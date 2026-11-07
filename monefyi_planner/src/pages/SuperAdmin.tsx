@@ -155,6 +155,8 @@ export default function SuperAdmin() {
       ai_daily_limit: u.ai_daily_limit ?? 20,
       profile_role: u.profile_role || 'user',
       status: 'active',
+      email_notifications: true,
+      push_notifications: true,
     });
   };
 
@@ -607,11 +609,11 @@ export default function SuperAdmin() {
             <textarea placeholder="Catatan admin" onChange={e => setEditForm({ ...editForm, admin_notes: e.target.value })}
               className="w-full p-3 border border-[#E5EAE8] rounded-xl text-sm h-20 text-[#0F172A]" />
             <label className="flex items-center gap-2 text-sm text-[#0F172A]">
-              <input type="checkbox" defaultChecked onChange={e => setEditForm({ ...editForm, email_notifications: e.target.checked })} />
+              <input type="checkbox" checked={Boolean(editForm.email_notifications ?? true)} onChange={e => setEditForm({ ...editForm, email_notifications: e.target.checked })} />
               Email notif
             </label>
             <label className="flex items-center gap-2 text-sm text-[#0F172A]">
-              <input type="checkbox" defaultChecked onChange={e => setEditForm({ ...editForm, push_notifications: e.target.checked })} />
+              <input type="checkbox" checked={Boolean(editForm.push_notifications ?? true)} onChange={e => setEditForm({ ...editForm, push_notifications: e.target.checked })} />
               Push notif
             </label>
             <div className="flex gap-2 pt-2">

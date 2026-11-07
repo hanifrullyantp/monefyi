@@ -30,13 +30,22 @@ function formatCurrency(val: number) {
   }).format(val);
 }
 
+function escapeHtml(raw: string): string {
+  return String(raw || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // 1. Template: Konfirmasi Pembayaran
 function getPaymentConfirmationTemplate(opts: SendEmailOptions) {
-  const name = opts.name || "Pelanggan Monefyi";
-  const plan = (opts.planTier || "standard").toUpperCase();
+  const name = escapeHtml(opts.name || "Pelanggan Monefyi");
+  const plan = escapeHtml((opts.planTier || "standard").toUpperCase());
   const amountStr = opts.amount ? formatCurrency(opts.amount) : "Rp 0 (Akses Gratis)";
-  const method = (opts.paymentMethod || "QRIS").toUpperCase();
-  const loginUrl = opts.appUrl || "https://estimator.monefyi.com/app/estimator";
+  const method = escapeHtml((opts.paymentMethod || "QRIS").toUpperCase());
+  const loginUrl = escapeHtml(opts.appUrl || "https://estimator.monefyi.com/app/estimator");
 
   return `
 <!DOCTYPE html>
@@ -108,10 +117,10 @@ function getPaymentConfirmationTemplate(opts: SendEmailOptions) {
 
 // 2. Template: Password & Akses Akun
 function getAccountAccessTemplate(opts: SendEmailOptions) {
-  const name = opts.name || "Pelanggan Monefyi";
-  const email = opts.to;
-  const password = opts.password || "Estimator2026!";
-  const loginUrl = opts.appUrl || "https://estimator.monefyi.com/app/estimator";
+  const name = escapeHtml(opts.name || "Pelanggan Monefyi");
+  const email = escapeHtml(opts.to);
+  const password = escapeHtml(opts.password || "Estimator2026!");
+  const loginUrl = escapeHtml(opts.appUrl || "https://estimator.monefyi.com/app/estimator");
 
   return `
 <!DOCTYPE html>
@@ -181,9 +190,9 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
 
 // 3. Template: Reset / Ubah Password
 function getPasswordResetTemplate(opts: SendEmailOptions) {
-  const name = opts.name || "Pengguna Monefyi";
-  const password = opts.password || "MonefyiBaru2026!";
-  const loginUrl = opts.resetLink || opts.appUrl || "https://estimator.monefyi.com/app/estimator";
+  const name = escapeHtml(opts.name || "Pengguna Monefyi");
+  const password = escapeHtml(opts.password || "MonefyiBaru2026!");
+  const loginUrl = escapeHtml(opts.resetLink || opts.appUrl || "https://estimator.monefyi.com/app/estimator");
 
   return `
 <!DOCTYPE html>
@@ -235,7 +244,7 @@ function getPasswordResetTemplate(opts: SendEmailOptions) {
 
 // 4. Template: Follow-Up Checkout Tertunda
 function getFollowupTemplate(opts: SendEmailOptions) {
-  const name = opts.name || "Kakak";
+  const name = escapeHtml(opts.name || "Kakak");
   const checkoutUrl = "https://estimator.monefyi.com/checkout";
 
   return `

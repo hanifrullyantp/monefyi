@@ -86,7 +86,23 @@ describe('invoicePdfContext - termin dari billing', () => {
 
 describe('pdf templates - document definition', () => {
   it('builds quotation and invoice docs for all templates without throw', async () => {
-    const ids = ['formal', 'modern', 'clean', 'fullcolor', 'futuristic'] as const;
+    const ids = [
+      'formal',
+      'modern',
+      'clean',
+      'fullcolor',
+      'futuristic',
+      'wellness',
+      'realestate',
+      'cardblue',
+      'greenpoly',
+      'yellowblock',
+      'navyorange',
+      'bluepill',
+      'innovagreen',
+      'atlasblue',
+      'yellowcharcoal',
+    ] as const;
     for (const id of ids) {
       const draft = previewEstimationDraft(id);
       draft.items = [];
@@ -98,6 +114,29 @@ describe('pdf templates - document definition', () => {
       expect(buildInvoiceDoc(i).content).toBeTruthy();
     }
   });
+
+  it('generates invoice blobs for all 10 new remake templates with items', async () => {
+    const remakeTemplates = [
+      'wellness',
+      'realestate',
+      'cardblue',
+      'greenpoly',
+      'yellowblock',
+      'navyorange',
+      'bluepill',
+      'innovagreen',
+      'atlasblue',
+      'yellowcharcoal',
+    ] as const;
+    const settings = previewPdfSettings(defaultPdfSettings('org', 'CV Test'));
+    for (const id of remakeTemplates) {
+      const draft = previewEstimationDraft(id);
+      draft.pdf_invoice_template = id;
+      const opts = displayOptionsFromDraft(draft);
+      const blob = await generateInvoicePdfBlob(draft, settings, opts);
+      expect(blob.size).toBeGreaterThan(100);
+    }
+  }, 20000);
 });
 
 describe('generate blobs - tiga jenis dokumen', () => {

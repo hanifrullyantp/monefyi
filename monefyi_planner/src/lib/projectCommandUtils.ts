@@ -1,8 +1,9 @@
-import type { Project } from '../../store/appStore';
-import type { AnalyzeResult } from '../../services/analyzeService';
-import type { WorkItem } from '../../services/workItemService';
-import type { DailyLog } from '../../services/dailyLogService';
-import type { TabBadges } from '../../components/projects/command-center/types';
+import type { Project } from '../store/appStore';
+import type { AnalyzeResult } from '../services/analyzeService';
+import type { WorkItem } from '../services/workItemService';
+import type { DailyLog } from '../services/dailyLogService';
+
+export type TabBadges = Partial<Record<'overview' | 'planning' | 'realisasi' | 'bahan' | 'dokumen', number>>;
 
 export interface SCurvePoint {
   week: string;

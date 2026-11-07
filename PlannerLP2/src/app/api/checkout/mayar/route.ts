@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     // JIKA PAKET FREE TANPA ORDER BUMP (TOTAL RP 0)
     // Kumpulkan data lead & berikan akses instan tanpa invoice bayar
-    if (amount <= 0 || (product === "free" && !bumpTaken)) {
+    if (product === "free" && !bumpTaken) {
       try {
         const supabase = getSupabaseClient();
         if (supabase) {
@@ -75,6 +75,25 @@ export async function POST(req: NextRequest) {
           email.trim().toLowerCase()
         )}`,
       });
+    }
+
+    // Validasi harga minimum di sisi server (Server-Side Price Validation)
+    const numericAmount = Math.round(Number(amount) || 0);
+    const minRequiredAmount =
+      product === "pro"
+        ? 199000 + (bumpTaken ? 49000 : 0)
+        : product === "standard"
+        ? 93000 + (bumpTaken ? 49000 : 0)
+        : 49000; // product === "free" && bumpTaken
+
+    if (numericAmount < minRequiredAmount) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Nominal pembayaran tidak valid untuk paket ${product.toUpperCase()}. Minimal Rp ${minRequiredAmount.toLocaleString("id-ID")}.`,
+        },
+        { status: 400 }
+      );
     }
 
     const host = req.headers.get("host") || "estimator.monefyi.com";

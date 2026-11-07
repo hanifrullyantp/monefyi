@@ -2,13 +2,16 @@ import { MetaCapiStatus } from '../types/marketing';
 
 async function sha256Hash(value: string): Promise<string> {
   const clean = value.trim().toLowerCase();
-  if (typeof window !== 'undefined' && window.crypto?.subtle) {
+  const subtle =
+    (typeof globalThis !== 'undefined' && globalThis.crypto?.subtle) ||
+    (typeof window !== 'undefined' && window.crypto?.subtle);
+  if (subtle) {
     const msgBuffer = new TextEncoder().encode(clean);
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashBuffer = await subtle.digest('SHA-256', msgBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
-  return clean;
+  return '';
 }
 
 export interface CapiEventPayload {

@@ -8,6 +8,16 @@ type Props = {
 };
 
 const THUMB: Record<PdfTemplate, string> = {
+  wellness: 'bg-[#5E9C98]',
+  realestate: 'bg-[#0F2744]',
+  cardblue: 'bg-[#1B67AE]',
+  greenpoly: 'bg-[#0E7C66]',
+  yellowblock: 'bg-[#FCE26B]',
+  navyorange: 'bg-[#1F2E4D]',
+  bluepill: 'bg-[#1B4F8A]',
+  innovagreen: 'bg-[#1F9D55]',
+  atlasblue: 'bg-[#2C9AD3]',
+  yellowcharcoal: 'bg-[#FFC52E]',
   formal: 'bg-[#1e3a8a]',
   modern: 'bg-[#6d28d9]',
   clean: 'bg-neutral-900',

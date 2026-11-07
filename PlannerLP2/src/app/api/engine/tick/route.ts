@@ -75,9 +75,19 @@ export async function POST(req: NextRequest) {
       ...DEFAULT_WINNING_ENGINE_CONFIG,
       ...(body.config || {}),
       llmRouting: {
+        openRouterApiKey:
+          body.config?.llmRouting?.openRouterApiKey ??
+          DEFAULT_WINNING_ENGINE_CONFIG.llmRouting.openRouterApiKey,
         strategist: {
           ...DEFAULT_WINNING_ENGINE_CONFIG.llmRouting.strategist,
           ...(body.config?.llmRouting?.strategist || {}),
+        },
+        processor: {
+          ...(DEFAULT_WINNING_ENGINE_CONFIG.llmRouting.processor || {
+            provider: "openrouter",
+            model: "google/gemini-2.5-flash",
+          }),
+          ...(body.config?.llmRouting?.processor || {}),
         },
         technical: {
           ...DEFAULT_WINNING_ENGINE_CONFIG.llmRouting.technical,
@@ -301,7 +311,7 @@ Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
       llmInfo: {
         strategistProvider: llmStrategistResult.providerUsed,
         strategistModel: llmStrategistResult.modelUsed,
-        processorModel: config.llmRouting.processor?.model || "openai/gpt-5.6-luna",
+        processorModel: config.llmRouting.processor?.model || "google/gemini-2.5-flash",
         technicalProvider: "OpenRouter",
         technicalModel: config.llmRouting.technical?.model || "google/gemini-2.5-flash",
       },

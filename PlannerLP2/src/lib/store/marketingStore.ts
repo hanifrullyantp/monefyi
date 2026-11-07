@@ -243,7 +243,7 @@ export const useMarketingStore = create<MarketingStore>()(
               processor: {
                 ...(state.winningEngineConfig.llmRouting.processor || {
                   provider: 'openrouter',
-                  model: 'openai/gpt-5.6-luna',
+                  model: 'google/gemini-2.5-flash',
                 }),
                 ...(updates.llmRouting?.processor || {}),
               },
@@ -262,7 +262,7 @@ export const useMarketingStore = create<MarketingStore>()(
 
       loadConfigFromCloud: async () => {
         try {
-          const res = await fetch('/api/engine/config');
+          const res = await fetch('/api/engine/config?full=1');
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.ok && data.config) {
             const c = data.config;
@@ -285,6 +285,8 @@ export const useMarketingStore = create<MarketingStore>()(
                 monthlySpendCap: c.monthlySpendCap || state.winningEngineConfig.monthlySpendCap,
                 targetCpa: c.targetCpa || state.winningEngineConfig.targetCpa,
                 targetRoas: c.targetRoas || state.winningEngineConfig.targetRoas,
+                maxScalePctPerStep:
+                  c.maxScalePctPerStep || state.winningEngineConfig.maxScalePctPerStep,
                 killSwitch: Boolean(c.killSwitch),
                 advanceMasterPlanApproved: Boolean(c.advanceMasterPlanApproved),
                 llmRouting: {
@@ -296,7 +298,7 @@ export const useMarketingStore = create<MarketingStore>()(
                   },
                   processor: {
                     provider: 'openrouter',
-                    model: c.processorModel || 'openai/gpt-5.6-luna',
+                    model: c.processorModel || 'google/gemini-2.5-flash',
                   },
                   technical: {
                     provider: 'openrouter',
@@ -308,6 +310,12 @@ export const useMarketingStore = create<MarketingStore>()(
                   whatsappAdminPhone:
                     c.whatsappAdminPhone ||
                     state.winningEngineConfig.notifications.whatsappAdminPhone,
+                  whatsappApiKey:
+                    c.whatsappApiKey ||
+                    state.winningEngineConfig.notifications.whatsappApiKey,
+                  telegramBotToken:
+                    c.telegramBotToken ||
+                    state.winningEngineConfig.notifications.telegramBotToken,
                   telegramChatId:
                     c.telegramChatId || state.winningEngineConfig.notifications.telegramChatId,
                 },

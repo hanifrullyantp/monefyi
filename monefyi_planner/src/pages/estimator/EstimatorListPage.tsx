@@ -16,7 +16,7 @@ import PostPurchaseBanner, {
 } from '../../components/entitlement/PostPurchaseBanner';
 import EstimatorListDashboard from '../../components/estimator/list/EstimatorListDashboard';
 import EstimatorListToolbar from '../../components/estimator/list/EstimatorListToolbar';
-import EstimatorListOptionsSheet from '../../components/estimator/list/EstimatorListOptionsSheet';
+import EstimatorListOptionsSheet, { type SortKey } from '../../components/estimator/list/EstimatorListOptionsSheet';
 import EstimatorStatusPickerSheet from '../../components/estimator/list/EstimatorStatusPickerSheet';
 import EstimatorBulkStatusPickerSheet from '../../components/estimator/list/EstimatorBulkStatusPickerSheet';
 import EstimatorListBulkActionBar from '../../components/estimator/list/EstimatorListBulkActionBar';
@@ -61,6 +61,7 @@ import {
   estimationToFormDraft,
   loadEstimation,
   loadEstimations,
+  unlinkEstimationProject,
   updateEstimationOrder,
   updateEstimationStatus,
 } from '../../services/estimatorService';
@@ -98,8 +99,6 @@ const STATUS_FILTERS: Array<{ value: '' | EstimationStatus; label: string }> = [
   { value: 'rejected', label: 'Ditolak' },
   { value: 'converted', label: 'Jadi Proyek' },
 ];
-
-type SortKey = 'manual' | 'newest' | 'oldest' | 'value_desc' | 'value_asc' | 'profit_desc' | 'status';
 
 const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
   { value: 'manual', label: 'Urutan Custom (Drag & Drop)' },
@@ -680,7 +679,7 @@ export default function EstimatorListPage() {
     void load();
   };
 
-  const renderCard = (est: Estimation, dragHandleProps?: Record<string, unknown> | null) => {
+  const renderCard = (est: Estimation, dragHandleProps?: unknown) => {
     const linkedProjId = est.converted_project_id || est.project_id || null;
     const linkedProj = linkedProjId ? projects.find(p => p.id === linkedProjId) : null;
 
@@ -1007,8 +1006,8 @@ export default function EstimatorListPage() {
         onUnlinkProject={async () => {
           if (!statusPickerEst) return;
           try {
-            await updateEstimationStatus(statusPickerEst.id, 'selesai');
-            showToast('Kaitan proyek dilepas. Status diubah ke Selesai', 'success');
+            await unlinkEstimationProject(statusPickerEst.id);
+            showToast('Kaitan proyek dilepas. Status diubah ke Disetujui', 'success');
             void load();
           } catch (e) {
             showToast(e instanceof Error ? e.message : 'Gagal melepas kaitan proyek', 'error');

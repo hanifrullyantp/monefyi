@@ -95,7 +95,7 @@ export const DEFAULT_WINNING_ENGINE_CONFIG: WinningEngineConfig = {
     },
     processor: {
       provider: "openrouter",
-      model: "openai/gpt-5.6-luna",
+      model: "google/gemini-2.5-flash",
       apiKey: "",
     },
     technical: {

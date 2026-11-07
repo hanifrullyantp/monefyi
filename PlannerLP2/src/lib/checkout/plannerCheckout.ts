@@ -20,7 +20,6 @@ export async function redirectToPlannerCheckout(
   const email = params.email?.toLowerCase().trim();
   const isHanifOrAdmin =
     email === "hanif.rullyant@gmail.com" ||
-    email?.includes("hanif") ||
     (typeof window !== "undefined" && (
       localStorage.getItem("admin_override") === "true" ||
       localStorage.getItem("hanif_checkout") === "true" ||

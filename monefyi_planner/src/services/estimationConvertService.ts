@@ -267,6 +267,13 @@ export async function linkEstimationToExistingProject({
         console.error('Peringatan: Gagal menambahkan item ke RAP:', rapInsertErr);
       } else {
         insertedCount = rapRows.length;
+        if (addedBudget > 0) {
+          const nextTotalBudget = Number(project.total_budget || 0) + addedBudget;
+          await supabase
+            .from('planner_projects')
+            .update({ total_budget: nextTotalBudget, updated_at: new Date().toISOString() })
+            .eq('id', projectId);
+        }
       }
     }
   }

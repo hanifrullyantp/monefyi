@@ -69,6 +69,19 @@ function roleLabel(role?: string) {
   return map[role || ''] || role || '—';
 }
 
+function planLabel(plan?: string | null): string {
+  const map: Record<string, string> = {
+    free: 'Gratis',
+    starter: 'Starter',
+    pro: 'Pro',
+    pro_plus: 'Pro+',
+    enterprise: 'Enterprise',
+    monthly: 'Bulanan',
+    lifetime: 'Lifetime',
+  };
+  return map[plan || ''] || plan || 'Gratis';
+}
+
 function roleBadgeClass(role?: string) {
   const map: Record<string, string> = {
     owner: 'bg-emerald-100 text-emerald-700',
@@ -207,15 +220,12 @@ export default function Settings() {
     if (!user || !name.trim()) return;
     setSavingProfile(true);
     try {
-      const { error: nameErr } = await updateProfileName(user.id, name.trim());
-      if (nameErr) throw new Error(nameErr.message);
-
-      const { error: settingsErr } = await updateProfileSettings(user.id, {
+      await updateProfileName(user.id, name.trim());
+      await updateProfileSettings(user.id, {
         position: position.trim(),
         phone: phone.trim(),
         department: department.trim(),
       });
-      if (settingsErr) throw new Error(settingsErr.message);
 
       setUser({
         ...user,

@@ -11,7 +11,7 @@ export async function getTodayAttendanceSummary(orgId: string) {
   let present = 0;
   let absent = 0;
   for (const id of memberIds) {
-    const g = grouped[id];
+    const g = grouped.get(id);
     if (g?.checkIn && !g?.checkOut) present += 1;
     else if (!g?.checkIn) absent += 1;
   }

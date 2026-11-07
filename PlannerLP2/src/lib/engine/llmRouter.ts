@@ -52,7 +52,7 @@ export const DEFAULT_ROUTING_CONFIG: MultiLlmRoutingConfig = {
   },
   processor: {
     provider: "openrouter",
-    model: "openai/gpt-5.6-luna",
+    model: "google/gemini-2.5-flash",
   },
   technical: {
     provider: "openrouter",
@@ -103,7 +103,7 @@ async function callSingleProvider(
     role === "strategist"
       ? "anthropic/claude-3.5-sonnet"
       : role === "processor"
-      ? "openai/gpt-5.6-luna"
+      ? "google/gemini-2.5-flash"
       : "google/gemini-2.5-flash"
   );
 
@@ -317,7 +317,7 @@ export async function runRoutedLlm(input: LlmCallInput): Promise<LlmCallOutput> 
   };
   const processorSlot: LlmSlotConfig = input.routing?.processor || {
     provider: "openrouter",
-    model: "openai/gpt-5.6-luna",
+    model: "google/gemini-2.5-flash",
   };
   const technicalSlot: LlmSlotConfig = input.routing?.technical || {
     provider: "openrouter",
@@ -350,8 +350,8 @@ export async function runRoutedLlm(input: LlmCallInput): Promise<LlmCallOutput> 
       input.role === "strategist"
         ? "anthropic/claude-3.7-sonnet"
         : input.role === "processor"
-        ? "google/gemini-2.5-flash"
-        : "openai/gpt-5.6-luna";
+        ? "deepseek/deepseek-chat"
+        : "deepseek/deepseek-chat";
 
     const fbSlot: LlmSlotConfig = {
       provider: "openrouter",

@@ -223,7 +223,7 @@ export default function EstimatorForm() {
       } catch (error) {
         console.error('Draft lokal gagal disimpan saat keluar:', error);
       }
-      if (!isNew && id) {
+      if (!isNew && id && autoSave.status !== 'saving') {
         void updateEstimation(id, latest).catch(error => {
           console.error('Simpan otomatis saat keluar gagal:', error);
         });
@@ -231,7 +231,7 @@ export default function EstimatorForm() {
     };
     window.addEventListener('pagehide', persistOnExit);
     return () => window.removeEventListener('pagehide', persistOnExit);
-  }, [draftStorageKey, isDirty, isNew, id]);
+  }, [draftStorageKey, isDirty, isNew, id, autoSave.status]);
 
   const handleBeforeLeaveList = useCallback(() => {
     discardAutoSave();

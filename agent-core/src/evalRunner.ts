@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { parseCostCommand } from '../../packages/domain/src/money.ts';
 import { startRun, transition, type FlowRun } from './flow.ts';
 import { routeRequest } from './runtime.ts';
-import type { SopDefinition } from './sopSchema.ts';
+import type { SopDefinition, SopStep } from './sopSchema.ts';
 import { parseYaml } from './yaml.ts';
 
 type ProjectRow = { id: string; org_id: string; name: string };
@@ -96,10 +96,10 @@ export function boundOrg(sessionOrg: string, _note: string): string {
 
 function toolsOf(sop: SopDefinition): string[] {
   const tools: string[] = [];
-  let step = sop.steps[0];
+  let step: SopStep | undefined = sop.steps[0];
   while (step && !step.terminal) {
     tools.push(step.tools[0]);
-    step = sop.steps.find((item) => item.id === step.onSuccess);
+    step = sop.steps.find((item) => item.id === step!.onSuccess);
   }
   return tools;
 }

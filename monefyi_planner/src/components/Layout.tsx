@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X, ArrowLeft,
   Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
-  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User,
+  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User, Eye,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -377,8 +377,8 @@ export default function Layout({ children }: LayoutProps) {
             type="button"
             onClick={openCommandModal}
             className={`mt-3 relative flex items-center justify-center shadow-sm hover:opacity-95 transition-all ${navSidebarCollapsed
-                ? 'w-11 h-11 mx-auto rounded-xl'
-                : 'w-full h-11 rounded-xl gap-2'
+              ? 'w-11 h-11 mx-auto rounded-xl'
+              : 'w-full h-11 rounded-xl gap-2'
               }`}
             style={{ background: 'linear-gradient(135deg, #064E3B 0%, #047857 50%, #059669 100%)' }}
             aria-label="Buka Monefyi AI"
@@ -422,8 +422,8 @@ export default function Layout({ children }: LayoutProps) {
               onClick={() => handleNav(item.id)}
               title={navSidebarCollapsed ? item.label : undefined}
               className={`w-full flex items-center rounded-xl text-sm transition-all relative ${navSidebarCollapsed
-                  ? 'justify-center p-2.5 min-h-11'
-                  : 'gap-3 px-3.5 py-2.5 min-h-11'
+                ? 'justify-center p-2.5 min-h-11'
+                : 'gap-3 px-3.5 py-2.5 min-h-11'
                 } ${isTabActive(item.id)
                   ? 'bg-emerald-50 text-[#047857] font-bold border border-emerald-200 shadow-xs'
                   : 'text-[#5B6B7A] font-medium hover:bg-[#F4F7F5] hover:text-[#0F172A]'
@@ -538,15 +538,17 @@ export default function Layout({ children }: LayoutProps) {
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setPreviewSheetOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-black active:scale-95 transition-all shadow-2xs"
-                title="Pilihan Mode Admin"
-              >
-                <Eye className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="capitalize">{uiViewMode === 'worker' ? 'Worker' : uiViewMode === 'owner' ? 'Owner' : 'Auto'}</span>
-              </button>
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewSheetOpen(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-black active:scale-95 transition-all shadow-2xs"
+                  title="Pilihan Mode Admin"
+                >
+                  <Eye className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="capitalize">{uiViewMode === 'worker' ? 'Worker' : uiViewMode === 'owner' ? 'Owner' : 'Auto'}</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setNotifOpen(v => !v)}
@@ -581,9 +583,9 @@ export default function Layout({ children }: LayoutProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${syncStatus === 'synced' ? 'bg-emerald-50 text-[#047857] border-emerald-200' :
-                syncStatus === 'syncing' ? 'bg-amber-50 text-amber-800 border-amber-200' :
-                  syncStatus === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                    'bg-slate-100 text-slate-700 border-slate-200'
+              syncStatus === 'syncing' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                syncStatus === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                  'bg-slate-100 text-slate-700 border-slate-200'
               }`}>
               <div className={`w-2 h-2 rounded-full ${sync.color}`} />
               <span className="hidden sm:inline">{sync.text}</span>
@@ -719,8 +721,8 @@ export default function Layout({ children }: LayoutProps) {
                       key={tab.id}
                       onClick={() => handleNav(tab.id)}
                       className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-all duration-200 rounded-xl active:scale-95 ${isTabActive(tab.id)
-                          ? 'text-emerald-600 bg-emerald-50'
-                          : 'text-slate-600 hover:text-slate-800'
+                        ? 'text-emerald-600 bg-emerald-50'
+                        : 'text-slate-600 hover:text-slate-800'
                         }`}
                     >
                       <tab.icon className="w-5 h-5" />
@@ -745,7 +747,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Mobile Preview Mode Picker Sheet */}
       <AnimatePresence>
-        {previewSheetOpen && (
+        {isSuperAdmin && previewSheetOpen && (
           <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
             <motion.div
               initial={{ opacity: 0 }}
@@ -789,8 +791,8 @@ export default function Layout({ children }: LayoutProps) {
                       setPreviewSheetOpen(false);
                     }}
                     className={`min-h-[46px] w-full rounded-xl px-4 flex items-center justify-between text-sm transition-all ${uiViewMode === m.id
-                        ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-300'
-                        : 'text-slate-700 hover:bg-slate-50 border border-slate-200'
+                      ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-300'
+                      : 'text-slate-700 hover:bg-slate-50 border border-slate-200'
                       }`}
                   >
                     <span>{m.label}</span>

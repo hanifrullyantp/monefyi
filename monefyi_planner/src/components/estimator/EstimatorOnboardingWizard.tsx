@@ -186,7 +186,7 @@ export default function EstimatorOnboardingWizard({
                 label="Logo (opsional)"
                 value={logoUrl}
                 onChange={setLogoUrl}
-                onError={msg => window.alert(msg)}
+                onError={msg => showToast(msg, 'error')}
               />
               <p className="text-xs text-slate-400">ℹ️ Bisa dilengkapi nanti di Pengaturan.</p>
             </section>

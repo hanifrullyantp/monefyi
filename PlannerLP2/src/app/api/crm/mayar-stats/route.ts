@@ -73,8 +73,9 @@ export async function GET(req: NextRequest) {
 
           for (const r of rows) {
             const raw = r.raw_payload || {};
-            const isPaid = r.status === "paid" || raw.status === "won";
             const amt = Number(r.grand_total || raw.amount || 0);
+            const isFree = amt === 0 || raw.planTier === "free" || r.status === "free_active";
+            const isPaid = !isFree && (r.status === "paid" || raw.status === "won");
 
             if (isPaid) {
               lifetimeRevenue += amt;
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
               if (createdAt >= startOfToday) {
                 todayRevenue += amt;
               }
-            } else {
+            } else if (!isFree) {
               pendingRevenue += amt;
               if (raw.paymentId && (r.status === "pending" || raw.status === "pending_payment")) {
                 pendingRowsToCheck.push(r);

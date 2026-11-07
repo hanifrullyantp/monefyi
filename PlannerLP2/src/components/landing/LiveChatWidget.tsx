@@ -15,8 +15,32 @@ import {
   POPULAR_CS_QUESTIONS,
   getCustomerSupportReply,
 } from "@/lib/services/customerSupportService";
+import { useSettingsStore } from "@/lib/store/settingsStore";
+import { useContentStore } from "@/lib/store/contentStore";
+import { useMarketingStore } from "@/lib/store/marketingStore";
 
 export function LiveChatWidget() {
+  const settings = useSettingsStore((s) => s.settings);
+  const content = useContentStore((s) => s.content);
+  const customAgentNames = useMarketingStore((s) => s.customAgentNames);
+  const agentName = customAgentNames?.cs || CS_AGENT_PROFILE.name || "Mbak Esti";
+
+  const rawWaNumber =
+    (settings as unknown as { whatsappNumber?: string }).whatsappNumber ||
+    settings.waNumber ||
+    (content.footer as unknown as { contactPhone?: string })?.contactPhone ||
+    content.footer?.whatsapp ||
+    "";
+  const cleanWaDigits = rawWaNumber.replace(/[^0-9]/g, "");
+  const normalizedWaPhone = cleanWaDigits.startsWith("0")
+    ? `62${cleanWaDigits.slice(1)}`
+    : cleanWaDigits;
+
+  const buildWaUrl = (text: string) => {
+    if (!normalizedWaPhone) return "#harga";
+    return `https://wa.me/${normalizedWaPhone}?text=${encodeURIComponent(text)}`;
+  };
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<CSMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -26,44 +50,48 @@ export function LiveChatWidget() {
   useEffect(() => {
     if (messages.length === 0 && isOpen) {
       setTimeout(() => {
+        const actions: NonNullable<CSMessage["suggestedActions"]> = [
+          {
+            label: "📄 Cara bikin PDF penawaran di HP?",
+            action: "ask",
+            payload: "Cara bikin PDF penawaran di HP",
+          },
+          {
+            label: "🚀 Apa bedanya Standard vs Pro?",
+            action: "ask",
+            payload: "Apa bedanya paket Standard vs Pro?",
+          },
+          {
+            label: "👷 Bisa untuk mandor & tukang?",
+            action: "ask",
+            payload: "Bisa dipakai mandor dan tukang lapangan?",
+          },
+        ];
+        if (normalizedWaPhone) {
+          actions.push({
+            label: "📲 Chat WhatsApp Langsung",
+            action: "link_whatsapp",
+            payload: buildWaUrl(`Halo ${agentName}, mau tanya seputar Monefyi Estimator`),
+          });
+        }
         setMessages([
           {
             id: "initial_greeting",
             sender: "cs",
             text: CS_AGENT_PROFILE.greeting,
             timestamp: new Date(),
-            suggestedActions: [
-              {
-                label: "📄 Cara bikin PDF penawaran di HP?",
-                action: "ask",
-                payload: "Cara bikin PDF penawaran di HP",
-              },
-              {
-                label: "🚀 Apa bedanya Standard vs Pro?",
-                action: "ask",
-                payload: "Apa bedanya paket Standard vs Pro?",
-              },
-              {
-                label: "👷 Bisa untuk mandor & tukang?",
-                action: "ask",
-                payload: "Bisa dipakai mandor dan tukang lapangan?",
-              },
-              {
-                label: "📲 Chat WhatsApp Langsung",
-                action: "link_whatsapp",
-                payload:
-                  "https://wa.me/6281234567890?text=Halo%20Mbak%20Nisa,%20mau%20tanya%20seputar%20Monefyi",
-              },
-            ],
+            suggestedActions: actions,
           },
         ]);
       }, 300);
     }
-  }, [isOpen, messages.length]);
+  }, [isOpen, messages.length, normalizedWaPhone, agentName]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  if (settings.liveChatEnabled === false) return null;
 
   const handleSendMessage = (textToSend?: string) => {
     const text = (textToSend || inputValue).trim();
@@ -84,7 +112,19 @@ export function LiveChatWidget() {
       const replyData = getCustomerSupportReply(text);
       const isComplexQuery = /diskon|kurang|spesial|khusus|custom|kerjasama|tender besar|komplain|nego|partnership|kantor kami/i.test(text);
 
-      const actions = [...(replyData.suggestedActions || [])];
+      const rawActions = (replyData.suggestedActions || []).map((act) => {
+        if (act.action === "link_whatsapp") {
+          return {
+            ...act,
+            payload: normalizedWaPhone
+              ? act.payload.replace("6281234567890", normalizedWaPhone)
+              : "#harga",
+          };
+        }
+        return act;
+      }).filter((act) => act.action !== "link_whatsapp" || Boolean(normalizedWaPhone));
+
+      const actions = [...rawActions];
       if (isComplexQuery && !actions.some(a => a.action === "escalate_telegram")) {
         actions.unshift({
           label: "🚨 Teruskan Pertanyaan ke Telegram Owner",
@@ -115,8 +155,11 @@ export function LiveChatWidget() {
     if (action.action === "ask") {
       handleSendMessage(action.payload);
     } else if (action.action === "link_whatsapp") {
-      window.open(action.payload, "_blank");
-    } else if (action.action === "link_upgrade") {
+      if (normalizedWaPhone) {
+        const targetUrl = action.payload.replace("6281234567890", normalizedWaPhone);
+        window.open(targetUrl, "_blank");
+      }
+    } else if (action.action === "link_upgrade" || action.action === "navigate") {
       window.location.href = action.payload;
     } else if (action.action === "escalate_telegram") {
       setMessages((prev) => [
@@ -124,17 +167,23 @@ export function LiveChatWidget() {
         {
           id: `cs_${Date.now()}`,
           sender: "cs",
-          text: `✅ *Permintaan Anda sudah Nisa teruskan ke Owner Monefyi!* 🚀\n\nUntuk respon langsung detik ini, Mas/Mbak juga bisa langsung kirim via WhatsApp Owner melalui tombol di bawah:`,
+          text: `✅ *Permintaan Anda sudah ${agentName} teruskan ke Owner Monefyi!* 🚀${
+            normalizedWaPhone
+              ? `\n\nUntuk respon langsung detik ini, Mas/Mbak juga bisa langsung kirim via WhatsApp Owner melalui tombol di bawah:`
+              : ""
+          }`,
           timestamp: new Date(),
-          suggestedActions: [
-            {
-              label: "💬 Hubungi Owner via WhatsApp",
-              action: "link_whatsapp",
-              payload: `https://wa.me/6281234567890?text=${encodeURIComponent(
-                `Halo Owner Monefyi, saya dari web landing mau konfirmasi: "${action.payload}"`
-              )}`,
-            },
-          ],
+          suggestedActions: normalizedWaPhone
+            ? [
+                {
+                  label: "💬 Hubungi Owner via WhatsApp",
+                  action: "link_whatsapp",
+                  payload: buildWaUrl(
+                    `Halo Owner Monefyi, saya dari web landing mau konfirmasi: "${action.payload}"`
+                  ),
+                },
+              ]
+            : undefined,
         },
       ]);
     }
@@ -157,7 +206,7 @@ export function LiveChatWidget() {
               className="hidden sm:flex items-center gap-2 bg-white text-slate-800 px-3.5 py-2 rounded-2xl shadow-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all text-xs font-bold"
             >
               <span className="text-base">👩‍💼</span>
-              <span>Mau tanya isi app &amp; paket? Tanya Mbak Esti</span>
+              <span>Mau tanya isi app &amp; paket? Tanya {agentName}</span>
             </div>
 
             <button
@@ -194,7 +243,7 @@ export function LiveChatWidget() {
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-extrabold text-sm">{CS_AGENT_PROFILE.name}</p>
+                    <p className="font-extrabold text-sm">{agentName}</p>
                     <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold">
                       {CS_AGENT_PROFILE.badge}
                     </span>
@@ -268,7 +317,7 @@ export function LiveChatWidget() {
               {isTyping && (
                 <div className="flex items-center gap-2 p-3 bg-white rounded-2xl border border-slate-200 text-xs text-slate-500 w-fit">
                   <span className="text-base animate-bounce">👩‍💼</span>
-                  <span>Mbak Esti sedang mengetik...</span>
+                  <span>{agentName} sedang mengetik...</span>
                 </div>
               )}
 
@@ -301,7 +350,7 @@ export function LiveChatWidget() {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Tanya Mbak Esti seputar Monefyi..."
+                placeholder={`Tanya ${agentName} seputar Monefyi...`}
                 className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-emerald-500"
               />
               <button

@@ -97,14 +97,15 @@ export function analyzeFieldPayroll(params: {
     if (!attendanceDaysMap.has(att.user_id)) {
       attendanceDaysMap.set(att.user_id, new Set());
     }
-    const dateStr = att.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+    const recordAny = att as unknown as { recorded_at?: string; timestamp?: string };
+    const dateStr = (recordAny.recorded_at || recordAny.timestamp || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
     attendanceDaysMap.get(att.user_id)!.add(dateStr);
   }
 
-  // 3. Map Potongan Bon yang masih approved / pending
+  // 3. Map Potongan Bon yang sudah disetujui (approved)
   const bonMap = new Map<string, number>();
   for (const b of bonRequests) {
-    if (b.status === 'approved' || b.status === 'pending') {
+    if (b.status === 'approved') {
       const current = bonMap.get(b.user_id) || 0;
       bonMap.set(b.user_id, current + (Number(b.amount) || 0));
     }
@@ -127,12 +128,12 @@ export function analyzeFieldPayroll(params: {
   for (const m of fieldMembers) {
     const comp = compMap.get(m.user_id);
     const presentSet = attendanceDaysMap.get(m.user_id);
-    // Jika tidak ada catatan presensi di filter bulan, asumsikan minimal kehadiran standar hari kerja (misal 22 hari atau count presensi)
-    const daysPresent = presentSet ? presentSet.size : 20;
+    const daysPresent = presentSet ? presentSet.size : 0;
 
     const salaryType = comp?.salary_type || 'daily';
-    const dailyRate = Number(comp?.daily_rate) || (Number(comp?.monthly_salary) ? Math.round(Number(comp.monthly_salary) / 22) : 150000);
-    const monthlySalary = Number(comp?.monthly_salary) || dailyRate * 22;
+    const monthlyVal = Number(comp?.monthly_salary) || 0;
+    const dailyRate = Number(comp?.daily_rate) || (monthlyVal ? Math.round(monthlyVal / 22) : 150000);
+    const monthlySalary = monthlyVal || dailyRate * 22;
 
     let gross = 0;
     if (salaryType === 'daily') {
@@ -302,7 +303,7 @@ export async function executeMayarDisbursementBatch(params: {
               })
               .eq('org_id', orgId)
               .eq('user_id', item.userId)
-              .in('status', ['approved', 'pending']);
+              .eq('status', 'approved');
           } catch (bonErr) {
             console.warn('Update bon request warning:', bonErr);
           }

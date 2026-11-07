@@ -35,6 +35,8 @@ export interface InvoicePdfContext extends QuotationPdfContext {
   installments: InvoiceInstallmentRow[];
   paymentMethod: string;
   paymentDateLabel: string;
+  dueDateLabel?: string;
+  customerEmail?: string;
 }
 
 const STATUS_LABEL: Record<InvoicePaymentStatus, string> = {

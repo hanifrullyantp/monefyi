@@ -5,6 +5,7 @@ import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useAuthStore } from '@/lib/store/authStore';
 import { useContentStore } from '@/lib/store/contentStore';
 import { useLeadsStore } from '@/lib/store/leadsStore';
+import { useMarketingStore } from '@/lib/store/marketingStore';
 import { useLandingAdmin } from '@/lib/hooks/useLandingAdmin';
 import { defaultContent } from '@/data/defaultContent';
 import { EditableText } from '@/components/shared/EditableText';
@@ -121,7 +122,8 @@ export default function ConversationalCheckout({
 }: CheckoutProps) {
   // 1. Content & Admin Stores
   const { content, isDirty, publishContent, isSaving } = useContentStore();
-  const { isEditMode, setEditMode, setAdmin } = useLandingAdmin();
+  const { isAdmin, isEditMode, setEditMode } = useLandingAdmin();
+  const orderBumpConfig = useMarketingStore((s) => s.orderBumpConfig);
   const co = { ...defaultContent.checkout!, ...(content.checkout || {}) };
 
   // State Management
@@ -160,9 +162,25 @@ export default function ConversationalCheckout({
   const inputRef = useRef<HTMLInputElement>(null);
   const authUser = useAuthStore((s) => s.user);
 
-  // 2. Kalkulasi Harga Dinamis
-  const basePrice = product === 'free' ? 0 : product === 'standard' ? 99000 : 199000;
-  const bumpPrice = product === 'free' ? 99000 : product === 'standard' ? 50000 : 99000;
+  // 2. Kalkulasi Harga Dinamis (Sinkron dengan Landing Page & FunnelAovPanel)
+  const stdCard = content.pricing?.cards?.find((c) => c.id === 'estimator-standard');
+  const parsedStdPrice = stdCard?.price ? Number(String(stdCard.price).replace(/[^0-9]/g, '')) : 0;
+  const standardBasePrice = parsedStdPrice >= 50000 ? parsedStdPrice : 93000;
+
+  const proCard = content.pricing?.cards?.find((c) => c.id === 'estimator-pro');
+  const parsedProPrice = proCard?.price ? Number(String(proCard.price).replace(/[^0-9]/g, '')) : 0;
+  const proBasePrice = parsedProPrice >= 100000 ? parsedProPrice : 199000;
+
+  const basePrice =
+    product === 'free' ? 0 : product === 'standard' ? standardBasePrice : proBasePrice;
+  const configuredBumpPrice =
+    orderBumpConfig?.enabled && orderBumpConfig?.price > 0 ? orderBumpConfig.price : null;
+  const bumpPrice =
+    product === 'free'
+      ? standardBasePrice
+      : product === 'standard'
+      ? configuredBumpPrice ?? 50000
+      : 99000;
   const finalPrice = takeOrderBump ? basePrice + bumpPrice : basePrice;
 
   // Meta Pixel Deduplication Flags
@@ -228,14 +246,19 @@ export default function ConversationalCheckout({
   // Progressive Sync Helper ke API CRM & Zustand Leads Store
   const syncLeadProgress = (
     stepNum: number,
-    statusOverride?: 'new' | 'abandoned_checkout' | 'pending_payment' | 'won'
+    statusOverride?: 'new' | 'abandoned_checkout' | 'pending_payment' | 'won' | 'free_active' | 'free_draft'
   ) => {
     const activeSid = sessionId || (typeof window !== 'undefined' ? sessionStorage.getItem('monefyi_checkout_session') || '' : '');
     if (!activeSid) return;
 
+    const isFreePlan = product === 'free' && !takeOrderBump;
+    const effectivePlanTier: ProductTier =
+      product === 'free' && takeOrderBump ? 'standard' : product;
     const leadStatus =
       statusOverride ||
-      (stepNum >= 3 ? 'abandoned_checkout' : 'new');
+      (isFreePlan
+        ? (stepNum >= 5 ? 'free_active' : 'free_draft')
+        : (stepNum >= 3 ? 'abandoned_checkout' : 'new'));
 
     // 1. Simpan ke Backend Supabase & API CRM
     fetch('/api/crm/lead', {
@@ -246,10 +269,10 @@ export default function ConversationalCheckout({
         name: fullName.trim(),
         email: email.trim(),
         phone: whatsapp.trim(),
-        planTier: product,
+        planTier: effectivePlanTier,
         bumpTaken: takeOrderBump,
-        paymentMethod,
-        amount: finalPrice,
+        paymentMethod: isFreePlan ? 'free' : paymentMethod,
+        amount: isFreePlan ? 0 : finalPrice,
         checkoutStep: stepNum,
         status: leadStatus,
       }),
@@ -264,11 +287,11 @@ export default function ConversationalCheckout({
           name: fullName.trim(),
           email: email.trim() || existing.email,
           phone: whatsapp.trim() || existing.phone,
-          status: leadStatus,
-          planTier: product,
+          status: leadStatus as any,
+          planTier: effectivePlanTier,
           bumpTaken: takeOrderBump,
-          paymentMethod,
-          amount: finalPrice,
+          paymentMethod: isFreePlan ? 'free' : paymentMethod,
+          amount: isFreePlan ? 0 : finalPrice,
           checkoutStep: stepNum,
         });
       } else if (whatsapp.trim() || email.trim()) {
@@ -276,15 +299,15 @@ export default function ConversationalCheckout({
           name: fullName.trim(),
           email: email.trim(),
           phone: whatsapp.trim() || '-',
-          projectType: `Estimator ${product.toUpperCase()}`,
+          projectType: `Estimator ${effectivePlanTier.toUpperCase()}`,
           source: 'checkout',
-          status: leadStatus,
+          status: leadStatus as any,
           sessionId: activeSid,
           checkoutStep: stepNum,
-          planTier: product,
+          planTier: effectivePlanTier,
           bumpTaken: takeOrderBump,
-          paymentMethod,
-          amount: finalPrice,
+          paymentMethod: isFreePlan ? 'free' : paymentMethod,
+          amount: isFreePlan ? 0 : finalPrice,
         });
       }
     }
@@ -411,9 +434,9 @@ export default function ConversationalCheckout({
 
   // Toggle inline edit mode untuk admin
   const handleToggleEdit = () => {
+    if (!isAdmin) return;
     const next = !isEditMode;
     setEditMode(next);
-    setAdmin(true);
   };
 
   // Format IDR
@@ -444,14 +467,6 @@ export default function ConversationalCheckout({
       setTimeout(() => setFloatingPill(null), 650);
       syncLeadProgress(1, 'new');
       trackFunnelEvent('step1_completed');
-      // Facebook Pixel: InitiateCheckout (IC) saat user mengisi form
-      trackMetaInitiateCheckout({
-        content_name: `Estimator ${product.toUpperCase()}`,
-        content_ids: [product],
-        value: finalPrice,
-        currency: 'IDR',
-        num_items: 1,
-      });
     } else if (currentStep === 2) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!email.trim() || !emailRegex.test(email.trim())) {
@@ -471,11 +486,11 @@ export default function ConversationalCheckout({
       const phoneDisplay = whatsapp.startsWith('0') ? whatsapp : `0${whatsapp}`;
       setFloatingPill({ text: phoneDisplay });
       setTimeout(() => setFloatingPill(null), 650);
-      // Di Step 3 kontak lengkap sudah ada, jika berhenti di sini status abandoned_checkout
-      syncLeadProgress(3, 'abandoned_checkout');
+      // Di Step 3 kontak lengkap sudah ada, jika berhenti di sini status sesuai plan
+      syncLeadProgress(3, product === 'free' && !takeOrderBump ? 'free_draft' : 'abandoned_checkout');
       trackFunnelEvent('step3_completed');
     } else if (currentStep === 4) {
-      syncLeadProgress(4, 'abandoned_checkout');
+      syncLeadProgress(4, product === 'free' && !takeOrderBump ? 'free_draft' : 'abandoned_checkout');
       trackFunnelEvent('step4_completed', { bumpTaken: takeOrderBump });
     }
 
@@ -563,7 +578,7 @@ export default function ConversationalCheckout({
           redirectUrl: resData.redirectUrl,
           amount: 0,
         });
-        syncLeadProgress(5, 'won');
+        syncLeadProgress(5, 'free_active');
         trackFunnelEvent('checkout_completed', { isFree: true });
         // Facebook Pixel: CompleteRegistration (BUKAN Purchase karena registrasi free / Rp 0!)
         trackMetaCompleteRegistration({
@@ -686,66 +701,68 @@ export default function ConversationalCheckout({
       </AnimatePresence>
 
       {/* ===================================================================== */}
-      {/* TOP BAR INLINE EDIT (SELALU TERSEDIA DI ATAS CHECKOUT PAGE) */}
+      {/* TOP BAR INLINE EDIT (KHUSUS ADMIN) */}
       {/* ===================================================================== */}
-      <div className="bg-slate-900 text-white px-4 py-2.5 border-b border-slate-800 sticky top-0 z-50 shadow-md">
-        <div className="max-w-xl mx-auto flex items-center justify-between gap-2 text-xs flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-bold tracking-wide">Checkout Estimator</span>
-          </div>
+      {isAdmin && (
+        <div className="bg-slate-900 text-white px-4 py-2.5 border-b border-slate-800 sticky top-0 z-50 shadow-md">
+          <div className="max-w-xl mx-auto flex items-center justify-between gap-2 text-xs flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="font-bold tracking-wide">Checkout Estimator</span>
+            </div>
 
-          {/* Shortcut lompat langkah (Step Jumper) — selalu bisa dipakai untuk edit langsung */}
-          <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg text-[11px]">
-            <span className="text-slate-400 px-1 font-medium hidden sm:inline">Langkah:</span>
-            {[1, 2, 3, 4, 5].map((st) => (
+            {/* Shortcut lompat langkah (Step Jumper) — khusus admin */}
+            <div className="flex items-center gap-1 bg-slate-800 p-0.5 rounded-lg text-[11px]">
+              <span className="text-slate-400 px-1 font-medium hidden sm:inline">Langkah:</span>
+              {[1, 2, 3, 4, 5].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => goToStep(st)}
+                  className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                    currentStep === st
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                  title={`Lompat ke langkah ${st}`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
               <button
-                key={st}
                 type="button"
-                onClick={() => goToStep(st)}
-                className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
-                  currentStep === st
-                    ? 'bg-emerald-500 text-white shadow-xs'
-                    : 'text-slate-300 hover:text-white'
+                onClick={handleToggleEdit}
+                className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isEditMode
+                    ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300 scale-105'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
                 }`}
-                title={`Lompat ke langkah ${st}`}
               >
-                {st}
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>{isEditMode ? 'Mode Edit: AKTIF ✏️' : '✏️ Mode Edit Teks'}</span>
               </button>
-            ))}
-          </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleToggleEdit}
-              className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                isEditMode
-                  ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300 scale-105'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-              }`}
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>{isEditMode ? 'Mode Edit: AKTIF ✏️' : '✏️ Mode Edit Teks'}</span>
-            </button>
-
-            {isDirty && (
-              <button
-                type="button"
-                onClick={() => void publishContent()}
-                disabled={isSaving}
-                className="px-3 py-1 rounded-lg font-bold bg-[#065f46] hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer animate-pulse"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{isSaving ? 'Menyimpan...' : 'Simpan 💾'}</span>
-              </button>
-            )}
+              {isDirty && (
+                <button
+                  type="button"
+                  onClick={() => void publishContent()}
+                  disabled={isSaving}
+                  className="px-3 py-1 rounded-lg font-bold bg-[#065f46] hover:bg-emerald-700 text-white flex items-center gap-1.5 shadow-sm disabled:opacity-60 cursor-pointer animate-pulse"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isSaving ? 'Menyimpan...' : 'Simpan 💾'}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Helper Banner saat Mode Edit Aktif */}
-      {isEditMode && (
+      {isAdmin && isEditMode && (
         <div className="bg-amber-400 text-slate-950 px-4 py-1.5 text-xs font-semibold border-b border-amber-300 shadow-xs">
           <div className="max-w-xl mx-auto flex items-center justify-between gap-2">
             <span className="flex items-center gap-1.5">
@@ -784,9 +801,15 @@ export default function ConversationalCheckout({
             <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-full">
               {paymentData ? 'Menunggu Pembayaran' : `Langkah ${currentStep} dari 5`}
             </span>
-            <div className="w-8 h-8 rounded-full bg-[#1e40af] text-white text-xs font-bold flex items-center justify-center shadow-xs">
-              h
-            </div>
+            {isAdmin && authUser?.name ? (
+              <div className="w-8 h-8 rounded-full bg-[#1e40af] text-white text-xs font-bold flex items-center justify-center shadow-xs">
+                {authUser.name.charAt(0).toUpperCase()}
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-[#065f46] flex items-center justify-center shadow-xs">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -880,10 +903,10 @@ export default function ConversationalCheckout({
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 shadow-sm shadow-amber-500/60" />
                   <span>
                     {product === 'free'
-                      ? 'Upgrade Standard (+Rp99rb)'
+                      ? `Upgrade Standard (+${formatIDR(bumpPrice)})`
                       : product === 'standard'
-                      ? 'Upgrade PRO (+Rp50rb)'
-                      : '2 Akun PRO (+Rp99rb)'}
+                      ? `${orderBumpConfig?.productName || 'Upgrade PRO'} (+${formatIDR(bumpPrice)})`
+                      : `2 Akun PRO (+${formatIDR(bumpPrice)})`}
                   </span>
                 </motion.button>
               )}
@@ -1242,22 +1265,22 @@ export default function ConversationalCheckout({
                 <div className="space-y-1.5 text-center">
                   <span className="inline-flex items-center gap-1.5 text-xs font-black text-amber-800 bg-amber-100 border border-amber-300 px-3 py-1 rounded-full uppercase tracking-wider">
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <EditableText section="checkout" field="bumpBadge" value={co.bumpBadge} />
+                    <EditableText section="checkout" field="bumpBadge" value={orderBumpConfig?.badgeText || co.bumpBadge} />
                   </span>
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
                     {product === 'free' ? (
                       <EditableText section="checkout" field="bumpTitleFree" value={co.bumpTitleFree || "Upgrade Langsung ke Estimator Standard Seumur Hidup?"} />
                     ) : product === 'standard' ? (
-                      <EditableText section="checkout" field="bumpTitleStandard" value={co.bumpTitleStandard} />
+                      <EditableText section="checkout" field="bumpTitleStandard" value={orderBumpConfig?.headline || co.bumpTitleStandard} />
                     ) : (
                       <EditableText section="checkout" field="bumpTitlePro" value={co.bumpTitlePro} />
                     )}
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
                     {product === 'free' ? (
-                      <EditableText section="checkout" field="bumpSubFree" value={co.bumpSubFree || "Khusus pendaftaran ini: Buka batas 3 estimasi & dapatkan lisensi seumur hidup hanya Rp99.000 (hemat Rp100.000)!"} multiline />
+                      <EditableText section="checkout" field="bumpSubFree" value={co.bumpSubFree || "Khusus pendaftaran ini: Buka batas 3 estimasi & dapatkan lisensi seumur hidup hanya Rp 93.000!"} multiline />
                     ) : product === 'standard' ? (
-                      <EditableText section="checkout" field="bumpSubStandard" value={co.bumpSubStandard} multiline />
+                      <EditableText section="checkout" field="bumpSubStandard" value={orderBumpConfig?.description || co.bumpSubStandard} multiline />
                     ) : (
                       <EditableText section="checkout" field="bumpSubPro" value={co.bumpSubPro} multiline />
                     )}
@@ -1298,12 +1321,14 @@ export default function ConversationalCheckout({
                           {product === 'free'
                             ? 'Ya! Ambil Lisensi Standard Seumur Hidup'
                             : product === 'standard'
-                            ? 'Ya! Upgrade ke Estimator PRO'
+                            ? orderBumpConfig?.productName || 'Ya! Upgrade ke Estimator PRO'
                             : 'Ya! Tambah 1 Lisensi PRO Ekstra'}
                         </span>
                         <div className="text-right">
                           <span className="text-xs text-slate-400 line-through mr-1.5">
-                            Rp199.000
+                            {product === 'standard' && orderBumpConfig?.originalPrice
+                              ? formatIDR(orderBumpConfig.originalPrice)
+                              : 'Rp199.000'}
                           </span>
                           <span className="text-sm sm:text-base font-extrabold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-lg">
                             +{formatIDR(bumpPrice)}

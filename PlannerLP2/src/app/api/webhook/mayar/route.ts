@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { sendResendEmail } from "@/lib/services/resendService";
 import type { LeadEmailLog } from "@/lib/types/leads";
+
+function getSupabaseAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) return null;
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
 
 /**
  * Webhook Handler untuk Notifikasi Pembayaran Mayar.id
@@ -49,7 +59,7 @@ export async function POST(req: NextRequest) {
       if (paymentId) {
         const { data: byPayId } = await supabase
           .from("orders")
-          .select("id, email, full_name, phone, product_title, raw_payload")
+          .select("id, email, full_name, phone, product_title, grand_total, plan_tier, raw_payload")
           .contains("raw_payload", { paymentId })
           .limit(1);
 
@@ -62,7 +72,7 @@ export async function POST(req: NextRequest) {
       if (!matchedOrder && customerEmail) {
         const { data: byEmail } = await supabase
           .from("orders")
-          .select("id, email, full_name, phone, product_title, raw_payload")
+          .select("id, email, full_name, phone, product_title, grand_total, plan_tier, raw_payload")
           .eq("email", customerEmail)
           .neq("status", "paid")
           .order("created_at", { ascending: false })
@@ -83,7 +93,7 @@ export async function POST(req: NextRequest) {
 
         const { data: byPhone } = await supabase
           .from("orders")
-          .select("id, email, full_name, phone, product_title, raw_payload")
+          .select("id, email, full_name, phone, product_title, grand_total, plan_tier, raw_payload")
           .eq("phone", phoneFormatted)
           .neq("status", "paid")
           .order("created_at", { ascending: false })
@@ -102,12 +112,39 @@ export async function POST(req: NextRequest) {
 
         // Kirim Resend email otomatis jika belum pernah terkirim
         const hasSentPaymentEmail = existingEmails.some((e) => e.type === "payment_confirmation");
+        const hasSentWelcomeEmail =
+          Boolean(currentRaw.welcomeEmailSent) ||
+          existingEmails.some((e) => e.type === "account_access");
         const recipientEmail = matchedOrder.email || customerEmail;
         const buyerName = matchedOrder.full_name || customerName;
-        const finalAmount = matchedOrder.grand_total || amount || 149000;
-        const planName = matchedOrder.product_title || "Monefyi Estimator";
+        const finalAmount = matchedOrder.grand_total || amount || 93000;
+        const accountPassword = String(currentRaw.accountPassword || "Estimator2026!");
+        const resolvedPlanTier: "free" | "standard" | "pro" =
+          matchedOrder.plan_tier ||
+          currentRaw.planTier ||
+          (matchedOrder.product_title?.toLowerCase().includes("pro") ? "pro" : "standard");
 
-        let newEmailLogs: LeadEmailLog[] = [];
+        // Provisioning akun pembeli di Supabase Auth jika SUPABASE_SERVICE_ROLE_KEY tersedia
+        if (recipientEmail && recipientEmail.includes("@")) {
+          const supabaseAdmin = getSupabaseAdminClient();
+          if (supabaseAdmin) {
+            try {
+              await supabaseAdmin.auth.admin.createUser({
+                email: recipientEmail,
+                password: accountPassword,
+                email_confirm: true,
+                user_metadata: {
+                  full_name: buyerName,
+                  plan_tier: resolvedPlanTier,
+                },
+              });
+            } catch (authErr) {
+              console.warn("Non-fatal: Supabase Auth user already exists or could not be created", authErr);
+            }
+          }
+        }
+
+        const newEmailLogs: LeadEmailLog[] = [];
 
         if (recipientEmail && recipientEmail.includes("@") && !hasSentPaymentEmail) {
           // 1. Email Konfirmasi Pembayaran
@@ -115,6 +152,7 @@ export async function POST(req: NextRequest) {
             to: recipientEmail,
             name: buyerName,
             type: "payment_confirmation",
+            planTier: resolvedPlanTier,
             amount: finalAmount,
             paymentMethod: currentRaw.paymentMethod || "QRIS / Mayar",
           });
@@ -129,13 +167,16 @@ export async function POST(req: NextRequest) {
             sentAt: res1.sentAt,
             error: res1.error,
           });
+        }
 
+        if (recipientEmail && recipientEmail.includes("@") && !hasSentWelcomeEmail) {
           // 2. Email Akun & Password
           const res2 = await sendResendEmail({
             to: recipientEmail,
             name: buyerName,
             type: "account_access",
-            password: "Estimator2026!",
+            planTier: resolvedPlanTier,
+            password: accountPassword,
             appUrl: "https://estimator.monefyi.com/app/estimator?status=activated",
           });
 
@@ -160,6 +201,8 @@ export async function POST(req: NextRequest) {
               status: "won",
               paidAt: new Date().toISOString(),
               transactionId: transactionId || currentRaw.paymentId,
+              accountPassword,
+              welcomeEmailSent: true,
               emails: [...newEmailLogs, ...existingEmails],
             },
           })

@@ -27,7 +27,7 @@ function useMdUp() {
 }
 
 export function PricingSection() {
-  const { content, updateField } = useContentStore();
+  const { content, updateField, publishContent } = useContentStore();
   const { pricing } = content;
   const { startCheckout } = useLandingCta();
   const { isAdmin, isEditMode } = useLandingAdmin();
@@ -78,7 +78,10 @@ export function PricingSection() {
             <div className="inline-flex p-1 bg-black/40 rounded-xl border border-white/10">
               <button
                 type="button"
-                onClick={() => updateField("pricing", "plannerPaymentProvider", "lynk")}
+                onClick={() => {
+                  updateField("pricing", "plannerPaymentProvider", "lynk");
+                  void publishContent();
+                }}
                 className={cn(
                   "px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer",
                   activeProvider === "lynk"
@@ -90,7 +93,10 @@ export function PricingSection() {
               </button>
               <button
                 type="button"
-                onClick={() => updateField("pricing", "plannerPaymentProvider", "mayar")}
+                onClick={() => {
+                  updateField("pricing", "plannerPaymentProvider", "mayar");
+                  void publishContent();
+                }}
                 className={cn(
                   "px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5",
                   activeProvider === "mayar"

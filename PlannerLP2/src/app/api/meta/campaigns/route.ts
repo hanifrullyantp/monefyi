@@ -492,11 +492,12 @@ export async function POST(req: NextRequest) {
           ? verifiedAccount
           : firstActive || verifiedAccount;
 
+      const clientProvidedToken = Boolean(body.accessToken || body.capiAccessToken);
       return NextResponse.json({
         ok: true,
         isLive: true,
         syncMode: "live_graph",
-        resolvedToken: workingToken,
+        ...(clientProvidedToken ? { resolvedToken: workingToken } : {}),
         account: {
           id: preferredAccount.id,
           name: preferredAccount.name,

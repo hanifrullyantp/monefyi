@@ -41,7 +41,8 @@ export type ItemPriceEdit = 'selling' | 'margin' | 'hpp' | 'qty';
  * Edit HPP manual → margin% disesuaikan (harga jual tetap).
  */
 export function calcItemRow(
-  draft: Pick<EstimationItemDraft, 'qty' | 'hpp_per_unit' | 'margin_pct' | 'selling_price_per_unit'>,
+  draft: Pick<EstimationItemDraft, 'qty' | 'hpp_per_unit' | 'margin_pct' | 'selling_price_per_unit'>
+    & Partial<Pick<EstimationItemDraft, 'item_discount_pct' | 'item_discount_amount' | 'is_bonus'>>,
   editField: ItemPriceEdit = 'selling',
 ): Pick<EstimationItemDraft, 'hpp_per_unit' | 'selling_price_per_unit' | 'total_hpp' | 'total_selling' | 'total_profit' | 'margin_pct'> {
   const qty = Math.max(0, Number(draft.qty) || 0);
@@ -85,7 +86,12 @@ export function calcItemRow(
     margin_pct: margin,
     total_hpp: totalHpp,
     total_selling: totalSelling,
-    total_profit: effectiveItemSelling({ ...draft, total_hpp: totalHpp, total_selling: totalSelling, is_bonus: draft.is_bonus ?? false, item_discount_pct: draft.item_discount_pct ?? 0, item_discount_amount: draft.item_discount_amount ?? 0 }) - totalHpp,
+    total_profit: effectiveItemSelling({
+      total_selling: totalSelling,
+      is_bonus: draft.is_bonus ?? false,
+      item_discount_pct: draft.item_discount_pct ?? 0,
+      item_discount_amount: draft.item_discount_amount ?? 0,
+    }) - totalHpp,
   };
 }
 
@@ -224,10 +230,13 @@ export function calcEstimationSummary(
   const billingDiscountAmount = roundIdr(Math.max(0, Number(opts?.billingDiscountAmount) || 0));
   const billingBonusNote = String(opts?.billingBonusNote || '').trim();
   const grandTotal = Math.max(0, grossTotal - billingDiscountAmount);
-  const totalProfit = itemProfit + overheadAmount - discountAmountPct - discountAmountFixed - adjustmentTotal - billingDiscountAmount;
-  const avgMarginPct = subtotalSellingItems > 0
-    ? ((subtotalSellingItems - subtotalHpp) / subtotalSellingItems) * 100
-    : 0;
+  const totalProfit = itemProfit - discountAmountPct - discountAmountFixed - adjustmentTotal - billingDiscountAmount;
+  const netRevenue = Math.max(0, afterDiscount - billingDiscountAmount);
+  const avgMarginPct = netRevenue > 0
+    ? (totalProfit / netRevenue) * 100
+    : subtotalSellingItems > 0
+      ? ((subtotalSellingItems - subtotalHpp) / subtotalSellingItems) * 100
+      : 0;
 
   return {
     subtotalHpp,

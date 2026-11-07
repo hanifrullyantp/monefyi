@@ -49,9 +49,11 @@ import {
 } from "@/lib/types/leads";
 import { getLeadPixelStage, META_PIXEL_ID } from "@/lib/analytics/metaPixel";
 import { cn } from "@/lib/utils/cn";
+import { EvergreenFunnelPlanner } from "@/components/admin/EvergreenFunnelPlanner";
 
 const PIPELINE_COLUMNS: LeadStatus[] = [
   "new",
+  "free_active",
   "abandoned_checkout",
   "pending_payment",
   "won",
@@ -692,6 +694,7 @@ export default function CRMPage() {
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
   const [planFilter, setPlanFilter] = useState<"all" | "free" | "standard" | "pro">("all");
   const [view, setView] = useState<"table" | "pipeline">("table");
+  const [mainTab, setMainTab] = useState<"leads" | "evergreen_funnel">("leads");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
@@ -793,6 +796,39 @@ export default function CRMPage() {
     }
   };
 
+  // Update Penggunaan Kuota Estimasi (0 s/d 3) langsung ke API & Supabase
+  const handleUpdateLeadQuota = async (leadId: string, usedQuota: number) => {
+    try {
+      const res = await fetch("/api/crm/lead", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: leadId,
+          usedEstimations: usedQuota,
+          estimatorActivity: {
+            usedEstimations: usedQuota,
+            maxEstimations: 3,
+            activityLevel: usedQuota >= 3 ? "quota_exhausted" : usedQuota > 0 ? "trying" : "not_started",
+            lastActiveAt: new Date().toISOString(),
+          },
+        }),
+      });
+      if (res.ok) {
+        useLeadsStore.getState().updateLead(leadId, {
+          estimatorActivity: {
+            usedEstimations: usedQuota,
+            maxEstimations: 3,
+            activityLevel: usedQuota >= 3 ? "quota_exhausted" : usedQuota > 0 ? "trying" : "not_started",
+            lastActiveAt: new Date().toISOString(),
+          },
+        });
+        showToast(`Status kuota ${usedQuota}/3 berhasil diperbarui`);
+      }
+    } catch (err) {
+      console.warn("Could not update lead quota:", err);
+    }
+  };
+
   // Auto-sync leads dari Supabase & Server API saat mount
   const syncServerLeads = async (verifyMayar: boolean = false) => {
     try {
@@ -831,6 +867,7 @@ export default function CRMPage() {
               emails: Array.isArray(remote.emails) ? remote.emails : [],
               createdAt: remote.createdAt,
               updatedAt: remote.updatedAt,
+              estimatorActivity: remote.estimatorActivity,
             });
           } else {
             store.updateLead(exists.id, {
@@ -846,6 +883,7 @@ export default function CRMPage() {
               checkoutStep: remote.checkoutStep ?? exists.checkoutStep,
               planTier: remote.planTier || exists.planTier,
               emails: Array.isArray(remote.emails) && remote.emails.length > 0 ? remote.emails : exists.emails,
+              estimatorActivity: remote.estimatorActivity ?? exists.estimatorActivity,
             });
           }
         });
@@ -865,12 +903,18 @@ export default function CRMPage() {
   }, []);
 
   const totalLeadsCount = leads.length;
-  const abandonedCount = leads.filter((l) => l.status === "abandoned_checkout").length;
+  const freeCount = leads.filter(
+    (l) => l.status === "free_active" || l.status === "free_draft" || l.planTier === "free" || Number(l.amount || 0) === 0
+  ).length;
+  const abandonedCount = leads.filter(
+    (l) => l.status === "abandoned_checkout" && l.planTier !== "free" && Number(l.amount || 0) > 0
+  ).length;
   const pendingCount = leads.filter((l) => l.status === "pending_payment").length;
-  const wonCount = leads.filter((l) => l.status === "won").length;
-  const freeCount = leads.filter((l) => l.planTier === "free" || l.projectType?.toLowerCase().includes("free")).length;
+  const wonCount = leads.filter(
+    (l) => l.status === "won" && Number(l.amount || 0) > 0 && l.planTier !== "free"
+  ).length;
   const potentialRecoveryValue = leads
-    .filter((l) => l.status === "abandoned_checkout" || l.status === "pending_payment")
+    .filter((l) => (l.status === "abandoned_checkout" || l.status === "pending_payment") && l.planTier !== "free")
     .reduce((sum, l) => sum + (l.amount || 99000), 0);
 
   const filtered = leads.filter((l) => {
@@ -1156,12 +1200,12 @@ export default function CRMPage() {
       )}
 
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">CRM & Email Monitor</h1>
             <span className="text-xs font-extrabold px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
-              Resend Integrated ✉️
+              Resend Integrated
             </span>
             <span className="text-xs font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
               Live Auto-Sync
@@ -1188,7 +1232,7 @@ export default function CRMPage() {
             title="Sinkronkan saldo Mayar dan verifikasi status pembayaran terbaru"
           >
             <RefreshCw className={cn("w-4 h-4", (isSyncing || isLoadingMayarStats) && "animate-spin")} />
-            <span>{isSyncing || isLoadingMayarStats ? "Memverifikasi..." : "⚡ Cek Mayar & Saldo"}</span>
+            <span>{isSyncing || isLoadingMayarStats ? "Memverifikasi..." : "Cek Mayar & Saldo"}</span>
           </button>
           <button
             onClick={() => syncServerLeads(false)}
@@ -1199,6 +1243,43 @@ export default function CRMPage() {
             <span>Refresh Data</span>
           </button>
         </div>
+      </div>
+
+      {/* Main Mode Navigation (Daftar Leads vs Evergreen Funnel Bot) */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit mb-8 border border-slate-200">
+        <button
+          type="button"
+          onClick={() => setMainTab("leads")}
+          className={cn(
+            "px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2",
+            mainTab === "leads"
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200/80"
+              : "text-slate-500 hover:text-slate-800"
+          )}
+        >
+          <LayoutList className="w-4 h-4 text-emerald-600" />
+          <span>Daftar Lead & Transaksi</span>
+          <span className="px-2 py-0.2 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
+            {leads.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainTab("evergreen_funnel")}
+          className={cn(
+            "px-5 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2",
+            mainTab === "evergreen_funnel"
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200/80"
+              : "text-slate-500 hover:text-slate-800"
+          )}
+        >
+          <Sparkles className="w-4 h-4 text-teal-600" />
+          <span>Funneling & Bot Evergreen Campaign</span>
+          <span className="px-2 py-0.2 rounded-full bg-teal-100 text-teal-800 text-[10px] font-bold">
+            {freeCount} Free
+          </span>
+        </button>
       </div>
 
       {/* ===================================================================== */}
@@ -1229,7 +1310,7 @@ export default function CRMPage() {
                         : "bg-amber-500/20 text-amber-300 border-amber-400/40"
                     )}
                   >
-                    {mayarStats.isMayarConnected ? "🟢 Mayar Live Sync" : "🟡 Database Aggregate"}
+                    {mayarStats.isMayarConnected ? "Mayar Live Sync" : "Database Aggregate"}
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 mt-0.5">
@@ -1255,7 +1336,7 @@ export default function CRMPage() {
                 className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-lg shadow-emerald-500/30 transition-all cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={cn("w-3.5 h-3.5", isLoadingMayarStats && "animate-spin")} />
-                <span>{isLoadingMayarStats ? "Memverifikasi..." : "⚡ Update Saldo & Verifikasi Mayar"}</span>
+                <span>{isLoadingMayarStats ? "Memverifikasi..." : "Update Saldo & Verifikasi Mayar"}</span>
               </button>
             </div>
           </div>
@@ -1458,22 +1539,25 @@ export default function CRMPage() {
           <div className="bg-slate-800/60 rounded-xl p-3 border border-slate-700/60">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">4. Complete Reg. (Free)</p>
             <p className="text-xl font-black text-teal-400 mt-1">
-              {leads.filter((l) => l.status === "won" && (Number(l.amount || 0) === 0 || l.planTier === "free")).length}
+              {leads.filter((l) => l.status === "free_active" || l.planTier === "free").length}
             </p>
             <p className="text-[10px] text-slate-400 mt-0.5">Aktivasi gratis (Bukan Purchase)</p>
           </div>
         </div>
       </div>
 
-      {/* Main Filter & Action Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+      {mainTab === "leads" ? (
+        <>
+          {/* Main Filter & Action Bar */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
         {/* Quick Filter Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {[
             { id: "all", label: "Semua Lead", count: totalLeadsCount },
-            { id: "abandoned_checkout", label: "Tertunda ⚠️", count: abandonedCount },
-            { id: "pending_payment", label: "Menunggu Bayar ⏳", count: pendingCount },
-            { id: "won", label: "Deal / Paid ✅", count: wonCount },
+            { id: "free_active", label: "Member Free", count: freeCount },
+            { id: "abandoned_checkout", label: "Tertunda", count: abandonedCount },
+            { id: "pending_payment", label: "Menunggu Bayar", count: pendingCount },
+            { id: "won", label: "Deal / Paid", count: wonCount },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1645,6 +1729,7 @@ export default function CRMPage() {
                   </th>
                   <th className="py-4 px-4 text-left">PROSPEK & KONTAK</th>
                   <th className="py-4 px-4 text-left">PAKET & BUMP</th>
+                  <th className="py-4 px-4 text-left">KEAKTIFAN ESTIMATOR (3 KUOTA)</th>
                   <th className="py-4 px-4 text-left">STATUS CHECKOUT</th>
                   <th className="py-4 px-4 text-left">TOTAL & METODE</th>
                   <th className="py-4 px-4 text-left">STATUS EMAIL RESEND</th>
@@ -1761,6 +1846,74 @@ export default function CRMPage() {
                         </div>
                       </td>
 
+                      {/* Keaktifan Estimator (3 Kuota) */}
+                      <td className="py-4 px-4">
+                        {isFree ? (
+                          <div className="space-y-1.5 min-w-[140px]">
+                            <div className="flex items-center justify-between text-[11px] font-black">
+                              <span
+                                className={cn(
+                                  (lead.estimatorActivity?.usedEstimations ?? 0) >= 3
+                                    ? "text-amber-800"
+                                    : (lead.estimatorActivity?.usedEstimations ?? 0) > 0
+                                    ? "text-blue-800"
+                                    : "text-slate-600"
+                                )}
+                              >
+                                {lead.estimatorActivity?.usedEstimations ?? 0}/3 Kuota
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-bold">
+                                {(lead.estimatorActivity?.usedEstimations ?? 0) >= 3 ? "Habis" : "Aktif"}
+                              </span>
+                            </div>
+                            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                              <div
+                                className={cn(
+                                  "h-full rounded-full transition-all",
+                                  (lead.estimatorActivity?.usedEstimations ?? 0) >= 3
+                                    ? "bg-amber-500"
+                                    : (lead.estimatorActivity?.usedEstimations ?? 0) > 0
+                                    ? "bg-blue-600"
+                                    : "bg-slate-300"
+                                )}
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    Math.round(((lead.estimatorActivity?.usedEstimations ?? 0) / 3) * 100)
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="flex items-center gap-1 pt-0.5">
+                              <span className="text-[9px] text-slate-400 font-bold">Ubah:</span>
+                              {[0, 1, 2, 3].map((val) => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => handleUpdateLeadQuota(lead.id, val)}
+                                  className={cn(
+                                    "w-4 h-4 rounded text-[9px] font-black flex items-center justify-center transition-all cursor-pointer",
+                                    (lead.estimatorActivity?.usedEstimations ?? 0) === val
+                                      ? "bg-slate-900 text-white"
+                                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                  )}
+                                  title={`Set kuota ke ${val}/3`}
+                                >
+                                  {val}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                              Unlimited (Paid)
+                            </span>
+                            <span className="text-[9px] text-slate-400 block font-semibold">Tanpa Batas Kuota</span>
+                          </div>
+                        )}
+                      </td>
+
                       {/* Status */}
                       <td className="py-4 px-4">
                         <div className="space-y-1">
@@ -1784,7 +1937,7 @@ export default function CRMPage() {
                                 className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-600 text-white shadow-2xs inline-flex items-center gap-0.5"
                                 title="Status pembayaran lunas di Mayar"
                               >
-                                ✓ Paid
+                                Paid
                               </span>
                             )}
                           </div>
@@ -1799,7 +1952,7 @@ export default function CRMPage() {
                               title="Cek apakah pembeli sudah membayar di Mayar"
                             >
                               <RefreshCw className={cn("w-2.5 h-2.5", verifyingLeadId === lead.id && "animate-spin text-emerald-600")} />
-                              <span>{verifyingLeadId === lead.id ? "Memeriksa..." : "⚡ Cek Status Mayar"}</span>
+                              <span>{verifyingLeadId === lead.id ? "Memeriksa..." : "Cek Status Mayar"}</span>
                             </button>
                           )}
 
@@ -2000,7 +2153,7 @@ export default function CRMPage() {
                           </span>
                           {lead.emails && lead.emails.length > 0 ? (
                             <span className="text-[10px] font-bold text-[#065f46] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                              ✉️ {lead.emails.length} email sent
+                              {lead.emails.length} email terkirim
                             </span>
                           ) : (
                             <span className="text-[10px] text-slate-400">Belum ada email</span>
@@ -2016,7 +2169,7 @@ export default function CRMPage() {
                             className="w-full py-1.5 bg-amber-50 hover:bg-emerald-50 text-amber-800 hover:text-emerald-800 border border-amber-200 hover:border-emerald-300 rounded-xl text-[10px] font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
                           >
                             <RefreshCw className={cn("w-3 h-3", verifyingLeadId === lead.id && "animate-spin text-emerald-600")} />
-                            <span>{verifyingLeadId === lead.id ? "Memeriksa Mayar..." : "⚡ Cek Status Pembayaran Mayar"}</span>
+                            <span>{verifyingLeadId === lead.id ? "Memeriksa Mayar..." : "Cek Status Pembayaran Mayar"}</span>
                           </button>
                         )}
 
@@ -2067,6 +2220,17 @@ export default function CRMPage() {
             })}
           </div>
         </div>
+      )}
+        </>
+      ) : (
+        <EvergreenFunnelPlanner
+          leads={leads}
+          onUpdateLeadQuota={handleUpdateLeadQuota}
+          onRefreshData={() => {
+            syncServerLeads(true);
+            fetchMayarStats(true);
+          }}
+        />
       )}
 
       {/* Modal Tambah Lead */}

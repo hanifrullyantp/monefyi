@@ -13,7 +13,7 @@ export interface CrmLeadPayload {
   amount?: number;
   paymentId?: string;
   checkoutStep?: number;
-  status?: "new" | "abandoned_checkout" | "pending_payment" | "won";
+  status?: "new" | "abandoned_checkout" | "pending_payment" | "won" | "free_active" | "free_draft";
 }
 
 // In-memory fallback if Supabase table is unreachable
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       amount = 0,
       paymentId,
       checkoutStep = 1,
-      status = "new",
+      status: requestedStatus = "new",
     } = body;
 
     if (!sessionId) {
@@ -52,18 +52,34 @@ export async function POST(req: NextRequest) {
       ? `62${cleanPhone}`
       : "";
 
+    const isFree = (planTier === "free" && !bumpTaken && amount <= 0) || (amount <= 0 && !bumpTaken);
+
+    // Tentukan status presisi: Jangan pernah menaruh free ke abandoned_checkout atau won
+    let finalStatus: string = requestedStatus;
+    if (isFree) {
+      if (checkoutStep >= 5 || requestedStatus === "won" || requestedStatus === "free_active") {
+        finalStatus = "free_active";
+      } else {
+        finalStatus = "free_draft";
+      }
+    } else {
+      if (requestedStatus === "free_active" || requestedStatus === "free_draft") {
+        finalStatus = "new";
+      }
+    }
+
     const leadRecord = {
       sessionId,
       name: name.trim(),
       email: email.trim().toLowerCase(),
       phone: formattedPhone,
-      planTier,
+      planTier: isFree ? "free" : planTier,
       bumpTaken,
-      paymentMethod,
-      amount: Math.round(amount),
+      paymentMethod: isFree ? "free" : paymentMethod,
+      amount: isFree ? 0 : Math.round(amount),
       paymentId: paymentId || null,
       checkoutStep,
-      status,
+      status: finalStatus,
       updatedAt: new Date().toISOString(),
     };
 
@@ -74,30 +90,29 @@ export async function POST(req: NextRequest) {
       createdAt: memoryLeads.get(sessionId)?.createdAt || new Date().toISOString(),
     });
 
-    // 2. Simpan ke Supabase orders table (menggunakan JSON raw_payload untuk fleksibilitas schema)
+    // 2. Simpan ke Supabase orders table
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
-        // Cari apakah session ini sudah pernah ada di orders
         const { data: existing } = await supabase
           .from("orders")
           .select("id, raw_payload")
           .contains("raw_payload", { sessionId })
           .limit(1);
 
-        const productTitle =
-          planTier === "free"
-            ? "Monefyi Estimator Free"
-            : planTier === "pro"
-            ? "Monefyi Estimator PRO"
-            : "Monefyi Estimator Standard";
+        const productTitle = isFree
+          ? "Monefyi Estimator Free"
+          : planTier === "pro"
+          ? "Monefyi Estimator PRO"
+          : "Monefyi Estimator Standard";
 
-        const orderStatus =
-          status === "won"
-            ? "paid"
-            : status === "pending_payment"
-            ? "pending"
-            : "abandoned";
+        const orderStatus = isFree
+          ? "free_active"
+          : finalStatus === "won"
+          ? "paid"
+          : finalStatus === "pending_payment"
+          ? "pending"
+          : "abandoned";
 
         if (existing && existing.length > 0) {
           const rowId = existing[0].id;
@@ -107,7 +122,7 @@ export async function POST(req: NextRequest) {
               full_name: name.trim() || undefined,
               email: email.trim().toLowerCase() || undefined,
               phone: formattedPhone || undefined,
-              grand_total: Math.round(amount),
+              grand_total: isFree ? 0 : Math.round(amount),
               status: orderStatus,
               product_title: productTitle,
               raw_payload: {
@@ -117,7 +132,6 @@ export async function POST(req: NextRequest) {
             })
             .eq("id", rowId);
         } else if (name.trim() || email.trim() || formattedPhone) {
-          // Buat record order baru dengan UUID v4 unik
           const newId = randomUUID();
           await supabase.from("orders").insert([
             {
@@ -126,7 +140,7 @@ export async function POST(req: NextRequest) {
               full_name: name.trim() || "Lead Checkout (Draft)",
               phone: formattedPhone || "-",
               product_title: productTitle,
-              grand_total: Math.round(amount),
+              grand_total: isFree ? 0 : Math.round(amount),
               status: orderStatus,
               raw_payload: {
                 ...leadRecord,
@@ -202,12 +216,42 @@ export async function GET(req: NextRequest) {
               }
             }
 
-            let currentStatus =
-              r.status === "paid"
-                ? "won"
-                : r.status === "pending"
-                ? "pending_payment"
-                : raw.status || "abandoned_checkout";
+            const planTier = raw.planTier || (r.product_title?.includes("Free") ? "free" : r.product_title?.includes("PRO") ? "pro" : "standard");
+            const isOrderFree = planTier === "free" || Number(r.grand_total || raw.amount || 0) === 0;
+
+            let currentStatus = "new";
+            if (isOrderFree) {
+              // Paket Free: Dilarang keras berstatus 'won' (Deal/Paid) atau 'abandoned_checkout'
+              if (
+                r.status === "free_active" ||
+                r.status === "paid" ||
+                raw.status === "won" ||
+                raw.status === "free_active" ||
+                raw.checkoutStep >= 3 ||
+                (r.full_name && r.full_name !== "Lead Checkout (Draft)")
+              ) {
+                currentStatus = "free_active";
+                // Pastikan Supabase status tersimpan konsisten sebagai free_active
+                if (r.status !== "free_active" && supabase) {
+                  supabase.from("orders").update({ status: "free_active" }).eq("id", r.id).then();
+                }
+              } else {
+                currentStatus = "free_draft";
+              }
+            } else {
+              // Paket Berbayar (Standard / Pro)
+              const isWon = r.status === "paid" || raw.status === "won" || raw.verifiedViaMayar === true;
+              if (isWon) {
+                currentStatus = "won";
+                if (r.status !== "paid" && supabase) {
+                  supabase.from("orders").update({ status: "paid" }).eq("id", r.id).then();
+                }
+              } else if (r.status === "pending" || raw.status === "pending_payment") {
+                currentStatus = "pending_payment";
+              } else {
+                currentStatus = raw.status || (raw.checkoutStep && raw.checkoutStep >= 3 ? "abandoned_checkout" : "new");
+              }
+            }
 
             // Verifikasi real-time ke Mayar jika status masih pending_payment dan memiliki paymentId
             if (shouldVerifyMayar && mayarApiKey && raw.paymentId && currentStatus === "pending_payment") {
@@ -240,6 +284,13 @@ export async function GET(req: NextRequest) {
               }
             }
 
+            // Estimator in-app usage activity
+            const usedEst = typeof raw.usedEstimations === "number" ? raw.usedEstimations : (isOrderFree ? 0 : 999);
+            const maxEst = isOrderFree ? 3 : 999;
+            const actLevel = isOrderFree
+              ? (usedEst >= maxEst ? "quota_exhausted" : usedEst > 0 ? "trying" : "not_started")
+              : "trying";
+
             // Gunakan r.id asli sebagai ID unik setiap pesanan di tabel
             leadsMap.set(r.id, {
               id: r.id,
@@ -247,20 +298,28 @@ export async function GET(req: NextRequest) {
               name: r.full_name || raw.name || "Anonim",
               email: r.email?.includes("@monefyi.temp") ? "" : r.email || raw.email || "",
               phone: r.phone !== "-" ? r.phone || raw.phone || "" : raw.phone || "",
-              planTier: raw.planTier || (r.product_title?.includes("Free") ? "free" : r.product_title?.includes("PRO") ? "pro" : "standard"),
+              planTier,
               bumpTaken: Boolean(raw.bumpTaken),
-              paymentMethod: raw.paymentMethod || "qris",
-              amount: r.grand_total || raw.amount || 0,
-              estimatedValue: r.grand_total || raw.amount || 0,
+              paymentMethod: isOrderFree ? "free" : (raw.paymentMethod || "qris"),
+              amount: isOrderFree ? 0 : (r.grand_total || raw.amount || 0),
+              estimatedValue: isOrderFree ? 0 : (r.grand_total || raw.amount || 0),
               paymentId: raw.paymentId || null,
               productId: raw.productId || (raw.paymentId ? "b8cd23" : null),
               paymentName: raw.paymentName || (raw.paymentId ? "Penagihan" : null),
               verifiedViaMayar: Boolean(raw.verifiedViaMayar || (r.status === "paid" && raw.paymentId)),
-              checkoutStep: raw.checkoutStep || (currentStatus === "won" ? 5 : 3),
+              checkoutStep: raw.checkoutStep || (currentStatus === "won" || currentStatus === "free_active" ? 5 : 3),
               status: currentStatus,
               emails: Array.isArray(raw.emails) ? raw.emails : [],
               createdAt: r.created_at,
               updatedAt: raw.updatedAt || r.created_at,
+              estimatorActivity: raw.estimatorActivity || {
+                usedEstimations: usedEst,
+                maxEstimations: maxEst,
+                hasCreatedProject: Boolean(raw.hasCreatedProject),
+                hasExportedPdf: Boolean(raw.hasExportedPdf),
+                lastActiveAt: raw.lastActiveAt || r.created_at,
+                activityLevel: actLevel,
+              },
             });
           }
         }
@@ -320,11 +379,17 @@ export async function GET(req: NextRequest) {
               }
             }
 
-            // Jika belum cocok via ID, cocokkan pesanan yang statusnya masih menunggu pembayaran
-            if (!matchedKey && txEmail) {
+            // Jika belum cocok via ID, cocokkan pesanan yang belum terbayar via email ATAU nomor WhatsApp
+            if (!matchedKey && (txEmail || txPhone)) {
               for (const [key, existing] of leadsMap.entries()) {
                 const exEmail = (existing.email || "").trim().toLowerCase();
-                if (exEmail === txEmail && existing.status === "pending_payment") {
+                const exPhone = (existing.phone || "").replace(/[^0-9]/g, "");
+                const emailMatch = Boolean(txEmail && exEmail && exEmail === txEmail);
+                const phoneMatch = Boolean(
+                  txPhone && exPhone && (exPhone.endsWith(txPhone.slice(-8)) || txPhone.endsWith(exPhone.slice(-8)))
+                );
+                const isUnpaidPaidTier = existing.status === "pending_payment" || existing.status === "abandoned_checkout";
+                if ((emailMatch || phoneMatch) && isUnpaidPaidTier) {
                   matchedKey = key;
                   break;
                 }
@@ -528,11 +593,11 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// PATCH: Perbarui status, catatan, atau password akun lead langsung ke memory & Supabase orders
+// PATCH: Perbarui status, catatan, password akun, atau metrik keaktifan estimasi lead
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { id, sessionId, status, notes, accountPassword } = body;
+    const { id, sessionId, status, notes, accountPassword, usedEstimations, estimatorActivity } = body;
 
     if (!id && !sessionId) {
       return NextResponse.json(
@@ -554,6 +619,8 @@ export async function PATCH(req: NextRequest) {
           ...(status ? { status } : {}),
           ...(notes !== undefined ? { notes } : {}),
           ...(accountPassword !== undefined ? { accountPassword } : {}),
+          ...(usedEstimations !== undefined ? { usedEstimations } : {}),
+          ...(estimatorActivity !== undefined ? { estimatorActivity } : {}),
           updatedAt: new Date().toISOString(),
         });
       }
@@ -568,6 +635,8 @@ export async function PATCH(req: NextRequest) {
             ? "paid"
             : status === "pending_payment"
             ? "pending"
+            : status === "free_active"
+            ? "free_active"
             : status === "abandoned_checkout"
             ? "abandoned"
             : status || "pending";
@@ -592,6 +661,8 @@ export async function PATCH(req: NextRequest) {
                 ...(status ? { status } : {}),
                 ...(notes !== undefined ? { notes } : {}),
                 ...(accountPassword !== undefined ? { accountPassword } : {}),
+                ...(usedEstimations !== undefined ? { usedEstimations } : {}),
+                ...(estimatorActivity !== undefined ? { estimatorActivity } : {}),
                 updatedAt: new Date().toISOString(),
               },
             })
@@ -602,7 +673,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, status, accountPassword });
+    return NextResponse.json({ ok: true, status, accountPassword, usedEstimations });
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: err?.message || "Internal server error" },

@@ -260,7 +260,25 @@ export async function createEstimation(
   return (await loadEstimation(estimationId)) as Estimation;
 }
 
+const updateLocks = new Map<string, Promise<Estimation>>();
+
 export async function updateEstimation(
+  id: string,
+  draft: EstimationFormDraft,
+): Promise<Estimation> {
+  const prev = updateLocks.get(id) ?? Promise.resolve(null as unknown as Estimation);
+  const next = prev.catch(() => null as unknown as Estimation).then(() => performUpdateEstimation(id, draft));
+  updateLocks.set(id, next);
+  try {
+    return await next;
+  } finally {
+    if (updateLocks.get(id) === next) {
+      updateLocks.delete(id);
+    }
+  }
+}
+
+async function performUpdateEstimation(
   id: string,
   draft: EstimationFormDraft,
 ): Promise<Estimation> {
@@ -501,6 +519,21 @@ export async function updateEstimationStatus(
     .eq('id', id);
   if (error) throw new Error(error.message);
 
+  return (await loadEstimation(id)) as Estimation;
+}
+
+export async function unlinkEstimationProject(id: string): Promise<Estimation> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('planner_estimations')
+    .update({
+      project_id: null,
+      converted_project_id: null,
+      status: 'disetujui',
+      updated_at: now,
+    })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
   return (await loadEstimation(id)) as Estimation;
 }
 

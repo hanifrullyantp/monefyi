@@ -10,6 +10,13 @@ function getSupabaseServerClient() {
   return createClient(supabaseUrl, supabaseKey);
 }
 
+function maskSecret(token?: string | null): string {
+  const val = String(token || "").trim();
+  if (!val) return "";
+  if (val.length <= 10) return "••••••••";
+  return `${val.slice(0, 6)}••••${val.slice(-4)}`;
+}
+
 /**
  * GET /api/engine/config
  * Mengambil konfigurasi Winning Engine, token Meta, dan OpenRouter dari Supabase Cloud Database.
@@ -17,6 +24,10 @@ function getSupabaseServerClient() {
  */
 export async function GET(req: NextRequest) {
   try {
+    const includeFullSecrets =
+      req.nextUrl.searchParams.get("full") === "1" ||
+      req.headers.get("x-admin-config") === "1";
+
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("winning_engine_config")
@@ -31,6 +42,9 @@ export async function GET(req: NextRequest) {
     if (!data) {
       return NextResponse.json({ ok: true, config: null });
     }
+
+    const fmtToken = (raw?: string | null) =>
+      includeFullSecrets ? String(raw || "") : maskSecret(raw);
 
     return NextResponse.json({
       ok: true,
@@ -47,14 +61,16 @@ export async function GET(req: NextRequest) {
         scaleCooldownHours: Number(data.scale_cooldown_hours || 48),
         killSwitch: Boolean(data.kill_switch),
         advanceMasterPlanApproved: Boolean(data.advance_master_plan_approved),
-        metaAccessToken: data.meta_access_token || "",
-        metaCapiToken: data.meta_capi_token || "",
+        metaAccessToken: fmtToken(data.meta_access_token),
+        metaCapiToken: fmtToken(data.meta_capi_token),
         metaPixelId: data.meta_pixel_id || "1530674178146899",
-        openRouterApiKey: data.openrouter_api_key || "",
+        openRouterApiKey: fmtToken(data.openrouter_api_key),
         strategistModel: data.strategist_model || "anthropic/claude-3.5-sonnet",
-        processorModel: data.openrouter_processor_model || "openai/gpt-5.6-luna",
+        processorModel: data.openrouter_processor_model || "google/gemini-2.5-flash",
         technicalModel: data.technical_model || "google/gemini-2.5-flash",
         whatsappAdminPhone: data.whatsapp_admin_phone || "",
+        whatsappApiKey: fmtToken(data.whatsapp_api_key),
+        telegramBotToken: fmtToken(data.telegram_bot_token),
         telegramChatId: data.telegram_chat_id || "",
         updatedAt: data.updated_at,
       },
@@ -93,15 +109,18 @@ export async function POST(req: NextRequest) {
     if (body.killSwitch !== undefined) payload.kill_switch = Boolean(body.killSwitch);
     if (body.advanceMasterPlanApproved !== undefined) payload.advance_master_plan_approved = Boolean(body.advanceMasterPlanApproved);
 
-    // Kredensial Meta & OpenRouter Cloud
-    if (body.metaAccessToken !== undefined) payload.meta_access_token = String(body.metaAccessToken).trim();
-    if (body.metaCapiToken !== undefined) payload.meta_capi_token = String(body.metaCapiToken).trim();
+    // Kredensial Meta & OpenRouter Cloud (Abaikan nilai ter-masking ••••)
+    const isUnmasked = (v: unknown) => typeof v === "string" && !v.includes("••••");
+    if (isUnmasked(body.metaAccessToken)) payload.meta_access_token = String(body.metaAccessToken).trim();
+    if (isUnmasked(body.metaCapiToken)) payload.meta_capi_token = String(body.metaCapiToken).trim();
     if (body.metaPixelId !== undefined) payload.meta_pixel_id = String(body.metaPixelId).trim();
-    if (body.openRouterApiKey !== undefined) payload.openrouter_api_key = String(body.openRouterApiKey).trim();
+    if (isUnmasked(body.openRouterApiKey)) payload.openrouter_api_key = String(body.openRouterApiKey).trim();
     if (body.strategistModel !== undefined) payload.strategist_model = String(body.strategistModel).trim();
     if (body.processorModel !== undefined) payload.openrouter_processor_model = String(body.processorModel).trim();
     if (body.technicalModel !== undefined) payload.technical_model = String(body.technicalModel).trim();
     if (body.whatsappAdminPhone !== undefined) payload.whatsapp_admin_phone = String(body.whatsappAdminPhone).trim();
+    if (isUnmasked(body.whatsappApiKey)) payload.whatsapp_api_key = String(body.whatsappApiKey).trim();
+    if (isUnmasked(body.telegramBotToken)) payload.telegram_bot_token = String(body.telegramBotToken).trim();
     if (body.telegramChatId !== undefined) payload.telegram_chat_id = String(body.telegramChatId).trim();
 
     const { data, error } = await supabase

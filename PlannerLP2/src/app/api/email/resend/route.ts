@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
               .update({
                 raw_payload: {
                   ...currentRaw,
+                  ...(type === "account_access" ? { welcomeEmailSent: true } : {}),
                   emails: [emailEntry, ...existingEmails],
                 },
               })

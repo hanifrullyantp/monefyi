@@ -95,7 +95,7 @@ export function useAttendanceAutomation({
     const poll = async () => {
       if (cancelled) return;
       const reachable = await probeOfficeNetwork(settings.wifi_ping_url!);
-      const onOffice = reachable || isLikelyOnWifi();
+      const onOffice = reachable;
 
       if (onOfficeRef.current === null) {
         onOfficeRef.current = onOffice;

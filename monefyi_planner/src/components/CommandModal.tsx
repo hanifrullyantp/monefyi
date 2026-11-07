@@ -32,6 +32,7 @@ import { loadRapItems } from '../services/rapService';
 import { aggregateCostByRapItem } from '../services/costService';
 import { listMembers } from '../services/memberService';
 import { useAppStore } from '../store/appStore';
+import { showToast } from '../store/uiStore';
 
 type Stage = 'idle' | 'listening' | 'processing' | 'confirm' | 'success' | 'error';
 
@@ -198,7 +199,7 @@ export default function CommandModal() {
   const [aliasEntities, setAliasEntities] = useState<TaggableEntity[]>([]);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const leadTargetHintRef = useRef<'estimation' | 'project' | undefined>();
+  const leadTargetHintRef = useRef<'estimation' | 'project' | undefined>(undefined);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
@@ -386,7 +387,7 @@ export default function CommandModal() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
-      alert('Browser kamu tidak mendukung voice input. Coba Chrome.');
+      showToast('Browser kamu tidak mendukung voice input. Coba Chrome.', 'info');
       return;
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

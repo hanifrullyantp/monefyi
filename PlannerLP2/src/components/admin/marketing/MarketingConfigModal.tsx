@@ -59,7 +59,6 @@ const TECHNICAL_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: stri
   openrouter: [
     { id: "google/gemini-2.5-flash", label: "OpenRouter: Gemini 2.5 Flash (Murah)" },
     { id: "deepseek/deepseek-chat", label: "OpenRouter: DeepSeek V3 (Sangat Ekonomis)" },
-    { id: "openai/gpt-5.6-luna", label: "OpenRouter: Luna (Cepat)" },
   ],
   groq: [
     { id: "llama-3.3-70b-versatile", label: "Groq: Llama 3.3 70B (Instan)" },
@@ -98,7 +97,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     winningEngineConfig.llmRouting.strategist.model || "anthropic/claude-3.5-sonnet"
   );
   const [processorModel, setProcessorModel] = useState(
-    winningEngineConfig.llmRouting.processor?.model || "openai/gpt-5.6-luna"
+    winningEngineConfig.llmRouting.processor?.model || "google/gemini-2.5-flash"
   );
   const [technicalModel, setTechnicalModel] = useState(
     winningEngineConfig.llmRouting.technical.model || "google/gemini-2.5-flash"
@@ -155,7 +154,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         winningEngineConfig.llmRouting.strategist.model || "anthropic/claude-3.5-sonnet"
       );
       setProcessorModel(
-        winningEngineConfig.llmRouting.processor?.model || "openai/gpt-5.6-luna"
+        winningEngineConfig.llmRouting.processor?.model || "google/gemini-2.5-flash"
       );
       setTechnicalModel(
         winningEngineConfig.llmRouting.technical.model || "google/gemini-2.5-flash"
@@ -267,7 +266,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         processor: {
           provider: "openrouter",
           apiKey: openRouterKey.trim(),
-          model: processorModel.trim() || "openai/gpt-5.6-luna",
+          model: processorModel.trim() || "google/gemini-2.5-flash",
         },
         technical: {
           provider: "openrouter",
@@ -297,9 +296,11 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
           metaPixelId: pixelId.trim() || "1530674178146899",
           openRouterApiKey: openRouterKey.trim(),
           strategistModel: strategistModel.trim() || "anthropic/claude-3.5-sonnet",
-          processorModel: processorModel.trim() || "openai/gpt-5.6-luna",
+          processorModel: processorModel.trim() || "google/gemini-2.5-flash",
           technicalModel: technicalModel.trim() || "google/gemini-2.5-flash",
           whatsappAdminPhone: waPhone.trim(),
+          whatsappApiKey: waApiKey.trim(),
+          telegramBotToken: tgBotToken.trim(),
           telegramChatId: tgChatId.trim(),
           targetCpa: Number(maxCpa),
           targetRoas: Number(minRoas),

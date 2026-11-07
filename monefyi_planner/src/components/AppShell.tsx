@@ -75,6 +75,14 @@ function AppContent() {
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
   useEffect(() => {
+    if (activeTab === 'estimator') {
+      navigate('/app/estimator', { replace: true });
+      return;
+    }
+    if (activeTab === 'database') {
+      navigate('/app/database', { replace: true });
+      return;
+    }
     if (activeTab !== 'finance') return;
     if (isSandboxFinance(financeVersion)) {
       navigate('/app/finance-v2', { replace: true });
@@ -138,6 +146,7 @@ function AppContent() {
       case 'settings':
         return <Settings />;
       case 'estimator':
+      case 'database':
         return null;
       default:
         return <Dashboard onOpenProject={id => navigate(`/app/projects/${id}`)} />;

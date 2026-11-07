@@ -10,7 +10,7 @@ const SESSION_KEY = "monefyi_lp_purchase_toast_shown";
 const INITIAL_DELAY_MS = 8000;
 
 function livePurchaseNotifications(items: ToastItem[]): ToastItem[] {
-  return items.filter((n) => n.source === "live_purchase");
+  return items.filter((n) => !n.source || n.source === "live_purchase");
 }
 
 export function ToastNotification() {

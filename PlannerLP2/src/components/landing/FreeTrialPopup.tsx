@@ -61,6 +61,7 @@ export function FreeTrialPopup() {
   const [open, setOpen] = useState(false);
   const [trigger, setTrigger] = useState<Trigger | null>(null);
   const shownRef = useRef(false);
+  const historyArmedRef = useRef(false);
   const idleTimerRef = useRef<number | null>(null);
 
   const eligible =
@@ -124,8 +125,11 @@ export function FreeTrialPopup() {
       }
     };
 
-    const previousHistoryState = window.history.state;
-    window.history.pushState({ ...previousHistoryState, relinkPrompt: true }, "", window.location.href);
+    if (!historyArmedRef.current && !isSuppressed()) {
+      historyArmedRef.current = true;
+      const previousHistoryState = window.history.state;
+      window.history.pushState({ ...previousHistoryState, relinkPrompt: true }, "", window.location.href);
+    }
     window.addEventListener("popstate", onBack);
     document.addEventListener("mouseout", onMouseOut);
     ["pointerdown", "keydown", "touchstart", "scroll"].forEach((eventName) => {

@@ -158,7 +158,11 @@ export async function openSecret(sealed: string, key: string): Promise<string> {
   const [ivPart, cipherPart] = sealed.split('.');
   const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
   const cryptoKey = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
-  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(ivPart) }, cryptoKey, b64ToBytes(cipherPart));
+  const plain = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: b64ToBytes(ivPart) as unknown as BufferSource },
+    cryptoKey,
+    b64ToBytes(cipherPart) as unknown as BufferSource
+  );
   return new TextDecoder().decode(plain);
 }
 

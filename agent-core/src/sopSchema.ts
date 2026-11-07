@@ -176,7 +176,7 @@ export function validateSop(sop: SopDefinition): string[] {
       if (edge && !known.has(edge)) problems.push(`${sop.id} edge ${edge} tidak ada`);
     }
   }
-  let cursor = sop.steps[0];
+  let cursor: SopStep | undefined = sop.steps[0];
   const seen = new Set<string>();
   while (cursor && !cursor.terminal) {
     if (seen.has(cursor.id)) {
@@ -184,7 +184,7 @@ export function validateSop(sop: SopDefinition): string[] {
       break;
     }
     seen.add(cursor.id);
-    cursor = sop.steps.find((step) => step.id === cursor.onSuccess);
+    cursor = sop.steps.find((step) => step.id === cursor!.onSuccess);
   }
   if (!cursor?.terminal) problems.push(`${sop.id} tidak sampai langkah akhir`);
   return problems;

@@ -68,11 +68,8 @@ export function useLandingCta() {
     }
 
     const userEmail = user?.email?.toLowerCase().trim();
-    const userName = user?.name?.toLowerCase().trim();
     const isHanifOrAdmin =
       userEmail === "hanif.rullyant@gmail.com" ||
-      userEmail?.includes("hanif") ||
-      userName?.includes("hanif") ||
       isAdminEmail(userEmail) ||
       (typeof window !== "undefined" && (
         localStorage.getItem("admin_override") === "true" ||

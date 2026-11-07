@@ -36,7 +36,12 @@ function formatHeroKas(amount: number): string {
 
 export default function FinanceSandboxOverview() {
   const navigate = useNavigate();
-  const { tenant, projects, user } = useAppStore();
+  const { tenant, projects, user, platformRole } = useAppStore();
+  const canManage =
+    user?.role === 'owner' ||
+    user?.role === 'manager' ||
+    user?.role === 'admin' ||
+    platformRole === 'admin';
   const [loading, setLoading] = useState(true);
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [totalKas, setTotalKas] = useState(0);
@@ -745,7 +750,7 @@ export default function FinanceSandboxOverview() {
           project={txModal.project}
           orgId={tenant.id}
           userId={user.id}
-          canManage={true}
+          canManage={canManage}
           onUpdated={() => {
             setTxModal({ open: false, kind: null, project: null });
             void load();

@@ -1,6 +1,6 @@
-import type { NormalizedProjectView } from '../../lib/migration/project-normalize';
-import type { MappedProjectView } from '../../lib/migration/planner-mapper';
-import type { PopupCard, PopupListItem } from '../migration/CardPopup';
+import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
+import type { MappedProjectView } from '../../../lib/migration/planner-mapper';
+import type { PopupCard, PopupListItem } from '../../migration/CardPopup';
 import { formatRupiah, formatDateId } from '../../../utils/projectUi';
 import { cashAfterExtraPiutang, extraPiutangBeyondContract } from '../../../lib/projects/cashIdentity';
 

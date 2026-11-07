@@ -200,7 +200,8 @@ export async function interpretInbound(input: {
       return { kind: 'linked', identity: redeemed.identity, reachedAgent: false };
     }
     const ignored = intakeMessage(null, input.text);
-    return { kind: 'ignore', summary: ignored.summary, orgId: null, reachedAgent: false };
+    const summary = ignored.action === 'ignore' ? ignored.summary : '';
+    return { kind: 'ignore', summary, orgId: null, reachedAgent: false };
   }
   if (!input.openQuestion) {
     const logged = intakeMessage(input.identity, input.text);

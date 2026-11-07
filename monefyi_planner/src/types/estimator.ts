@@ -10,22 +10,64 @@ export type EstimationWorkflowStatus =
   | 'selesai';
 
 export type EstimationStatus = EstimationWorkflowStatus | 'rejected' | 'converted';
-export type PdfTemplate = 'formal' | 'modern' | 'clean' | 'fullcolor' | 'futuristic';
+export type PdfTemplate =
+  | 'formal'
+  | 'modern'
+  | 'clean'
+  | 'fullcolor'
+  | 'futuristic'
+  | 'wellness'
+  | 'realestate'
+  | 'cardblue'
+  | 'greenpoly'
+  | 'yellowblock'
+  | 'navyorange'
+  | 'bluepill'
+  | 'innovagreen'
+  | 'atlasblue'
+  | 'yellowcharcoal';
+
 export type LegacyPdfTemplate = 'classic' | 'minimal' | 'bold';
 
-const PDF_TEMPLATE_SET = new Set<PdfTemplate>(['formal', 'modern', 'clean', 'fullcolor', 'futuristic']);
+const PDF_TEMPLATE_SET = new Set<string>([
+  'formal',
+  'modern',
+  'clean',
+  'fullcolor',
+  'futuristic',
+  'wellness',
+  'realestate',
+  'cardblue',
+  'greenpoly',
+  'yellowblock',
+  'navyorange',
+  'bluepill',
+  'innovagreen',
+  'atlasblue',
+  'yellowcharcoal',
+]);
 
-const PDF_TEMPLATE_ALIASES: Record<LegacyPdfTemplate, PdfTemplate> = {
+const PDF_TEMPLATE_ALIASES: Record<string, PdfTemplate> = {
   classic: 'formal',
   minimal: 'clean',
   bold: 'fullcolor',
+  inv1: 'wellness',
+  inv2: 'realestate',
+  inv3: 'cardblue',
+  inv4: 'greenpoly',
+  inv5: 'yellowblock',
+  inv6: 'navyorange',
+  inv7: 'bluepill',
+  inv8: 'innovagreen',
+  inv9: 'atlasblue',
+  inv10: 'yellowcharcoal',
 };
 
 /** Map ID lama (classic/minimal/bold) ke template baru. */
 export function normalizePdfTemplate(value: string | null | undefined): PdfTemplate {
   if (!value) return 'modern';
-  if (value in PDF_TEMPLATE_ALIASES) return PDF_TEMPLATE_ALIASES[value as LegacyPdfTemplate];
-  if (PDF_TEMPLATE_SET.has(value as PdfTemplate)) return value as PdfTemplate;
+  if (value in PDF_TEMPLATE_ALIASES) return PDF_TEMPLATE_ALIASES[value];
+  if (PDF_TEMPLATE_SET.has(value)) return value as PdfTemplate;
   return 'modern';
 }
 
@@ -239,6 +281,16 @@ export const PDF_TEMPLATE_OPTIONS: Array<{
   tags: string[];
   accent: string;
 }> = [
+  { value: 'wellness', label: '1. Wellness', desc: 'Teal natural, pill elegan, calm & clean', tags: ['Wellness', 'Klinik', 'Natural'], accent: '#5E9C98' },
+  { value: 'realestate', label: '2. Real Estate', desc: 'Navy & teal geometris, gold accent', tags: ['Properti', 'Korporat', 'Arsitek'], accent: '#0F2744' },
+  { value: 'cardblue', label: '3. Biru Kartu', desc: 'Floating card, navy banner, yellow pill', tags: ['Agency', 'Fintech', 'Modern'], accent: '#1B67AE' },
+  { value: 'greenpoly', label: '4. Hijau Poligon', desc: 'Poligon multi-green, modern tech', tags: ['Eco', 'Landscape', 'Kreatif'], accent: '#0E7C66' },
+  { value: 'yellowblock', label: '5. Kuning Blok', desc: 'Blok kuning hangat, header charcoal', tags: ['Studio', 'Desain', 'Retail'], accent: '#FCE26B' },
+  { value: 'navyorange', label: '6. Navy Oranye', desc: 'Header selang-seling, dinamis & tegas', tags: ['Konstruksi', 'Teknik', 'B2B'], accent: '#F5A623' },
+  { value: 'bluepill', label: '7. Biru Pill', desc: 'Banner navy maritim, baris zebra pill', tags: ['Maritim', 'Logistik', 'Konsultan'], accent: '#1B4F8A' },
+  { value: 'innovagreen', label: '8. Innova Hijau', desc: 'Header two-tone hijau cerah & dark', tags: ['Digital', 'Startup', 'Workshop'], accent: '#1F9D55' },
+  { value: 'atlasblue', label: '9. Atlas Biru', desc: 'Biru langit, zebra soft, footer bar', tags: ['Engineering', 'SaaS', 'Arsitektur'], accent: '#2C9AD3' },
+  { value: 'yellowcharcoal', label: '10. Kuning Charcoal', desc: 'Strip emas, header charcoal berbingkai', tags: ['Luxury', 'Workshop', 'Interior'], accent: '#FFC52E' },
   { value: 'formal', label: 'Formal', desc: 'Korporat, garis ganda, stamp', tags: ['B2B', 'Pemerintah'], accent: '#1e3a8a' },
   { value: 'modern', label: 'Modern', desc: 'Kartu rounded, gaya startup', tags: ['Agency', 'Interior'], accent: '#6d28d9' },
   { value: 'clean', label: 'Clean', desc: 'Minimalis, banyak whitespace', tags: ['Arsitek', 'High-end'], accent: '#111111' },

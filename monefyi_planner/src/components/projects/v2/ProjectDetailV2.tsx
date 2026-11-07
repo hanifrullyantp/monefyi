@@ -26,6 +26,8 @@ import { useAppStore } from '../../../store/appStore';
 import { useShellStore } from '../../../store/shellStore';
 import {
   getProject,
+  updateProject as updateProjectApi,
+  deleteProject as deleteProjectApi,
 } from '../../../services/projectService';
 import { showToast } from '../../../store/uiStore';
 import { loadRapItems } from '../../../services/rapService';
@@ -83,7 +85,12 @@ type Props = {
 
 export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
   const navigate = useNavigate();
-  const { user, tenant, updateProject, deleteProject } = useAppStore();
+  const { user, tenant, platformRole, updateProject, removeProject } = useAppStore();
+  const canManage =
+    user?.role === 'owner' ||
+    user?.role === 'manager' ||
+    user?.role === 'admin' ||
+    platformRole === 'admin';
   const { setShellMeta, clearShellMeta } = useShellStore();
   const [project, setProject] = useState(initialProject);
   const [tab, setTab] = useState<TabId>('overview');
@@ -258,14 +265,19 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
 
   const openEdit = () => setEditOpen(true);
 
-  const handleSavedEdit = (updated: Project) => {
+  const handleSavedEdit = async (updates: Partial<Project>) => {
+    await updateProjectApi(project.id, updates);
+    const updated = { ...project, ...updates };
     setProject(updated);
-    updateProject(updated.id, updated);
+    updateProject(project.id, updates);
+    showToast('Proyek berhasil diperbarui', 'success');
     void reload();
   };
 
-  const handleDeleted = () => {
-    deleteProject(project.id);
+  const handleDeleted = async () => {
+    await deleteProjectApi(project.id);
+    removeProject(project.id);
+    showToast('Proyek diarsipkan', 'success');
     onClose();
   };
 
@@ -293,12 +305,10 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     if (!logText.trim() || !user || !tenant) return;
     try {
       await createDailyLog({
-        org_id: tenant.id,
         project_id: project.id,
-        user_id: user.id,
+        recorded_by: user.id,
         date: new Date().toISOString().slice(0, 10),
         description: logText.trim(),
-        work_category: 'general',
       });
       setLogText('');
       setLogModalOpen(false);
@@ -339,14 +349,16 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             {project.code || 'PRJ'}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={openEdit}
-          aria-label="Menu proyek"
-          className="w-11 h-11 border-0 bg-transparent flex items-center justify-center p-0 text-slate-700 active:scale-95 transition-transform"
-        >
-          <MoreVertical className="w-5 h-5" />
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={openEdit}
+            aria-label="Menu proyek"
+            className="w-11 h-11 border-0 bg-transparent flex items-center justify-center p-0 text-slate-700 active:scale-95 transition-transform"
+          >
+            <MoreVertical className="w-5 h-5" />
+          </button>
+        )}
       </header>
 
       {/* ─── DESKTOP HEADER (Preserve full desktop UI) ─── */}
@@ -428,24 +440,28 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
               </button>
             </>
           )}
-          <button
-            type="button"
-            onClick={openEdit}
-            className="p-2 hover:bg-slate-100 rounded-xl"
-            aria-label="Edit proyek"
-            title="Edit proyek"
-          >
-            <Pencil className="w-5 h-5 text-slate-500" />
-          </button>
-          <button
-            type="button"
-            onClick={openEdit}
-            className="p-2 hover:bg-slate-100 rounded-xl"
-            aria-label="Pengaturan Proyek"
-            title="Pengaturan & Arsip Proyek"
-          >
-            <MoreVertical className="w-5 h-5 text-slate-500" />
-          </button>
+          {canManage && (
+            <>
+              <button
+                type="button"
+                onClick={openEdit}
+                className="p-2 hover:bg-slate-100 rounded-xl"
+                aria-label="Edit proyek"
+                title="Edit proyek"
+              >
+                <Pencil className="w-5 h-5 text-slate-500" />
+              </button>
+              <button
+                type="button"
+                onClick={openEdit}
+                className="p-2 hover:bg-slate-100 rounded-xl"
+                aria-label="Pengaturan Proyek"
+                title="Pengaturan & Arsip Proyek"
+              >
+                <MoreVertical className="w-5 h-5 text-slate-500" />
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -593,7 +609,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 project={project}
                 orgId={tenant?.id || ''}
                 userId={user?.id || ''}
-                canManage
+                canManage={canManage}
                 onRefresh={reload}
                 onEditProject={openEdit}
               />
@@ -604,7 +620,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 normalized={normalized}
                 orgId={tenant?.id || ''}
                 userId={user?.id || ''}
-                canManage
+                canManage={canManage}
                 onRefresh={reload}
               />
             )}
@@ -614,7 +630,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
                 project={project}
                 workItems={workItems}
                 userId={user?.id || ''}
-                canManage
+                canManage={canManage}
                 onRefresh={reload}
               />
             )}
@@ -640,22 +656,24 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       </main>
 
       {/* ─── MOBILE BOTTOM ACTION BAR ─── */}
-      <div className="md:hidden fixed bottom-[84px] inset-x-3 z-30 rounded-[18px] p-2 bg-white/95 backdrop-blur-md border border-[#E5EAE8] shadow-[0_4px_20px_rgba(15,23,42,0.12)] flex gap-2">
-        <button
-          type="button"
-          onClick={() => setTxModal({ open: true, kind: 'cost' })}
-          className="flex-1 h-11 rounded-xl bg-[#059669] text-white font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
-        >
-          + Catat biaya
-        </button>
-        <button
-          type="button"
-          onClick={() => setLogModalOpen(true)}
-          className="flex-1 h-11 rounded-xl border border-[#D5DDDA] bg-white text-[#0F172A] font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
-        >
-          Log harian
-        </button>
-      </div>
+      {canManage && (
+        <div className="md:hidden fixed bottom-[84px] inset-x-3 z-30 rounded-[18px] p-2 bg-white/95 backdrop-blur-md border border-[#E5EAE8] shadow-[0_4px_20px_rgba(15,23,42,0.12)] flex gap-2">
+          <button
+            type="button"
+            onClick={() => setTxModal({ open: true, kind: 'cost' })}
+            className="flex-1 h-11 rounded-xl bg-[#059669] text-white font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
+          >
+            + Catat biaya
+          </button>
+          <button
+            type="button"
+            onClick={() => setLogModalOpen(true)}
+            className="flex-1 h-11 rounded-xl border border-[#D5DDDA] bg-white text-[#0F172A] font-bold text-xs flex items-center justify-center active:scale-95 transition-transform"
+          >
+            Log harian
+          </button>
+        </div>
+      )}
 
       <BalanceDiagnosisModal
         open={balanceOpen}
@@ -666,9 +684,10 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       {editOpen && (
         <ProjectEditModal
           project={project}
+          canArchive={canManage}
           onClose={() => setEditOpen(false)}
-          onSaved={handleSavedEdit}
-          onDeleted={handleDeleted}
+          onSave={handleSavedEdit}
+          onArchive={handleDeleted}
         />
       )}
 
@@ -681,7 +700,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           project={project}
           orgId={tenant.id}
           userId={user.id}
-          canManage={true}
+          canManage={canManage}
           onUpdated={() => {
             setTxModal({ open: false, kind: null });
             void reload();

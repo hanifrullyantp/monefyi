@@ -10,7 +10,9 @@ export type LeadStatus =
   | "won"
   | "lost"
   | "abandoned_checkout"
-  | "pending_payment";
+  | "pending_payment"
+  | "free_active"
+  | "free_draft";
 
 export type LeadSource =
   | "checkout"
@@ -39,6 +41,15 @@ export interface LeadEmailLog {
   status: "sent" | "delivered" | "failed" | "simulated";
   sentAt: string;
   error?: string;
+}
+
+export interface EstimatorUserActivity {
+  usedEstimations: number;
+  maxEstimations: number;
+  hasCreatedProject?: boolean;
+  hasExportedPdf?: boolean;
+  lastActiveAt?: string;
+  activityLevel: "not_started" | "trying" | "quota_exhausted";
 }
 
 export interface Lead {
@@ -75,6 +86,8 @@ export interface Lead {
   emails?: LeadEmailLog[];
   // Account Credential for WA / Resend Delivery
   accountPassword?: string;
+  // Estimator in-app usage activity
+  estimatorActivity?: EstimatorUserActivity;
 }
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
@@ -88,6 +101,8 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   lost: "Tidak Jadi",
   abandoned_checkout: "Checkout Tertunda",
   pending_payment: "Menunggu Pembayaran",
+  free_active: "Member Free (3 Estimasi)",
+  free_draft: "Draft Pendaftaran Free",
 };
 
 export const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
@@ -101,6 +116,8 @@ export const LEAD_STATUS_COLORS: Record<LeadStatus, string> = {
   lost: "bg-red-100 text-red-700",
   abandoned_checkout: "bg-rose-100 text-rose-700",
   pending_payment: "bg-amber-100 text-amber-800",
+  free_active: "bg-teal-100 text-teal-800",
+  free_draft: "bg-slate-100 text-slate-700",
 };
 
 export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {

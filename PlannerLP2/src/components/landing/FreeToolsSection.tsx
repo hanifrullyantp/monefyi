@@ -32,7 +32,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 export function FreeToolsSection() {
   const { content } = useContentStore();
   const { freeTools } = content;
-  const totalValue = "Rp 846.000";
+  const totalValue = "Rp 897.000";
 
   return (
     <section id="bonus" className="py-14 md:py-32 bg-white relative overflow-hidden">

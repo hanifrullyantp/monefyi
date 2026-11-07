@@ -27,7 +27,7 @@ import { buildUpcomingDeadlines } from '../../../lib/projectCommandUtils';
 import { formatDateId, daysUntil } from '../../../utils/projectUi';
 import { showToast } from '../../../store/uiStore';
 import BottomActionBar from '../../sandbox-ui/BottomActionBar';
-import ProjectScheduleGantt from '../command-center/ProjectScheduleGantt';
+import ProjectScheduleGantt from './ProjectScheduleGantt';
 import GanttAddWorkItemModal from '../gantt/GanttAddWorkItemModal';
 
 type ViewMode = 'list' | 'gantt';
@@ -435,7 +435,7 @@ export default function TabV2Progress({
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
-              <Tooltip formatter={(v: number) => [`${v}%`, '']} />
+              <Tooltip formatter={(v: any) => [`${v ?? 0}%`, '']} />
               <Legend />
               <Area type="monotone" dataKey="planned" name="Rencana" stroke="#2563EB" fill="#2563EB" fillOpacity={0.08} strokeWidth={2} />
               <Line type="monotone" dataKey="actual" name="Aktual" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />

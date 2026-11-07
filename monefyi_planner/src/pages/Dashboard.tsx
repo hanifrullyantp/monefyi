@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAppStore, type Project } from '../store/appStore';
 import { getProjectStats } from '../services/projectService';
+import { getTodayAttendanceSummary } from '../services/dashboardService';
 import { aggregateNetCashflow } from '../services/projectFinanceService';
 import DashboardInteractiveCards from '../components/dashboard/DashboardInteractiveCards';
 import AgentHomePanel from '../components/dashboard/AgentHomePanel';
@@ -69,6 +70,7 @@ export default function Dashboard({
   const [recommendations, setRecommendations] = useState<AnalyzeResult['recommendations']>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [stats, setStats] = useState({ atRisk: 0, avgProgress: 0 });
+  const [attendanceSummary, setAttendanceSummary] = useState({ present: 0, total: 0 });
 
   // Mobile list interactive state
   const [healthFilter, setHealthFilter] = useState<HealthFilterType>('all');
@@ -91,6 +93,9 @@ export default function Dashboard({
     if (!tenant?.id) return;
     getProjectStats(tenant.id)
       .then(s => setStats({ atRisk: s.atRisk, avgProgress: s.avgProgress }))
+      .catch(console.error);
+    getTodayAttendanceSummary(tenant.id)
+      .then(s => setAttendanceSummary({ present: s.present, total: s.total }))
       .catch(console.error);
     aggregateNetCashflow(tenant.id, 30).then(setCashflowData).catch(console.error);
     loadRecentLogs(tenant.id)
@@ -160,12 +165,10 @@ export default function Dashboard({
     try {
       const { createDailyLog } = await import('../services/dailyLogService');
       await createDailyLog({
-        org_id: tenant.id,
         project_id: logModalProj.id,
-        user_id: user.id,
+        recorded_by: user.id,
         date: new Date().toISOString().slice(0, 10),
         description: logText.trim(),
-        work_category: 'general',
       });
       setLogModalProj(null);
       setLogText('');
@@ -249,7 +252,7 @@ export default function Dashboard({
           {/* 4. Karyawan */}
           <GradientStatCard
             label="KARYAWAN"
-            value={`${projects.length > 0 ? 1 : 0} / ${projects.length > 0 ? 12 : 0}`}
+            value={`${attendanceSummary.present} / ${attendanceSummary.total}`}
             subInfo="hadir hari ini"
             variant="teal"
             onClick={() => setActiveTab('hr')}
@@ -488,7 +491,7 @@ export default function Dashboard({
           />
           <GradientStatCard
             label="KARYAWAN"
-            value={`${projects.length > 0 ? 1 : 0} / ${projects.length > 0 ? 12 : 0}`}
+            value={`${attendanceSummary.present} / ${attendanceSummary.total}`}
             subInfo="hadir hari ini"
             variant="teal"
             onClick={() => setActiveTab('hr')}
@@ -543,8 +546,8 @@ export default function Dashboard({
                 <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#5B6B7A' }} />
                 <YAxis tick={{ fontSize: 9, fill: '#5B6B7A' }} />
                 <Tooltip
-                  formatter={(v: number, n: string) => [
-                    `Rp ${v.toFixed(1)} jt`,
+                  formatter={(v: any, n: any) => [
+                    `Rp ${Number(v || 0).toFixed(1)} jt`,
                     n === 'inflow' ? 'Masuk' : n === 'outflow' ? 'Keluar' : 'Net',
                   ]}
                 />
@@ -626,8 +629,8 @@ export default function Dashboard({
                     key={i}
                     className="p-3 bg-[#F4F7F5] rounded-xl text-xs space-y-1 border border-[#E5EAE8]"
                   >
-                    <div className="font-bold text-[#0F172A]">{rec.action}</div>
-                    <div className="text-[#5B6B7A]">{rec.impact}</div>
+                    <div className="font-bold text-[#0F172A]">{rec.title || rec.action}</div>
+                    <div className="text-[#5B6B7A]">{rec.message}</div>
                   </div>
                 ))}
               </div>

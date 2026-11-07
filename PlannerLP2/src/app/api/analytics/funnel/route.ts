@@ -34,43 +34,6 @@ interface FunnelSession {
 const sessions: Map<string, FunnelSession> = new Map();
 const recentLogs: Array<FunnelEventPayload & { timestamp: string }> = [];
 
-// Seed baseline demo data so admin always sees meaningful analytics if fresh
-function ensureBaselineStats() {
-  if (sessions.size >= 10) return;
-
-  const demoSessions: Array<Partial<FunnelSession>> = [
-    { maxStepReached: 6, isCompleted: true, bumpTaken: true, paymentMethod: "qris", plan: "standard" },
-    { maxStepReached: 6, isCompleted: true, bumpTaken: false, paymentMethod: "bca_va", plan: "standard" },
-    { maxStepReached: 6, isCompleted: true, bumpTaken: false, paymentMethod: "qris", plan: "free" },
-    { maxStepReached: 5, isCompleted: false, bumpTaken: true, paymentMethod: "mandiri_va", plan: "pro" },
-    { maxStepReached: 4, isCompleted: false, bumpTaken: false, plan: "standard" },
-    { maxStepReached: 3, isCompleted: false, bumpTaken: false, plan: "standard" },
-    { maxStepReached: 3, isCompleted: false, bumpTaken: false, plan: "free" },
-    { maxStepReached: 2, isCompleted: false, bumpTaken: false, plan: "standard" },
-    { maxStepReached: 1, isCompleted: false, bumpTaken: false, plan: "pro" },
-    { maxStepReached: 1, isCompleted: false, bumpTaken: false, plan: "standard" },
-    { maxStepReached: 6, isCompleted: true, bumpTaken: true, paymentMethod: "qris", plan: "pro" },
-    { maxStepReached: 6, isCompleted: true, bumpTaken: false, paymentMethod: "ewallet", plan: "standard" },
-    { maxStepReached: 4, isCompleted: false, bumpTaken: true, plan: "standard" },
-    { maxStepReached: 5, isCompleted: false, bumpTaken: false, paymentMethod: "bri_va", plan: "standard" },
-  ];
-
-  demoSessions.forEach((demo, idx) => {
-    const sId = `demo_seed_${idx + 1}`;
-    sessions.set(sId, {
-      sessionId: sId,
-      landedAt: new Date(Date.now() - (idx + 1) * 3600000).toISOString(),
-      lastEventAt: new Date(Date.now() - (idx + 1) * 1800000).toISOString(),
-      plan: demo.plan || "standard",
-      maxStepReached: demo.maxStepReached || 1,
-      bumpTaken: Boolean(demo.bumpTaken),
-      paymentMethod: demo.paymentMethod,
-      isCompleted: Boolean(demo.isCompleted),
-      history: ["checkout_landed"],
-    });
-  });
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as FunnelEventPayload;
@@ -150,8 +113,6 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
-    ensureBaselineStats();
-
     const allSessions = Array.from(sessions.values());
     const totalVisitors = allSessions.length;
 

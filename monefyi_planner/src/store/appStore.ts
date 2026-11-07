@@ -368,6 +368,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({
         projects,
         notifications,
+        unreadCount: notifications.filter(n => !n.read).length,
         lastSynced: new Date(),
         syncStatus: 'synced',
       });
@@ -398,6 +399,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       unreadCount: 0,
       activeTab: 'home',
       selectedProjectId: null,
+      platformRole: 'user',
+      uiViewMode: 'auto',
+      entitlementPreviewMode: 'full',
       authError: null,
       hasMembership: false,
       signupIntent: null,

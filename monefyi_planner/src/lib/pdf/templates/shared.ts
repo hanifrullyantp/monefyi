@@ -16,6 +16,7 @@ export type PdfDocPalette = {
 export type PdfLineItem = {
   no: number;
   name: string;
+  description?: string;
   qty: string;
   unit: string;
   unitPrice: string;
@@ -62,6 +63,16 @@ const DEFAULTS: Record<PdfTemplate, Omit<PdfDocPalette, 'primary' | 'secondary' 
   clean: { pageBg: '#ffffff', text: '#171717', muted: '#78716c', surface: '#fafafa', altRow: '#fafafa' },
   fullcolor: { pageBg: '#ffffff', text: '#064e3b', muted: '#047857', surface: '#ecfdf5', altRow: '#f0fdfa' },
   futuristic: { pageBg: '#0a0a0a', text: '#f8fafc', muted: '#94a3b8', surface: '#111827', altRow: '#1e293b' },
+  wellness: { pageBg: '#ffffff', text: '#1f2937', muted: '#6b7280', surface: '#f9fafb', altRow: '#f3f4f6' },
+  realestate: { pageBg: '#ffffff', text: '#111827', muted: '#6b7280', surface: '#f8fafc', altRow: '#f1f5f9' },
+  cardblue: { pageBg: '#ffffff', text: '#0f172a', muted: '#64748b', surface: '#eff6ff', altRow: '#f8fafc' },
+  greenpoly: { pageBg: '#ffffff', text: '#111827', muted: '#6b7280', surface: '#f4f7f5', altRow: '#f3f4f6' },
+  navyorange: { pageBg: '#ffffff', text: '#111827', muted: '#6b7280', surface: '#f9fafb', altRow: '#f3f4f6' },
+  yellowblock: { pageBg: '#ffffff', text: '#1f2937', muted: '#6b7280', surface: '#efeff1', altRow: '#f3f4f6' },
+  atlasblue: { pageBg: '#ffffff', text: '#111827', muted: '#6b7280', surface: '#f9fafb', altRow: '#e7ecf1' },
+  bluepill: { pageBg: '#ffffff', text: '#1f2937', muted: '#6b7280', surface: '#e7edf3', altRow: '#f8fafc' },
+  innovagreen: { pageBg: '#ffffff', text: '#1f2937', muted: '#6b7280', surface: '#f9fafb', altRow: '#f3f5f4' },
+  yellowcharcoal: { pageBg: '#ffffff', text: '#111827', muted: '#6b7280', surface: '#f8f9fa', altRow: '#f1f1f4' },
 };
 
 const ACCENT_DEFAULT: Record<PdfTemplate, string> = {
@@ -70,6 +81,16 @@ const ACCENT_DEFAULT: Record<PdfTemplate, string> = {
   clean: '#78716c',
   fullcolor: '#facc15',
   futuristic: '#00d9ff',
+  wellness: '#d97706',
+  realestate: '#b45309',
+  cardblue: '#3b82f6',
+  greenpoly: '#39b06a',
+  navyorange: '#f5a623',
+  yellowblock: '#fce26b',
+  atlasblue: '#2c9ad3',
+  bluepill: '#124e8c',
+  innovagreen: '#8cd66f',
+  yellowcharcoal: '#ffc52e',
 };
 
 const PRIMARY_DEFAULT: Record<PdfTemplate, string> = {
@@ -78,6 +99,16 @@ const PRIMARY_DEFAULT: Record<PdfTemplate, string> = {
   clean: '#111111',
   fullcolor: '#059669',
   futuristic: '#00c853',
+  wellness: '#065f46',
+  realestate: '#1e293b',
+  cardblue: '#1d4ed8',
+  greenpoly: '#0e7c66',
+  navyorange: '#1f2e4d',
+  yellowblock: '#1e212b',
+  atlasblue: '#1f7fb8',
+  bluepill: '#1b4f8a',
+  innovagreen: '#1f9d55',
+  yellowcharcoal: '#2d2f38',
 };
 
 export function paletteFor(
