@@ -186,72 +186,72 @@ export function MetaAdsCommanderTable() {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Metric Cards Header (100% Data Riil) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs transition-colors">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Total Amount Spent
+    <div className="space-y-2.5">
+      {/* Metric Cards Header (Ramping, 1 Baris Grid, 100% Data Riil) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-2xs transition-colors">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">
+              Total Spent
             </span>
-            <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">
+          <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
             Rp {totalSpend.toLocaleString("id-ID")}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Conversion Value: Rp {totalRevenue.toLocaleString("id-ID")}
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            Conv. Value: Rp {totalRevenue.toLocaleString("id-ID")}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs transition-colors">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">
-              Total Results &amp; CPA
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-2xs transition-colors">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">
+              Results &amp; CPA
             </span>
-            <Target className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <Target className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">
+          <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
             {totalResults.toLocaleString("id-ID")} Results
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Cost / Result: Rp {avgCostPerResult.toLocaleString("id-ID")} ({totalPurchases} Purchase, {totalLeads} Lead)
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            CPA: Rp {avgCostPerResult.toLocaleString("id-ID")} ({totalPurchases} Pur, {totalLeads} Lead)
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs transition-colors">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">
-              15s ThruPlays &amp; ROAS
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-2xs transition-colors">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">
+              ThruPlays &amp; ROAS
             </span>
-            <Video className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <Video className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+          <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 leading-tight">
             {totalThruPlays.toLocaleString("id-ID")} ThruPlay
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-            Blended ROAS: {weightedRoas}x (Target &ge; {rules.minRoasScaleThreshold}x)
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            ROAS: {weightedRoas}x (Target &ge; {rules.minRoasScaleThreshold}x)
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs transition-colors">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
-            <span className="text-xs font-bold uppercase tracking-wider">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-2xs transition-colors">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider">
               Status Kampanye Live
             </span>
-            <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <Activity className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xl md:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+          <div className="flex items-center gap-1.5 leading-tight">
+            <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">
               {winningCount} Winning
             </span>
             {bleedingCount > 0 && (
-              <span className="text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
+              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-1.5 py-0.2 rounded-full border border-rose-200 dark:border-rose-800">
                 {bleedingCount} Boncos
               </span>
             )}
           </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
             Total {campaigns.length} Kampanye di Akun Ini
           </div>
         </div>
@@ -259,102 +259,107 @@ export function MetaAdsCommanderTable() {
 
       {/* Action Notification Toast */}
       {actionNotice && (
-        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-2xl text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2 shadow-sm">
-          <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <div className="py-2 px-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-xs font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2 shadow-2xs">
+          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{actionNotice}</span>
         </div>
       )}
 
-      {/* Control Toolbar: Filter Status, Pemilih Akun Iklan, Rentang Tanggal & Tombol AI */}
-      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl transition-colors">
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Control Toolbar: 1 Baris Penuh, Super Ramping & Responsif */}
+      <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-1.5 sm:gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-xl transition-colors">
+        {/* Filter Status: Segmented Control Ramping */}
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
           {["ALL", "ACTIVE", "WINNING", "BLEEDING", "PAUSED"].map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setStatusFilter(tab)}
               className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer",
+                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border cursor-pointer whitespace-nowrap",
                 statusFilter === tab
-                  ? "bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-xs"
+                  ? "bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-2xs"
                   : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
               )}
             >
               {tab === "ALL" && `Semua (${campaigns.length})`}
               {tab === "ACTIVE" && "Aktif"}
-              {tab === "WINNING" && "Winning / Scale"}
+              {tab === "WINNING" && "Winning"}
               {tab === "BLEEDING" && "Boncos"}
               {tab === "PAUSED" && "Off"}
             </button>
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Pemilih Ad Account jika ditemukan lebih dari 1 akun di Business Portfolio */}
+        {/* Filter Akun, Tanggal, Search & Tombol AI: Seluruhnya 1 Baris */}
+        <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap shrink-0">
+          {/* Pemilih Ad Account */}
           {discoveredAccounts.length > 0 && (
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5">
-              <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 max-w-[170px]">
+              <Building2 className="w-3 h-3 text-emerald-600 shrink-0" />
               <select
                 value={apiConfig.adAccountId || ""}
                 onChange={(e) => selectAdAccount(e.target.value)}
-                className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-                title="Pilih Akun Iklan dari Business Portfolio Anda"
+                className="bg-transparent text-[11px] font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer truncate w-full"
+                title="Pilih Akun Iklan"
               >
                 {discoveredAccounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
-                    {acc.name} ({acc.id}) {acc.account_status === 1 ? "[Aktif]" : "[Nonaktif]"}
+                    {acc.name} ({acc.id})
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          {/* Pemilih Rentang Waktu (Date Preset) */}
-          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5">
-            <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          {/* Date Preset */}
+          <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
+            <Calendar className="w-3 h-3 text-blue-600 shrink-0" />
             <select
               value={datePreset}
               onChange={(e) => setDatePreset(e.target.value)}
-              className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-              title="Rentang Waktu Meta Insights"
+              className="bg-transparent text-[11px] font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+              title="Rentang Waktu"
             >
-              <option value="data_maximum">Semua Waktu (Lifetime)</option>
-              <option value="last_90d">90 Hari Terakhir</option>
-              <option value="last_30d">30 Hari Terakhir</option>
-              <option value="last_7d">7 Hari Terakhir</option>
               <option value="today">Hari Ini</option>
+              <option value="last_7d">7 Hari</option>
+              <option value="last_30d">30 Hari</option>
+              <option value="last_90d">90 Hari</option>
+              <option value="data_maximum">Semua</option>
             </select>
           </div>
 
-          <div className="relative flex-1 sm:w-52">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          {/* Search Box */}
+          <div className="relative w-28 sm:w-36">
+            <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari kampanye..."
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+              placeholder="Cari..."
+              className="w-full pl-6 pr-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
             />
           </div>
 
+          {/* Kill Boncos Button */}
           <button
             type="button"
             onClick={handleAutoKill}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
-            title="AI otomatis mematikan kampanye boncos di Meta Ads"
+            className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+            title="Matikan kampanye boncos"
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-            <span className="hidden md:inline">Kill Boncos</span>
+            <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />
+            <span>Kill Boncos</span>
           </button>
 
+          {/* Scale Winning Button */}
           <button
             type="button"
             onClick={handleAutoScale}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold rounded-xl transition-all cursor-pointer"
-            title="AI otomatis menaikkan budget kampanye winning di Meta Ads"
+            className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+            title="Scale budget kampanye winning"
           >
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span className="hidden md:inline">Scale Winning (+{rules.scaleBudgetPercentage}%)</span>
+            <TrendingUp className="w-3 h-3 text-emerald-600 shrink-0" />
+            <span>Scale (+{rules.scaleBudgetPercentage}%)</span>
           </button>
         </div>
       </div>

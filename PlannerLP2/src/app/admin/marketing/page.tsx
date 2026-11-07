@@ -38,6 +38,7 @@ import {
   ExternalLink,
   ShieldAlert,
   Target,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -48,8 +49,7 @@ export default function MarketingAdminPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("commander");
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isAdspertOpen, setIsAdspertOpen] = useState(false); // Default popup chat tertutup (bisa dibuka menimpa konten)
-  const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(false); // Default notif analisa diminimalkan
-  const [isAnalysisDismissed, setIsAnalysisDismissed] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false); // Dropdown popover notifikasi di lonceng
   const [lastRefreshed, setLastRefreshed] = useState<string>("Baru saja");
 
   const {
@@ -84,88 +84,175 @@ export default function MarketingAdminPage() {
   );
 
   return (
-    <div className="p-4 md:p-8 max-w-[1700px] mx-auto space-y-6 relative">
-      {/* Top Header: Judul, Status Koneksi AI & Meta, Refresh Realtime */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-xs transition-colors">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="p-2.5 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-900/20">
-              <BarChart3 className="w-5 h-5" />
+    <div className="p-3 md:p-5 max-w-[1700px] mx-auto space-y-3 relative">
+      {/* Top Header Bar: 1 Baris Penuh, Ringkas & Padat */}
+      <div className="flex items-center justify-between gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3.5 py-2 rounded-2xl shadow-xs transition-colors relative">
+        {/* Kiri: Title Ringkas 1 Baris */}
+        <div className="flex items-center gap-2">
+          <span className="p-1.5 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xs">
+            <BarChart3 className="w-4 h-4" />
+          </span>
+          <h1 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
+            <span>Meta Ads Commander</span>
+            <span className="hidden sm:inline-block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded">
+              Live Ops
             </span>
-            <div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                Meta Ads Commander &amp; Monefyi Adspert
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Pengendalian Kampanye Real-Time, Monitoring Funnel Scale, dan Rekomendasi Tim AI Terpadu.
-              </p>
-            </div>
-          </div>
+          </h1>
         </div>
 
-        {/* Status Koneksi AI & Meta + Tombol Aksi */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Kanan: Seluruh Status & Aksi Dalam 1 Baris */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Status Meta */}
           <div
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-2",
+              "px-2.5 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5",
               isLiveMeta
                 ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                 : hasConfiguredCredentials
                 ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
             )}
+            title={isLiveMeta ? `Meta API: Live (${metaAccountName || "Terhubung"})` : "Mode Simulator"}
           >
-            <Wifi className={cn("w-3.5 h-3.5", isLiveMeta ? "text-emerald-600 dark:text-emerald-400 animate-pulse" : "text-slate-400")} />
-            <span>
-              Meta API: {isLiveMeta ? `Live (${metaAccountName || "Terhubung"})` : hasConfiguredCredentials ? "Menghubungkan..." : "Mode Simulator Sandbox"}
+            <Wifi className={cn("w-3 h-3", isLiveMeta ? "text-emerald-600 animate-pulse" : "text-slate-400")} />
+            <span className="text-[11px] hidden sm:inline max-w-[120px] truncate">
+              {isLiveMeta ? (metaAccountName || "Meta Live") : "Sandbox"}
             </span>
           </div>
 
-          {/* Status AI */}
-          <div className="px-3 py-1.5 rounded-xl text-xs font-bold border bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 flex items-center gap-2">
-            <Cpu className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-            <span>AI: {apiConfig.aiProvider ? apiConfig.aiProvider.toUpperCase() : "BUILT-IN"} Ready</span>
+          {/* Status AI Engine */}
+          <div
+            className="px-2 py-1 rounded-xl text-xs font-bold border bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 flex items-center gap-1"
+            title={`AI Engine: ${apiConfig.aiProvider ? apiConfig.aiProvider.toUpperCase() : "GEMINI"} Ready`}
+          >
+            <Cpu className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+            <span className="text-[11px] hidden md:inline">
+              {apiConfig.aiProvider ? apiConfig.aiProvider.toUpperCase() : "GEMINI"}
+            </span>
           </div>
 
-          {/* Tombol Refresh Data Real-Time */}
+          {/* Tombol Refresh Data */}
           <button
             type="button"
             onClick={handleManualRefresh}
             disabled={isRefreshingCampaigns}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl transition-all disabled:opacity-50 cursor-pointer"
-            title="Refresh data real-time dari Meta Ads Manager"
+            className="p-1.5 sm:px-2.5 sm:py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+            title={`Refresh data real-time (Terakhir: ${lastRefreshed})`}
           >
             <RefreshCw className={cn("w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400", isRefreshingCampaigns && "animate-spin")} />
-            <span>{isRefreshingCampaigns ? "Menyinkronkan..." : "Refresh Data"}</span>
-            <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">({lastRefreshed})</span>
+            <span className="text-[11px] hidden lg:inline">{isRefreshingCampaigns ? "Sync..." : "Refresh"}</span>
           </button>
 
-          {/* Toggle Popup Chat Monefyi Adspert */}
+          {/* Icon Lonceng: Notifikasi & Alert Jumlah Notif Popover */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              className={cn(
+                "relative p-1.5 rounded-xl border transition-all cursor-pointer",
+                isNotifOpen
+                  ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 border-amber-300"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-750"
+              )}
+              title="Notifikasi & Rekomendasi Optimasi Adspert"
+            >
+              <Bell className="w-4 h-4" />
+              {auditReport.detectedIssues.length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center animate-pulse shadow-xs">
+                  {auditReport.detectedIssues.length}
+                </span>
+              )}
+            </button>
+
+            {/* Popover Notifikasi Dropdown Saat Lonceng Diklik */}
+            {isNotifOpen && (
+              <div className="absolute right-0 top-10 z-50 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                      Notifikasi Adspert ({auditReport.detectedIssues.length})
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                      Skor: {auditReport.score}%
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsNotifOpen(false)}
+                    className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="mt-2.5 space-y-2 max-h-72 overflow-y-auto pr-1">
+                  {auditReport.detectedIssues.length === 0 ? (
+                    <p className="text-xs text-slate-500 p-2 text-center">Semua sistem & kampanye optimal.</p>
+                  ) : (
+                    auditReport.detectedIssues.map((issue, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "p-2.5 rounded-xl border text-xs space-y-1 bg-slate-50 dark:bg-slate-800/60",
+                          issue.severity === "critical"
+                            ? "border-rose-200 dark:border-rose-900/60"
+                            : "border-amber-200 dark:border-amber-900/60"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={cn(
+                              "font-bold text-[9px] uppercase px-1.5 py-0.5 rounded",
+                              issue.severity === "critical"
+                                ? "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300"
+                                : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                            )}
+                          >
+                            {issue.agent}
+                          </span>
+                          <span className="text-[9px] text-slate-400">
+                            {issue.severity === "critical" ? "Penting" : "Saran"}
+                          </span>
+                        </div>
+                        <p className="font-bold text-slate-900 dark:text-white text-[11px] leading-tight">{issue.title}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">{issue.diagnosis}</p>
+                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                          Solusi: {issue.actionableFix}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Monefyi Adspert: ICON SAJA */}
           <button
             type="button"
             onClick={() => setIsAdspertOpen(!isAdspertOpen)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-xs",
+              "relative p-1.5 rounded-xl border transition-all cursor-pointer shadow-xs",
               isAdspertOpen
                 ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-900/20"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
             )}
-            title="Buka / Tutup Popup Chat Monefyi Adspert"
+            title="Buka / Tutup Monefyi Adspert (AI Expert)"
           >
-            <Bot className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Monefyi Adspert</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <Bot className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-pulse border-2 border-white dark:border-slate-900" />
           </button>
 
-          {/* Tombol Konfigurasi */}
+          {/* Konfigurasi & Rules */}
           <button
             type="button"
             onClick={() => setIsConfigOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+            className="p-1.5 sm:px-2.5 sm:py-1 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1"
+            title="Konfigurasi & Rules"
           >
             <Settings className="w-3.5 h-3.5" />
-            <span>Konfigurasi &amp; Rules</span>
+            <span className="text-[11px] hidden sm:inline">Rules</span>
           </button>
         </div>
       </div>
@@ -214,123 +301,34 @@ export default function MarketingAdminPage() {
         </div>
       )}
 
-      {/* Analisa Sistem AI: Bentuk Notifikasi Ramping (Bisa di-hide / di-expand) */}
-      {!isAnalysisDismissed && auditReport.detectedIssues.length > 0 && (
-        <div className="bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl overflow-hidden shadow-2xs transition-all">
-          {/* Bar Notifikasi Ramping Satu Baris */}
-          <div className="p-3.5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="p-1 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 shrink-0">
-                <AlertTriangle className="w-4 h-4" />
-              </span>
-              <div className="text-xs truncate">
-                <span className="font-black text-amber-900 dark:text-amber-200 mr-2">
-                  Notifikasi Monefyi Adspert:
-                </span>
-                <span className="text-amber-800 dark:text-amber-300 font-medium">
-                  Terdeteksi {auditReport.detectedIssues.length} rekomendasi optimasi (Skor Kesiapan: {auditReport.score}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsAnalysisExpanded(!isAnalysisExpanded)}
-                className="flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-              >
-                <span>{isAnalysisExpanded ? "Sembunyikan" : "Baca Analisa"}</span>
-                {isAnalysisExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAnalysisDismissed(true)}
-                className="p-1 text-amber-700 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 rounded-lg"
-                title="Tutup Notifikasi"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Konten Kartu Analisa yang Terbuka Saat Diklik 'Baca Analisa' */}
-          {isAnalysisExpanded && (
-            <div className="p-4 pt-1 border-t border-amber-200/60 dark:border-amber-800/40 space-y-3 animate-fade-in">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {auditReport.detectedIssues.map((issue, idx) => (
-                  <div
-                    key={idx}
-                    className={cn(
-                      "p-3.5 rounded-2xl border text-xs space-y-1.5 bg-white dark:bg-slate-900 shadow-2xs",
-                      issue.severity === "critical"
-                        ? "border-rose-200 dark:border-rose-800/80"
-                        : "border-amber-200 dark:border-amber-800/60"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={cn(
-                          "font-bold text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded",
-                          issue.severity === "critical"
-                            ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300"
-                            : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300"
-                        )}
-                      >
-                        {issue.agent.toUpperCase()}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {issue.severity === "critical" ? "Perhatian Khusus" : "Rekomendasi"}
-                      </span>
-                    </div>
-                    <p className="font-bold text-slate-900 dark:text-white leading-tight">
-                      {issue.title}
-                    </p>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-normal">
-                      {issue.diagnosis}
-                    </p>
-                    <div className="pt-1.5 text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold border-t border-slate-100 dark:border-slate-800">
-                      Solusi: {issue.actionableFix}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Main Tabs Navigation */}
-      <div className="flex gap-2 overflow-x-auto pb-1 border-b border-slate-200 dark:border-slate-800">
+      {/* Main Tabs Navigation: Ramping & Maksimal 1 Baris */}
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5 border-b border-slate-200 dark:border-slate-800 scrollbar-none">
         {[
           {
             id: "commander" as const,
-            label: "Meta Ads Commander",
+            label: "Commander",
             icon: BarChart3,
-            badge: `${campaigns.length} Kampanye`,
+            badge: `${campaigns.length}`,
           },
           {
             id: "insights" as const,
-            label: "Ads Insight & Demografi",
+            label: "Insight & Demografi",
             icon: Target,
-            badge: "Lokasi, Umur & Gender",
           },
           {
             id: "creative" as const,
-            label: "Pabrik Iklan Winning",
+            label: "Pabrik Creative",
             icon: Sparkles,
-            badge: "Hook & Copy",
           },
           {
             id: "video_audit" as const,
-            label: "Review Video Iklan",
+            label: "Video Audit",
             icon: Video,
-            badge: "AI Auditor",
           },
           {
             id: "funnel_aov" as const,
-            label: "Funnel & AOV (Scale)",
+            label: "Funnel & AOV",
             icon: ShoppingBag,
-            badge: "Order Bump & CAPI",
           },
         ].map((t) => {
           const isActive = activeTab === t.id;
@@ -339,24 +337,26 @@ export default function MarketingAdminPage() {
               key={t.id}
               onClick={() => setActiveTab(t.id)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-extrabold whitespace-nowrap transition-all border cursor-pointer",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer",
                 isActive
-                  ? "bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-sm"
+                  ? "bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-2xs"
                   : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
               )}
             >
-              <t.icon className={cn("w-4 h-4", isActive ? "text-emerald-400 dark:text-white" : "text-slate-500 dark:text-slate-400")} />
+              <t.icon className={cn("w-3.5 h-3.5", isActive ? "text-emerald-400 dark:text-white" : "text-slate-500 dark:text-slate-400")} />
               <span>{t.label}</span>
-              <span
-                className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full font-bold",
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
-                )}
-              >
-                {t.badge}
-              </span>
+              {t.badge && (
+                <span
+                  className={cn(
+                    "text-[10px] px-1.5 py-0.2 rounded-full font-extrabold",
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                  )}
+                >
+                  {t.badge}
+                </span>
+              )}
             </button>
           );
         })}
