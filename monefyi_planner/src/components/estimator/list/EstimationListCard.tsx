@@ -255,17 +255,17 @@ export default function EstimationListCard({
               <ActionBtn
                 label="Follow-up WA"
                 onClick={onShareWhatsApp}
-                disabled={!onShareWhatsApp || waLoading || isConverted}
+                disabled={!onShareWhatsApp || waLoading}
               />
               <ActionBtn
                 label="Ubah status"
                 onClick={onChangeStatus}
-                disabled={!onChangeStatus || statusBusy || statusDisabled || isConverted}
+                disabled={!onChangeStatus || statusBusy || statusDisabled}
               />
               <ActionBtn
                 label="Arsipkan"
                 onClick={onArchive}
-                disabled={!onArchive || archiveBusy || archiveDisabled || isConverted}
+                disabled={!onArchive || archiveBusy || archiveDisabled}
               />
             </div>
 
@@ -274,7 +274,7 @@ export default function EstimationListCard({
                 <IconAction
                   label="Kwitansi"
                   icon={Receipt}
-                  disabled={kwitansiLoading || isConverted}
+                  disabled={kwitansiLoading}
                   onClick={onKwitansi}
                 />
               )}

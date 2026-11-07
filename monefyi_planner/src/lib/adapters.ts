@@ -23,6 +23,7 @@ export interface DbProject {
   client_name?: string | null;
   client_contact?: Record<string, unknown> | null;
   location?: string | null;
+  source_estimation_id?: string | null;
   planned_start: string;
   planned_end: string;
   actual_start?: string | null;
@@ -224,6 +225,7 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
     end_date: row.planned_end,
     total_budget_planned: budget,
     contract_value: contractValue > 0 ? contractValue : undefined,
+    source_estimation_id: row.source_estimation_id || undefined,
     currency,
     manager_id: settings.manager_id,
     progress_percentage: progress,
@@ -285,6 +287,7 @@ export function fromProjectUpdate(data: Partial<Project>): Partial<DbProject> {
   if (data.end_date !== undefined) update.planned_end = data.end_date;
   if (data.status !== undefined) update.status = UI_TO_DB_STATUS[data.status];
   if (data.total_budget_planned !== undefined) update.total_budget = data.total_budget_planned;
+  if (data.source_estimation_id !== undefined) update.source_estimation_id = data.source_estimation_id;
   if (data.contract_value !== undefined) {
     update.settings = {
       ...((update.settings as Record<string, unknown>) || {}),

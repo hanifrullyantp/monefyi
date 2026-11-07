@@ -50,6 +50,8 @@ export interface Project {
   total_budget_planned: number;
   /** Nilai kontrak dengan klien (disimpan di settings.contract_value). */
   contract_value?: number;
+  /** ID Estimasi asal jika proyek dikonversi dari Estimator. */
+  source_estimation_id?: string;
   currency: string;
   manager_id?: string;
   progress_percentage: number;

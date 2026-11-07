@@ -241,7 +241,7 @@ export async function createEstimation(
       pdf_invoice_template: normalizePdfTemplate(draft.pdf_invoice_template),
       pdf_primary_color: draft.pdf_primary_color || null,
       pdf_secondary_color: draft.pdf_secondary_color || null,
-      billing_config: billingConfigToDb(draft.billing_config),
+      billing_config: draft.billing_config?.milestones ? billingConfigToDb(draft.billing_config) : null,
       created_by: userId,
       ...imagesToDbFields(draft.images),
       ...header,
@@ -266,9 +266,6 @@ export async function updateEstimation(
 ): Promise<Estimation> {
   const existing = await loadEstimation(id);
   if (!existing) throw new Error('Estimasi tidak ditemukan');
-  if (existing.status === 'converted') {
-    throw new Error('Estimasi sudah menjadi proyek dan tidak bisa diedit');
-  }
 
   const items = draft.items.filter(i => i.name.trim());
   const header = summaryToHeader(draft, items);
@@ -295,7 +292,7 @@ export async function updateEstimation(
       pdf_invoice_template: normalizePdfTemplate(draft.pdf_invoice_template),
       pdf_primary_color: draft.pdf_primary_color || null,
       pdf_secondary_color: draft.pdf_secondary_color || null,
-      billing_config: billingConfigToDb(draft.billing_config),
+      billing_config: draft.billing_config?.milestones ? billingConfigToDb(draft.billing_config) : null,
       updated_at: new Date().toISOString(),
       ...imagesToDbFields(draft.images),
       ...header,
@@ -313,6 +310,58 @@ export async function updateEstimation(
   if (dbItems.length) {
     const { error: insErr } = await supabase.from('planner_estimation_items').insert(dbItems);
     if (insErr) throw new Error(insErr.message);
+  }
+
+  // ─── SINKRONISASI KE HARGA PROJECT (CONTRACT VALUE) ───
+  // Jika estimasi terhubung dengan project, perbarui harga project (contract_value) secara otomatis
+  const linkedProjectId = draft.project_id || existing.converted_project_id || existing.project_id;
+  const newContractValue = Number(header.total_selling_price) || 0;
+
+  try {
+    const query = supabase
+      .from('planner_projects')
+      .select('id, settings, total_budget')
+      .is('deleted_at', null);
+
+    if (linkedProjectId) {
+      query.or(`id.eq.${linkedProjectId},source_estimation_id.eq.${id}`);
+    } else {
+      query.eq('source_estimation_id', id);
+    }
+
+    const { data: linkedProjects } = await query;
+
+    if (linkedProjects && linkedProjects.length > 0) {
+      for (const proj of linkedProjects) {
+        const currentSettings = typeof proj.settings === 'object' && proj.settings !== null ? proj.settings : {};
+        const updatedSettings = {
+          ...currentSettings,
+          contract_value: newContractValue,
+        };
+
+        await supabase
+          .from('planner_projects')
+          .update({
+            settings: updatedSettings,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', proj.id);
+
+        // Update state in-memory AppStore agar UI Project Detail dan Project List langsung update seketika
+        if (typeof window !== 'undefined') {
+          try {
+            const { useAppStore } = await import('../store/appStore');
+            useAppStore.getState().updateProject(proj.id, {
+              contract_value: newContractValue,
+            });
+          } catch {
+            // non-blocking
+          }
+        }
+      }
+    }
+  } catch (syncErr) {
+    console.error('Gagal sinkronisasi harga estimasi ke project:', syncErr);
   }
 
   return (await loadEstimation(id)) as Estimation;

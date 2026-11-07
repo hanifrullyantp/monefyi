@@ -149,16 +149,16 @@ export default function EstimatorForm() {
 
   const draftHistory = useEstimationDraftHistory();
 
-  const isReadOnly = draft?.status === 'converted';
+  // Estimasi selalu bisa diedit meskipun sudah dikonversi atau terhubung dengan proyek
+  const isReadOnly = false;
 
   const patch = useCallback((p: Partial<EstimationFormDraft>, opts?: { skipHistory?: boolean }) => {
-    if (isReadOnly) return;
     setDraft(prev => {
       if (!prev) return prev;
       if (!opts?.skipHistory) draftHistory.recordBeforeChange(prev);
       return { ...prev, ...p };
     });
-  }, [isReadOnly, draftHistory]);
+  }, [draftHistory]);
 
   useEffect(() => {
     draftRef.current = draft;
@@ -171,7 +171,7 @@ export default function EstimatorForm() {
   } = draftHistory;
 
   const persistDraft = useCallback(async (payload: EstimationFormDraft) => {
-    if (!tenant?.id || !user?.id || isNew || !id || payload.status === 'converted') return;
+    if (!tenant?.id || !user?.id || isNew || !id) return;
     const namedCount = payload.items.filter(i => i.name.trim()).length;
     const savedNamedCount = getSavedNamedItemCount();
     if (namedCount === 0 && savedNamedCount > 0) {
@@ -203,7 +203,7 @@ export default function EstimatorForm() {
   const { schedule: scheduleAutoSave, discard: discardAutoSave } = autoSave;
 
   useEffect(() => {
-    if (!draftStorageKey || !draft || loading || draft.status === 'converted') return;
+    if (!draftStorageKey || !draft || loading) return;
     if (!isDirty(draft) || (isNew && !draftHasContent(draft))) return;
     try {
       writeEstimationDraft(draftStorageKey, draft, false);
@@ -216,7 +216,7 @@ export default function EstimatorForm() {
     if (!draftStorageKey) return;
     const persistOnExit = () => {
       const latest = draftRef.current;
-      if (!latest || latest.status === 'converted' || !isDirty(latest)) return;
+      if (!latest || !isDirty(latest)) return;
       if (isNew && !draftHasContent(latest)) return;
       try {
         writeEstimationDraft(draftStorageKey, latest, true);
@@ -460,10 +460,6 @@ export default function EstimatorForm() {
 
   const handleSave = async (): Promise<boolean> => {
     if (!draft || !tenant?.id || !user?.id) return false;
-    if (isReadOnly) {
-      showToast('Estimasi sudah menjadi proyek dan tidak bisa diedit', 'error');
-      return false;
-    }
     if (!draft.title.trim()) {
       showToast('Judul estimasi wajib diisi', 'error');
       return false;
@@ -534,7 +530,13 @@ export default function EstimatorForm() {
         draftHistory.setSavedSnapshot(saved);
         autoSave.discard();
         if (draftStorageKey) clearEstimationDraft(draftStorageKey);
-        showToast('Perubahan disimpan', 'success');
+        const isLinkedToProj = Boolean(convertedProjectId || draft.project_id);
+        showToast(
+          isLinkedToProj
+            ? 'Perubahan disimpan & Nilai Kontrak Proyek diperbarui'
+            : 'Perubahan disimpan',
+          'success'
+        );
       }
       return true;
     } catch (e) {
@@ -855,7 +857,7 @@ export default function EstimatorForm() {
 
   return (
     <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-52 lg:pb-32 overflow-x-hidden bg-[#F4F7F5] min-h-full">
-      {isReadOnly && convertedProjectId && (
+      {convertedProjectId && (
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/80 rounded-2xl shadow-xs">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white font-bold text-xs shadow-xs">
@@ -866,22 +868,17 @@ export default function EstimatorForm() {
                 Terhubung dengan Proyek: &ldquo;{convertedProjectName || linkedProjectName || draft.title}&rdquo;
               </p>
               <p className="text-[11px] text-teal-700">
-                Data estimasi ini terhubung aktif dengan timeline &amp; RAP proyek.
+                Estimasi tetap dapat diedit. Total harga jual estimasi otomatis tersinkron ke Nilai Kontrak Proyek.
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => navigate(`/app/projects/${convertedProjectId}`)}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95 shrink-0"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer"
           >
             Buka Proyek →
           </button>
-        </div>
-      )}
-      {isReadOnly && !convertedProjectId && (
-        <div className="mb-4 px-4 py-3 bg-teal-50 border border-teal-200 rounded-xl text-sm text-teal-800">
-          Estimasi ini sudah menjadi proyek — mode arsip/baca.
         </div>
       )}
 

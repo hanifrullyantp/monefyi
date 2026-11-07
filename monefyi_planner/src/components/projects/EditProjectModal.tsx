@@ -82,6 +82,11 @@ export default function EditProjectModal({ project, onClose, onSaved }: EditProj
           <div>
             <label className="text-xs font-bold text-slate-500 uppercase">Nilai Kontrak</label>
             <input type="number" value={form.contract_value || ''} onChange={e => setForm({ ...form, contract_value: Number(e.target.value) })} className="w-full mt-1 px-3 py-2 border rounded-xl text-sm" />
+            {project.source_estimation_id && (
+              <p className="text-[11px] text-emerald-600 font-medium mt-1">
+                ✓ Terhubung ke Estimator. Perubahan harga di Estimator akan otomatis sinkron ke Nilai Kontrak ini.
+              </p>
+            )}
           </div>
           <div>
             <label className="text-xs font-bold text-slate-500 uppercase">Total RAP / Budget</label>

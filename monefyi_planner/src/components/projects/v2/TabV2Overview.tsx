@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Calendar, Wallet, Package, HardHat, FileCheck, ListChecks,
   Filter, ArrowUpDown, Plus, Pencil, AlertTriangle, BarChart3, TrendingDown, TrendingUp,
+  Calculator, ExternalLink,
 } from 'lucide-react';
 import type { WorkItem } from '../../../services/workItemService';
 import { computeProgressSummary } from '../../../lib/progressMetrics';
@@ -140,7 +142,20 @@ export default function TabV2Overview({
             Saldo: {formatRupiah(contractCheck.cash)}
           </button>
         </div>
-        <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total Nilai Proyek</p>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <p className="text-xs font-bold text-slate-500 uppercase">Total Nilai Proyek</p>
+          {project.source_estimation_id && (
+            <Link
+              to={`/app/estimator/${project.source_estimation_id}`}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200/80 transition-colors"
+              title="Buka dan edit rincian di Estimator"
+            >
+              <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Edit di Estimator</span>
+              <ExternalLink className="w-3 h-3 text-emerald-600" />
+            </Link>
+          )}
+        </div>
         <div className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-2">
           {formatRupiah(nilaiProyek)}
         </div>

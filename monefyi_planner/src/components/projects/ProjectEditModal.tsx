@@ -192,6 +192,11 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
             {form.contract_value > 0 && (
               <p className="text-[11px] text-slate-500 mt-1">{formatRupiah(form.contract_value)}</p>
             )}
+            {project.source_estimation_id && (
+              <p className="text-[11px] text-emerald-600 font-medium mt-1">
+                ✓ Terhubung ke Estimator. Perubahan harga di Estimator akan otomatis sinkron ke Nilai Kontrak ini.
+              </p>
+            )}
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-600 block mb-1">Total RAP / Budget Rencana (Rp)</label>

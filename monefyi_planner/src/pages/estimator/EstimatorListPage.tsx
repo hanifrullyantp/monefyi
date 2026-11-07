@@ -713,7 +713,7 @@ export default function EstimatorListPage() {
         statusBusy={statusUpdatingId === est.id}
         archiveBusy={statusUpdatingId === est.id || archiveBusy}
         archiveDisabled={isEstimationArchived(est.status)}
-        statusDisabled={normalizeEstimationStatus(est.status) === 'converted' && isProjectActive}
+        statusDisabled={false}
       />
     );
   };
