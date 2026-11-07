@@ -125,9 +125,8 @@ export default function EstimationListCard({
 
   return (
     <article
-      className={`bg-white rounded-[14px] border overflow-hidden ${
-        selectionMode && selected ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-[#E5EAE8]'
-      }`}
+      className={`bg-white rounded-[14px] border overflow-hidden ${selectionMode && selected ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-[#E5EAE8]'
+        }`}
     >
       <div className="flex items-stretch">
         {dragHandleProps && !selectionMode && (
@@ -209,9 +208,8 @@ export default function EstimationListCard({
       </div>
 
       <div
-        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
-          expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-        }`}
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+          }`}
         inert={expanded ? undefined : true}
         aria-hidden={!expanded}
       >
@@ -350,9 +348,8 @@ function IconAction({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      className={`inline-flex items-center justify-center min-h-11 min-w-11 rounded-full text-slate-500 hover:bg-slate-50 disabled:opacity-45 ${
-        danger ? 'text-rose-600' : ''
-      }`}
+      className={`inline-flex items-center justify-center min-h-11 min-w-11 rounded-full text-slate-500 hover:bg-slate-50 disabled:opacity-45 ${danger ? 'text-rose-600' : ''
+        }`}
     >
       <Icon className="w-4 h-4" />
     </button>

@@ -74,9 +74,8 @@ export default function EstimatorStatusPickerSheet({
                   type="button"
                   disabled={busy || active}
                   onClick={() => onPick(status)}
-                  className={`w-full min-h-11 text-left px-3 py-2.5 rounded-xl ${
-                    active ? 'bg-emerald-50' : 'hover:bg-slate-50'
-                  } disabled:opacity-60 transition-colors`}
+                  className={`w-full min-h-11 text-left px-3 py-2.5 rounded-xl ${active ? 'bg-emerald-50' : 'hover:bg-slate-50'
+                    } disabled:opacity-60 transition-colors`}
                 >
                   <div className="flex items-center gap-2">
                     <span className={`w-2 h-2 rounded-full ${ESTIMATION_STATUS_DOT[status]}`} aria-hidden />

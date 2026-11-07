@@ -338,9 +338,8 @@ export default function Layout({ children }: LayoutProps) {
     <div className="flex h-screen overflow-hidden org-branded" style={orgBrandStyle}>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:flex flex-col shell-sidebar z-30 transition-[width] duration-200 shrink-0 ${
-          navSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
-        }`}
+        className={`hidden lg:flex flex-col shell-sidebar z-30 transition-[width] duration-200 shrink-0 ${navSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
+          }`}
       >
         {/* Logo + collapse + Monefyi AI */}
         <div className={`${navSidebarCollapsed ? 'px-2 py-3' : 'p-4'}`}>
@@ -349,9 +348,8 @@ export default function Layout({ children }: LayoutProps) {
               <EstimatorLogo className="rounded-xl object-contain shadow-xs shrink-0 w-9 h-9" />
             ) : (
               <PlannerLogo
-                className={`rounded-xl object-contain shadow-xs shrink-0 ${
-                  navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'
-                }`}
+                className={`rounded-xl object-contain shadow-xs shrink-0 ${navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'
+                  }`}
               />
             )}
             {!navSidebarCollapsed && (
@@ -367,16 +365,14 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={toggleNavSidebarCollapsed}
-              className={`p-1.5 min-h-11 min-w-11 flex items-center justify-center rounded-xl text-[#5B6B7A] hover:bg-[#F4F7F5] hover:text-[#0F172A] transition-colors shrink-0 ${
-                navSidebarCollapsed ? 'mt-1' : ''
-              }`}
+              className={`p-1.5 min-h-11 min-w-11 flex items-center justify-center rounded-xl text-[#5B6B7A] hover:bg-[#F4F7F5] hover:text-[#0F172A] transition-colors shrink-0 ${navSidebarCollapsed ? 'mt-1' : ''
+                }`}
               title={navSidebarCollapsed ? 'Perluas menu' : 'Perkecil menu'}
               aria-label={navSidebarCollapsed ? 'Perluas menu navigasi' : 'Perkecil menu navigasi'}
             >
               <ChevronRight
-                className={`w-5 h-5 transition-transform duration-200 ${
-                  navSidebarCollapsed ? 'rotate-180' : ''
-                }`}
+                className={`w-5 h-5 transition-transform duration-200 ${navSidebarCollapsed ? 'rotate-180' : ''
+                  }`}
               />
             </button>
           </div>
@@ -384,11 +380,10 @@ export default function Layout({ children }: LayoutProps) {
           <button
             type="button"
             onClick={openCommandModal}
-            className={`mt-3 relative flex items-center justify-center shadow-sm hover:opacity-95 transition-all ${
-              navSidebarCollapsed
+            className={`mt-3 relative flex items-center justify-center shadow-sm hover:opacity-95 transition-all ${navSidebarCollapsed
                 ? 'w-11 h-11 mx-auto rounded-xl'
                 : 'w-full h-11 rounded-xl gap-2'
-            }`}
+              }`}
             style={{ background: 'linear-gradient(135deg, #064E3B 0%, #047857 50%, #059669 100%)' }}
             aria-label="Buka Monefyi AI"
             title="Monefyi AI"
@@ -430,19 +425,16 @@ export default function Layout({ children }: LayoutProps) {
               key={item.id}
               onClick={() => handleNav(item.id)}
               title={navSidebarCollapsed ? item.label : undefined}
-              className={`w-full flex items-center rounded-xl text-sm transition-all relative ${
-                navSidebarCollapsed
+              className={`w-full flex items-center rounded-xl text-sm transition-all relative ${navSidebarCollapsed
                   ? 'justify-center p-2.5 min-h-11'
                   : 'gap-3 px-3.5 py-2.5 min-h-11'
-              } ${
-                isTabActive(item.id)
+                } ${isTabActive(item.id)
                   ? 'bg-emerald-50 text-[#047857] font-bold border border-emerald-200 shadow-xs'
                   : 'text-[#5B6B7A] font-medium hover:bg-[#F4F7F5] hover:text-[#0F172A]'
-              }`}
+                }`}
             >
-              <item.icon className={`shrink-0 ${navSidebarCollapsed ? 'w-5 h-5' : 'w-4.5 h-4.5'} ${
-                isTabActive(item.id) ? 'text-[#059669]' : 'text-[#5B6B7A]'
-              }`} />
+              <item.icon className={`shrink-0 ${navSidebarCollapsed ? 'w-5 h-5' : 'w-4.5 h-4.5'} ${isTabActive(item.id) ? 'text-[#059669]' : 'text-[#5B6B7A]'
+                }`} />
               {!navSidebarCollapsed && (
                 <>
                   <span className="truncate">{item.label}</span>
@@ -571,12 +563,11 @@ export default function Layout({ children }: LayoutProps) {
             {headerTitle}
           </div>
           <div className="flex items-center gap-1.5">
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-              syncStatus === 'synced' ? 'bg-emerald-50 text-[#047857] border-emerald-200' :
-              syncStatus === 'syncing' ? 'bg-amber-50 text-amber-800 border-amber-200' :
-              syncStatus === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-              'bg-slate-100 text-slate-700 border-slate-200'
-            }`}>
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${syncStatus === 'synced' ? 'bg-emerald-50 text-[#047857] border-emerald-200' :
+                syncStatus === 'syncing' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                  syncStatus === 'error' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                    'bg-slate-100 text-slate-700 border-slate-200'
+              }`}>
               <div className={`w-2 h-2 rounded-full ${sync.color}`} />
               <span className="hidden sm:inline">{sync.text}</span>
               <span className="hidden lg:inline text-[#5B6B7A] font-normal">· {lastSyncText}</span>
@@ -710,11 +701,10 @@ export default function Layout({ children }: LayoutProps) {
                     <button
                       key={tab.id}
                       onClick={() => handleNav(tab.id)}
-                      className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-all duration-200 rounded-xl active:scale-95 ${
-                        isTabActive(tab.id)
+                      className={`flex flex-col items-center gap-0.5 px-3 py-1 transition-all duration-200 rounded-xl active:scale-95 ${isTabActive(tab.id)
                           ? 'text-emerald-600 bg-emerald-50'
                           : 'text-slate-600 hover:text-slate-800'
-                      }`}
+                        }`}
                     >
                       <tab.icon className="w-5 h-5" />
                       <span className={`text-[10px] font-semibold ${isTabActive(tab.id) ? 'font-bold' : ''}`}>
@@ -781,11 +771,10 @@ export default function Layout({ children }: LayoutProps) {
                       setUiViewMode(m.id);
                       setPreviewSheetOpen(false);
                     }}
-                    className={`min-h-[46px] w-full rounded-xl px-4 flex items-center justify-between text-sm transition-all ${
-                      uiViewMode === m.id
+                    className={`min-h-[46px] w-full rounded-xl px-4 flex items-center justify-between text-sm transition-all ${uiViewMode === m.id
                         ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-300'
                         : 'text-slate-700 hover:bg-slate-50 border border-slate-200'
-                    }`}
+                      }`}
                   >
                     <span>{m.label}</span>
                     {uiViewMode === m.id && <span className="text-emerald-600 font-extrabold text-xs">Aktif</span>}

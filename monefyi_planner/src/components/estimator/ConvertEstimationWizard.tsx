@@ -314,9 +314,8 @@ export default function ConvertEstimationWizard({
     return (
       <label
         key={item.id}
-        className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border cursor-pointer ${
-          checked ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-100 bg-white'
-        }`}
+        className={`flex items-start gap-3 px-3 py-2.5 rounded-xl border cursor-pointer ${checked ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-100 bg-white'
+          }`}
       >
         <input
           type="checkbox"
@@ -351,314 +350,312 @@ export default function ConvertEstimationWizard({
 
   return (
     <>
-    <div className="fixed inset-0 z-[60] flex flex-col bg-white sm:bg-black/40">
-      <div className="flex flex-col flex-1 sm:my-6 sm:mx-auto sm:max-w-2xl sm:w-full sm:max-h-[calc(100vh-3rem)] sm:rounded-2xl sm:shadow-2xl sm:border sm:border-slate-200 bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
-          <div>
-            <h2 className="font-black text-slate-900 flex items-center gap-2">
-              <Rocket className="w-5 h-5 text-emerald-600" />
-              Jadikan Proyek
-            </h2>
-            {step !== 'success' && (
-              <p className="text-xs text-slate-500 mt-0.5">
-                Langkah {step} dari 2 · {estimation.code}
-              </p>
+      <div className="fixed inset-0 z-[60] flex flex-col bg-white sm:bg-black/40">
+        <div className="flex flex-col flex-1 sm:my-6 sm:mx-auto sm:max-w-2xl sm:w-full sm:max-h-[calc(100vh-3rem)] sm:rounded-2xl sm:shadow-2xl sm:border sm:border-slate-200 bg-white overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+            <div>
+              <h2 className="font-black text-slate-900 flex items-center gap-2">
+                <Rocket className="w-5 h-5 text-emerald-600" />
+                Jadikan Proyek
+              </h2>
+              {step !== 'success' && (
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Langkah {step} dari 2 · {estimation.code}
+                </p>
+              )}
+            </div>
+            <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100" aria-label="Tutup">
+              <X className="w-5 h-5 text-slate-500" />
+            </button>
+          </div>
+
+          {step !== 'success' && (
+            <div className="px-4 pt-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-full ${step === 1 ? 'bg-emerald-500' : 'bg-emerald-300'}`} />
+                <span className="h-0.5 flex-1 bg-slate-200">
+                  <span className={`block h-full bg-emerald-400 transition-all ${step >= 2 ? 'w-full' : 'w-0'}`} />
+                </span>
+                <span className={`w-2.5 h-2.5 rounded-full ${step === 2 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {error && (
+              <div className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            {showWarning && step === 1 && (
+              <div className="flex gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                Estimasi belum diterima klien. Anda tetap bisa lanjut, tapi pastikan sudah disetujui.
+              </div>
+            )}
+
+            {step === 1 && (
+              <section className="space-y-4">
+                {/* Toggle mode: Proyek Baru vs Proyek Yang Sudah Ada */}
+                <div className="flex p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setConvertMode('new')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${convertMode === 'new'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-800'
+                      }`}
+                  >
+                    ✨ Buat Proyek Baru
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConvertMode('existing')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${convertMode === 'existing'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-600 hover:text-slate-800'
+                      }`}
+                  >
+                    🔗 Hubungkan ke Proyek Ada
+                  </button>
+                </div>
+
+                {convertMode === 'existing' ? (
+                  <div className="space-y-3.5 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200">
+                    <Field label="Pilih Proyek *" hint="Estimasi akan terhubung langsung dengan proyek ini">
+                      {projects.length === 0 ? (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                          Belum ada proyek aktif. Silakan pilih opsi &ldquo;Buat Proyek Baru&rdquo;.
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedExistingProjectId}
+                          onChange={e => setSelectedExistingProjectId(e.target.value)}
+                          className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500/20"
+                        >
+                          <option value="">— Pilih Proyek —</option>
+                          {projects.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} {p.client_name ? `(${p.client_name})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </Field>
+
+                    <div className="pt-2 border-t border-slate-200">
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={copyItemsToRap}
+                          onChange={e => setCopyItemsToRap(e.target.checked)}
+                          className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <div className="text-xs">
+                          <span className="font-bold text-slate-800 block">Salin Item Estimasi ke RAP Proyek</span>
+                          <span className="text-slate-500">
+                            Item bahan &amp; upah dari estimasi akan dimasukkan ke Rencana Anggaran Pelaksanaan proyek.
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-bold text-slate-700">Detail Proyek</h3>
+                    <Field label="Nama Proyek *" hint="Pre-filled dari judul estimasi">
+                      <input
+                        value={projectInput.name}
+                        onChange={e => setProjectInput(p => ({ ...p, name: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      />
+                    </Field>
+                    <Field label="Nama Klien">
+                      <input
+                        value={projectInput.clientName}
+                        onChange={e => setProjectInput(p => ({ ...p, clientName: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      />
+                    </Field>
+                    <Field label="Kontak Klien">
+                      <input
+                        value={projectInput.clientPhone}
+                        onChange={e => setProjectInput(p => ({ ...p, clientPhone: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      />
+                    </Field>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Field label="Tanggal Mulai *">
+                        <input
+                          type="date"
+                          value={projectInput.startDate}
+                          onChange={e => setProjectInput(p => ({ ...p, startDate: e.target.value }))}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        />
+                      </Field>
+                      <Field label="Target Selesai *">
+                        <input
+                          type="date"
+                          value={projectInput.endDate}
+                          onChange={e => setProjectInput(p => ({ ...p, endDate: e.target.value }))}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        />
+                      </Field>
+                    </div>
+                    <Field label="Deskripsi" hint="Pre-filled dari catatan estimasi">
+                      <textarea
+                        value={projectInput.description}
+                        onChange={e => setProjectInput(p => ({ ...p, description: e.target.value }))}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none"
+                      />
+                    </Field>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {step === 2 && (
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700">Pilih Item untuk RAP</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Item mana yang masuk ke Rencana Anggaran Pelaksanaan?
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={e => toggleAll(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600"
+                    />
+                    Pilih Semua
+                  </label>
+                </div>
+
+                <div className="space-y-3">
+                  {productGroups.map(group => {
+                    const groupItems = group.indices.map(i => namedItems[i]).filter(Boolean);
+                    const groupChecked = group.indices.every(i => selectedIds.has(namedItems[i]?.id));
+                    return (
+                      <div key={group.key} className="border border-slate-200 rounded-2xl overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
+                          <label className="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={groupChecked}
+                              onChange={e => toggleGroup(group.indices, e.target.checked)}
+                              className="rounded border-slate-300 text-emerald-600"
+                            />
+                            {group.key} ({groupItems.length} item)
+                          </label>
+                        </div>
+                        <div className="p-2 space-y-2">
+                          {group.indices.map(idx => renderItemRow(namedItems[idx], idx))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {namedItems.map((item, idx) =>
+                    groupedIndices.has(idx) ? null : renderItemRow(item, idx),
+                  )}
+                </div>
+
+                <div className="sticky bottom-0 bg-white/95 backdrop-blur border border-emerald-200 rounded-xl px-4 py-3">
+                  <div className="text-xs text-slate-500">Total budget RAP</div>
+                  <div className="text-lg font-black text-emerald-700 tabular-nums">
+                    {formatRupiahFull(selectedBudget)}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {step === 'success' && successSummary && (
+              <div className="py-8 text-center space-y-4">
+                <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" />
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">
+                    {convertMode === 'existing' ? 'Berhasil Dihubungkan ke Proyek!' : 'Proyek berhasil dibuat!'}
+                  </h3>
+                  <p className="text-sm text-slate-600 mt-1">{successSummary.projectName}</p>
+                </div>
+                <p className="text-sm text-slate-700">
+                  {successSummary.rapItemCount > 0 ? (
+                    <>
+                      {successSummary.rapItemCount} item RAP dengan total budget{' '}
+                      <span className="font-bold tabular-nums">{formatRupiahFull(successSummary.rapBudgetTotal)}</span>
+                    </>
+                  ) : (
+                    'Estimasi dan kontrak berhasil terhubung ke proyek.'
+                  )}
+                </p>
+              </div>
             )}
           </div>
-          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100" aria-label="Tutup">
-            <X className="w-5 h-5 text-slate-500" />
-          </button>
-        </div>
 
-        {step !== 'success' && (
-          <div className="px-4 pt-3 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${step === 1 ? 'bg-emerald-500' : 'bg-emerald-300'}`} />
-              <span className="h-0.5 flex-1 bg-slate-200">
-                <span className={`block h-full bg-emerald-400 transition-all ${step >= 2 ? 'w-full' : 'w-0'}`} />
-              </span>
-              <span className={`w-2.5 h-2.5 rounded-full ${step === 2 ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-            </div>
+          <div className="px-4 py-3 border-t border-slate-100 flex gap-2 justify-end shrink-0">
+            {step === 1 && (
+              <>
+                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm border border-slate-200 text-slate-600">
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleContinueStep1}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  Lanjut →
+                </button>
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  disabled={submitting}
+                  className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl text-sm border border-slate-200 text-slate-600"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Kembali
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConvert}
+                  disabled={submitting || (convertMode === 'new' && selectedIds.size === 0)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+                >
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
+                  {convertMode === 'existing' ? 'Hubungkan ke Proyek' : 'Buat Proyek'}
+                </button>
+              </>
+            )}
+            {step === 'success' && successSummary && (
+              <>
+                <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm border border-slate-200 text-slate-600">
+                  Kembali ke Estimasi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/app/projects/${successSummary.projectId}`)}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  Buka Proyek
+                </button>
+              </>
+            )}
           </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {error && (
-            <div className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          {showWarning && step === 1 && (
-            <div className="flex gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              Estimasi belum diterima klien. Anda tetap bisa lanjut, tapi pastikan sudah disetujui.
-            </div>
-          )}
-
-          {step === 1 && (
-            <section className="space-y-4">
-              {/* Toggle mode: Proyek Baru vs Proyek Yang Sudah Ada */}
-              <div className="flex p-1 bg-slate-100 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setConvertMode('new')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                    convertMode === 'new'
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-800'
-                  }`}
-                >
-                  ✨ Buat Proyek Baru
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConvertMode('existing')}
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                    convertMode === 'existing'
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-600 hover:text-slate-800'
-                  }`}
-                >
-                  🔗 Hubungkan ke Proyek Ada
-                </button>
-              </div>
-
-              {convertMode === 'existing' ? (
-                <div className="space-y-3.5 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200">
-                  <Field label="Pilih Proyek *" hint="Estimasi akan terhubung langsung dengan proyek ini">
-                    {projects.length === 0 ? (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-                        Belum ada proyek aktif. Silakan pilih opsi &ldquo;Buat Proyek Baru&rdquo;.
-                      </div>
-                    ) : (
-                      <select
-                        value={selectedExistingProjectId}
-                        onChange={e => setSelectedExistingProjectId(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500/20"
-                      >
-                        <option value="">— Pilih Proyek —</option>
-                        {projects.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} {p.client_name ? `(${p.client_name})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </Field>
-
-                  <div className="pt-2 border-t border-slate-200">
-                    <label className="flex items-start gap-2.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={copyItemsToRap}
-                        onChange={e => setCopyItemsToRap(e.target.checked)}
-                        className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <div className="text-xs">
-                        <span className="font-bold text-slate-800 block">Salin Item Estimasi ke RAP Proyek</span>
-                        <span className="text-slate-500">
-                          Item bahan &amp; upah dari estimasi akan dimasukkan ke Rencana Anggaran Pelaksanaan proyek.
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-bold text-slate-700">Detail Proyek</h3>
-                  <Field label="Nama Proyek *" hint="Pre-filled dari judul estimasi">
-                    <input
-                      value={projectInput.name}
-                      onChange={e => setProjectInput(p => ({ ...p, name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                    />
-                  </Field>
-                  <Field label="Nama Klien">
-                    <input
-                      value={projectInput.clientName}
-                      onChange={e => setProjectInput(p => ({ ...p, clientName: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                    />
-                  </Field>
-                  <Field label="Kontak Klien">
-                    <input
-                      value={projectInput.clientPhone}
-                      onChange={e => setProjectInput(p => ({ ...p, clientPhone: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                    />
-                  </Field>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <Field label="Tanggal Mulai *">
-                      <input
-                        type="date"
-                        value={projectInput.startDate}
-                        onChange={e => setProjectInput(p => ({ ...p, startDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                      />
-                    </Field>
-                    <Field label="Target Selesai *">
-                      <input
-                        type="date"
-                        value={projectInput.endDate}
-                        onChange={e => setProjectInput(p => ({ ...p, endDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                      />
-                    </Field>
-                  </div>
-                  <Field label="Deskripsi" hint="Pre-filled dari catatan estimasi">
-                    <textarea
-                      value={projectInput.description}
-                      onChange={e => setProjectInput(p => ({ ...p, description: e.target.value }))}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none"
-                    />
-                  </Field>
-                </div>
-              )}
-            </section>
-          )}
-
-          {step === 2 && (
-            <section className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-700">Pilih Item untuk RAP</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Item mana yang masuk ke Rencana Anggaran Pelaksanaan?
-                  </p>
-                </div>
-                <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={e => toggleAll(e.target.checked)}
-                    className="rounded border-slate-300 text-emerald-600"
-                  />
-                  Pilih Semua
-                </label>
-              </div>
-
-              <div className="space-y-3">
-                {productGroups.map(group => {
-                  const groupItems = group.indices.map(i => namedItems[i]).filter(Boolean);
-                  const groupChecked = group.indices.every(i => selectedIds.has(namedItems[i]?.id));
-                  return (
-                    <div key={group.key} className="border border-slate-200 rounded-2xl overflow-hidden">
-                      <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
-                        <label className="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
-                          <input
-                            type="checkbox"
-                            checked={groupChecked}
-                            onChange={e => toggleGroup(group.indices, e.target.checked)}
-                            className="rounded border-slate-300 text-emerald-600"
-                          />
-                          {group.key} ({groupItems.length} item)
-                        </label>
-                      </div>
-                      <div className="p-2 space-y-2">
-                        {group.indices.map(idx => renderItemRow(namedItems[idx], idx))}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {namedItems.map((item, idx) =>
-                  groupedIndices.has(idx) ? null : renderItemRow(item, idx),
-                )}
-              </div>
-
-              <div className="sticky bottom-0 bg-white/95 backdrop-blur border border-emerald-200 rounded-xl px-4 py-3">
-                <div className="text-xs text-slate-500">Total budget RAP</div>
-                <div className="text-lg font-black text-emerald-700 tabular-nums">
-                  {formatRupiahFull(selectedBudget)}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {step === 'success' && successSummary && (
-            <div className="py-8 text-center space-y-4">
-              <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" />
-              <div>
-                <h3 className="text-xl font-black text-slate-900">
-                  {convertMode === 'existing' ? 'Berhasil Dihubungkan ke Proyek!' : 'Proyek berhasil dibuat!'}
-                </h3>
-                <p className="text-sm text-slate-600 mt-1">{successSummary.projectName}</p>
-              </div>
-              <p className="text-sm text-slate-700">
-                {successSummary.rapItemCount > 0 ? (
-                  <>
-                    {successSummary.rapItemCount} item RAP dengan total budget{' '}
-                    <span className="font-bold tabular-nums">{formatRupiahFull(successSummary.rapBudgetTotal)}</span>
-                  </>
-                ) : (
-                  'Estimasi dan kontrak berhasil terhubung ke proyek.'
-                )}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="px-4 py-3 border-t border-slate-100 flex gap-2 justify-end shrink-0">
-          {step === 1 && (
-            <>
-              <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm border border-slate-200 text-slate-600">
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleContinueStep1}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                Lanjut →
-              </button>
-            </>
-          )}
-          {step === 2 && (
-            <>
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                disabled={submitting}
-                className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl text-sm border border-slate-200 text-slate-600"
-              >
-                <ChevronLeft className="w-4 h-4" /> Kembali
-              </button>
-              <button
-                type="button"
-                onClick={handleConvert}
-                disabled={submitting || (convertMode === 'new' && selectedIds.size === 0)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-                {convertMode === 'existing' ? 'Hubungkan ke Proyek' : 'Buat Proyek'}
-              </button>
-            </>
-          )}
-          {step === 'success' && successSummary && (
-            <>
-              <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm border border-slate-200 text-slate-600">
-                Kembali ke Estimasi
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(`/app/projects/${successSummary.projectId}`)}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                Buka Proyek
-              </button>
-            </>
-          )}
         </div>
       </div>
-    </div>
-    <UpgradeModal
-      open={upgradeOpen}
-      trigger="project_limit"
-      onClose={() => setUpgradeOpen(false)}
-      onManageProjects={() => navigate('/app?tab=projects')}
-    />
+      <UpgradeModal
+        open={upgradeOpen}
+        trigger="project_limit"
+        onClose={() => setUpgradeOpen(false)}
+        onManageProjects={() => navigate('/app?tab=projects')}
+      />
     </>
   );
 }

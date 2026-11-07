@@ -117,7 +117,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         setTemplates(m.templates);
         if (m.templates[0]) setSelectedTemplateId(m.templates[0].id);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [smartCreate, tenant?.id, step]);
 
   const handleCreate = async () => {
@@ -758,11 +758,10 @@ export default function Projects({
               setProjectsListFilter('all');
             }}
             aria-label={`Total proyek: ${stats.total}`}
-            className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${
-              filter === 'all'
+            className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${filter === 'all'
                 ? 'bg-slate-50 border-[#0F172A]'
                 : 'bg-white border-[#E5EAE8]'
-            }`}
+              }`}
           >
             <div className="text-[10px] font-bold text-[#5B6B7A] tracking-[0.05em] uppercase">
               TOTAL
@@ -781,11 +780,10 @@ export default function Projects({
               setProjectsListFilter('active');
             }}
             aria-label={`Proyek aktif: ${stats.active}`}
-            className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${
-              filter === 'active'
+            className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${filter === 'active'
                 ? 'bg-emerald-50 border-[#059669]'
                 : 'bg-white border-[#E5EAE8]'
-            }`}
+              }`}
           >
             <div className="text-[10px] font-bold text-[#047857] tracking-[0.05em] uppercase">
               AKTIF
@@ -804,11 +802,10 @@ export default function Projects({
               setProjectsListFilter('at_risk');
             }}
             aria-label={`Proyek perlu perhatian: ${stats.atRisk}`}
-            className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${
-              filter === 'at_risk'
+            className={`rounded-2xl p-2.5 sm:p-3 text-left border transition-all active:scale-95 ${filter === 'at_risk'
                 ? 'bg-amber-50 border-[#D97706]'
                 : 'bg-white border-[#E5EAE8]'
-            }`}
+              }`}
           >
             <div className="text-[10px] font-bold text-[#B45309] tracking-[0.05em] uppercase">
               PERHATIAN
@@ -873,11 +870,10 @@ export default function Projects({
                     setView(v.id);
                     setViewPickerOpen(false);
                   }}
-                  className={`flex-1 h-9 rounded-lg font-bold text-xs transition-all ${
-                    projectView === v.id
+                  className={`flex-1 h-9 rounded-lg font-bold text-xs transition-all ${projectView === v.id
                       ? 'bg-white text-[#059669] shadow-xs'
                       : 'text-[#5B6B7A] hover:text-[#0F172A]'
-                  }`}
+                    }`}
                 >
                   {v.label}
                 </button>
@@ -899,11 +895,10 @@ export default function Projects({
                     setFilter(f.id);
                     setProjectsListFilter(f.id);
                   }}
-                  className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 shrink-0 ${
-                    isActive
+                  className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 shrink-0 ${isActive
                       ? 'bg-[#0F172A] text-white shadow-xs'
                       : 'bg-white border border-[#E5EAE8] text-[#334155] hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <span>{f.label}</span>
                   <span className={`text-[11px] ${isActive ? 'text-white/80' : 'text-[#8A99A6]'}`}>
@@ -1001,9 +996,8 @@ export default function Projects({
                         >
                           <span>Planning · {planningProjects.length}</span>
                           <ChevronRight
-                            className={`w-5 h-5 text-[#8A99A6] transition-transform ${
-                              planningOpen ? 'rotate-90' : ''
-                            }`}
+                            className={`w-5 h-5 text-[#8A99A6] transition-transform ${planningOpen ? 'rotate-90' : ''
+                              }`}
                           />
                         </button>
                         {planningOpen && (
@@ -1024,9 +1018,8 @@ export default function Projects({
                         >
                           <span>Lainnya · {otherProjects.length}</span>
                           <ChevronRight
-                            className={`w-5 h-5 text-[#8A99A6] transition-transform ${
-                              otherOpen ? 'rotate-90' : ''
-                            }`}
+                            className={`w-5 h-5 text-[#8A99A6] transition-transform ${otherOpen ? 'rotate-90' : ''
+                              }`}
                           />
                         </button>
                         {otherOpen && (
@@ -1175,11 +1168,10 @@ export default function Projects({
                       type="button"
                       onClick={() => setView(v.id)}
                       title={v.label}
-                      className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${
-                        projectView === v.id
+                      className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${projectView === v.id
                           ? 'bg-white text-[#059669] shadow-xs'
                           : 'text-[#5B6B7A] hover:text-[#0F172A]'
-                      }`}
+                        }`}
                       aria-label={v.label}
                     >
                       <v.icon className="w-4 h-4" />
@@ -1190,11 +1182,10 @@ export default function Projects({
                       <button
                         type="button"
                         onClick={() => setListLayout('card')}
-                        className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${
-                          listLayout === 'card'
+                        className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${listLayout === 'card'
                             ? 'bg-white text-[#059669] shadow-xs'
                             : 'text-[#5B6B7A] hover:text-[#0F172A]'
-                        }`}
+                          }`}
                         aria-label="Kartu"
                       >
                         <Grid className="w-4 h-4" />
@@ -1202,11 +1193,10 @@ export default function Projects({
                       <button
                         type="button"
                         onClick={() => setListLayout('compact')}
-                        className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${
-                          listLayout === 'compact'
+                        className={`p-2 min-h-9 min-w-9 rounded-lg transition-colors flex items-center justify-center ${listLayout === 'compact'
                             ? 'bg-white text-[#059669] shadow-xs'
                             : 'text-[#5B6B7A] hover:text-[#0F172A]'
-                        }`}
+                          }`}
                         aria-label="Baris"
                       >
                         <List className="w-4 h-4" />
@@ -1225,17 +1215,15 @@ export default function Projects({
                     setFilter(f.id);
                     setProjectsListFilter(f.id);
                   }}
-                  className={`flex items-center gap-2 h-10 px-4 rounded-full text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${
-                    filter === f.id
+                  className={`flex items-center gap-2 h-10 px-4 rounded-full text-xs font-bold whitespace-nowrap transition-all active:scale-95 ${filter === f.id
                       ? 'bg-[#0F172A] text-white shadow-xs'
                       : 'bg-white border border-[#E5EAE8] text-[#5B6B7A] hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <span>{f.label}</span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] ${
-                      filter === f.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-[#5B6B7A]'
-                    }`}
+                    className={`px-2 py-0.5 rounded-full text-[10px] ${filter === f.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-[#5B6B7A]'
+                      }`}
                   >
                     {f.count}
                   </span>
@@ -1315,9 +1303,8 @@ export default function Projects({
             </div>
             <div className="flex items-center gap-2">
               <ChevronDown
-                className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${
-                  archivedSectionOpen ? 'rotate-180' : ''
-                }`}
+                className={`w-5 h-5 text-slate-400 transition-transform duration-200 ${archivedSectionOpen ? 'rotate-180' : ''
+                  }`}
               />
             </div>
           </button>
@@ -1352,9 +1339,8 @@ export default function Projects({
                           <span>Diarsipkan: {new Date(row.deleted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                           {daysLeft != null && (
                             <span
-                              className={`font-semibold ${
-                                daysLeft <= 7 ? 'text-rose-600 font-bold' : 'text-amber-700'
-                              }`}
+                              className={`font-semibold ${daysLeft <= 7 ? 'text-rose-600 font-bold' : 'text-amber-700'
+                                }`}
                             >
                               · {daysLeft} hari tersisa sebelum dihapus permanen
                             </span>
@@ -1487,11 +1473,10 @@ export default function Projects({
                     key={opt.id}
                     type="button"
                     onClick={() => setSelectedNewStatus(opt.id)}
-                    className={`w-full p-3 text-left rounded-xl border transition-all flex items-center justify-between ${
-                      isSelected
+                    className={`w-full p-3 text-left rounded-xl border transition-all flex items-center justify-between ${isSelected
                         ? 'border-[#059669] bg-emerald-50/60 text-[#0F172A]'
                         : 'border-[#E5EAE8] bg-white text-[#5B6B7A] hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     <div>
                       <div className="text-xs font-bold">{opt.label}</div>
