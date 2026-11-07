@@ -1,6 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { BRANDS } from "@/lib/brand/brand.config";
 import "./globals.css";
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  preload: true,
+  variable: "--font-jakarta",
+});
 
 const brand = BRANDS.estimator;
 
@@ -54,14 +63,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id" className={plusJakartaSans.variable} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
         <meta name="apple-mobile-web-app-title" content="Estimator" />
         <script
           dangerouslySetInnerHTML={{
@@ -77,14 +80,20 @@ export default function RootLayout({
                   window.dispatchEvent(new CustomEvent('pwa-prompt-ready', { detail: { key: key, prompt: e } }));
                 });
 
-                // Auto register SW sesuai path
                 if ('serviceWorker' in navigator) {
                   window.addEventListener('load', function() {
-                    var path = window.location.pathname || '';
-                    if (path.startsWith('/admin')) {
-                      navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin' }).catch(function(){});
+                    var registerSw = function() {
+                      var path = window.location.pathname || '';
+                      if (path.startsWith('/admin')) {
+                        navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin' }).catch(function(){});
+                      } else {
+                        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+                      }
+                    };
+                    if ('requestIdleCallback' in window) {
+                      window.requestIdleCallback(registerSw, { timeout: 4000 });
                     } else {
-                      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+                      setTimeout(registerSw, 2000);
                     }
                   });
                 }
@@ -94,7 +103,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className="font-sans antialiased bg-[var(--bg)] text-[var(--ink)]"
+        className={`${plusJakartaSans.className} font-sans antialiased bg-[var(--bg)] text-[var(--ink)]`}
         suppressHydrationWarning
       >
         {children}

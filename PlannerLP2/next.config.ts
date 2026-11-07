@@ -31,6 +31,11 @@ const publicPlannerUrl =
 const landingBasePath = (process.env.PLANNER_LANDING_BASE_PATH || "/lp2").replace(/\/$/, "") || "/lp2";
 
 const nextConfig: NextConfig = {
+  compress: true,
+  poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: ["lucide-react", "framer-motion"],
+  },
   turbopack: {
     root: __dirname,
   },
@@ -40,6 +45,12 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: "/brand/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
       {
         source: "/admin-sw.js",
         headers: [

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import { Menu, X, ArrowRight, LogIn, LayoutDashboard, Edit3, Save } from "lucide-react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { useContentStore } from "@/lib/store/contentStore";
@@ -9,12 +9,16 @@ import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { useFinishInlineEdit } from "@/lib/hooks/useFinishInlineEdit";
 import { useAuthStore } from "@/lib/store/authStore";
+import { useUIStore } from "@/lib/store/uiStore";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { canClaimBonusApps, isEstimatorOnlyUser } from "@/lib/permissions";
 import { getActiveHeroCopy } from "@/lib/content/heroCopy";
 import { cn } from "@/lib/utils/cn";
-import { LoginModal } from "./LoginModal";
 import Link from "next/link";
+
+const LoginModal = dynamic(() => import("./LoginModal").then((m) => m.LoginModal), {
+  ssr: false,
+});
 
 const DESKTOP_NAV_HREFS = new Set(["#tiga-step", "#fitur", "#harga", "#faq"]);
 
@@ -25,6 +29,7 @@ export function Navbar() {
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLoginModalOpen = useUIStore((s) => s.isLoginModalOpen);
   const hideNavbarForEstimatorCustomer =
     hydrated && isAuthenticated && !isAdmin && isEstimatorOnlyUser(user);
   const { content } = useContentStore();
@@ -98,9 +103,11 @@ export function Navbar() {
             </div>
           </div>
         </div>
-        <Suspense fallback={null}>
-          <LoginModal />
-        </Suspense>
+        {isLoginModalOpen && (
+          <Suspense fallback={null}>
+            <LoginModal />
+          </Suspense>
+        )}
       </>
     );
   }
@@ -206,19 +213,16 @@ export function Navbar() {
         </div>
       </header>
 
-      <Suspense fallback={null}>
-        <LoginModal />
-      </Suspense>
+      {isLoginModalOpen && (
+        <Suspense fallback={null}>
+          <LoginModal />
+        </Suspense>
+      )}
 
-      <AnimatePresence>
-        {isMobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, x: "100%" }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 z-40 w-full max-w-xs bg-white shadow-2xl flex flex-col lg:hidden"
-          >
+      {isMobileOpen && (
+        <div
+          className="fixed inset-y-0 right-0 z-40 w-full max-w-xs bg-white shadow-2xl flex flex-col lg:hidden transition-transform duration-200 ease-out"
+        >
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
               <span className="font-bold text-slate-900">Menu</span>
               <button type="button" onClick={() => setIsMobileOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
@@ -321,9 +325,8 @@ export function Navbar() {
                 </button>
               </div>
             )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
       {isMobileOpen && (
         <div

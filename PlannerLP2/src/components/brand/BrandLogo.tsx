@@ -40,6 +40,8 @@ export function BrandLogo({
       alt={alt ?? def.name}
       width={width}
       height={height}
+      decoding="async"
+      fetchPriority="high"
       className={cn("object-contain shrink-0", className)}
       style={{ height, width: isLockup ? "auto" : height, maxHeight: height }}
     />

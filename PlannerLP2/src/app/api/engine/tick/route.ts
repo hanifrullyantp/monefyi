@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import {
   runFivePillarDiagnostics,
   WinningEngineConfig,
   DEFAULT_WINNING_ENGINE_CONFIG,
   evaluateGuardrailGate,
 } from "@/lib/engine/winningEngine";
-import { runRoutedLlm } from "@/lib/engine/llmRouter";
+import { runRoutedLlm, submitOpenRouterBatch } from "@/lib/engine/llmRouter";
 import { dispatchEngineNotification } from "@/lib/services/telegramBotService";
+
+function getSupabaseServerClient() {
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zzwqfmdyncxbolestkqp.supabase.co";
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    "";
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 /**
  * Endpoint utama Monefyi Holistic Winning Engine (/api/engine/tick).
@@ -17,12 +28,48 @@ import { dispatchEngineNotification } from "@/lib/services/telegramBotService";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const campaigns = Array.isArray(body.campaigns) ? body.campaigns : [];
-    const insightsData = body.insightsData || null;
+    let campaigns = Array.isArray(body.campaigns) && body.campaigns.length > 0 ? body.campaigns : [];
+    let insightsData = body.insightsData || null;
     const orderBumpConfig = body.orderBumpConfig || undefined;
     const upsellConfig = body.upsellConfig || undefined;
     const capiStatus = body.capiStatus || undefined;
     const currentLpCopy = body.currentLpCopy || undefined;
+
+    // Jika data kampanye belum dikirim di body (misal dipanggil pg_cron atau initial load),
+    // tarik data riil kampanye & breakdown insights langsung dari Meta Graph API menggunakan token Supabase Cloud
+    if (campaigns.length === 0) {
+      try {
+        const origin = req.nextUrl.origin || "http://localhost:3000";
+        const [campRes, insRes] = await Promise.all([
+          fetch(`${origin}/api/meta/campaigns`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }).catch(() => null),
+          fetch(`${origin}/api/meta/insights`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          }).catch(() => null),
+        ]);
+
+        if (campRes && campRes.ok) {
+          const campJson = await campRes.json().catch(() => ({}));
+          if (Array.isArray(campJson.campaigns) && campJson.campaigns.length > 0) {
+            campaigns = campJson.campaigns;
+          }
+        }
+
+        if (insRes && insRes.ok && !insightsData) {
+          const insJson = await insRes.json().catch(() => ({}));
+          if (insJson.ok) {
+            insightsData = insJson;
+          }
+        }
+      } catch {
+        // Fallback jika pemanggilan internal gagal
+      }
+    }
 
     const config: WinningEngineConfig = {
       ...DEFAULT_WINNING_ENGINE_CONFIG,
@@ -90,6 +137,68 @@ ${diagnostics.pillars
 
 Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
  Susun ringkasan strategis singkat (tanpa emoticon) agar user langsung mengerti apa yang terjadi dan mengapa rencana di bawah perlu disetujui.`;
+
+    const strategistModel = config.llmRouting?.strategist?.model || "";
+    const isBatchMode = strategistModel.includes(":batch") || strategistModel.includes("batch");
+    const supabase = getSupabaseServerClient();
+
+    // Jika model dikonfigurasi menggunakan antrean Batch (misal: anthropic/claude-sonnet-5.5:batch)
+    if (isBatchMode) {
+      let openRouterKey =
+        config.llmRouting?.openRouterApiKey ||
+        config.llmRouting?.strategist?.apiKey ||
+        "";
+
+      if (!openRouterKey) {
+        const { data: dbConf } = await supabase
+          .from("winning_engine_config")
+          .select("openrouter_api_key")
+          .eq("id", "default")
+          .maybeSingle();
+        if (dbConf?.openrouter_api_key) {
+          openRouterKey = dbConf.openrouter_api_key;
+        }
+      }
+
+      if (openRouterKey) {
+        const batchSubmitRes = await submitOpenRouterBatch({
+          model: strategistModel,
+          systemPrompt,
+          userPrompt,
+          apiKey: openRouterKey,
+          temperature: 0.3,
+          maxTokens: 1000,
+        });
+
+        if (batchSubmitRes.ok && batchSubmitRes.batchId) {
+          const startedAt = new Date().toISOString();
+          await supabase
+            .from("winning_engine_config")
+            .update({
+              batch_job_id: batchSubmitRes.batchId,
+              batch_status: "in_progress",
+              batch_model: strategistModel,
+              batch_started_at: startedAt,
+              batch_completed_at: null,
+              batch_diagnostics_snapshot: diagnostics,
+              updated_at: startedAt,
+            })
+            .eq("id", "default");
+
+          return NextResponse.json({
+            ok: true,
+            isBatch: true,
+            status: "processing",
+            batchId: batchSubmitRes.batchId,
+            model: strategistModel,
+            startedAt,
+            message:
+              "Permintaan analisa telah dikirim ke antrean Sonnet 5.5 Batch. Sistem sedang memproses di belakang layar. Tampilan akan otomatis terisi begitu data siap.",
+            diagnostics,
+          });
+        }
+      }
+    }
 
     const llmStrategistResult = await runRoutedLlm({
       role: "strategist",
@@ -165,8 +274,23 @@ Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
       );
     }
 
+    // 5. Simpan snapshot hasil analisa selesai ke Supabase Cloud
+    await supabase
+      .from("winning_engine_config")
+      .update({
+        batch_status: "completed",
+        batch_completed_at: new Date().toISOString(),
+        last_executive_brief: executiveBrief,
+        last_pillars: diagnostics.pillars,
+        last_plans: finalPlans,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", "default");
+
     return NextResponse.json({
       ok: true,
+      status: "ready",
+      isBatch: false,
       timestamp: new Date().toISOString(),
       mode: config.mode,
       overallScore: diagnostics.overallScore,

@@ -374,3 +374,172 @@ export async function runRoutedLlm(input: LlmCallInput): Promise<LlmCallOutput> 
 
   return result;
 }
+
+/**
+ * Parameter untuk submit batch job ke OpenRouter Batch API
+ */
+export interface OpenRouterBatchSubmitParams {
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  apiKey: string;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+export interface OpenRouterBatchSubmitResult {
+  ok: boolean;
+  batchId?: string;
+  status?: string;
+  model?: string;
+  error?: string;
+}
+
+export interface OpenRouterBatchPollResult {
+  ok: boolean;
+  status: "validating" | "in_progress" | "completed" | "failed" | "expired";
+  text?: string;
+  error?: string;
+}
+
+/**
+ * Submit request analisa ke OpenRouter Batch API (mendukung model :batch seperti Sonnet 5.5 Batch).
+ * Endpoint: POST https://openrouter.ai/api/v1/batches
+ */
+export async function submitOpenRouterBatch(
+  params: OpenRouterBatchSubmitParams
+): Promise<OpenRouterBatchSubmitResult> {
+  const { model, systemPrompt, userPrompt, apiKey, temperature = 0.3, maxTokens = 1000 } = params;
+
+  if (!apiKey) {
+    return {
+      ok: false,
+      error: "OpenRouter API Key belum dikonfigurasi.",
+    };
+  }
+
+  // Normalisasi model batch bila diperlukan
+  const normalizedModel = model.trim();
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/batches", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey.trim()}`,
+        "HTTP-Referer": "https://monefyi.com",
+        "X-Title": "Monefyi Winning Engine",
+      },
+      body: JSON.stringify({
+        model: normalizedModel,
+        endpoint: "/v1/chat/completions",
+        requests: [
+          {
+            custom_id: `monefyi_5pillar_diag_${Date.now()}`,
+            body: {
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+              temperature,
+              max_tokens: maxTokens,
+            },
+          },
+        ],
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data?.id) {
+      return {
+        ok: true,
+        batchId: data.id,
+        status: data.status || "validating",
+        model: data.model || normalizedModel,
+      };
+    }
+
+    return {
+      ok: false,
+      error: data?.error?.message || `Gagal membuat batch job (${res.status}).`,
+    };
+  } catch (err: any) {
+    return {
+      ok: false,
+      error: err?.message || "Koneksi ke OpenRouter Batch API terputus.",
+    };
+  }
+}
+
+/**
+ * Memeriksa status dan mengambil hasil batch job dari OpenRouter.
+ * Endpoint: GET https://openrouter.ai/api/v1/batches/{id}
+ */
+export async function pollOpenRouterBatch(
+  batchId: string,
+  apiKey: string
+): Promise<OpenRouterBatchPollResult> {
+  if (!batchId || !apiKey) {
+    return {
+      ok: false,
+      status: "failed",
+      error: "Batch ID atau API Key tidak valid.",
+    };
+  }
+
+  try {
+    const res = await fetch(`https://openrouter.ai/api/v1/batches/${encodeURIComponent(batchId)}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey.trim()}`,
+        "HTTP-Referer": "https://monefyi.com",
+        "X-Title": "Monefyi Winning Engine",
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: "failed",
+        error: data?.error?.message || `Gagal mengambil status batch (${res.status}).`,
+      };
+    }
+
+    const status = data?.status as "validating" | "in_progress" | "completed" | "failed" | "expired";
+
+    if (status === "completed") {
+      // Ekstrak teks hasil dari data.results
+      const firstResult = data?.results?.[0];
+      const content =
+        firstResult?.response?.body?.choices?.[0]?.message?.content ||
+        firstResult?.body?.choices?.[0]?.message?.content ||
+        "";
+
+      if (content) {
+        return {
+          ok: true,
+          status: "completed",
+          text: String(content),
+        };
+      } else if (firstResult?.error) {
+        return {
+          ok: false,
+          status: "failed",
+          error: firstResult.error?.message || "Batch selesai dengan kegagalan item.",
+        };
+      }
+    }
+
+    return {
+      ok: true,
+      status: status || "in_progress",
+    };
+  } catch (err: any) {
+    return {
+      ok: false,
+      status: "failed",
+      error: err?.message || "Gagal memantau status batch OpenRouter.",
+    };
+  }
+}

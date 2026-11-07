@@ -82,6 +82,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
+    // Fast-path untuk pengunjung baru (99% trafik iklan Meta):
+    // Jika tidak ada token sesi Supabase atau cache user di localStorage, tidak perlu inisialisasi Supabase Auth
+    if (typeof window !== "undefined") {
+      try {
+        let hasSessionToken = Boolean(window.localStorage.getItem(AUTH_STORAGE_KEY));
+        if (!hasSessionToken) {
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const k = window.localStorage.key(i);
+            if (k && k.startsWith("sb-") && k.endsWith("-auth-token")) {
+              hasSessionToken = true;
+              break;
+            }
+          }
+        }
+        if (
+          !hasSessionToken &&
+          !window.location.hash.includes("access_token") &&
+          !window.location.search.includes("code=")
+        ) {
+          set({ user: null, isAuthenticated: false, orgId: null, hydrated: true });
+          return;
+        }
+      } catch {
+        // Lanjut normal jika localStorage diblokir
+      }
+    }
+
     const supabase = getSupabaseClient();
     if (!supabase) {
       set({ hydrated: true });

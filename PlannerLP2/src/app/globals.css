@@ -11,8 +11,8 @@
 */
 @layer base {
   :root {
-    --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
-    --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+    --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+    --font-display: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
 
     --brand-400: #21ab7b;
     --brand-600: #157f5f;

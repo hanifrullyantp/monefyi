@@ -123,7 +123,7 @@ export const useContentStore = create<ContentStore>()(
 
       loadFromRemote: async () => {
         try {
-          const { isDirty, content: localContent } = get();
+          const { isDirty, content: localContent, remoteUpdatedAt: prevUpdatedAt } = get();
           const remote = await fetchLandingContent();
           if (remote?.fromDatabase) {
             if (isDirty) {
@@ -136,8 +136,23 @@ export const useContentStore = create<ContentStore>()(
               });
               return;
             }
+            const merged = mergeSiteContent(remote.content);
+            // Hindari full re-render halaman apabila konten lokal sudah identik dengan remote
+            if (
+              prevUpdatedAt &&
+              remote.updatedAt &&
+              prevUpdatedAt === remote.updatedAt
+            ) {
+              set({
+                isLoaded: true,
+                loadError: null,
+                publishError: null,
+                dbSynced: true,
+              });
+              return;
+            }
             set({
-              content: mergeSiteContent(remote.content),
+              content: merged,
               isDirty: false,
               isLoaded: true,
               loadError: null,
@@ -197,11 +212,6 @@ export const useContentStore = create<ContentStore>()(
           history: (saved.history ?? current.history).map((item) =>
             mergeSiteContent(item),
           ),
-        };
-      },
-      onRehydrateStorage: () => {
-        return () => {
-          void useContentStore.getState().loadFromRemote();
         };
       },
     },

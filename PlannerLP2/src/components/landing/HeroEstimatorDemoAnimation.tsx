@@ -220,14 +220,18 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
       return;
     }
 
+    let startTimer: number | undefined;
     const io = new IntersectionObserver(
       (es) => {
         if (!es[0]?.isIntersecting || startedRef.current) return;
         startedRef.current = true;
         io.disconnect();
-        trackEvent("view_hero", { variant_id: "hero_animation_demo" });
         reset();
-        void run();
+        startTimer = window.setTimeout(() => {
+          if (cancelled) return;
+          trackEvent("view_hero", { variant_id: "hero_animation_demo" });
+          void run();
+        }, 1600);
       },
       { threshold: 0.25 },
     );
@@ -235,6 +239,7 @@ export function HeroEstimatorDemoAnimation({ pulseToken = 0 }: HeroEstimatorDemo
 
     return () => {
       cancelled = true;
+      if (startTimer !== undefined) window.clearTimeout(startTimer);
       io.disconnect();
     };
   }, []);

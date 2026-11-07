@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { WinningPillarId, WinningActionPlan } from "@/lib/engine/winningEngine";
 import {
@@ -25,6 +25,7 @@ import {
   Clock,
   BookOpen,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -44,6 +45,12 @@ export function WinningEngineCommandCenter({
     winningLlmInfo,
     isRunningEngineTick,
     executingPlanId,
+    batchAnalysisStatus,
+    batchJobId,
+    batchStartedAt,
+    batchCompletedAt,
+    batchProgressMessage,
+    pollBatchStatus,
     runWinningEngineTick,
     approveAndExecutePlan,
     rejectPlan,
@@ -55,6 +62,62 @@ export function WinningEngineCommandCenter({
     ok: boolean;
     message: string;
   } | null>(null);
+
+  // Timer & Polling untuk Sonnet 5.5 Batch Processing
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isPollingBatch, setIsPollingBatch] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (batchAnalysisStatus === "processing") {
+      const startMs = batchStartedAt ? new Date(batchStartedAt).getTime() : Date.now();
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+
+      interval = setInterval(() => {
+        setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [batchAnalysisStatus, batchStartedAt]);
+
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout | null = null;
+    if (batchAnalysisStatus === "processing") {
+      pollInterval = setInterval(async () => {
+        setIsPollingBatch(true);
+        try {
+          await pollBatchStatus();
+        } finally {
+          setIsPollingBatch(false);
+        }
+      }, 6000);
+    }
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [batchAnalysisStatus, pollBatchStatus]);
+
+  const handleManualCheckBatch = async () => {
+    setIsPollingBatch(true);
+    try {
+      const res = await pollBatchStatus();
+      if (res.message) {
+        setFeedbackBanner({ ok: res.isReady, message: res.message });
+      }
+    } finally {
+      setIsPollingBatch(false);
+    }
+  };
+
+  const formatElapsed = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const remainingSecs = sec % 60;
+    return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
+  };
 
   // State edit cepat per plan sebelum user klik Setujui
   const [customEdits, setCustomEdits] = useState<Record<string, Record<string, any>>>({});
@@ -408,37 +471,178 @@ export function WinningEngineCommandCenter({
       </div>
 
       {/* =====================================================================
+          SONNET 5.5 BATCH STATUS TRACKER (PROCESSING / READY)
+          ===================================================================== */}
+      {batchAnalysisStatus === "processing" && (
+        <div className="bg-amber-50/80 dark:bg-amber-950/40 border-2 border-amber-300 dark:border-amber-700/60 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200/80 dark:border-amber-800/60 pb-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-sm">
+                <Loader2 className="w-5 h-5 animate-spin" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-black text-amber-950 dark:text-amber-100">
+                    Analisa Strategis Sonnet 5.5 Batch Sedang Diproses
+                  </h3>
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider border border-amber-400/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                    Sedang Dalam Proses
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800/90 dark:text-amber-300/90 mt-0.5">
+                  Model: <span className="font-mono font-bold">{winningEngineConfig.llmRouting.strategist.model}</span> (Antrean Batch Asinkron)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-950 dark:text-amber-200 text-xs font-mono font-bold border border-amber-300/80 dark:border-amber-700">
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Waktu Berjalan: {formatElapsed(elapsedSeconds)}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleManualCheckBatch}
+                disabled={isPollingBatch}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                title="Cek status terkini antrean batch"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", isPollingBatch && "animate-spin")} />
+                <span>{isPollingBatch ? "Mengecek..." : "Cek Status"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tahapan Eksekusi Batch */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="p-3 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-amber-200/60 dark:border-amber-800/40 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  1. Ekstraksi Metrik Data
+                </span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                Data kampanye Meta, rasio OCLP LP, dan checkout telah dihitung.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-amber-200/60 dark:border-amber-800/40 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  2. Diagnosa Awal 5 Pilar
+                </span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                Pilar Offer, LP, Checkout, Ads, dan Tracking siap diselaraskan.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-amber-100/70 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black text-amber-900 dark:text-amber-200">
+                  3. Analisa Strategis Sonnet
+                </span>
+                <Loader2 className="w-4 h-4 text-amber-600 dark:text-amber-400 animate-spin" />
+              </div>
+              <p className="text-[10px] text-amber-800 dark:text-amber-300">
+                Anthropic sedang menyusun ringkasan eksekutif &amp; rencana aksi.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 text-[11px] text-amber-800 dark:text-amber-300 font-medium pt-1">
+            <p>
+              Proses batch bekerja di server latar belakang. Anda dapat tetap menggunakan aplikasi atau berpindah menu. Halaman ini akan <strong>otomatis menampilkan data dan kartu persetujuan</strong> begitu proses siap.
+            </p>
+            <span className="shrink-0 text-[10px] font-mono opacity-75">
+              Auto-check tiap 6 dtk
+            </span>
+          </div>
+        </div>
+      )}
+
+      {batchAnalysisStatus === "ready" && batchCompletedAt && (
+        <div className="bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-sm font-black text-emerald-950 dark:text-emerald-100">
+                  Analisa Sonnet 5.5 Batch Siap (Ready)
+                </h4>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black uppercase">
+                  Data Terkini
+                </span>
+              </div>
+              <p className="text-xs text-emerald-800/90 dark:text-emerald-300/90 mt-0.5">
+                Model: <span className="font-mono font-bold">{winningEngineConfig.llmRouting.strategist.model}</span> | Selesai diproses pada {new Date(batchCompletedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} WIB
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => handleRunTick(false)}
+            disabled={isRunningEngineTick}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer self-start sm:self-auto shrink-0"
+          >
+            <RefreshCw className={cn("w-3.5 h-3.5", isRunningEngineTick && "animate-spin")} />
+            <span>Jalankan Analisa Baru</span>
+          </button>
+        </div>
+      )}
+
+      {/* =====================================================================
           PANEL 2: RADAR KESEHATAN 5 PILAR WINNING (KLIK UNTUK FILTER)
           ===================================================================== */}
       {winningPillars.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xs">
-          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-            <Target className="w-6 h-6" />
-          </div>
-          <div className="max-w-md mx-auto space-y-1.5">
-            <h3 className="text-base font-black text-slate-900 dark:text-white">
-              Belum Ada Analisa 5 Pilar Aktif
+        batchAnalysisStatus === "processing" ? (
+          <div className="bg-white/60 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-3 shadow-xs">
+            <div className="w-10 h-10 mx-auto rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white">
+              Menunggu Antrean Sonnet 5.5 Batch...
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              Monefyi Winning Engine siap menganalisa data riil kampanye Meta Ads untuk <strong>Monefyi Estimator (estimator.monefyi.com)</strong>. Klik tombol di bawah untuk meminta AI Strategist ({winningEngineConfig.llmRouting.strategist.provider.toUpperCase()} {winningEngineConfig.llmRouting.strategist.model}) membuat evaluasi dan rencana winning.
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              Radar skor 5 pilar dan kotak persetujuan rencana aksi akan otomatis tertampil secara utuh begitu hasil analisa strategis Anthropic Sonnet 5.5 diterima.
             </p>
           </div>
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => handleRunTick(false)}
-              disabled={isRunningEngineTick}
-              className="inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-950/20 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={cn("w-4 h-4", isRunningEngineTick && "animate-spin")} />
-              <span>
-                {isRunningEngineTick
-                  ? "AI Sedang Menganalisa 5 Pilar..."
-                  : "Mulai Planning & Generate Analisa 5 Pilar Sekarang"}
-              </span>
-            </button>
+        ) : (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-xs">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Target className="w-6 h-6" />
+            </div>
+            <div className="max-w-md mx-auto space-y-1.5">
+              <h3 className="text-base font-black text-slate-900 dark:text-white">
+                Belum Ada Analisa 5 Pilar Aktif
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Monefyi Winning Engine siap menganalisa data riil kampanye Meta Ads untuk <strong>Monefyi Estimator (estimator.monefyi.com)</strong>. Klik tombol di bawah untuk meminta AI Strategist ({winningEngineConfig.llmRouting.strategist.provider.toUpperCase()} {winningEngineConfig.llmRouting.strategist.model}) membuat evaluasi dan rencana winning.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => handleRunTick(false)}
+                disabled={isRunningEngineTick}
+                className="inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-950/20 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={cn("w-4 h-4", isRunningEngineTick && "animate-spin")} />
+                <span>
+                  {isRunningEngineTick
+                    ? "AI Sedang Menganalisa 5 Pilar..."
+                    : "Mulai Planning & Generate Analisa 5 Pilar Sekarang"}
+                </span>
+              </button>
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <div className="space-y-2.5">
           <div className="flex items-center justify-between px-1">

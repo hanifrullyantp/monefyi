@@ -115,6 +115,15 @@ interface MarketingStore {
   };
   isRunningEngineTick: boolean;
   executingPlanId: string | null;
+
+  // Batch Analysis Tracker (Sonnet 5.5 Batch & Multi-device)
+  batchAnalysisStatus: "idle" | "processing" | "ready" | "error";
+  batchJobId: string | null;
+  batchStartedAt: string | null;
+  batchCompletedAt: string | null;
+  batchProgressMessage: string;
+  pollBatchStatus: () => Promise<{ status: string; isReady: boolean; message?: string }>;
+
   currentLpCopySnapshot: {
     heroTitle: string;
     heroSubtitle: string;
@@ -201,6 +210,14 @@ export const useMarketingStore = create<MarketingStore>()(
       },
       isRunningEngineTick: false,
       executingPlanId: null,
+
+      // Batch Analysis Initial State (Sonnet 5.5 Batch Tracker)
+      batchAnalysisStatus: "idle",
+      batchJobId: null,
+      batchStartedAt: null,
+      batchCompletedAt: null,
+      batchProgressMessage: "",
+
       currentLpCopySnapshot: {
         heroTitle: 'Kirim Penawaran Sebelum Kamu Pulang Survei',
         heroSubtitle:
@@ -297,13 +314,88 @@ export const useMarketingStore = create<MarketingStore>()(
               },
             }));
           }
+
+          // Sinkronisasi status batch dari Supabase Cloud (Multi-device tracking)
+          const batchRes = await fetch('/api/engine/batch');
+          const batchData = await batchRes.json().catch(() => ({}));
+          if (batchRes.ok && batchData.ok) {
+            if (batchData.status === 'processing') {
+              set({
+                batchAnalysisStatus: 'processing',
+                batchJobId: batchData.batchId,
+                batchStartedAt: batchData.startedAt,
+                batchProgressMessage:
+                  batchData.message || 'Analisa Sonnet 5.5 Batch sedang diproses di belakang layar...',
+                isRunningEngineTick: true,
+              });
+            } else if (batchData.status === 'ready') {
+              set({
+                batchAnalysisStatus: 'ready',
+                batchJobId: batchData.batchId || get().batchJobId,
+                batchStartedAt: batchData.startedAt || get().batchStartedAt,
+                batchCompletedAt: batchData.completedAt || new Date().toISOString(),
+                winningOverallScore: batchData.overallScore ?? get().winningOverallScore,
+                winningPillars: batchData.pillars?.length ? batchData.pillars : get().winningPillars,
+                winningPlans: batchData.plans?.length ? batchData.plans : get().winningPlans,
+                winningExecutiveBrief: batchData.executiveBrief || get().winningExecutiveBrief,
+                winningLearnings: batchData.learnings || get().winningLearnings,
+                batchProgressMessage: 'Data siap! Hasil analisa 5 pilar Sonnet 5.5 telah tersedia.',
+                isRunningEngineTick: false,
+              });
+            }
+          }
         } catch {
           // Abaikan jika offline
         }
       },
 
+      pollBatchStatus: async () => {
+        try {
+          const res = await fetch('/api/engine/batch');
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.ok) {
+            if (data.status === 'ready') {
+              set({
+                batchAnalysisStatus: 'ready',
+                batchJobId: data.batchId || get().batchJobId,
+                batchStartedAt: data.startedAt || get().batchStartedAt,
+                batchCompletedAt: data.completedAt || new Date().toISOString(),
+                batchProgressMessage: 'Analisa Sonnet 5.5 Batch selesai dan data siap ditampilkan.',
+                winningOverallScore: data.overallScore ?? get().winningOverallScore,
+                winningPillars: data.pillars?.length ? data.pillars : get().winningPillars,
+                winningPlans: data.plans?.length ? data.plans : get().winningPlans,
+                winningLearnings: data.learnings || get().winningLearnings,
+                winningExecutiveBrief: data.executiveBrief || get().winningExecutiveBrief,
+                isRunningEngineTick: false,
+              });
+              return { status: 'ready', isReady: true, message: 'Data siap!' };
+            } else if (data.status === 'processing') {
+              set({
+                batchAnalysisStatus: 'processing',
+                batchJobId: data.batchId || get().batchJobId,
+                batchStartedAt: data.startedAt || get().batchStartedAt,
+                batchProgressMessage:
+                  data.message || 'Analisa Sonnet 5.5 Batch sedang diproses di belakang layar...',
+                isRunningEngineTick: true,
+              });
+              return { status: 'processing', isReady: false, message: data.message };
+            } else if (data.status === 'failed') {
+              set({
+                batchAnalysisStatus: 'error',
+                batchProgressMessage: data.error || 'Batch gagal diproses oleh penyedia AI.',
+                isRunningEngineTick: false,
+              });
+              return { status: 'failed', isReady: false, message: data.error };
+            }
+          }
+          return { status: 'idle', isReady: false };
+        } catch (err: any) {
+          return { status: 'error', isReady: false, message: err?.message };
+        }
+      },
+
       runWinningEngineTick: async (sendNotification = false) => {
-        set({ isRunningEngineTick: true });
+        set({ isRunningEngineTick: true, batchAnalysisStatus: 'processing' });
         try {
           const {
             campaigns,
@@ -332,13 +424,37 @@ export const useMarketingStore = create<MarketingStore>()(
 
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.ok) {
+            // Jika model berstatus Batch Asinkron
+            if (data.isBatch) {
+              set({
+                batchAnalysisStatus: 'processing',
+                batchJobId: data.batchId || null,
+                batchStartedAt: data.startedAt || new Date().toISOString(),
+                batchCompletedAt: null,
+                batchProgressMessage:
+                  data.message ||
+                  'Permintaan telah dikirim ke antrean Sonnet 5.5 Batch. Sistem sedang memproses di belakang layar...',
+                winningOverallScore: data.diagnostics?.overallScore || get().winningOverallScore,
+                winningPillars: data.diagnostics?.pillars || get().winningPillars,
+                isRunningEngineTick: true,
+              });
+              return {
+                ok: true,
+                message: data.message,
+              };
+            }
+
             set({
+              batchAnalysisStatus: 'ready',
+              batchCompletedAt: new Date().toISOString(),
+              batchProgressMessage: 'Data siap! 5 pilar dan rencana winning berhasil disusun.',
               winningOverallScore: data.overallScore,
               winningPillars: data.pillars || [],
               winningPlans: data.plans || [],
               winningLearnings: data.learnings || [],
               winningExecutiveBrief: data.executiveBrief || '',
               winningLlmInfo: data.llmInfo || get().winningLlmInfo,
+              isRunningEngineTick: false,
             });
             return {
               ok: true,
@@ -347,17 +463,21 @@ export const useMarketingStore = create<MarketingStore>()(
                 : 'Analisa 5 Pilar berhasil diperbarui.',
             };
           }
+          set({ batchAnalysisStatus: 'error', isRunningEngineTick: false });
           return {
             ok: false,
             message: data.error || 'Gagal menjalankan analisa Winning Engine.',
           };
         } catch (err: any) {
+          set({ batchAnalysisStatus: 'error', isRunningEngineTick: false });
           return {
             ok: false,
             message: err?.message || 'Gagal menghubungi server Winning Engine.',
           };
         } finally {
-          set({ isRunningEngineTick: false });
+          if (get().batchAnalysisStatus !== 'processing') {
+            set({ isRunningEngineTick: false });
+          }
         }
       },
 

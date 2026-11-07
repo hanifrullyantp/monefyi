@@ -3,18 +3,9 @@ import { AuthHydrator } from "@/components/landing/AuthHydrator";
 import { ContentHydrator } from "@/components/landing/ContentHydrator";
 import { LoginRedirect } from "@/components/landing/LoginRedirect";
 import { LandingPageSections } from "@/components/landing/LandingPageSections";
-import { ToastNotification } from "@/components/landing/ToastNotification";
-import { FloatingCTA } from "@/components/landing/FloatingCTA";
-import { FreeTrialPopup } from "@/components/landing/FreeTrialPopup";
-import { ScrollProgress } from "@/components/landing/ScrollProgress";
-import { BackToTop } from "@/components/landing/BackToTop";
-import { LiveChatWidget } from "@/components/landing/LiveChatWidget";
-import { WhatsAppFloat } from "@/components/landing/WhatsAppFloat";
-import { MobileAdminToolbar } from "@/components/landing/MobileAdminToolbar";
-import { AdminSaveNotice } from "@/components/landing/AdminSaveNotice";
+import { DeferredLandingWidgets } from "@/components/landing/DeferredLandingWidgets";
 import { EditModeRedirect } from "@/components/landing/EditModeRedirect";
 import EstimatorPwaLaunchRedirect from "@/components/brand/EstimatorPwaLaunchRedirect";
-import { EstimatorPwaInstallPrompt } from "@/components/landing/EstimatorPwaInstallPrompt";
 import { BrandHead } from "@/components/brand/BrandHead";
 import { TrackingScripts } from "@/components/landing/TrackingScripts";
 import { MetaPixelNoscript } from "@/components/landing/MetaPixelNoscript";
@@ -33,20 +24,11 @@ export default function LandingPage() {
       <ContentHydrator />
       <LoginRedirect />
       <EditModeRedirect />
-      <ScrollProgress />
       <Navbar />
-      <AdminSaveNotice />
       <main>
         <LandingPageSections />
       </main>
-      <ToastNotification />
-      <FloatingCTA />
-      <FreeTrialPopup />
-      <BackToTop />
-      <WhatsAppFloat />
-      <LiveChatWidget />
-      <EstimatorPwaInstallPrompt />
-      <MobileAdminToolbar />
+      <DeferredLandingWidgets />
     </PublicLandingRoot>
   );
 }

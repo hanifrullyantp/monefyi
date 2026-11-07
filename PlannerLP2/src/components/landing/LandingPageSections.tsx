@@ -10,11 +10,24 @@ export function LandingPageSections() {
 
   return (
     <>
-      {order.map((key) => {
+      {order.map((key, idx) => {
         if (visibility[key] === false) return null;
         const Section = getSectionComponent(key);
         if (!Section) return null;
-        return <Section key={key} />;
+        if (idx <= 1 || key === "hero" || key === "trustBadges") {
+          return <Section key={key} />;
+        }
+        return (
+          <div
+            key={key}
+            style={{
+              contentVisibility: "auto",
+              containIntrinsicSize: "auto 620px",
+            }}
+          >
+            <Section />
+          </div>
+        );
       })}
     </>
   );
