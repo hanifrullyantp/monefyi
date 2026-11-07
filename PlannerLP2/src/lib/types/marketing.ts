@@ -20,7 +20,7 @@ export interface AgentInfo {
   role: MarketingAgentRole;
   name: string;
   title: string;
-  avatar: string;
+  badge: string;
   specialty: string;
   badgeColor: string;
 }
@@ -30,33 +30,33 @@ export const MARKETING_AGENTS: Record<MarketingAgentRole, AgentInfo> = {
     role: 'cmo',
     name: 'Mas Danu',
     title: 'Chief Marketing Officer',
-    avatar: '🎯',
+    badge: 'CMO',
     specialty: 'Strategi Kampanye, Funneling & Alokasi Budget',
-    badgeColor: 'bg-purple-100 text-purple-700 border-purple-200',
+    badgeColor: 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800',
   },
   media_buyer: {
     role: 'media_buyer',
     name: 'Bima',
     title: 'Meta Ads Media Buyer',
-    avatar: '📊',
+    badge: 'MEDIA BUYER',
     specialty: 'Membaca Metrik, Diagnosa Boncos & Pengendali Iklan',
-    badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
+    badgeColor: 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
   },
   copywriter: {
     role: 'copywriter',
     name: 'Sinta',
     title: 'Creative & Copywriter Strategist',
-    avatar: '🎨',
+    badge: 'COPYWRITER',
     specialty: 'Winning Hook 3-Detik, Copy PAS/HSO & Script UGC',
-    badgeColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    badgeColor: 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
   },
   funnel_aov: {
     role: 'funnel_aov',
     name: 'Aris',
     title: 'Funnel & AOV Specialist (Scale Model)',
-    avatar: '🚀',
+    badge: 'FUNNEL & AOV',
     specialty: 'Order Bump, OTO Upsell, CAPI & Recovery Abandoned',
-    badgeColor: 'bg-amber-100 text-amber-700 border-amber-200',
+    badgeColor: 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
   },
 };
 
@@ -69,6 +69,7 @@ export interface MetaCampaign {
   name: string;
   objective: 'OUTCOME_LEADS' | 'OUTCOME_SALES' | 'OUTCOME_TRAFFIC';
   status: CampaignStatus;
+  deliveryStatus?: string; // e.g. "Active", "In Review", "Learning", "Off"
   dailyBudget: number; // in IDR
   spend: number;
   impressions: number;
@@ -86,6 +87,33 @@ export interface MetaCampaign {
   targetAudience: string;
   creativeHook: string;
   lastUpdated: string;
+
+  // 26 Metrik Standar Agency & Scale Model
+  results?: number;
+  purchasesConversionValue?: number; // Nilai konversi penjualan (Rp)
+  costPerResult?: number; // Cost per Result (Rp)
+  reach?: number; // Unique reach accounts
+  landingPageViews?: number; // Website landing page views
+  addsToCart?: number; // Adds to cart count
+  checkoutsInitiated?: number; // Checkouts initiated count
+  costPerLpView?: number; // Cost per landing page view (Rp)
+  costPerAddToCart?: number; // Cost per add to cart (Rp)
+  costPerCheckoutInitiated?: number; // Cost per checkout initiated (Rp)
+  costPerPurchase?: number; // Cost per purchase (Rp)
+  
+  // 4 Rasio Funnel Scale Model
+  oclpRate?: number; // 1. OCLP (Link Click ke Landing Page View %)
+  lpToAtcRate?: number; // 2. LP-ATC (Landing Page ke Add to Cart %)
+  atcToIcRate?: number; // 3. ATC-IC (Add to Cart ke Initiate Checkout %)
+  icToPurchaseRate?: number; // 4. IC-Purchase (Initiate Checkout ke Purchase %)
+
+  // Metrik Efisiensi Media Buying
+  cpm?: number; // CPM (Cost per 1,000 impressions)
+  ctrLink?: number; // CTR (Link click-through rate %)
+  ctrAll?: number; // CTR (All clicks %)
+  cpcLink?: number; // CPC (Cost per link click Rp)
+  cpcAll?: number; // CPC (Cost per all clicks Rp)
+  videoThruPlays15s?: number; // 15-second ThruPlays count
 }
 
 export interface WinningAdTemplate {

@@ -250,11 +250,11 @@ export function processAgentWarRoomMessage(
     responses.push({
       id: `msg_${Date.now()}_2`,
       sender: 'copywriter',
-      text: `Halo Pak/Bu! Ini 3 formula hook penahan scroll dan angle tajam yang siap diuji:\n\n1. 🎯 **Hook Emosional**: *"Kelihatannya untung 50 juta di depan, pas serah terima kunci malah nomboki 15 juta. Ternyata bocornya di sini..."*\n2. ⏱️ **Hook Efisiensi**: *"Kirim penawaran RAB berlogo workshop sendiri ke WA klien SEBELUM Anda pulang dari survei lokasi."*\n3. 💸 **Hook Kontroversial**: *"Stop banting harga tender kalau rumus Excel Anda sendiri masih rawan salah hitung!"*\n\nSaya juga sudah menyiapkan draft script Reels 30 detik di tab **Pabrik Iklan (Winning Ad Studio)**. Mau saya siapkan format carousel atau video UGC?`,
+      text: `Halo, ini 3 formula hook penahan scroll dan angle tajam yang siap diuji:\n\n1. [Hook Emosional]: "Kelihatannya untung 50 juta di depan, pas serah terima kunci malah nomboki 15 juta. Ternyata bocornya di sini..."\n2. [Hook Efisiensi]: "Kirim penawaran RAB berlogo workshop sendiri ke WA klien sebelum Anda pulang dari survei lokasi."\n3. [Hook Kontroversial]: "Hentikan banting harga tender kalau rumus Excel Anda sendiri masih rawan salah hitung!"\n\nDraft naskah video 30 detik sudah tersedia di tab Pabrik Iklan. Silakan pilih format carousel atau video untuk dieksekusi.`,
       timestamp: now,
       actionTaken: {
         type: 'generate_ad',
-        details: 'Menghasilkan 3 variasi hook penahan scroll & konsep Reels',
+        details: 'Menghasilkan 3 variasi hook penahan scroll dan konsep video',
       },
     });
     return responses;
@@ -265,7 +265,7 @@ export function processAgentWarRoomMessage(
     responses.push({
       id: `msg_${Date.now()}_1`,
       sender: 'funnel_aov',
-      text: `Lapor dari meja Funnel & AOV (Model Scale.co.id), Pak/Bu! Ada 3 rekomendasi taktis untuk melipatgandakan profit tanpa menaikkan biaya iklan:\n\n1. 🛍️ **Order Bump di Checkout**: Pasang add-on *"Template Database Harga 500+ Material & SOP Proyek 2026"* seharga **Rp 49.000**. Berdasarkan benchmark Scale.co.id, take-rate rata-rata mencapai 28-35% sehingga langsung menaikkan profit bersih per transaksi.\n2. 🔒 **Meta Conversions API (CAPI)**: Sistem CAPI server-side kita aktif dengan Event Match Quality (EMQ) **8.6/10**, memangkas kebocoran tracking iOS 14 sebesar 98%.\n3. 📲 **Abandoned Checkout Recovery**: Ada calon pembeli yang sudah input nomor WhatsApp di checkout tapi belum transfer. Sekali klik kirim reminder WA personal dapat menyelamatkan 15-20% penjualan yang hilang!`,
+      text: `Laporan optimasi Funnel dan AOV (Model Scale):\n\n1. [Order Bump Checkout]: Tambahkan add-on "Template Database Harga 500+ Material & SOP Proyek 2026" seharga Rp 49.000. Take-rate benchmark mencapai 28-35% sehingga langsung mendongkrak margin transaksi.\n2. [Meta Conversions API (CAPI)]: CAPI server-side aktif dengan Event Match Quality 8.6/10 untuk meminimalkan kebocoran data di browser.\n3. [Follow-up Abandoned Checkout]: Calon pembeli yang mengisi nomor WhatsApp namun belum menyelesaikan pembayaran dapat di-follow up otomatis via pesan pengingat.`,
       timestamp: now,
     });
     return responses;
@@ -275,11 +275,144 @@ export function processAgentWarRoomMessage(
   responses.push({
     id: `msg_${Date.now()}_1`,
     sender: 'cmo',
-    text: `Halo! Saya Mas Danu, CMO AI Anda. Bersama Bima (Media Buyer), Sinta (Creative Strategist), dan Aris (Funnel Specialist model Scale.co.id), kami siap mengawal full funnel marketing Monefyi:\n\n• **Bima** siap membaca metrik Meta Ads, mematikan iklan boncos, dan scaling iklan winning.\n• **Sinta** siap membuat hook 3-detik, copywriter PAS/HSO, dan script video Reels.\n• **Aris** siap mengoptimalkan Order Bump, Upsell OTO, dan menyelamatkan abandoned checkout.\n\nApa arahan prioritas Anda hari ini?`,
+    text: `Saya Mas Danu, CMO Tim Marketing. Bersama Bima (Media Buyer), Sinta (Creative Strategist), dan Aris (Funnel Specialist), kami mengawal seluruh funnel pemasaran:\n\n- Media Buyer: Memantau metrik Meta Ads, mematikan iklan boncos, dan scaling iklan winning.\n- Creative Strategist: Menyusun hook 3-detik, teks penawaran, dan naskah video.\n- Funnel Specialist: Mengoptimalkan Order Bump, Upsell OTO, dan penanganan checkout tertunda.\n\nSilakan tentukan fokus instruksi Anda.`,
     timestamp: now,
   });
 
   return responses;
+}
+
+export interface MarketingSystemAudit {
+  isFullyIntegrated: boolean;
+  score: number; // 0 - 100
+  metaStatus: {
+    connected: boolean;
+    label: string;
+    detail: string;
+  };
+  aiStatus: {
+    connected: boolean;
+    provider: string;
+    model: string;
+    detail: string;
+  };
+  capiStatus: {
+    connected: boolean;
+    emq: number;
+    detail: string;
+  };
+  detectedIssues: {
+    severity: 'critical' | 'warning' | 'info';
+    agent: MarketingAgentRole;
+    title: string;
+    diagnosis: string;
+    actionableFix: string;
+  }[];
+}
+
+export function analyzeMarketingSystemIntegrations(
+  apiConfig: {
+    metaAccessToken?: string;
+    adAccountId?: string;
+    pixelId?: string;
+    capiAccessToken?: string;
+    aiProvider?: string;
+    aiApiKey?: string;
+  },
+  campaigns: MetaCampaign[],
+  rules: MarketingAutomationRules
+): MarketingSystemAudit {
+  const issues: MarketingSystemAudit['detectedIssues'] = [];
+  let score = 100;
+
+  const hasMetaToken = Boolean(apiConfig.metaAccessToken?.trim());
+  const hasAdAccount = Boolean(apiConfig.adAccountId?.trim());
+  const hasPixel = Boolean(apiConfig.pixelId?.trim());
+  const hasCapiToken = Boolean(apiConfig.capiAccessToken?.trim());
+  const hasAiKey = Boolean(apiConfig.aiApiKey?.trim());
+
+  // Check 1: Meta Credentials
+  if (!hasMetaToken || !hasAdAccount) {
+    score -= 25;
+    issues.push({
+      severity: 'warning',
+      agent: 'media_buyer',
+      title: 'Meta Graph API Berjalan di Mode Simulator',
+      diagnosis: 'Access Token atau Ad Account ID belum diisi. Saat ini tabel menampilkan data benchmark sandbox Monefyi.',
+      actionableFix: 'Buka menu Konfigurasi & Rules, masukkan Access Token dari Meta Business Developer dan Ad Account ID (format: act_xxxxxxxx).',
+    });
+  }
+
+  // Check 2: Conversions API (CAPI)
+  if (!hasCapiToken || !hasPixel) {
+    score -= 15;
+    issues.push({
+      severity: 'warning',
+      agent: 'funnel_aov',
+      title: 'Meta Conversions API (CAPI) Server-Side Belum Aktif',
+      diagnosis: 'Hanya pixel browser yang aktif tanpa token CAPI server. Sekitar 18-25% konversi dari pengguna iOS 14+ dan browser dengan ad-blocker bisa hilang dari pelaporan Meta.',
+      actionableFix: 'Generate Conversions API Access Token di Meta Events Manager dan tempelkan ke konfigurasi CAPI.',
+    });
+  }
+
+  // Check 3: AI Provider BYOK
+  if (!hasAiKey) {
+    score -= 10;
+    issues.push({
+      severity: 'info',
+      agent: 'cmo',
+      title: 'Kunci AI Provider Eksternal Belum Terpasang',
+      diagnosis: 'Sistem War Room saat ini menggunakan mesin penalaran lokal built-in. Untuk integrasi model Gemini 2.5 Pro / Claude 3.7 Sonnet / OpenRouter Luna, pasang API Key Anda.',
+      actionableFix: 'Pilih provider AI di pengaturan dan simpan API Key untuk mengaktifkan model reasoning tingkat tinggi.',
+    });
+  }
+
+  // Check 4: Campaign Performance / Funnel Bleeding (OCLP & Bleeding)
+  const bleedingCamps = campaigns.filter(c => c.healthStatus === 'bleeding');
+  if (bleedingCamps.length > 0) {
+    score -= 15;
+    issues.push({
+      severity: 'critical',
+      agent: 'media_buyer',
+      title: `Terdeteksi ${bleedingCamps.length} Kampanye Boncos (Bleeding)`,
+      diagnosis: `Kampanye "${bleedingCamps[0].name}" memiliki CPA Rp ${bleedingCamps[0].cpa.toLocaleString('id-ID')}, melebihi ambang batas toleransi Anda (Rp ${rules.maxCpaThreshold.toLocaleString('id-ID')}).`,
+      actionableFix: 'Klik tombol Matikan Kampanye Boncos atau turunkan budgetnya sekarang untuk menghentikan pembakaran saldo iklan.',
+    });
+  }
+
+  const lowOclpCamps = campaigns.filter(c => (c.oclpRate || 0) > 0 && (c.oclpRate || 0) < 70);
+  if (lowOclpCamps.length > 0) {
+    score -= 10;
+    issues.push({
+      severity: 'warning',
+      agent: 'funnel_aov',
+      title: 'Rasio OCLP Di Bawah 70% (Indikasi Landing Page Lemot)',
+      diagnosis: `Pada kampanye "${lowOclpCamps[0].name}", rasio Outbound Click ke Landing Page View hanya ${lowOclpCamps[0].oclpRate}%. Lebih dari 30% orang klik iklan tapi menutup browser sebelum halaman selesai loading.`,
+      actionableFix: 'Optimalkan kompresi gambar landing page dan gunakan CDN agar loading time di bawah 1.8 detik.',
+    });
+  }
+
+  return {
+    isFullyIntegrated: hasMetaToken && hasAdAccount && hasPixel && hasCapiToken,
+    score: Math.max(20, score),
+    metaStatus: {
+      connected: hasMetaToken && hasAdAccount,
+      label: hasMetaToken && hasAdAccount ? 'Meta API Terhubung (Live)' : 'Simulator Mode Aktif',
+      detail: hasMetaToken && hasAdAccount ? `Ad Account: ${apiConfig.adAccountId}` : 'Sandbox Benchmark Monefyi',
+    },
+    aiStatus: {
+      connected: true,
+      provider: apiConfig.aiProvider || 'Built-in Reasoning Engine',
+      model: hasAiKey ? 'External Model Live' : 'Autonomous Engine',
+      detail: hasAiKey ? 'BYOK API Key Aktif' : 'Engine Standar Aktif',
+    },
+    capiStatus: {
+      connected: hasPixel && hasCapiToken,
+      emq: hasCapiToken ? 8.6 : 5.2,
+      detail: hasCapiToken ? 'Server-Side Redundancy 98%' : 'Hanya Pixel Browser',
+    },
+    detectedIssues: issues,
+  };
 }
 
 export interface VideoAuditInput {

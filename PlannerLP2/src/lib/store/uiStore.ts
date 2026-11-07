@@ -6,6 +6,7 @@ import type { LynkProduct } from "@/lib/checkout/products";
 interface UIStore {
   isMobileMenuOpen: boolean;
   isAdminSidebarOpen: boolean;
+  adminTheme: 'light' | 'dark';
   activeSection: string;
   isAdmin: boolean;
   isEditMode: boolean;
@@ -15,6 +16,8 @@ interface UIStore {
   setMobileMenuOpen: (open: boolean) => void;
   setAdminSidebarOpen: (open: boolean) => void;
   toggleAdminSidebar: () => void;
+  setAdminTheme: (theme: 'light' | 'dark') => void;
+  toggleAdminTheme: () => void;
   setActiveSection: (section: string) => void;
   setAdmin: (isAdmin: boolean) => void;
   setEditMode: (isEditMode: boolean) => void;
@@ -28,6 +31,7 @@ export const useUIStore = create<UIStore>()(
     (set, get) => ({
       isMobileMenuOpen: false,
       isAdminSidebarOpen: true,
+      adminTheme: 'light',
       activeSection: "hero",
       isAdmin: false,
       isEditMode: false,
@@ -38,6 +42,8 @@ export const useUIStore = create<UIStore>()(
       setMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
       setAdminSidebarOpen: (open) => set({ isAdminSidebarOpen: open }),
       toggleAdminSidebar: () => set((s) => ({ isAdminSidebarOpen: !s.isAdminSidebarOpen })),
+      setAdminTheme: (theme) => set({ adminTheme: theme }),
+      toggleAdminTheme: () => set((s) => ({ adminTheme: s.adminTheme === 'dark' ? 'light' : 'dark' })),
       setActiveSection: (section) => set({ activeSection: section }),
       setAdmin: (isAdmin) => set({ isAdmin }),
       setEditMode: (isEditMode) => set({ isEditMode }),
@@ -47,7 +53,10 @@ export const useUIStore = create<UIStore>()(
     }),
     {
       name: "monefyi-ui-prefs",
-      partialize: (state) => ({ isAdminSidebarOpen: state.isAdminSidebarOpen }),
+      partialize: (state) => ({
+        isAdminSidebarOpen: state.isAdminSidebarOpen,
+        adminTheme: state.adminTheme,
+      }),
     }
   )
 );
