@@ -17,6 +17,7 @@ import { formatRupiahFull } from '../../lib/estimatorFormat';
 import {
   assertEstimationConvertible,
   convertEstimationToProject,
+  linkEstimationToExistingProject,
 } from '../../services/estimationConvertService';
 import { assertCanCreateProjectByEntitlement } from '../../services/entitlementService';
 import UpgradeModal from '../entitlement/UpgradeModal';
@@ -77,9 +78,12 @@ export default function ConvertEstimationWizard({
   onConverted,
 }: Props) {
   const navigate = useNavigate();
-  const { tenant } = useAppStore();
+  const { tenant, projects } = useAppStore();
   const { tier, currentActiveProjects } = useEntitlement();
   const [step, setStep] = useState<WizardStep>(1);
+  const [convertMode, setConvertMode] = useState<'new' | 'existing'>('new');
+  const [selectedExistingProjectId, setSelectedExistingProjectId] = useState<string>('');
+  const [copyItemsToRap, setCopyItemsToRap] = useState<boolean>(true);
   const [projectInput, setProjectInput] = useState<ConvertEstimationProjectInput>(() =>
     buildDefaultProjectInputFromEstimation(estimation),
   );
@@ -129,11 +133,14 @@ export default function ConvertEstimationWizard({
   useEffect(() => {
     if (!open) return;
     setStep(1);
+    setConvertMode('new');
+    setSelectedExistingProjectId(projects[0]?.id || '');
+    setCopyItemsToRap(true);
     setError('');
     setSuccessSummary(null);
     setProjectInput(buildDefaultProjectInputFromEstimation(estimation));
     setSelectedIds(new Set(defaultSelectedEstimationItemIds(estimation.items || [])));
-  }, [open, estimation]);
+  }, [open, estimation, projects]);
 
   if (!open) return null;
 
@@ -168,6 +175,25 @@ export default function ConvertEstimationWizard({
 
   const handleContinueStep1 = () => {
     setError('');
+    if (convertMode === 'existing') {
+      if (!selectedExistingProjectId) {
+        setError('Pilih proyek yang ingin dihubungkan');
+        return;
+      }
+      try {
+        assertEstimationConvertible(estimation);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Estimasi tidak bisa dikonversi');
+        return;
+      }
+      if (copyItemsToRap) {
+        setStep(2);
+      } else {
+        void handleConnectExisting([]);
+      }
+      return;
+    }
+
     if (!projectInput.name.trim()) {
       setError('Nama proyek wajib diisi');
       return;
@@ -195,7 +221,49 @@ export default function ConvertEstimationWizard({
     setStep(2);
   };
 
+  const handleConnectExisting = async (itemIdsToCopy: string[]) => {
+    setError('');
+    const targetProject = projects.find(p => p.id === selectedExistingProjectId);
+    if (!targetProject) {
+      setError('Proyek tidak ditemukan');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      assertEstimationConvertible(estimation);
+      const res = await linkEstimationToExistingProject({
+        estimationId: estimation.id,
+        projectId: targetProject.id,
+        copyItemsToRap: itemIdsToCopy.length > 0,
+        selectedItemIds: itemIdsToCopy,
+      });
+      const summary = {
+        projectId: targetProject.id,
+        projectName: targetProject.name,
+        rapItemCount: res.rapItemCount,
+        rapBudgetTotal: res.rapBudgetTotal,
+      };
+      setSuccessSummary(summary);
+      setStep('success');
+      analytics.convertWizardCompleted({
+        estimationId: estimation.id,
+        projectId: targetProject.id,
+        itemsSelected: itemIdsToCopy.length,
+      });
+      onConverted(summary);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal menghubungkan proyek');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleConvert = async () => {
+    if (convertMode === 'existing') {
+      await handleConnectExisting(Array.from(selectedIds));
+      return;
+    }
+
     setError('');
     if (!selectedIds.size) {
       setError('Pilih minimal satu item untuk RAP');
@@ -329,55 +397,125 @@ export default function ConvertEstimationWizard({
           )}
 
           {step === 1 && (
-            <section className="space-y-3">
-              <h3 className="text-sm font-bold text-slate-700">Detail Proyek</h3>
-              <Field label="Nama Proyek *" hint="Pre-filled dari judul estimasi">
-                <input
-                  value={projectInput.name}
-                  onChange={e => setProjectInput(p => ({ ...p, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                />
-              </Field>
-              <Field label="Nama Klien">
-                <input
-                  value={projectInput.clientName}
-                  onChange={e => setProjectInput(p => ({ ...p, clientName: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                />
-              </Field>
-              <Field label="Kontak Klien">
-                <input
-                  value={projectInput.clientPhone}
-                  onChange={e => setProjectInput(p => ({ ...p, clientPhone: e.target.value }))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                />
-              </Field>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Tanggal Mulai *">
-                  <input
-                    type="date"
-                    value={projectInput.startDate}
-                    onChange={e => setProjectInput(p => ({ ...p, startDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                  />
-                </Field>
-                <Field label="Target Selesai *">
-                  <input
-                    type="date"
-                    value={projectInput.endDate}
-                    onChange={e => setProjectInput(p => ({ ...p, endDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                  />
-                </Field>
+            <section className="space-y-4">
+              {/* Toggle mode: Proyek Baru vs Proyek Yang Sudah Ada */}
+              <div className="flex p-1 bg-slate-100 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setConvertMode('new')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                    convertMode === 'new'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  ✨ Buat Proyek Baru
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConvertMode('existing')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                    convertMode === 'existing'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  🔗 Hubungkan ke Proyek Ada
+                </button>
               </div>
-              <Field label="Deskripsi" hint="Pre-filled dari catatan estimasi">
-                <textarea
-                  value={projectInput.description}
-                  onChange={e => setProjectInput(p => ({ ...p, description: e.target.value }))}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none"
-                />
-              </Field>
+
+              {convertMode === 'existing' ? (
+                <div className="space-y-3.5 bg-slate-50/70 p-3.5 rounded-2xl border border-slate-200">
+                  <Field label="Pilih Proyek *" hint="Estimasi akan terhubung langsung dengan proyek ini">
+                    {projects.length === 0 ? (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                        Belum ada proyek aktif. Silakan pilih opsi &ldquo;Buat Proyek Baru&rdquo;.
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedExistingProjectId}
+                        onChange={e => setSelectedExistingProjectId(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500/20"
+                      >
+                        <option value="">— Pilih Proyek —</option>
+                        {projects.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} {p.client_name ? `(${p.client_name})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </Field>
+
+                  <div className="pt-2 border-t border-slate-200">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={copyItemsToRap}
+                        onChange={e => setCopyItemsToRap(e.target.checked)}
+                        className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <div className="text-xs">
+                        <span className="font-bold text-slate-800 block">Salin Item Estimasi ke RAP Proyek</span>
+                        <span className="text-slate-500">
+                          Item bahan &amp; upah dari estimasi akan dimasukkan ke Rencana Anggaran Pelaksanaan proyek.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-bold text-slate-700">Detail Proyek</h3>
+                  <Field label="Nama Proyek *" hint="Pre-filled dari judul estimasi">
+                    <input
+                      value={projectInput.name}
+                      onChange={e => setProjectInput(p => ({ ...p, name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                    />
+                  </Field>
+                  <Field label="Nama Klien">
+                    <input
+                      value={projectInput.clientName}
+                      onChange={e => setProjectInput(p => ({ ...p, clientName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                    />
+                  </Field>
+                  <Field label="Kontak Klien">
+                    <input
+                      value={projectInput.clientPhone}
+                      onChange={e => setProjectInput(p => ({ ...p, clientPhone: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                    />
+                  </Field>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Field label="Tanggal Mulai *">
+                      <input
+                        type="date"
+                        value={projectInput.startDate}
+                        onChange={e => setProjectInput(p => ({ ...p, startDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      />
+                    </Field>
+                    <Field label="Target Selesai *">
+                      <input
+                        type="date"
+                        value={projectInput.endDate}
+                        onChange={e => setProjectInput(p => ({ ...p, endDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Deskripsi" hint="Pre-filled dari catatan estimasi">
+                    <textarea
+                      value={projectInput.description}
+                      onChange={e => setProjectInput(p => ({ ...p, description: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm resize-none"
+                    />
+                  </Field>
+                </div>
+              )}
             </section>
           )}
 
@@ -443,12 +581,20 @@ export default function ConvertEstimationWizard({
             <div className="py-8 text-center space-y-4">
               <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto" />
               <div>
-                <h3 className="text-xl font-black text-slate-900">Proyek berhasil dibuat!</h3>
+                <h3 className="text-xl font-black text-slate-900">
+                  {convertMode === 'existing' ? 'Berhasil Dihubungkan ke Proyek!' : 'Proyek berhasil dibuat!'}
+                </h3>
                 <p className="text-sm text-slate-600 mt-1">{successSummary.projectName}</p>
               </div>
               <p className="text-sm text-slate-700">
-                {successSummary.rapItemCount} item RAP dengan total budget{' '}
-                <span className="font-bold tabular-nums">{formatRupiahFull(successSummary.rapBudgetTotal)}</span>
+                {successSummary.rapItemCount > 0 ? (
+                  <>
+                    {successSummary.rapItemCount} item RAP dengan total budget{' '}
+                    <span className="font-bold tabular-nums">{formatRupiahFull(successSummary.rapBudgetTotal)}</span>
+                  </>
+                ) : (
+                  'Estimasi dan kontrak berhasil terhubung ke proyek.'
+                )}
               </p>
             </div>
           )}
@@ -482,11 +628,11 @@ export default function ConvertEstimationWizard({
               <button
                 type="button"
                 onClick={handleConvert}
-                disabled={submitting || selectedIds.size === 0}
+                disabled={submitting || (convertMode === 'new' && selectedIds.size === 0)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-                Buat Proyek
+                {convertMode === 'existing' ? 'Hubungkan ke Proyek' : 'Buat Proyek'}
               </button>
             </>
           )}

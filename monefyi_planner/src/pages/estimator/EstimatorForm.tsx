@@ -847,17 +847,32 @@ export default function EstimatorForm() {
   return (
     <div className="w-full max-w-[100rem] mx-auto px-3 sm:px-5 py-4 pb-52 lg:pb-32 overflow-x-hidden bg-[#F4F7F5] min-h-full">
       {isReadOnly && convertedProjectId && (
-        <button
-          type="button"
-          onClick={() => navigate(`/app/projects/${convertedProjectId}`)}
-          className="mb-4 w-full text-left px-4 py-3 bg-teal-50 border border-teal-200 rounded-xl text-sm text-teal-800 hover:bg-teal-100 transition-colors"
-        >
-          ✅ Estimasi ini sudah menjadi proyek &quot;{convertedProjectName || draft.title}&quot; →
-        </button>
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/80 rounded-2xl shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-white font-bold text-xs shadow-xs">
+              🚀
+            </span>
+            <div>
+              <p className="text-xs font-bold text-teal-900">
+                Terhubung dengan Proyek: &ldquo;{convertedProjectName || linkedProjectName || draft.title}&rdquo;
+              </p>
+              <p className="text-[11px] text-teal-700">
+                Data estimasi ini terhubung aktif dengan timeline &amp; RAP proyek.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(`/app/projects/${convertedProjectId}`)}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95 shrink-0"
+          >
+            Buka Proyek →
+          </button>
+        </div>
       )}
       {isReadOnly && !convertedProjectId && (
         <div className="mb-4 px-4 py-3 bg-teal-50 border border-teal-200 rounded-xl text-sm text-teal-800">
-          Estimasi ini sudah menjadi proyek — mode baca saja.
+          Estimasi ini sudah menjadi proyek — mode arsip/baca.
         </div>
       )}
 

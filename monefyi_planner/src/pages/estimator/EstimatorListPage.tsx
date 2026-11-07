@@ -643,32 +643,39 @@ export default function EstimatorListPage() {
     void load();
   };
 
-  const renderCard = (est: Estimation) => (
-    <EstimationListCard
-      key={est.id}
-      estimation={est}
-      newestId={newestId}
-      expanded={!selectionMode && expandedId === est.id}
-      onToggleExpand={() => setExpandedId(prev => (prev === est.id ? null : est.id))}
-      onOpen={() => navigate(`/app/estimator/${est.id}`)}
-      selectionMode={selectionMode}
-      selected={selectedIds.has(est.id)}
-      onToggleSelect={() => toggleRowSelected(est.id)}
-      onDuplicate={() => handleDuplicate(est.id)}
-      onDelete={() => handleDelete(est.id, est.title)}
-      onConvert={() => handleConvert(est.id)}
-      onShareWhatsApp={() => handleShareWhatsApp(est.id)}
-      onChangeStatus={() => setStatusPickerId(est.id)}
-      onArchive={() => { void handleArchive(est); }}
-      onKwitansi={() => handleKwitansi(est.id)}
-      waLoading={waLoadingId === est.id}
-      kwitansiLoading={kwitansiLoadingId === est.id}
-      statusBusy={statusUpdatingId === est.id}
-      archiveBusy={statusUpdatingId === est.id || archiveBusy}
-      archiveDisabled={isEstimationArchived(est.status)}
-      statusDisabled={normalizeEstimationStatus(est.status) === 'converted'}
-    />
-  );
+  const renderCard = (est: Estimation) => {
+    const linkedProjId = est.converted_project_id || est.project_id || null;
+    const linkedProj = linkedProjId ? projects.find(p => p.id === linkedProjId) : null;
+
+    return (
+      <EstimationListCard
+        key={est.id}
+        estimation={est}
+        newestId={newestId}
+        expanded={!selectionMode && expandedId === est.id}
+        onToggleExpand={() => setExpandedId(prev => (prev === est.id ? null : est.id))}
+        onOpen={() => navigate(`/app/estimator/${est.id}`)}
+        selectionMode={selectionMode}
+        selected={selectedIds.has(est.id)}
+        onToggleSelect={() => toggleRowSelected(est.id)}
+        onDuplicate={() => handleDuplicate(est.id)}
+        onDelete={() => handleDelete(est.id, est.title)}
+        onConvert={() => handleConvert(est.id)}
+        onShareWhatsApp={() => handleShareWhatsApp(est.id)}
+        onChangeStatus={() => setStatusPickerId(est.id)}
+        onArchive={() => { void handleArchive(est); }}
+        onKwitansi={() => handleKwitansi(est.id)}
+        onOpenProject={linkedProjId ? () => navigate(`/app/projects/${linkedProjId}`) : undefined}
+        linkedProjectName={linkedProj?.name ?? null}
+        waLoading={waLoadingId === est.id}
+        kwitansiLoading={kwitansiLoadingId === est.id}
+        statusBusy={statusUpdatingId === est.id}
+        archiveBusy={statusUpdatingId === est.id || archiveBusy}
+        archiveDisabled={isEstimationArchived(est.status)}
+        statusDisabled={normalizeEstimationStatus(est.status) === 'converted'}
+      />
+    );
+  };
 
   const quotaUsed = lifetimeCount ?? listStats.total;
   const visibleRows = sortedRows.slice(0, visibleCount);

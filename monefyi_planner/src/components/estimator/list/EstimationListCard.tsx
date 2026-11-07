@@ -1,5 +1,5 @@
 import { type KeyboardEvent, type MouseEvent } from 'react';
-import { ChevronDown, Copy, Receipt, Rocket, Trash2 } from 'lucide-react';
+import { ChevronDown, Copy, ExternalLink, Receipt, Rocket, Trash2 } from 'lucide-react';
 import {
   dashboardPillForRow,
   estimationMarginPct,
@@ -25,6 +25,8 @@ type Props = {
   onChangeStatus?: () => void;
   onArchive?: () => void;
   onKwitansi?: () => void;
+  onOpenProject?: () => void;
+  linkedProjectName?: string | null;
   waLoading?: boolean;
   kwitansiLoading?: boolean;
   statusBusy?: boolean;
@@ -40,12 +42,14 @@ const PILL_CLASS: Record<Exclude<DashboardPill, null>, string> = {
   terbaru: 'bg-emerald-50 text-emerald-700',
   active: 'bg-sky-50 text-sky-700',
   lead: 'bg-slate-100 text-slate-600',
+  converted: 'bg-teal-50 text-teal-700 border border-teal-200/60',
 };
 
 const PILL_LABEL: Record<Exclude<DashboardPill, null>, string> = {
   terbaru: 'Terbaru',
   active: 'Active',
   lead: 'Lead',
+  converted: 'Proyek',
 };
 
 const TONE_BAR: Record<string, string> = {
@@ -84,6 +88,8 @@ export default function EstimationListCard({
   onChangeStatus,
   onArchive,
   onKwitansi,
+  onOpenProject,
+  linkedProjectName,
   waLoading = false,
   kwitansiLoading = false,
   statusBusy = false,
@@ -213,6 +219,24 @@ export default function EstimationListCard({
               <span className="text-slate-300">·</span>
               <span>{estimationSourceLabel(est)}</span>
             </div>
+
+            {isConverted && onOpenProject && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={e => {
+                    stop(e);
+                    onOpenProject();
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-teal-50/70 hover:bg-teal-100/70 border border-teal-200/80 rounded-xl text-xs font-bold text-teal-800 transition-colors"
+                >
+                  <span className="truncate">
+                    🚀 Terhubung ke Proyek: {linkedProjectName || 'Lihat Proyek'}
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0 ml-1.5 text-teal-600" />
+                </button>
+              </div>
+            )}
 
             <div className="mt-3 grid grid-cols-3 gap-2">
               <ActionBtn

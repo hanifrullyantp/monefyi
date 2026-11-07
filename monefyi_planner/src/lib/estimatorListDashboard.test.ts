@@ -38,26 +38,27 @@ function daysAgo(days: number): string {
 }
 
 describe('estimatorListDashboard - status mapping - Active/Lead/Arsip', () => {
-  it('maps closing/proses/finishing to Active, wa/survei/penawaran to Lead, selesai/rejected to arsip', () => {
+  it('maps closing/proses/finishing and converted to Active, wa/survei/penawaran to Lead, selesai/rejected to arsip', () => {
     expect(getDashboardBucket('closing')).toBe('active');
     expect(getDashboardBucket('proses')).toBe('active');
     expect(getDashboardBucket('finishing')).toBe('active');
+    expect(getDashboardBucket('converted')).toBe('active');
     expect(getDashboardBucket('selesai')).toBeNull();
     expect(getDashboardBucket('wa')).toBe('lead');
     expect(getDashboardBucket('survei')).toBe('lead');
     expect(getDashboardBucket('penawaran')).toBe('lead');
     expect(getDashboardBucket('rejected')).toBeNull();
-    expect(getDashboardBucket('converted')).toBeNull();
     expect(dashboardStatusLabel('penawaran')).toBe('Lead');
     expect(dashboardStatusLabel('closing')).toBe('Active');
+    expect(dashboardStatusLabel('converted')).toBe('Active');
     expect(dashboardStatusLabel('selesai')).toBe('Arsip');
     expect(dashboardStatusLabel('rejected')).toBe('Arsip');
   });
 
-  it('treats selesai, rejected, and converted as archived', () => {
+  it('treats selesai and rejected as archived (converted remains active connected to project)', () => {
     expect(isEstimationArchived('selesai')).toBe(true);
     expect(isEstimationArchived('rejected')).toBe(true);
-    expect(isEstimationArchived('converted')).toBe(true);
+    expect(isEstimationArchived('converted')).toBe(false);
     expect(isEstimationArchived('wa')).toBe(false);
     expect(isEstimationArchived('finishing')).toBe(false);
   });

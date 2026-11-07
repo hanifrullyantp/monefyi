@@ -6,16 +6,17 @@ import type { Estimation, EstimationStatus } from '../types/estimator';
 export type DashboardBucket = 'active' | 'lead';
 export type DashboardListFilter = 'all' | 'active' | 'lead' | 'stale';
 export type RecencyTone = 'fresh' | 'aging' | 'stale';
-export type DashboardPill = 'terbaru' | 'active' | 'lead' | null;
+export type DashboardPill = 'terbaru' | 'active' | 'lead' | 'converted' | null;
 
-/** Active di kartu dashboard: closing sampai finishing (selesai → arsip). */
+/** Active di kartu dashboard: closing sampai finishing serta yang sudah jadi proyek aktif. */
 export const DASHBOARD_ACTIVE_STATUSES: EstimationStatus[] = [
   'closing',
   'proses',
   'finishing',
+  'converted',
 ];
 
-/** Arsip outcome: pekerjaan selesai atau ditolak (converted tetap arsip terpisah). */
+/** Arsip outcome: pekerjaan selesai atau ditolak. */
 export const DASHBOARD_ARCHIVE_OUTCOME_STATUSES: EstimationStatus[] = [
   'selesai',
   'rejected',
@@ -53,10 +54,7 @@ function updatedAtMs(est: Pick<Estimation, 'updated_at' | 'created_at'>): number
 
 export function isEstimationArchived(status: EstimationStatus | string): boolean {
   const normalized = normalizeEstimationStatus(status);
-  return (
-    normalized === 'converted'
-    || DASHBOARD_ARCHIVE_OUTCOME_STATUSES.includes(normalized)
-  );
+  return DASHBOARD_ARCHIVE_OUTCOME_STATUSES.includes(normalized);
 }
 
 export function isDashboardActive(status: EstimationStatus | string): boolean {
@@ -209,6 +207,8 @@ export function dashboardPillForRow(
   est: Estimation,
   newestId: string | null,
 ): DashboardPill {
+  const norm = normalizeEstimationStatus(est.status);
+  if (norm === 'converted' || est.converted_project_id) return 'converted';
   if (newestId && est.id === newestId) return 'terbaru';
   const bucket = getDashboardBucket(est.status);
   if (bucket === 'active') return 'active';
