@@ -923,7 +923,7 @@ export default function EstimatorForm() {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 md:col-span-2 xl:col-span-2">
-                <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Customer & Proyek</h3>
+                <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Pelanggan & Proyek</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Kode">
                     <input
@@ -946,7 +946,7 @@ export default function EstimatorForm() {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Customer">
+                  <Field label="Pelanggan / Klien">
                     <input
                       value={draft.customer_name}
                       onChange={e => patch({ customer_name: e.target.value })}

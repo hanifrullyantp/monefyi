@@ -46,6 +46,7 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
     rules,
     customAgentNames,
     apiConfig,
+    winningEngineConfig,
     actionLogs,
     updateCampaignDailyBudget,
     toggleCampaignStatus,
@@ -135,6 +136,12 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
     setIsProcessing(true);
 
     try {
+      const activeLlmModel =
+        winningEngineConfig.llmRouting.processor?.model ||
+        winningEngineConfig.llmRouting.technical?.model ||
+        winningEngineConfig.llmRouting.strategist?.model ||
+        "openai/gpt-6-luna-pro";
+
       const res = await fetch("/api/marketing/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -145,6 +152,9 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
           rules,
           apiConfig,
           customAgentNames,
+          openRouterApiKey: winningEngineConfig.llmRouting.openRouterApiKey,
+          openRouterModel: activeLlmModel,
+          winningEngineConfig,
         }),
       });
       const data = await res.json().catch(() => ({}));

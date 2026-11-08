@@ -205,8 +205,8 @@ export const useMarketingStore = create<MarketingStore>()(
       winningLlmInfo: {
         strategistProvider: 'OpenRouter (Claude 3.5 Sonnet)',
         strategistModel: 'anthropic/claude-3.5-sonnet',
-        technicalProvider: 'OpenRouter (Gemini 2.5 Flash)',
-        technicalModel: 'google/gemini-2.5-flash',
+        technicalProvider: 'OpenRouter (Luna Pro 6)',
+        technicalModel: 'openai/gpt-6-luna-pro',
       },
       isRunningEngineTick: false,
       executingPlanId: null,
@@ -243,7 +243,7 @@ export const useMarketingStore = create<MarketingStore>()(
               processor: {
                 ...(state.winningEngineConfig.llmRouting.processor || {
                   provider: 'openrouter',
-                  model: 'google/gemini-2.5-flash',
+                  model: 'openai/gpt-6-luna-pro',
                 }),
                 ...(updates.llmRouting?.processor || {}),
               },
@@ -273,6 +273,7 @@ export const useMarketingStore = create<MarketingStore>()(
                 metaAccessToken: c.metaAccessToken || state.apiConfig.metaAccessToken,
                 capiAccessToken: c.metaCapiToken || state.apiConfig.capiAccessToken,
                 pixelId: c.metaPixelId || state.apiConfig.pixelId,
+                aiProvider: c.openRouterApiKey ? 'openrouter' : state.apiConfig.aiProvider,
                 aiApiKey: c.openRouterApiKey || state.apiConfig.aiApiKey,
               },
               winningEngineConfig: {
@@ -298,11 +299,11 @@ export const useMarketingStore = create<MarketingStore>()(
                   },
                   processor: {
                     provider: 'openrouter',
-                    model: c.processorModel || 'google/gemini-2.5-flash',
+                    model: c.processorModel || 'openai/gpt-6-luna-pro',
                   },
                   technical: {
                     provider: 'openrouter',
-                    model: c.technicalModel || 'google/gemini-2.5-flash',
+                    model: c.technicalModel || 'openai/gpt-6-luna-pro',
                   },
                 },
                 notifications: {
@@ -413,13 +414,21 @@ export const useMarketingStore = create<MarketingStore>()(
             capiStatus,
             winningEngineConfig,
             currentLpCopySnapshot,
+            datePreset,
           } = get();
+
+          // Pastikan kampanye terbaru dari Meta Ads ditarik sebelum analisa dibuat
+          if (get().campaigns.length === 0) {
+            await get().refreshCampaigns().catch(() => undefined);
+          }
+
+          const activeCampaigns = get().campaigns;
 
           const res = await fetch('/api/engine/tick', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              campaigns,
+              campaigns: activeCampaigns,
               insightsData,
               orderBumpConfig,
               upsellConfig,
@@ -427,6 +436,8 @@ export const useMarketingStore = create<MarketingStore>()(
               config: winningEngineConfig,
               currentLpCopy: currentLpCopySnapshot,
               sendNotification,
+              forceRealtime: true,
+              datePreset,
             }),
           });
 
@@ -904,14 +915,14 @@ export const useMarketingStore = create<MarketingStore>()(
       // Scale Funnel (Bebas Emoticon)
       orderBumpConfig: {
         enabled: true,
-        productName: 'Template Excel RAP 2026 + SOP Proyek Lengkap',
+        productName: 'Upgrade ke Estimator PRO',
         headline:
-          'YA! Tambahkan Template Database 500+ Material & SOP Kontraktor (Hemat Rp 350.000)',
+          'YA! Upgrade ke Estimator PRO — Tambah Rp 50.000 (Hemat Rp 50.000)',
         description:
-          'Dapatkan 10 template RAP siap pakai, rumus otomatis waste material, dan SOP tender proyek langsung ke akun Anda.',
-        price: 49000,
-        originalPrice: 399000,
-        badgeText: 'ADD-ON SPESIAL',
+          'Khusus di halaman ini: Tambah Rp 50.000 untuk langsung upgrade ke Estimator PRO Seumur Hidup. Buka semua fitur Custom Branding Logo, SPK, Invoice & Kwitansi Resmi!',
+        price: 50000,
+        originalPrice: 199000,
+        badgeText: 'PENAWARAN TERBATAS SEKALI INI SAJA',
         takeRateEstimate: 31,
       },
       updateOrderBumpConfig: (updates) =>

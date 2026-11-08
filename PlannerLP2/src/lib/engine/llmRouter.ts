@@ -52,13 +52,29 @@ export const DEFAULT_ROUTING_CONFIG: MultiLlmRoutingConfig = {
   },
   processor: {
     provider: "openrouter",
-    model: "google/gemini-2.5-flash",
+    model: "openai/gpt-6-luna-pro",
   },
   technical: {
     provider: "openrouter",
-    model: "google/gemini-2.5-flash",
+    model: "openai/gpt-6-luna-pro",
   },
 };
+
+/**
+ * Normalisasi model OpenRouter, terutama untuk memastikan model Luna Pro 6 / Luna 6
+ * dialirkan ke identifier resmi OpenAI di OpenRouter: "openai/gpt-6-luna-pro".
+ */
+export function normalizeOpenRouterModel(rawModel?: string): string {
+  const trimmed = String(rawModel || "").trim();
+  if (!trimmed) return "openai/gpt-6-luna-pro";
+  if (/(?:luna.*pro|gpt-6-luna-pro|luna-pro-6|luna\s*pro\s*6)/i.test(trimmed)) {
+    return "openai/gpt-6-luna-pro";
+  }
+  if (/(?:luna|gpt-6-luna|gpt-5.6-luna|luna-6|luna\s*6)/i.test(trimmed)) {
+    return "openai/gpt-6-luna-pro";
+  }
+  return trimmed;
+}
 
 function resolveEnvKey(provider: LlmProviderType): string {
   switch (provider) {
@@ -99,13 +115,14 @@ async function callSingleProvider(
       : slot.apiKey || resolveEnvKey(provider)
   ).trim();
 
-  const model = slot.model?.trim() || (
+  const rawModel = slot.model?.trim() || (
     role === "strategist"
       ? "anthropic/claude-3.5-sonnet"
       : role === "processor"
-      ? "google/gemini-2.5-flash"
-      : "google/gemini-2.5-flash"
+      ? "openai/gpt-6-luna-pro"
+      : "openai/gpt-6-luna-pro"
   );
+  const model = provider === "openrouter" ? normalizeOpenRouterModel(rawModel) : rawModel;
 
   if (!apiKey) {
     return {
@@ -317,11 +334,11 @@ export async function runRoutedLlm(input: LlmCallInput): Promise<LlmCallOutput> 
   };
   const processorSlot: LlmSlotConfig = input.routing?.processor || {
     provider: "openrouter",
-    model: "google/gemini-2.5-flash",
+    model: "openai/gpt-6-luna-pro",
   };
   const technicalSlot: LlmSlotConfig = input.routing?.technical || {
     provider: "openrouter",
-    model: "google/gemini-2.5-flash",
+    model: "openai/gpt-6-luna-pro",
   };
 
   const targetSlot =
@@ -350,8 +367,8 @@ export async function runRoutedLlm(input: LlmCallInput): Promise<LlmCallOutput> 
       input.role === "strategist"
         ? "anthropic/claude-3.7-sonnet"
         : input.role === "processor"
-        ? "deepseek/deepseek-chat"
-        : "deepseek/deepseek-chat";
+        ? "openai/gpt-6-luna-pro"
+        : "openai/gpt-6-luna-pro";
 
     const fbSlot: LlmSlotConfig = {
       provider: "openrouter",

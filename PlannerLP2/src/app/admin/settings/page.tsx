@@ -29,6 +29,8 @@ const STRATEGIST_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: str
     { id: "claude-3-5-sonnet-latest", label: "Claude 3.5 Sonnet (Tajam & Stabil)" },
   ],
   openrouter: [
+    { id: "openai/gpt-6-luna-pro", label: "OpenRouter: Luna Pro 6 (GPT-6 Luna Pro - Rekomendasi)" },
+    { id: "openai/gpt-6-luna", label: "OpenRouter: Luna 6 (GPT-6 Luna Fast)" },
     { id: "anthropic/claude-3.7-sonnet", label: "OpenRouter: Claude 3.7 Sonnet (Strategist)" },
     { id: "anthropic/claude-3.5-sonnet", label: "OpenRouter: Claude 3.5 Sonnet" },
     { id: "openai/gpt-4o", label: "OpenRouter: GPT-4o" },
@@ -52,6 +54,8 @@ const TECHNICAL_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: stri
     { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (Super Cepat)" },
   ],
   openrouter: [
+    { id: "openai/gpt-6-luna-pro", label: "OpenRouter: Luna Pro 6 (GPT-6 Luna Pro - Unggulan)" },
+    { id: "openai/gpt-6-luna", label: "OpenRouter: Luna 6 (GPT-6 Luna Fast)" },
     { id: "google/gemini-2.5-flash", label: "OpenRouter: Gemini 2.5 Flash" },
     { id: "deepseek/deepseek-chat", label: "OpenRouter: DeepSeek V3 (Ekonomis)" },
   ],
@@ -141,21 +145,57 @@ function SettingsContent() {
       aiApiKey: strategistKey.trim() || technicalKey.trim() || undefined,
     });
 
+    const openRouterSharedKey =
+      (strategistProvider === "openrouter" ? strategistKey.trim() : "") ||
+      (technicalProvider === "openrouter" ? technicalKey.trim() : "") ||
+      winningEngineConfig.llmRouting.openRouterApiKey ||
+      "";
+
     // 3. Simpan Dual-Slot Multi-LLM Config
     updateWinningEngineConfig({
       llmRouting: {
+        openRouterApiKey: openRouterSharedKey || undefined,
         strategist: {
           provider: strategistProvider,
-          apiKey: strategistKey.trim() || undefined,
+          apiKey: strategistKey.trim() || openRouterSharedKey || undefined,
           model: strategistModel,
+        },
+        processor: {
+          provider: "openrouter",
+          apiKey: openRouterSharedKey || undefined,
+          model: technicalModel.includes("luna")
+            ? technicalModel
+            : winningEngineConfig.llmRouting.processor?.model || "openai/gpt-6-luna-pro",
         },
         technical: {
           provider: technicalProvider,
-          apiKey: technicalKey.trim() || undefined,
+          apiKey: technicalKey.trim() || openRouterSharedKey || undefined,
           model: technicalModel,
         },
       },
     });
+
+    // Simpan permanen ke Supabase Cloud Database (Sinkron Multi-Device)
+    try {
+      await fetch("/api/engine/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adAccountId: adAccountId.trim() || undefined,
+          metaAccessToken: metaToken.trim() || undefined,
+          metaCapiToken: capiToken.trim() || undefined,
+          metaPixelId: pixelId.trim() || "1530674178146899",
+          openRouterApiKey: openRouterSharedKey || undefined,
+          strategistModel: strategistModel,
+          processorModel: technicalModel.includes("luna")
+            ? technicalModel
+            : winningEngineConfig.llmRouting.processor?.model || "openai/gpt-6-luna-pro",
+          technicalModel: technicalModel,
+        }),
+      });
+    } catch {
+      // Abaikan jika offline
+    }
 
     await refreshCampaigns().catch(() => undefined);
 
@@ -305,6 +345,13 @@ function SettingsContent() {
                     </option>
                   ))}
                 </select>
+                <input
+                  type="text"
+                  value={strategistModel}
+                  onChange={(e) => setStrategistModel(e.target.value)}
+                  placeholder="ID Model Kustom (misal: openai/gpt-6-luna-pro)"
+                  className="mt-1.5 w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 text-[10px] font-mono text-slate-800 dark:text-slate-200"
+                />
               </div>
 
               <div>
@@ -381,6 +428,13 @@ function SettingsContent() {
                     </option>
                   ))}
                 </select>
+                <input
+                  type="text"
+                  value={technicalModel}
+                  onChange={(e) => setTechnicalModel(e.target.value)}
+                  placeholder="ID Model Kustom (misal: openai/gpt-6-luna-pro)"
+                  className="mt-1.5 w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 text-[10px] font-mono text-slate-800 dark:text-slate-200"
+                />
               </div>
 
               <div>

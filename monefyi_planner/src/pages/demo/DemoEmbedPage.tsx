@@ -190,9 +190,9 @@ export default function DemoEmbedPage() {
         >
           <div className="grid grid-cols-1 gap-3">
             <section className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
-              <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Customer</h3>
+              <h3 className="text-xs font-bold text-slate-500 uppercase">Informasi Pelanggan / Klien</h3>
               <div className="grid grid-cols-1 gap-3">
-                <Field label="Customer">
+                <Field label="Pelanggan / Klien">
                   <input
                     value={draft.customer_name}
                     onChange={e => patch({ customer_name: e.target.value })}

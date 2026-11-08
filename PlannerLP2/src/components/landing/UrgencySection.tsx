@@ -43,13 +43,6 @@ export function UrgencySection() {
           {(isAdmin && isEditMode) ? (
             <div className="mx-auto mt-10 max-w-3xl rounded-[30px] border-2 border-dashed border-slate-400 bg-slate-900 p-6 text-left text-white shadow-xl">
               <p className="mb-4 text-xs font-bold uppercase tracking-wider text-emerald-300">Konten promo — edit semua field</p>
-              <div className="mb-5 rounded-2xl border border-emerald-400/40 bg-emerald-950/40 p-4">
-                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-emerald-200">Progress slot promo</p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="text-xs font-semibold text-slate-300">Total slot<input type="number" min={1} value={urgency.totalSlots} onChange={(event) => useContentStore.getState().updateField("urgency", "totalSlots", Math.max(1, Number(event.target.value)))} className="mt-1 block w-full rounded-lg border border-emerald-300/40 bg-slate-800 px-3 py-2 text-base text-white" /></label>
-                  <label className="text-xs font-semibold text-slate-300">Slot terpakai<input type="number" min={0} value={urgency.usedSlots} onChange={(event) => useContentStore.getState().updateField("urgency", "usedSlots", Math.max(0, Number(event.target.value)))} className="mt-1 block w-full rounded-lg border border-emerald-300/40 bg-slate-800 px-3 py-2 text-base text-white" /></label>
-                </div>
-              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="text-xs font-semibold text-slate-300">Harga coret<EditableText section="urgency" field="normalPrice" value={urgency.normalPrice} className="mt-1 block text-base" /></label>
                 <label className="text-xs font-semibold text-slate-300">Harga Standard<EditableText section="urgency" field="launchPrice" value={urgency.launchPrice} className="mt-1 block text-base" /></label>
@@ -70,22 +63,6 @@ export function UrgencySection() {
           <div className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-[30px] bg-slate-900 text-white shadow-xl">
             <div className="h-1.5 bg-gradient-to-r from-emerald-500 via-lime-400 to-emerald-500" />
             <div className="px-6 py-8 md:px-12 md:py-10">
-              <div className="mx-auto mb-7 max-w-xl rounded-2xl border border-emerald-400/30 bg-emerald-950/50 p-4 text-left">
-                <div className="mb-2 flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-wider text-emerald-100">
-                  <span>Slot promo terbatas</span>
-                  <span>{urgency.usedSlots} / {urgency.totalSlots} terpakai</span>
-                </div>
-                <div
-                  className="h-3 overflow-hidden rounded-full bg-white/15"
-                  role="progressbar"
-                  aria-label="Slot promo terpakai"
-                  aria-valuemin={0}
-                  aria-valuemax={urgency.totalSlots}
-                  aria-valuenow={Math.min(urgency.usedSlots, urgency.totalSlots)}
-                >
-                  <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 transition-all" style={{ width: `${urgency.totalSlots > 0 ? Math.min(100, (urgency.usedSlots / urgency.totalSlots) * 100) : 0}%` }} />
-                </div>
-              </div>
               <p className="text-xs font-black uppercase tracking-[0.35em] text-emerald-300">
                 <EditableText section="urgency" field="productTitle" value={urgency.productTitle} />
               </p>

@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         processor: {
           ...(DEFAULT_WINNING_ENGINE_CONFIG.llmRouting.processor || {
             provider: "openrouter",
-            model: "google/gemini-2.5-flash",
+            model: "openai/gpt-6-luna-pro",
           }),
           ...(body.config?.llmRouting?.processor || {}),
         },
@@ -118,7 +118,7 @@ KONTEKS PRODUK YANG DIJUAL:
 - Produk Inti: Monefyi Estimator (website: estimator.monefyi.com)
 - Target Audiens Iklan: Kontraktor Umum, Interior Designer, Kitchen Set Vendor, dan Subkontraktor Sipil.
 - Nilai & Masalah Utama: Kontraktor sering kalah tender atau telat closing karena butuh 2-3 hari hitung RAB manual di rumah. Monefyi Estimator memampukan mereka hitung harga akurat dalam 1 menit langsung di HP saat survei lokasi, lalu kirim PDF penawaran berlogo ke WhatsApp klien sebelum mereka sempat membandingkan dengan vendor lain.
-- Struktur Harga: Sekali Bayar (Lifetime) — Paket Standard Rp 93.000 / Rp 150.000, Paket Pro Rp 199.000 / Rp 250.000. Add-on Order Bump: Template Database Material & SOP Rp 49.000.
+- Struktur Harga: Sekali Bayar (Lifetime) — Paket Standard Rp 93.000 / Rp 150.000, Paket Pro Rp 199.000 / Rp 250.000. Add-on Order Bump: Upgrade ke Estimator PRO +Rp 50.000 (Hemat Rp 50.000).
 PERINGATAN PENTING: JANGAN menyamakan produk ini dengan aplikasi pengatur keuangan pribadi atau chat bot personal finance monefyi.com. Segala evaluasi Offer, Copywriting Landing Page, Funnel, dan Iklan WAJIB 100% berfokus pada Monefyi Estimator (estimator.monefyi.com) untuk kontraktor/interior.
 
 ATURAN KOMUNIKASI WAJIB:
@@ -139,17 +139,34 @@ ATURAN KOMUNIKASI WAJIB:
          )}/hari)`
    }.`;
 
-    const userPrompt = `Skor Keseluruhan 5 Pilar: ${diagnostics.overallScore}/100
+     const now = new Date();
+     const dateStr = now.toLocaleDateString("id-ID", {
+       weekday: "long",
+       year: "numeric",
+       month: "long",
+       day: "numeric",
+     });
+     const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+     const totalCampSpend = campaigns.reduce((s: number, c: any) => s + Number(c.spend || 0), 0);
+
+     const userPrompt = `Waktu Analisa Real-Time: ${dateStr}, ${timeStr} WIB.
+Jumlah Kampanye Terdeteksi: ${campaigns.length}
+Total Spend Terpantau: Rp ${totalCampSpend.toLocaleString("id-ID")}
+Skor Keseluruhan 5 Pilar: ${diagnostics.overallScore}/100
+
 Detail 5 Pilar:
 ${diagnostics.pillars
   .map((p) => `- ${p.label}: Skor ${p.score}/100 (${p.headlineMetric}) -> ${p.honestDiagnosis}`)
   .join("\n")}
 
+Daftar Kampanye Utama:
+${campaigns.slice(0, 5).map((c: any) => `- "${c.name}" (Status: ${c.status}, Spend: Rp ${Number(c.spend || 0).toLocaleString("id-ID")}, Results: ${c.results || 0}, OCLP: ${Number(c.oclpRate || 0)}%)`).join("\n")}
+
 Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
- Susun ringkasan strategis singkat (tanpa emoticon) agar user langsung mengerti apa yang terjadi dan mengapa rencana di bawah perlu disetujui.`;
+Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (tanpa emoticon) agar pemilik bisnis langsung paham evaluasi performa dan mengapa rencana perbaikan perlu disetujui.`;
 
     const strategistModel = config.llmRouting?.strategist?.model || "";
-    const isBatchMode = strategistModel.includes(":batch") || strategistModel.includes("batch");
+    const isBatchMode = (strategistModel.includes(":batch") || strategistModel.includes("batch")) && !body.forceRealtime;
     const supabase = getSupabaseServerClient();
 
     // Jika model dikonfigurasi menggunakan antrean Batch (misal: anthropic/claude-sonnet-5.5:batch)
@@ -210,19 +227,29 @@ Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
       }
     }
 
+    // Pemrosesan Real-time: Bersihkan akhiran :batch agar dapat dieksekusi secara instan
+    const realTimeRouting = {
+      ...config.llmRouting,
+      strategist: {
+        ...config.llmRouting.strategist,
+        model: (config.llmRouting.strategist.model || "anthropic/claude-3.5-sonnet").replace(/:batch$/i, ""),
+      },
+    };
+
     const llmStrategistResult = await runRoutedLlm({
       role: "strategist",
       systemPrompt,
       userPrompt,
-      routing: config.llmRouting,
-      temperature: 0.3,
-      maxTokens: 900,
+      routing: realTimeRouting,
+      temperature: 0.35,
+      maxTokens: 1100,
     });
 
-    const executiveBrief = llmStrategistResult.ok
+    const executiveBrief = llmStrategistResult.ok && llmStrategistResult.text
       ? llmStrategistResult.text
       : [
-          `1. Diagnosa 5 Pilar: Skor kesiapan sistem berada di ${diagnostics.overallScore}/100. Fokus utama adalah menyelaraskan kekuatan Offer, kecepatan/copywriting Landing Page, dan disiplin alokasi anggaran iklan.`,
+          `Ringkasan Eksekutif Real-Time (${dateStr} - ${timeStr} WIB):`,
+          `1. Diagnosa 5 Pilar: Skor kesiapan sistem berada di ${diagnostics.overallScore}/100 dari ${campaigns.length} kampanye terpantau (Total Spend: Rp ${totalCampSpend.toLocaleString("id-ID")}). Fokus utama adalah menyelaraskan kekuatan Offer, kecepatan/copywriting Landing Page, dan efisiensi belanja iklan.`,
           `2. Evaluasi Produk & Offer: ${diagnostics.pillars[0]?.honestDiagnosis || ""}`,
           `3. Evaluasi Landing Page & Checkout: ${diagnostics.pillars[1]?.honestDiagnosis || ""}`,
           `4. Rencana Meta Ads (${
@@ -311,9 +338,9 @@ Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
       llmInfo: {
         strategistProvider: llmStrategistResult.providerUsed,
         strategistModel: llmStrategistResult.modelUsed,
-        processorModel: config.llmRouting.processor?.model || "google/gemini-2.5-flash",
+        processorModel: config.llmRouting.processor?.model || "openai/gpt-6-luna-pro",
         technicalProvider: "OpenRouter",
-        technicalModel: config.llmRouting.technical?.model || "google/gemini-2.5-flash",
+        technicalModel: config.llmRouting.technical?.model || "openai/gpt-6-luna-pro",
       },
       autoExecutedCount: autoExecutedIds.length,
       notificationResult,

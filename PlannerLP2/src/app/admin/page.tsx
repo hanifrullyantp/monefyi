@@ -106,7 +106,7 @@ function QuickAddLeadModal({
 
         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
           <div>
-            <label className="block font-bold text-slate-700 mb-1">Nama Customer *</label>
+            <label className="block font-bold text-slate-700 mb-1">Nama Pelanggan / Klien *</label>
             <input
               required
               value={form.name}

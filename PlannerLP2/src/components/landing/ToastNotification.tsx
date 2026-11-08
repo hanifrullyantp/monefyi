@@ -31,7 +31,7 @@ const FALLBACK_NOTIFICATIONS: ToastItem[] = [
   {
     name: "Faisal Rahman",
     action: "baru saja upgrade ke",
-    product: "Paket Pro (Branding Logo)",
+    product: "Paket Pro (Custom Branding)",
     location: "Bandung",
     timeAgo: "6 menit lalu",
     source: "live_purchase",
@@ -183,13 +183,33 @@ function livePurchaseNotifications(items: ToastItem[]): ToastItem[] {
 export function ToastNotification() {
   const { content } = useContentStore();
   const { toast: toastConfig } = content;
-  const liveItems = livePurchaseNotifications(toastConfig?.notifications || []);
+  const configuredItems = livePurchaseNotifications(toastConfig?.notifications || []);
+  const [extraItems, setExtraItems] = useState<ToastItem[]>([]);
+  const liveItems = [...extraItems, ...configuredItems];
   const [visible, setVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const displayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nextScheduleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isManuallyClosedRef = useRef(false);
+
+  // Tangkap event registrasi live dari FreeTrialPopup atau Checkout
+  useEffect(() => {
+    const onUserEvent = (e: Event) => {
+      const custom = e as CustomEvent<ToastItem>;
+      if (custom.detail) {
+        setExtraItems((prev) => [custom.detail, ...prev]);
+        setCurrentIndex(0);
+        setVisible(true);
+        if (displayTimerRef.current) clearTimeout(displayTimerRef.current);
+        displayTimerRef.current = setTimeout(() => {
+          setVisible(false);
+        }, 7000);
+      }
+    };
+    window.addEventListener("monefyi_user_toast", onUserEvent);
+    return () => window.removeEventListener("monefyi_user_toast", onUserEvent);
+  }, []);
 
   const clearAllTimers = useCallback(() => {
     if (displayTimerRef.current) clearTimeout(displayTimerRef.current);

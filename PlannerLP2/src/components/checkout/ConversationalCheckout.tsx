@@ -38,6 +38,10 @@ import {
   Landmark,
   CreditCard,
   Wallet,
+  Download,
+  Smartphone,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 export type ProductTier = 'free' | 'standard' | 'pro';
@@ -153,6 +157,34 @@ export default function ConversationalCheckout({
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
+  const [downloadingQr, setDownloadingQr] = useState(false);
+  const [downloadQrSuccess, setDownloadQrSuccess] = useState(false);
+  const [showHowToPay, setShowHowToPay] = useState(true);
+
+  const handleDownloadQr = async () => {
+    if (!paymentData?.qrImageUrl) return;
+    setDownloadingQr(true);
+    try {
+      const response = await fetch(paymentData.qrImageUrl, { mode: 'cors' });
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `QRIS-Estimator-${paymentData.paymentId || 'bayar'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      setDownloadQrSuccess(true);
+      setTimeout(() => setDownloadQrSuccess(false), 5000);
+    } catch {
+      window.open(paymentData.qrImageUrl, '_blank');
+      setDownloadQrSuccess(true);
+      setTimeout(() => setDownloadQrSuccess(false), 5000);
+    } finally {
+      setDownloadingQr(false);
+    }
+  };
 
   // Validation & Loading
   const [errorMsg, setErrorMsg] = useState('');
@@ -407,6 +439,20 @@ export default function ConversationalCheckout({
           // Facebook Pixel: Purchase (pembayaran berhasil)
           triggerPurchasePixel(paymentData.amount || finalPrice, paymentData.paymentId);
           sendAutoResendEmails(false);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('monefyi_user_toast', {
+                detail: {
+                  name: fullName.trim() || 'Pengguna',
+                  action: 'baru saja membeli',
+                  product: product === 'pro' || takeOrderBump ? 'Estimator Pro' : 'Estimator Standard',
+                  location: 'Baru saja',
+                  timeAgo: 'Baru saja',
+                  source: 'live_purchase',
+                },
+              }),
+            );
+          }
           clearInterval(checkInterval);
           setTimeout(() => {
             window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
@@ -641,6 +687,20 @@ export default function ConversationalCheckout({
         // Facebook Pixel: Purchase (pembayaran berhasil dikonfirmasi manual)
         triggerPurchasePixel(paymentData.amount || finalPrice, paymentData.paymentId);
         sendAutoResendEmails(false);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('monefyi_user_toast', {
+              detail: {
+                name: fullName.trim() || 'Pengguna',
+                action: 'baru saja membeli',
+                product: product === 'pro' || takeOrderBump ? 'Estimator Pro' : 'Estimator Standard',
+                location: 'Baru saja',
+                timeAgo: 'Baru saja',
+                source: 'live_purchase',
+              },
+            }),
+          );
+        }
         setTimeout(() => {
           window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
         }, 2000);
@@ -971,8 +1031,8 @@ export default function ConversationalCheckout({
 
                 {/* Container Gambar QRIS atau Detail Virtual Account */}
                 {paymentData.qrImageUrl ? (
-                  <div className="flex flex-col items-center justify-center space-y-3">
-                    <div className="p-4 bg-white rounded-2xl border-2 border-emerald-100 shadow-md ring-4 ring-emerald-50 flex items-center justify-center">
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="p-4 bg-white rounded-3xl border-2 border-emerald-100 shadow-md ring-4 ring-emerald-50 flex items-center justify-center">
                       <img
                         src={paymentData.qrImageUrl}
                         alt="QRIS Pembayaran Estimator"
@@ -980,9 +1040,83 @@ export default function ConversationalCheckout({
                       />
                     </div>
 
-                    <span className="text-[11px] font-semibold text-slate-400 tracking-wider uppercase">
-                      Scan dengan BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay
-                    </span>
+                    {/* Tombol Simpan / Unduh QR untuk Pengguna HP */}
+                    <div className="w-full space-y-2 max-w-sm">
+                      <button
+                        type="button"
+                        onClick={handleDownloadQr}
+                        disabled={downloadingQr}
+                        className="w-full py-3.5 px-4 bg-emerald-50 hover:bg-emerald-100 active:scale-[0.98] border border-emerald-300 text-[#065f46] font-extrabold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xs text-sm cursor-pointer"
+                      >
+                        <Download className="w-4 h-4 text-emerald-700" />
+                        <span>{downloadingQr ? 'Menyimpan...' : 'Simpan / Unduh Gambar QR'}</span>
+                      </button>
+
+                      {downloadQrSuccess && (
+                        <p className="text-xs text-center text-emerald-800 font-semibold bg-emerald-100/80 py-2 px-3 rounded-xl border border-emerald-300 animate-fade-in">
+                          ✓ Gambar QR tersimpan! Buka aplikasi m-Banking atau E-Wallet Anda lalu pilih menu <strong>Upload QR dari Galeri</strong>.
+                        </p>
+                      )}
+
+                      <p className="text-[11px] text-center text-slate-400 font-medium tracking-wide">
+                        BCA, Mandiri, BRI, BNI, GoPay, OVO, DANA, ShopeePay
+                      </p>
+                    </div>
+
+                    {/* Panduan Cara Bayar di HP (Tanpa Perlu Scan Kamera) */}
+                    <div className="w-full bg-slate-50 border border-slate-200/90 rounded-2xl p-4 text-left space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowHowToPay(!showHowToPay)}
+                        className="w-full flex items-center justify-between font-bold text-xs sm:text-sm text-slate-800 cursor-pointer"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Smartphone className="w-4 h-4 text-[#065f46]" />
+                          <span>Cara Bayar Pakai HP (Tanpa Perlu Scan Kamera)</span>
+                        </span>
+                        {showHowToPay ? (
+                          <ChevronUp className="w-4 h-4 text-slate-400" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-400" />
+                        )}
+                      </button>
+
+                      {showHowToPay && (
+                        <ol className="space-y-1.5 text-xs text-slate-600 list-decimal pl-4 pt-1.5 border-t border-slate-200/60 mt-1">
+                          <li>
+                            Klik tombol <strong>&ldquo;Simpan / Unduh Gambar QR&rdquo;</strong> di atas (atau screenshot layar HP ini).
+                          </li>
+                          <li>
+                            Buka aplikasi m-Banking (<strong>BCA Mobile, Livin Mandiri, BRImo, BNI, BSI</strong>) atau E-Wallet (<strong>GoPay, OVO, DANA, ShopeePay</strong>).
+                          </li>
+                          <li>
+                            Pilih menu <strong>QRIS / Bayar</strong>, lalu ketuk ikon <strong>Galeri Foto / Upload QR</strong> di pojok aplikasi.
+                          </li>
+                          <li>
+                            Pilih foto QR tadi, pastikan nominal <strong>{formatIDR(paymentData.amount)}</strong> sesuai, lalu masukkan PIN Anda.
+                          </li>
+                          <li>
+                            Setelah bayar, sistem otomatis mendeteksi dan mengaktifkan akun Estimator Anda dalam beberapa detik.
+                          </li>
+                        </ol>
+                      )}
+                    </div>
+
+                    {/* Pilihan E-Wallet & Transfer Bank Alternatif */}
+                    {paymentData.redirectUrl && (
+                      <div className="w-full pt-1">
+                        <a
+                          href={paymentData.redirectUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-3 px-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xs text-xs text-center cursor-pointer group"
+                        >
+                          <Landmark className="w-4 h-4 text-slate-500 group-hover:text-emerald-700" />
+                          <span>Ingin Bayar via Transfer Bank (VA) atau E-Wallet Langsung? Klik Di Sini</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+                        </a>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center space-y-4 py-2">

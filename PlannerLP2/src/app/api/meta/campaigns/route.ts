@@ -75,7 +75,7 @@ async function fetchRealCampaignsForAccount(
       const insightsUrl = buildGraphUrl(
         `https://graph.facebook.com/v20.0/${actId}/insights?level=campaign&date_preset=${encodeURIComponent(
           preset
-        )}&fields=campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,cpc,cpm,ctr,actions,action_values,cost_per_action_type,video_thruplay_watched_actions&limit=150`,
+        )}&fields=campaign_id,campaign_name,spend,impressions,reach,frequency,clicks,cpc,cpm,ctr,actions,action_values,cost_per_action_type,video_thruplay_watched_actions,outbound_clicks&limit=150`,
         token,
         appSecret
       );
@@ -156,11 +156,15 @@ async function fetchRealCampaignsForAccount(
       insights.frequency || (reach > 0 ? (impressions / reach).toFixed(2) : 0)
     );
 
-    const linkClicks = getAction(
-      "link_click",
-      "outbound_click",
-      "inline_link_clicks"
-    );
+    const outboundClicksRaw = Array.isArray(insights.outbound_clicks)
+      ? Number(insights.outbound_clicks[0]?.value || 0)
+      : getAction("outbound_click");
+
+    const linkClicks =
+      outboundClicksRaw > 0
+        ? outboundClicksRaw
+        : getAction("link_click", "outbound_click", "inline_link_clicks");
+
     const landingPageViews = getAction(
       "landing_page_view",
       "omni_landing_page_view"
@@ -222,7 +226,11 @@ async function fetchRealCampaignsForAccount(
 
     // Rasio Funnel Scale Model (Murni dari angka riil Meta)
     const oclpRate =
-      linkClicks > 0 ? Number(((landingPageViews / linkClicks) * 100).toFixed(1)) : 0;
+      outboundClicksRaw > 0
+        ? Number(((landingPageViews / outboundClicksRaw) * 100).toFixed(1))
+        : linkClicks > 0
+        ? Number(((landingPageViews / linkClicks) * 100).toFixed(1))
+        : 0;
     const lpToAtcRate =
       landingPageViews > 0 ? Number(((addsToCart / landingPageViews) * 100).toFixed(1)) : 0;
     const atcToIcRate =

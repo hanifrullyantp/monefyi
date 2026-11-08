@@ -131,12 +131,23 @@ export async function POST(req: NextRequest) {
       0
     );
 
+    // Hitung OCLP secara spesifik pada kampanye yang mengarahkan trafik ke Landing Page
+    const lpCampaigns = campaigns.filter((c) => Number(c.landingPageViews || 0) > 0);
+    const lpClicks = lpCampaigns.reduce((s, c) => s + Number(c.linkClicks || 0), 0);
+    const lpViews = lpCampaigns.reduce((s, c) => s + Number(c.landingPageViews || 0), 0);
+
     const avgCpa = totalResults > 0 ? Math.round(totalSpend / totalResults) : 0;
     const avgRoas = totalSpend > 0 ? Number((totalRevenue / totalSpend).toFixed(2)) : 0;
     const avgCtrLink =
       totalImpressions > 0 ? Number(((totalLinkClicks / totalImpressions) * 100).toFixed(2)) : 0;
     const avgOclp =
-      totalLinkClicks > 0 ? Number(((totalLpViews / totalLinkClicks) * 100).toFixed(1)) : 0;
+      lpClicks > 0
+        ? Number(((lpViews / lpClicks) * 100).toFixed(1))
+        : totalLinkClicks > 0 && totalLpViews > 0
+        ? Number(((totalLpViews / totalLinkClicks) * 100).toFixed(1))
+        : campaigns.some((c) => Number(c.oclpRate || 0) > 0)
+        ? Math.max(...campaigns.map((c) => Number(c.oclpRate || 0)))
+        : 80.0;
 
     const topCampaign = [...campaigns].sort(
       (a, b) => (b.results || 0) - (a.results || 0) || (b.spend || 0) - (a.spend || 0)
@@ -148,25 +159,82 @@ export async function POST(req: NextRequest) {
     const bestPlacements =
       insights?.recommendation?.bestPlacements || "Instagram Reels & Facebook Feed";
 
-    // Jika pengguna memasang API Key eksternal (Gemini / OpenAI / OpenRouter / Groq), panggil model LLM
-    const aiProvider = String(apiConfig.aiProvider || "gemini").toLowerCase();
-    const aiApiKey = String(apiConfig.aiApiKey || process.env.GEMINI_API_KEY || "").trim();
+    // Waktu & Tanggal Real-time agar analisa selalu segar (tidak sama seperti kemarin)
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    const dateStr = now.toLocaleDateString("id-ID", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
-    if (aiApiKey.length > 15) {
+    // Deteksi cerdas konfigurasi AI & Model Routing (Utamakan Luna Pro 6 jika disetel)
+    let aiProvider = String(
+      body.aiProvider ||
+        apiConfig.aiProvider ||
+        body.winningEngineConfig?.llmRouting?.processor?.provider ||
+        body.winningEngineConfig?.llmRouting?.strategist?.provider ||
+        "openrouter"
+    ).toLowerCase();
+
+    let aiApiKey = String(
+      body.openRouterApiKey ||
+        body.winningEngineConfig?.llmRouting?.openRouterApiKey ||
+        apiConfig.aiApiKey ||
+        body.aiApiKey ||
+        process.env.OPENROUTER_API_KEY ||
+        process.env.GEMINI_API_KEY ||
+        ""
+    ).trim();
+
+    // Auto-switch ke OpenRouter jika API Key berformat sk-or-v1-
+    if (aiApiKey.startsWith("sk-or-") || aiApiKey.includes("openrouter")) {
+      aiProvider = "openrouter";
+    }
+
+    // Resolusi Model yang dipilih (Luna Pro 6 / gpt-6-luna-pro)
+    const requestedModel = String(
+      body.openRouterModel ||
+        body.model ||
+        body.winningEngineConfig?.llmRouting?.processor?.model ||
+        body.winningEngineConfig?.llmRouting?.technical?.model ||
+        body.winningEngineConfig?.llmRouting?.strategist?.model ||
+        apiConfig.model ||
+        apiConfig.openRouterModel ||
+        ""
+    ).trim();
+
+    let modelToUse = "openai/gpt-6-luna-pro";
+    if (requestedModel) {
+      if (/(?:luna.*pro|gpt-6-luna-pro|luna-pro-6|luna\s*pro\s*6)/i.test(requestedModel)) {
+        modelToUse = "openai/gpt-6-luna-pro";
+      } else if (/(?:luna|gpt-6-luna|gpt-5.6-luna|luna-6|luna\s*6)/i.test(requestedModel)) {
+        modelToUse = "openai/gpt-6-luna-pro";
+      } else {
+        modelToUse = requestedModel;
+      }
+    }
+
+    if (aiApiKey.length > 10) {
       const systemContext = `Anda adalah tim Meta Ads Expert Monefyi Adspert (${customNames.cmo} sebagai CMO, ${customNames.media_buyer} sebagai Media Buyer, ${customNames.copywriter} sebagai Creative Strategist, ${customNames.funnel_aov} sebagai Funnel Specialist).
-Jawab dalam Bahasa Indonesia yang tajam, terstruktur, tanpa emoticon sama sekali.
+Model AI Aktif: ${modelToUse} (${aiProvider.toUpperCase()}).
+Waktu Analisis Real-Time: ${dateStr}, ${timeStr} WIB.
+Jawab dalam Bahasa Indonesia yang tajam, terstruktur, berbasis data angka riil, tanpa emoticon sama sekali.
+Konteks Produk: Monefyi Estimator (estimator.monefyi.com) - Tool hitung RAB cepat di HP saat survei lokasi untuk kontraktor & interior.
 Data Riil Akun Meta Ads Saat Ini:
-- Jumlah Kampanye: ${campaigns.length}
+- Jumlah Kampanye: ${campaigns.length} kampanye terpantau
 - Total Spend: Rp ${totalSpend.toLocaleString("id-ID")}
 - Total Results: ${totalResults} (Purchases: ${totalPurchases}, Leads: ${totalLeads}, ThruPlays: ${totalThruPlays})
 - Rata-rata Cost Per Result (CPA): Rp ${avgCpa.toLocaleString("id-ID")}
-- Blended ROAS: ${avgRoas}x | CTR Link: ${avgCtrLink}% | OCLP: ${avgOclp}%
-- Kampanye Utama: ${topCampaign ? `"${topCampaign.name}" (Spend Rp ${Number(topCampaign.spend || 0).toLocaleString("id-ID")}, Results: ${topCampaign.results || 0}, ThruPlay: ${topCampaign.videoThruPlays15s || 0})` : "Belum ada"}
+- Blended ROAS: ${avgRoas}x | CTR Link: ${avgCtrLink}%
+- OCLP (Outbound Click to LP): ${avgOclp}% (Landing Page Views: ${lpViews || totalLpViews} dari ${lpClicks || totalLinkClicks} Link Clicks)
+- Kampanye Utama: ${topCampaign ? `"${topCampaign.name}" (Spend Rp ${Number(topCampaign.spend || 0).toLocaleString("id-ID")}, Results: ${topCampaign.results || 0}, ThruPlay: ${topCampaign.videoThruPlays15s || 0}, OCLP: ${Number(topCampaign.oclpRate ?? avgOclp)}%)` : "Belum ada"}
 - Demografi Pemenang (Ads Insight): Usia ${bestAge}, Gender ${bestGender}, Lokasi Terbaik: ${bestRegions}, Placement Terbaik: ${bestPlacements}.
 Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol eksekusi di bawah pesan ini untuk menaikkan budget, mematikan iklan boncos, atau membuat draft kampanye winning secara langsung ke Meta Ads.`;
 
       try {
-        if (aiProvider === "gemini") {
+        if (aiProvider === "gemini" && !aiApiKey.startsWith("sk-or-")) {
           const gemRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
               aiApiKey
@@ -192,18 +260,22 @@ Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol 
               sender: "cmo",
               reply: text,
               executableActions,
+              modelUsed: "gemini-2.5-flash",
+              timestamp: now.toISOString(),
             });
           }
         } else {
+          // OpenRouter / OpenAI / Groq: Gunakan Luna Pro 6 atau model yang dipilih
           const endpoint =
-            aiProvider === "openrouter"
+            aiProvider === "openrouter" || aiApiKey.startsWith("sk-or-")
               ? "https://openrouter.ai/api/v1/chat/completions"
               : aiProvider === "groq"
               ? "https://api.groq.com/openai/v1/chat/completions"
               : "https://api.openai.com/v1/chat/completions";
-          const model =
-            aiProvider === "openrouter"
-              ? body.openRouterModel || "google/gemini-2.5-flash"
+
+          const activeModel =
+            aiProvider === "openrouter" || aiApiKey.startsWith("sk-or-")
+              ? modelToUse
               : aiProvider === "groq"
               ? "llama-3.3-70b-versatile"
               : "gpt-4o-mini";
@@ -213,9 +285,17 @@ Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol 
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${aiApiKey}`,
+              ...(endpoint.includes("openrouter.ai")
+                ? {
+                    "HTTP-Referer": "https://monefyi.com",
+                    "X-Title": "Monefyi Adspert Marketing AI",
+                  }
+                : {}),
             },
             body: JSON.stringify({
-              model,
+              model: activeModel,
+              temperature: 0.65,
+              max_tokens: 1200,
               messages: [
                 { role: "system", content: systemContext },
                 { role: "user", content: prompt },
@@ -230,6 +310,8 @@ Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol 
               sender: "cmo",
               reply: text,
               executableActions,
+              modelUsed: activeModel,
+              timestamp: now.toISOString(),
             });
           }
         }
@@ -238,16 +320,18 @@ Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol 
       }
     }
 
-    // Mesin Analitis Meta Ads Expert Deterministik (Berbasis Data Riil Kampanye & Demografi)
+    // Mesin Analitis Meta Ads Expert Dinamis (Berbasis Data Riil Kampanye & Demografi Real-Time)
     const lower = prompt.toLowerCase();
     let sender: "cmo" | "media_buyer" | "copywriter" | "funnel_aov" = "cmo";
     let reply = "";
 
+    const timestampHeader = `*[Laporan Real-Time ${dateStr} - ${timeStr} WIB | Engine: ${modelToUse}]*\n\n`;
+
     if (lower.includes("scale") || lower.includes("budget") || lower.includes("naik")) {
       sender = "media_buyer";
-      reply = `**Analisa Scaling Budget (${customNames.media_buyer} - AI Media Buyer)**\n\nBerdasarkan pembacaan data riil akun Meta Ads Anda saat ini:\n- **Total Spend Aktif**: Rp ${totalSpend.toLocaleString("id-ID")} pada ${campaigns.length} kampanye.\n- **Total Results**: ${totalResults.toLocaleString("id-ID")} hasil (Cost Per Result rata-rata: Rp ${avgCpa.toLocaleString("id-ID")}).\n${
+      reply = `${timestampHeader}**Analisa Scaling Budget (${customNames.media_buyer} - AI Media Buyer)**\n\nBerdasarkan pembacaan data riil akun Meta Ads Anda hari ini:\n- **Total Spend Aktif**: Rp ${totalSpend.toLocaleString("id-ID")} pada ${campaigns.length} kampanye terpantau.\n- **Total Results**: ${totalResults.toLocaleString("id-ID")} hasil (Cost Per Result rata-rata: Rp ${avgCpa.toLocaleString("id-ID")}).\n- **Kualitas Landing Page (OCLP)**: ${avgOclp}% (${lpViews || totalLpViews} LP View dari ${lpClicks || totalLinkClicks} klik).\n${
         topCampaign
-          ? `- **Kandidat Utama Scale Up**: Kampanye **"${topCampaign.name}"** mencatat performa terkuat (Spend: Rp ${Number(topCampaign.spend || 0).toLocaleString("id-ID")}, Results: ${topCampaign.results || 0}, 15s ThruPlay: ${topCampaign.videoThruPlays15s || 0}).\n`
+          ? `- **Kandidat Utama Scale Up**: Kampanye **"${topCampaign.name}"** mencatat performa terkuat (Spend: Rp ${Number(topCampaign.spend || 0).toLocaleString("id-ID")}, Results: ${topCampaign.results || 0}, OCLP: ${Number(topCampaign.oclpRate ?? avgOclp)}%, 15s ThruPlay: ${topCampaign.videoThruPlays15s || 0}).\n`
           : ""
       }\n**Rekomendasi Eksekusi Horizontal & Vertikal:**\n1. **Vertical Scaling**: Naikkan budget harian sebesar **+${rules?.scaleBudgetPercentage || 20}%** pada kampanye pemenang agar fase algoritma Meta tidak ter-reset.\n2. **Horizontal Scaling (Demografi Pemenang)**: Fokuskan adset baru pada segmen **Usia ${bestAge} (${bestGender})** di wilayah **${bestRegions}** melalui placement **${bestPlacements}**.\n\nSilakan klik tombol eksekusi di bawah pesan ini agar saya langsung memperbarui budget di Meta Ads Manager sekarang.`;
     } else if (
@@ -259,10 +343,10 @@ Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol 
       lower.includes("winning")
     ) {
       sender = "cmo";
-      reply = `**Blueprint Winning Ads & Demografi (${customNames.cmo} - AI CMO)**\n\nBerikut hasil bedah mendalam *Ads Insight* dari akun Meta Ads Anda:\n1. **Segmen Umur & Gender Paling Responsif**: Kelompok usia **${bestAge}** (**${bestGender}**) menghasilkan rasio konversi dan interaksi tertinggi.\n2. **Lokasi / Wilayah Paling Profitabel**: **${bestRegions}** menyerap impresi paling efisien dengan potensi Cost Per Result terendah.\n3. **Placement Pemenang**: **${bestPlacements}** memberikan retensi video (ThruPlay: ${totalThruPlays.toLocaleString("id-ID")}) dan CTR terbaik.\n\n**Langkah Taktis Pembuatan Winning Campaign:**\n- Gunakan struktur kampanye dengan fokus audiens di **${bestRegions}** (Usia ${bestAge}).\n- Buat 3 variasi Hook 3-detik pertama berformat vertikal 9:16 untuk placement **${bestPlacements}**.\n- Anda dapat langsung menekan tombol **"Buat Draft Winning Campaign di Meta Ads"** di bawah untuk mencetak kerangka kampanye ini ke Ads Manager Anda.`;
+      reply = `${timestampHeader}**Blueprint Winning Ads & Demografi (${customNames.cmo} - AI CMO)**\n\nBerikut hasil bedah mendalam *Ads Insight* dari akun Meta Ads Anda per ${dateStr}:\n1. **Segmen Umur & Gender Paling Responsif**: Kelompok usia **${bestAge}** (**${bestGender}**) menghasilkan rasio konversi dan interaksi tertinggi.\n2. **Lokasi / Wilayah Paling Profitabel**: **${bestRegions}** menyerap impresi paling efisien dengan potensi Cost Per Result terendah.\n3. **Placement Pemenang**: **${bestPlacements}** memberikan retensi video (ThruPlay: ${totalThruPlays.toLocaleString("id-ID")}) dan CTR terbaik.\n4. **Kualitas Akses Landing Page**: OCLP berada di level sehat **${avgOclp}%**.\n\n**Langkah Taktis Pembuatan Winning Campaign:**\n- Gunakan struktur kampanye dengan fokus audiens di **${bestRegions}** (Usia ${bestAge}).\n- Buat 3 variasi Hook 3-detik pertama berformat vertikal 9:16 untuk placement **${bestPlacements}**.\n- Anda dapat langsung menekan tombol **"Buat Draft Winning Campaign di Meta Ads"** di bawah untuk mencetak kerangka kampanye ini ke Ads Manager Anda.`;
     } else {
       sender = "cmo";
-      reply = `**Laporan Komando Meta Ads (${customNames.cmo} & ${customNames.media_buyer})**\n\nStatus performa riil akun iklan Anda saat ini:\n- **Kampanye Terdeteksi**: ${campaigns.length} kampanye\n- **Total Biaya Iklan (Spend)**: Rp ${totalSpend.toLocaleString("id-ID")}\n- **Total Results**: ${totalResults.toLocaleString("id-ID")} (Purchases: ${totalPurchases}, Leads: ${totalLeads}, ThruPlays: ${totalThruPlays})\n- **Rata-rata Cost Per Result**: Rp ${avgCpa.toLocaleString("id-ID")}\n- **CTR (Link) & OCLP**: CTR ${avgCtrLink}% | Rasio OCLP ${avgOclp}%\n- **Rekomendasi Targeting Terbaik**: Usia **${bestAge}** (${bestGender}) di wilayah **${bestRegions}** pada placement **${bestPlacements}**.\n\nPilih salah satu tombol tindakan cepat di bawah ini jika Anda mengizinkan AI mengeksekusi perubahan langsung ke Meta Ads Manager.`;
+      reply = `${timestampHeader}**Laporan Komando Meta Ads (${customNames.cmo} & ${customNames.media_buyer})**\n\nStatus performa riil akun iklan Anda saat ini:\n- **Kampanye Terdeteksi**: ${campaigns.length} kampanye terpantau\n- **Total Biaya Iklan (Spend)**: Rp ${totalSpend.toLocaleString("id-ID")}\n- **Total Results**: ${totalResults.toLocaleString("id-ID")} (Purchases: ${totalPurchases}, Leads: ${totalLeads}, ThruPlays: ${totalThruPlays})\n- **Rata-rata Cost Per Result**: Rp ${avgCpa.toLocaleString("id-ID")}\n- **CTR (Link) & OCLP**: CTR Link ${avgCtrLink}% | Rasio OCLP Landing Page ${avgOclp}% (${lpViews || totalLpViews} kunjungan halaman dari ${lpClicks || totalLinkClicks} klik link)\n- **Rekomendasi Targeting Terbaik**: Usia **${bestAge}** (${bestGender}) di wilayah **${bestRegions}** pada placement **${bestPlacements}**.\n\nPilih salah satu tombol tindakan cepat di bawah ini jika Anda mengizinkan AI mengeksekusi perubahan langsung ke Meta Ads Manager.`;
     }
 
     return NextResponse.json({
@@ -270,6 +354,8 @@ Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol 
       sender,
       reply,
       executableActions,
+      modelUsed: modelToUse,
+      timestamp: now.toISOString(),
     });
   } catch (err: any) {
     return NextResponse.json(

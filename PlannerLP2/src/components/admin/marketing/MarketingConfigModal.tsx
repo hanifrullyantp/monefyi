@@ -36,6 +36,7 @@ const STRATEGIST_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: str
   openrouter: [
     { id: "anthropic/claude-3.7-sonnet", label: "OpenRouter: Claude 3.7 Sonnet (Strategist)" },
     { id: "anthropic/claude-3.5-sonnet", label: "OpenRouter: Claude 3.5 Sonnet" },
+    { id: "openai/gpt-6-luna-pro", label: "OpenRouter: Luna Pro 6 (GPT-6 Luna Pro)" },
     { id: "openai/gpt-4o", label: "OpenRouter: GPT-4o" },
   ],
   gemini: [
@@ -57,6 +58,8 @@ const TECHNICAL_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: stri
     { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite (Ekstra Hemat)" },
   ],
   openrouter: [
+    { id: "openai/gpt-6-luna-pro", label: "OpenRouter: Luna Pro 6 (GPT-6 Luna Pro - Unggulan)" },
+    { id: "openai/gpt-6-luna", label: "OpenRouter: Luna 6 (GPT-6 Luna Fast)" },
     { id: "google/gemini-2.5-flash", label: "OpenRouter: Gemini 2.5 Flash (Murah)" },
     { id: "deepseek/deepseek-chat", label: "OpenRouter: DeepSeek V3 (Sangat Ekonomis)" },
   ],
@@ -97,10 +100,10 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     winningEngineConfig.llmRouting.strategist.model || "anthropic/claude-3.5-sonnet"
   );
   const [processorModel, setProcessorModel] = useState(
-    winningEngineConfig.llmRouting.processor?.model || "google/gemini-2.5-flash"
+    winningEngineConfig.llmRouting.processor?.model || "openai/gpt-6-luna-pro"
   );
   const [technicalModel, setTechnicalModel] = useState(
-    winningEngineConfig.llmRouting.technical.model || "google/gemini-2.5-flash"
+    winningEngineConfig.llmRouting.technical.model || "openai/gpt-6-luna-pro"
   );
 
   // WhatsApp & Telegram Notification State
@@ -154,10 +157,10 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         winningEngineConfig.llmRouting.strategist.model || "anthropic/claude-3.5-sonnet"
       );
       setProcessorModel(
-        winningEngineConfig.llmRouting.processor?.model || "google/gemini-2.5-flash"
+        winningEngineConfig.llmRouting.processor?.model || "openai/gpt-6-luna-pro"
       );
       setTechnicalModel(
-        winningEngineConfig.llmRouting.technical.model || "google/gemini-2.5-flash"
+        winningEngineConfig.llmRouting.technical.model || "openai/gpt-6-luna-pro"
       );
 
       setWaPhone(winningEngineConfig.notifications.whatsappAdminPhone || "");
@@ -266,12 +269,12 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         processor: {
           provider: "openrouter",
           apiKey: openRouterKey.trim(),
-          model: processorModel.trim() || "google/gemini-2.5-flash",
+          model: processorModel.trim() || "openai/gpt-6-luna-pro",
         },
         technical: {
           provider: "openrouter",
           apiKey: openRouterKey.trim(),
-          model: technicalModel.trim() || "google/gemini-2.5-flash",
+          model: technicalModel.trim() || "openai/gpt-6-luna-pro",
         },
       },
       notifications: {
@@ -296,8 +299,8 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
           metaPixelId: pixelId.trim() || "1530674178146899",
           openRouterApiKey: openRouterKey.trim(),
           strategistModel: strategistModel.trim() || "anthropic/claude-3.5-sonnet",
-          processorModel: processorModel.trim() || "google/gemini-2.5-flash",
-          technicalModel: technicalModel.trim() || "google/gemini-2.5-flash",
+          processorModel: processorModel.trim() || "openai/gpt-6-luna-pro",
+          technicalModel: technicalModel.trim() || "openai/gpt-6-luna-pro",
           whatsappAdminPhone: waPhone.trim(),
           whatsappApiKey: waApiKey.trim(),
           telegramBotToken: tgBotToken.trim(),
@@ -582,8 +585,25 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
                     type="text"
                     value={processorModel}
                     onChange={(e) => setProcessorModel(e.target.value)}
+                    placeholder="openai/gpt-6-luna-pro"
                     className="w-full bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-800 rounded-lg p-1.5 text-[10px] font-mono text-slate-800 dark:text-slate-200"
                   />
+                  <div className="flex gap-1 flex-wrap pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setProcessorModel("openai/gpt-6-luna-pro")}
+                      className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 font-bold hover:bg-blue-200 cursor-pointer"
+                    >
+                      Luna Pro 6 (Aktif)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProcessorModel("openai/gpt-6-luna")}
+                      className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-200 cursor-pointer"
+                    >
+                      Luna 6 Fast
+                    </button>
+                  </div>
                 </div>
 
                 {/* 3. Technical: Gemini 2.5 Flash */}

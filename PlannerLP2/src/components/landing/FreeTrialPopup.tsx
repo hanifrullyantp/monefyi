@@ -208,6 +208,21 @@ export function FreeTrialPopup() {
 
       setSuccess(true);
 
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("monefyi_user_toast", {
+            detail: {
+              name: cleanName,
+              action: "baru saja mulai menggunakan",
+              product: "Monefyi Estimator",
+              location: "Baru saja",
+              timeAgo: "Baru saja",
+              source: "live_purchase",
+            },
+          }),
+        );
+      }
+
       // 4. Redirect ke aplikasi Estimator dengan status teraktivasi
       const targetUrl =
         resData.redirectUrl ||

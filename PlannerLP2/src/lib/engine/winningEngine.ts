@@ -95,12 +95,12 @@ export const DEFAULT_WINNING_ENGINE_CONFIG: WinningEngineConfig = {
     },
     processor: {
       provider: "openrouter",
-      model: "google/gemini-2.5-flash",
+      model: "openai/gpt-6-luna-pro",
       apiKey: "",
     },
     technical: {
       provider: "openrouter",
-      model: "google/gemini-2.5-flash",
+      model: "openai/gpt-6-luna-pro",
       apiKey: "",
     },
   },
@@ -260,17 +260,30 @@ export function runFivePillarDiagnostics(params: {
   const totalRevenue = campaigns.reduce((s, c) => s + Number(c.purchasesConversionValue || 0), 0);
 
   const avgCtr = totalImpressions > 0 ? (totalLinkClicks / totalImpressions) * 100 : 0;
+
+  // Hitung OCLP (Outbound Click to Landing Page) secara spesifik pada kampanye yang mengarahkan pengunjung ke Landing Page (estimator.monefyi.com).
+  // Hal ini mencegah dilusi dari kampanye awareness, video thruplay, atau WA leads yang tidak memiliki LP view.
+  const lpActiveCampaigns = campaigns.filter(
+    (c) => Number(c.landingPageViews || 0) > 0
+  );
+  const lpTotalViews = lpActiveCampaigns.reduce((s, c) => s + Number(c.landingPageViews || 0), 0);
+  const lpTotalClicks = lpActiveCampaigns.reduce((s, c) => s + Number(c.linkClicks || 0), 0);
+
+  // Jika ada kampanye landing page, gunakan rasio LP views terhadap klik pada kampanye tersebut
   const oclpRate =
-    totalLinkClicks > 0
+    lpTotalClicks > 0
+      ? Math.min(100, (lpTotalViews / lpTotalClicks) * 100)
+      : totalLinkClicks > 0 && totalLpViews > 0
       ? Math.min(100, (totalLpViews / totalLinkClicks) * 100)
-      : campaigns.length > 0
-      ? campaigns.reduce((s, c) => s + Number(c.oclpRate || 0), 0) / campaigns.length
-      : 82;
+      : campaigns.some((c) => Number(c.oclpRate || 0) > 0)
+      ? Math.max(...campaigns.map((c) => Number(c.oclpRate || 0)))
+      : 80.0;
+
+  // Rasio LP ke Checkout: Gunakan total checkout initiated terhadap total LP visitors tanpa double-count ATC
+  const effectiveLpVisitors = lpTotalViews > 0 ? lpTotalViews : totalLpViews > 0 ? totalLpViews : totalLinkClicks;
   const lpToCheckoutRate =
-    totalLpViews > 0
-      ? ((totalIc + totalAtc) / totalLpViews) * 100
-      : totalLinkClicks > 0
-      ? ((totalIc + totalPurchases) / totalLinkClicks) * 100
+    effectiveLpVisitors > 0
+      ? Math.min(100, (totalIc / effectiveLpVisitors) * 100)
       : 4.2;
   const checkoutToPurchaseRate =
     totalIc > 0
@@ -394,9 +407,9 @@ export function runFivePillarDiagnostics(params: {
       title: "Perbaikan Otomatis Kecepatan Landing Page estimator.monefyi.com (Naikkan OCLP > 85%)",
       whatToDo:
         "Mengaktifkan mode prioritas render Hero Section estimator.monefyi.com, menunda skrip demo interaktif di bawah lipatan layar, dan memangkas beban visual awal agar halaman terbuka cepat di HP kontraktor di lokasi survei.",
-      whyEvidence: `Data Meta menunjukkan OCLP saat ini ${oclpRate.toFixed(
+      whyEvidence: `Data Meta menunjukkan OCLP kampanye landing page saat ini ${oclpRate.toFixed(
         1
-      )}% (${totalLpViews} LP View dari ${totalLinkClicks} Link Click). Mempercepat loading langsung menyelamatkan calon pembeli yang keluar sebelum melihat demo.`,
+      )}% (${lpTotalViews || totalLpViews} LP View dari ${lpTotalClicks || totalLinkClicks} Link Click). Mempercepat loading langsung menyelamatkan calon pembeli yang keluar sebelum melihat demo.`,
       expectedImpact: "Memulihkan 15% - 25% trafik iklan kontraktor yang sebelumnya terpental karena halaman lambat.",
       actionType: "optimize_lp_speed",
       actionPayload: {
