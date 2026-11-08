@@ -10,6 +10,7 @@ import { AuthHydrator } from "@/components/landing/AuthHydrator";
 import { INLINE_EDIT_LANDING_PATH } from "@/lib/hooks/useLandingAdmin";
 import { useUIStore } from "@/lib/store/uiStore";
 import { AdminPwaInstallPrompt } from "@/components/admin/AdminPwaInstallPrompt";
+import { MayarStatusBanner } from "@/components/admin/MayarStatusBanner";
 import { MarketingConfigModal } from "@/components/admin/marketing/MarketingConfigModal";
 import { cn } from "@/lib/utils/cn";
 
@@ -61,6 +62,8 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
       <div className={cn("min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col relative transition-colors duration-200", adminTheme === "dark" && "dark")}>
         {/* PWA Install Prompt Banner */}
         <AdminPwaInstallPrompt />
+        {/* Mayar Payment Gateway Status & Alert Banner */}
+        <MayarStatusBanner />
 
         <div className="flex-1 flex relative">
           {/* Desktop Sidebar (Collapsible) */}

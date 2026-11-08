@@ -42,6 +42,7 @@ import {
   Smartphone,
   ChevronDown,
   ChevronUp,
+  MessageSquare,
 } from 'lucide-react';
 
 export type ProductTier = 'free' | 'standard' | 'pro';
@@ -149,7 +150,9 @@ export default function ConversationalCheckout({
     qrImageUrl: string | null;
     redirectUrl: string | null;
     amount: number;
-    method?: PaymentMethodId;
+    method?: PaymentMethodId | string;
+    isFallback?: boolean;
+    waOrderUrl?: string;
   } | null>(null);
 
   // Timer & Polling Status
@@ -639,6 +642,38 @@ export default function ConversationalCheckout({
         return;
       }
 
+      // Auto Fallback ke Lynk.id / WhatsApp jika Mayar mengalami gangguan
+      if (resData.fallback) {
+        setPaymentData({
+          paymentId: resData.paymentId || `fb_${Date.now()}`,
+          qrImageUrl: null,
+          redirectUrl: resData.redirectUrl,
+          amount: resData.amount || finalPrice,
+          method: 'fallback_lynk',
+          isFallback: true,
+          waOrderUrl: resData.waOrderUrl,
+        });
+        syncLeadProgress(5, 'pending_payment');
+        trackFunnelEvent('step5_fallback_redirect', {
+          provider: resData.provider || 'lynk',
+          amount: resData.amount || finalPrice,
+        });
+        trackMetaAddPaymentInfo({
+          content_name: `Estimator ${product.toUpperCase()}`,
+          content_ids: [product],
+          value: resData.amount || finalPrice,
+          currency: 'IDR',
+          payment_method: 'lynk_fallback',
+        });
+        if (onSuccess) onSuccess(resData);
+        setTimeout(() => {
+          if (resData.redirectUrl) {
+            window.location.href = resData.redirectUrl;
+          }
+        }, 1500);
+        return;
+      }
+
       setPaymentData({
         paymentId: resData.paymentId,
         qrImageUrl: resData.qrImageUrl,
@@ -1116,6 +1151,48 @@ export default function ConversationalCheckout({
                           <ExternalLink className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
                         </a>
                       </div>
+                    )}
+                  </div>
+                ) : paymentData.isFallback ? (
+                  <div className="flex flex-col items-center justify-center space-y-4 py-3">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-xs">
+                      <Sparkles className="w-8 h-8 animate-pulse" />
+                    </div>
+
+                    <div className="text-center space-y-1">
+                      <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full uppercase">
+                        Jalur Pembayaran Cadangan Resmi
+                      </span>
+                      <h3 className="font-extrabold text-slate-900 text-lg">
+                        Mengarahkan ke Pembayaran Lynk.id...
+                      </h3>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Jika halaman checkout belum terbuka otomatis, silakan klik tombol di bawah untuk membayar via QRIS atau Transfer Bank.
+                      </p>
+                    </div>
+
+                    {paymentData.redirectUrl && (
+                      <a
+                        href={paymentData.redirectUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-black rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/15 text-sm text-center cursor-pointer"
+                      >
+                        <span>Buka Halaman Pembayaran (Lynk.id)</span>
+                        <ExternalLink className="w-4 h-4 ml-0.5" />
+                      </a>
+                    )}
+
+                    {paymentData.waOrderUrl && (
+                      <a
+                        href={paymentData.waOrderUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3 bg-white hover:bg-slate-50 border border-slate-300 active:scale-[0.98] text-slate-700 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all text-xs text-center cursor-pointer"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Atau Bayar Langsung & Konfirmasi via WhatsApp</span>
+                      </a>
                     )}
                   </div>
                 ) : (

@@ -17,7 +17,9 @@ import {
   EyeOff,
   Sparkles,
   Sliders,
+  CreditCard,
 } from "lucide-react";
+import { MayarSettingsCard } from "@/components/admin/MayarSettingsCard";
 import { useSettingsStore } from "@/lib/store/settingsStore";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { LlmProviderType } from "@/lib/engine/llmRouter";
@@ -70,7 +72,7 @@ const TECHNICAL_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: stri
   ],
 };
 
-type SettingsTab = "ai" | "meta" | "whatsapp" | "general";
+type SettingsTab = "ai" | "meta" | "whatsapp" | "payment" | "general";
 
 function SettingsContent() {
   const searchParams = useSearchParams();
@@ -126,7 +128,7 @@ function SettingsContent() {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as SettingsTab;
-    if (tabParam && ["ai", "meta", "whatsapp", "general"].includes(tabParam)) {
+    if (tabParam && ["ai", "meta", "whatsapp", "payment", "general"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -251,6 +253,7 @@ function SettingsContent() {
           { id: "ai" as const, label: "AI & Dual-LLM", icon: Cpu, badge: "Super Admin" },
           { id: "meta" as const, label: "Meta Ads & CAPI", icon: Key, badge: "API" },
           { id: "whatsapp" as const, label: "WhatsApp Bot", icon: MessageSquare },
+          { id: "payment" as const, label: "Pembayaran Mayar", icon: CreditCard, badge: "Payment" },
           { id: "general" as const, label: "General & SEO", icon: Globe },
         ].map((t) => {
           const isActive = activeTab === t.id;
@@ -634,7 +637,10 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* TAB 4: GENERAL & SEO */}
+      {/* TAB 4: PEMBAYARAN MAYAR & MONITORING KONEKSI */}
+      {activeTab === "payment" && <MayarSettingsCard />}
+
+      {/* TAB 5: GENERAL & SEO */}
       {activeTab === "general" && (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-7 space-y-4 shadow-xs">
           <div className="border-b border-slate-100 dark:border-slate-800 pb-4">

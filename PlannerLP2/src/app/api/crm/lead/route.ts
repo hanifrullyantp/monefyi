@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import {
+  getActiveMayarApiKey,
+  getActiveMayarApiUrl,
+} from "@/lib/services/mayarHealthService";
 import { randomUUID } from "crypto";
 
 export interface CrmLeadPayload {
@@ -173,14 +177,8 @@ export async function GET(req: NextRequest) {
     const supabase = getSupabaseClient();
     const leadsMap: Map<string, any> = new Map();
 
-    const mayarApiKey = (
-      process.env.MAYAR_API_KEY ||
-      process.env.MAYAR_API_KEY_SANDBOX ||
-      ""
-    ).trim();
-    const mayarApiUrl = (
-      process.env.MAYAR_API_URL || "https://api.mayar.id"
-    ).replace(/\/$/, "");
+    const mayarApiKey = await getActiveMayarApiKey();
+    const mayarApiUrl = await getActiveMayarApiUrl();
 
     // 1. Masukkan memory leads dulu
     for (const [sid, item] of memoryLeads.entries()) {
