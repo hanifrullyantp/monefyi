@@ -2033,17 +2033,29 @@ export default function CRMPage() {
 
                       {/* Direct WhatsApp Follow-up & Kirim Akun */}
                       <td className="py-4 px-4 text-center">
-                        <div className="flex flex-col gap-1.5 items-center min-w-[125px]">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedLeadForAccountWa(lead)}
-                            disabled={!hasWa}
-                            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-black text-[11px] shadow-sm shadow-emerald-700/20 transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
-                            title="Kirim nama, user email, dan password akun Estimator langsung via WhatsApp"
-                          >
-                            <Key className="w-3 h-3 text-amber-300" />
-                            <span>Kirim Akun (WA)</span>
-                          </button>
+                        <div className="flex flex-col gap-1.5 items-center min-w-[130px]">
+                          {(lead.status === "pending_payment" || lead.status === "abandoned_checkout") && hasWa ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLeadForPaymentFollowUp(lead)}
+                              className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-black text-[11px] shadow-sm shadow-amber-500/25 transition-all active:scale-95 cursor-pointer"
+                              title="Kirim link konfirmasi pembayaran instan via WhatsApp (Tinggal Bayar)"
+                            >
+                              <CreditCard className="w-3.5 h-3.5 text-white" />
+                              <span>Follow-Up Bayar (WA)</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLeadForAccountWa(lead)}
+                              disabled={!hasWa}
+                              className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white rounded-xl font-black text-[11px] shadow-sm shadow-emerald-700/20 transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
+                              title="Kirim nama, user email, dan password akun Estimator langsung via WhatsApp"
+                            >
+                              <Key className="w-3 h-3 text-amber-300" />
+                              <span>Kirim Akun (WA)</span>
+                            </button>
+                          )}
                           {hasWa ? (
                             <a
                               href={generateWhatsAppLink(lead)}
@@ -2190,7 +2202,16 @@ export default function CRMPage() {
 
                         {/* Action WhatsApp & Email Buttons */}
                         <div className="pt-2 space-y-1.5">
-                          {lead.phone && lead.phone !== "-" && (
+                          {(lead.status === "pending_payment" || lead.status === "abandoned_checkout") && lead.phone && lead.phone !== "-" ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedLeadForPaymentFollowUp(lead)}
+                              className="w-full py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-black text-[11px] flex items-center justify-center gap-1.5 shadow-sm shadow-amber-500/20 cursor-pointer transition-all active:scale-[0.98]"
+                            >
+                              <CreditCard className="w-3.5 h-3.5 text-white" />
+                              <span>Follow-Up Konfirmasi Bayar (1-Klik WA)</span>
+                            </button>
+                          ) : lead.phone && lead.phone !== "-" ? (
                             <button
                               type="button"
                               onClick={() => setSelectedLeadForAccountWa(lead)}
@@ -2199,7 +2220,7 @@ export default function CRMPage() {
                               <Key className="w-3.5 h-3.5 text-amber-300" />
                               <span>Kirim Akun & Password (WA)</span>
                             </button>
-                          )}
+                          ) : null}
                           <div className="flex items-center justify-between gap-2">
                             {lead.phone && lead.phone !== "-" && (
                               <a
@@ -2257,6 +2278,15 @@ export default function CRMPage() {
           lead={selectedLeadForEmail}
           onClose={() => setSelectedLeadForEmail(null)}
           onEmailSent={handleEmailSentCallback}
+        />
+      )}
+
+      {/* Modal Follow-Up Konfirmasi Pembayaran (Tinggal Bayar) */}
+      {selectedLeadForPaymentFollowUp && (
+        <FollowUpPaymentWaModal
+          lead={selectedLeadForPaymentFollowUp}
+          onClose={() => setSelectedLeadForPaymentFollowUp(null)}
+          onFollowUpSent={handlePaymentFollowUpSentCallback}
         />
       )}
 
