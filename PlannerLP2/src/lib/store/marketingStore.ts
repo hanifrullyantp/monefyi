@@ -182,7 +182,7 @@ interface MarketingStore {
 }
 
 export const useMarketingStore = create<MarketingStore>()(
-  persist(
+  persist<MarketingStore, any>(
     (set, get) => ({
       campaigns: [],
       isRefreshingCampaigns: false,
@@ -1017,18 +1017,35 @@ export const useMarketingStore = create<MarketingStore>()(
     }),
     {
       name: 'monefyi_marketing_store',
-      partialize: (state) => ({
-        rules: state.rules,
-        apiConfig: state.apiConfig,
-        winningEngineConfig: state.winningEngineConfig,
-        currentLpCopySnapshot: state.currentLpCopySnapshot,
-        customAgentNames: state.customAgentNames,
-        orderBumpConfig: state.orderBumpConfig,
-        upsellConfig: state.upsellConfig,
-        adBank: state.adBank,
-        actionLogs: state.actionLogs.slice(0, 50),
-        chatMessages: state.chatMessages.slice(-30),
-      }),
+      partialize: (state: any) =>
+        ({
+          rules: state.rules,
+          apiConfig: state.apiConfig,
+          winningEngineConfig: state.winningEngineConfig,
+          currentLpCopySnapshot: state.currentLpCopySnapshot,
+          customAgentNames: state.customAgentNames,
+          orderBumpConfig: state.orderBumpConfig,
+          upsellConfig: state.upsellConfig,
+          adBank: state.adBank,
+          actionLogs: state.actionLogs.slice(0, 50),
+          chatMessages: state.chatMessages.slice(-30),
+        } as any),
+      merge: (persisted: unknown, current: MarketingStore): MarketingStore => {
+        const persistedObj = (persisted as Partial<MarketingStore>) || {};
+        const merged: MarketingStore = { ...current, ...persistedObj };
+        // Sanitize agar orderBumpConfig tidak terkontaminasi teks lama "SOP"
+        const headline = merged.orderBumpConfig?.headline || '';
+        const prodName = merged.orderBumpConfig?.productName || '';
+        if (
+          headline.toLowerCase().includes('sop') ||
+          headline.toLowerCase().includes('template') ||
+          prodName.toLowerCase().includes('sop') ||
+          prodName.toLowerCase().includes('template')
+        ) {
+          merged.orderBumpConfig = current.orderBumpConfig;
+        }
+        return merged;
+      },
     }
   )
 );

@@ -265,7 +265,7 @@ export function processAgentWarRoomMessage(
     responses.push({
       id: `msg_${Date.now()}_1`,
       sender: 'funnel_aov',
-      text: `Laporan optimasi Funnel dan AOV (Model Scale):\n\n1. [Order Bump Checkout]: Tambahkan add-on "Template Database Harga 500+ Material & SOP Proyek 2026" seharga Rp 49.000. Take-rate benchmark mencapai 28-35% sehingga langsung mendongkrak margin transaksi.\n2. [Meta Conversions API (CAPI)]: CAPI server-side aktif dengan Event Match Quality 8.6/10 untuk meminimalkan kebocoran data di browser.\n3. [Follow-up Abandoned Checkout]: Calon pembeli yang mengisi nomor WhatsApp namun belum menyelesaikan pembayaran dapat di-follow up otomatis via pesan pengingat.`,
+      text: `Laporan optimasi Funnel dan AOV (Model Scale):\n\n1. [Order Bump Checkout]: Tawarkan opsi "Upgrade ke Estimator PRO" seharga +Rp 50.000 (Hemat Rp 50.000). Take-rate benchmark mencapai 28-35% sehingga langsung mendongkrak margin transaksi.\n2. [Meta Conversions API (CAPI)]: CAPI server-side aktif dengan Event Match Quality 8.6/10 untuk meminimalkan kebocoran data di browser.\n3. [Follow-up Abandoned Checkout]: Calon pembeli yang mengisi nomor WhatsApp namun belum menyelesaikan pembayaran dapat di-follow up otomatis via pesan pengingat dengan link langsung bayar.`,
       timestamp: now,
     });
     return responses;

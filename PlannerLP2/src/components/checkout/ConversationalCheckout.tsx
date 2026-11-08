@@ -275,6 +275,24 @@ export default function ConversationalCheckout({
       : 99000;
   const finalPrice = takeOrderBump ? basePrice + bumpPrice : basePrice;
 
+  // Sanitize bump data untuk paket Standard agar selalu "Upgrade ke PRO" (Bukan SOP)
+  const isSopBump =
+    orderBumpConfig?.headline?.toLowerCase().includes('sop') ||
+    orderBumpConfig?.productName?.toLowerCase().includes('sop') ||
+    orderBumpConfig?.productName?.toLowerCase().includes('template');
+
+  const standardBumpTitle = !isSopBump && orderBumpConfig?.headline
+    ? orderBumpConfig.headline
+    : co.bumpTitleStandard || 'YA! Upgrade ke Estimator PRO — Tambah Rp 50.000 (Hemat Rp 50.000)';
+
+  const standardBumpSub = !isSopBump && orderBumpConfig?.description
+    ? orderBumpConfig.description
+    : co.bumpSubStandard || 'Harga resmi PRO di landing page Rp 199.000. Khusus di halaman ini, Anda cukup menambah Rp 50.000 saja untuk upgrade ke PRO Seumur Hidup!';
+
+  const standardBumpProductName = !isSopBump && orderBumpConfig?.productName
+    ? orderBumpConfig.productName
+    : 'Ya! Upgrade ke Estimator PRO';
+
   // Meta Pixel Deduplication Flags
   const hasTrackedIC = useRef(false);
   const hasTrackedPurchase = useRef(false);
@@ -1057,7 +1075,7 @@ export default function ConversationalCheckout({
                     {product === 'free'
                       ? `Upgrade Standard (+${formatIDR(bumpPrice)})`
                       : product === 'standard'
-                      ? `${orderBumpConfig?.productName || 'Upgrade PRO'} (+${formatIDR(bumpPrice)})`
+                      ? `${standardBumpProductName} (+${formatIDR(bumpPrice)})`
                       : `2 Akun PRO (+${formatIDR(bumpPrice)})`}
                   </span>
                 </motion.button>
@@ -1539,7 +1557,7 @@ export default function ConversationalCheckout({
                     {product === 'free' ? (
                       <EditableText section="checkout" field="bumpTitleFree" value={co.bumpTitleFree || "Upgrade Langsung ke Estimator Standard Seumur Hidup?"} />
                     ) : product === 'standard' ? (
-                      <EditableText section="checkout" field="bumpTitleStandard" value={orderBumpConfig?.headline || co.bumpTitleStandard} />
+                      <EditableText section="checkout" field="bumpTitleStandard" value={standardBumpTitle} />
                     ) : (
                       <EditableText section="checkout" field="bumpTitlePro" value={co.bumpTitlePro} />
                     )}
@@ -1548,7 +1566,7 @@ export default function ConversationalCheckout({
                     {product === 'free' ? (
                       <EditableText section="checkout" field="bumpSubFree" value={co.bumpSubFree || "Khusus pendaftaran ini: Buka batas 3 estimasi & dapatkan lisensi seumur hidup hanya Rp 93.000!"} multiline />
                     ) : product === 'standard' ? (
-                      <EditableText section="checkout" field="bumpSubStandard" value={orderBumpConfig?.description || co.bumpSubStandard} multiline />
+                      <EditableText section="checkout" field="bumpSubStandard" value={standardBumpSub} multiline />
                     ) : (
                       <EditableText section="checkout" field="bumpSubPro" value={co.bumpSubPro} multiline />
                     )}
@@ -1589,13 +1607,13 @@ export default function ConversationalCheckout({
                           {product === 'free'
                             ? 'Ya! Ambil Lisensi Standard Seumur Hidup'
                             : product === 'standard'
-                            ? orderBumpConfig?.productName || 'Ya! Upgrade ke Estimator PRO'
+                            ? standardBumpProductName
                             : 'Ya! Tambah 1 Lisensi PRO Ekstra'}
                         </span>
                         <div className="text-right">
                           <span className="text-xs text-slate-400 line-through mr-1.5">
-                            {product === 'standard' && orderBumpConfig?.originalPrice
-                              ? formatIDR(orderBumpConfig.originalPrice)
+                            {product === 'standard'
+                              ? formatIDR(!isSopBump && orderBumpConfig?.originalPrice ? orderBumpConfig.originalPrice : 199000)
                               : 'Rp199.000'}
                           </span>
                           <span className="text-sm sm:text-base font-extrabold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-lg">
@@ -1625,15 +1643,15 @@ export default function ConversationalCheckout({
                           <>
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span><EditableText section="checkout" field="bumpBenefit1Standard" value={co.bumpBenefit1Standard} /></span>
+                              <span><EditableText section="checkout" field="bumpBenefit1Standard" value={co.bumpBenefit1Standard || "Custom Branding: Pasang logo, stempel & tanda tangan resmi di semua PDF"} /></span>
                             </div>
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span><EditableText section="checkout" field="bumpBenefit2Standard" value={co.bumpBenefit2Standard} /></span>
+                              <span><EditableText section="checkout" field="bumpBenefit2Standard" value={co.bumpBenefit2Standard || "Lengkap Surat Perjanjian Kerja (SPK), Invoice, & Kwitansi resmi"} /></span>
                             </div>
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span><EditableText section="checkout" field="bumpBenefit3Standard" value={co.bumpBenefit3Standard} /></span>
+                              <span><EditableText section="checkout" field="bumpBenefit3Standard" value={co.bumpBenefit3Standard || "Kalkulasi margin HPP & export tanpa watermark seumur hidup"} /></span>
                             </div>
                           </>
                         ) : (

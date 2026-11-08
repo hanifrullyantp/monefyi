@@ -306,7 +306,7 @@ export function runFivePillarDiagnostics(params: {
   // Harga Resmi: Paket Standard Rp 93.000 / Rp 150.000 sekali bayar, Paket Pro Rp 199.000 / Rp 250.000 sekali bayar.
   let offerScore = 78;
   let offerDiagnosis =
-    "Struktur penawaran Monefyi Estimator (Paket Standard Rp 93.000 / Rp 150.000 vs Paket Pro Rp 199.000 / Rp 249.000 Sekali Bayar) sangat menarik bagi kontraktor & interior. Daya tarik bisa dilipatgandakan dengan mempertegas garansi survei & bonus template SOP RAB kontraktor.";
+    "Struktur penawaran Monefyi Estimator (Paket Standard Rp 93.000 / Rp 150.000 vs Paket Pro Rp 199.000 / Rp 250.000 Sekali Bayar) sangat menarik bagi kontraktor & interior. Daya tarik diperkuat dengan opsi upgrade ke Pro hanya +Rp 50.000 di halaman checkout.";
   let offerRecommendation =
     "Pertahankan harga Monefyi Estimator dan perjelas perbandingan penghematan di Paket Pro (Kalkulator Margin + Custom Logo & Tanda Tangan PDF).";
 
@@ -470,20 +470,20 @@ export function runFivePillarDiagnostics(params: {
     pillar: "checkout",
     pillarLabel: "Pilar 3: Checkout Page & AOV Funnel",
     priority: "medium",
-    title: "Optimasi Order Bump: Database 500+ Material & SOP Kontraktor Lengkap",
+    title: "Optimasi Order Bump: Upgrade ke Estimator PRO (+Rp 50.000)",
     whatToDo:
-      "Memperbarui penawaran add-on Order Bump di halaman checkout estimator.monefyi.com agar kontraktor langsung menambahkan template SOP tender & database harga material cukup dengan centang 1 kotak (Rp 49.000).",
+      "Memastikan penawaran Order Bump di halaman checkout estimator.monefyi.com fokus pada Upgrade langsung ke Estimator PRO Seumur Hidup hanya dengan menambah Rp 50.000 (Hemat Rp 50.000).",
     whyEvidence: `Take-rate Order Bump saat ini berada di ${bumpTakeRate}% dan Upsell di ${upsellTakeRate}%. Menaikkan take-rate ini mendongkrak margin per transaksi sehingga biaya iklan (CPA) terlindungi.`,
     expectedImpact: "Meningkatkan nilai transaksi rata-rata (AOV) sebesar +18% s/d +28% dari setiap pembeli yang checkout.",
     actionType: "optimize_checkout_funnel",
     actionPayload: {
       headline:
-        "YA! Tambahkan Template Database 500+ Material & SOP Tender Kontraktor (Hanya +Rp 49.000)",
+        "YA! Upgrade ke Estimator PRO — Tambah Rp 50.000 (Hemat Rp 50.000)",
       description:
-        "Dapatkan 10 template RAP siap pakai, rumus otomatis waste material, dan SOP tender proyek langsung ke akun Anda.",
-      price: 49000,
-      originalPrice: 399000,
-      badgeText: "ADD-ON SPESIAL CHECKOUT",
+        "Harga resmi PRO di landing page Rp 199.000. Khusus di halaman ini, Anda cukup menambah Rp 50.000 saja untuk upgrade ke PRO Seumur Hidup! Buka Custom Branding Logo, SPK, Invoice & Kwitansi Resmi!",
+      price: 50000,
+      originalPrice: 199000,
+      badgeText: "PENAWARAN TERBATAS SEKALI INI SAJA",
     },
     requiresCeilingReapproval: false,
     status: "pending",
@@ -717,9 +717,9 @@ export function runFivePillarDiagnostics(params: {
       score: checkoutScore,
       status: checkoutScore >= 80 ? "winning" : checkoutScore >= 65 ? "perlu_optimasi" : "kritis",
       headlineMetric: `Order Bump: ${bumpTakeRate}% | Upsell: ${upsellTakeRate}%`,
-      honestDiagnosis: `Checkout estimator.monefyi.com stabil dengan peluang kenaikan AOV lewat Order Bump Database Material & SOP Rp 49.000.`,
+      honestDiagnosis: `Checkout estimator.monefyi.com stabil dengan peluang kenaikan AOV lewat Order Bump Upgrade ke Estimator PRO (+Rp 50.000).`,
       keyRecommendation:
-        "Tawarkan add-on template tender proyek di halaman checkout dan follow-up kontraktor yang terhenti di langkah pembayaran Mayar via WhatsApp.",
+        "Tawarkan penawaran Upgrade ke Estimator PRO hemat Rp 50.000 di halaman checkout dan follow-up kontraktor yang terhenti di langkah pembayaran Mayar via WhatsApp.",
     },
     {
       id: "ads_testing",

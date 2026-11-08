@@ -51,7 +51,7 @@ export function FollowUpPaymentWaModal({
 
   // Kalkulasi total nominal sesuai pilihan
   const basePrice = planTier === "pro" ? 199000 : 93000;
-  const bumpPrice = 49000;
+  const bumpPrice = planTier === "pro" ? 99000 : 50000;
   const finalAmount = lead.amount || (basePrice + (bumpTaken ? bumpPrice : 0));
 
   // 1. Link Checkout Otomatis (Pre-filled - Tinggal Bayar)
@@ -78,8 +78,12 @@ export function FollowUpPaymentWaModal({
   // Nama paket untuk teks
   const productName =
     planTier === "pro"
-      ? `Monefyi Estimator PRO${bumpTaken ? " + Add-on SOP Proyek" : ""}`
-      : `Monefyi Estimator Standard${bumpTaken ? " + Add-on SOP Proyek" : ""}`;
+      ? bumpTaken
+        ? "Monefyi Estimator PRO (+1 Akun Lisensi Ekstra)"
+        : "Monefyi Estimator PRO"
+      : bumpTaken
+      ? "Monefyi Estimator PRO (Upgrade dari Standard via Promo Bump +Rp 50.000)"
+      : "Monefyi Estimator Standard";
 
   // Konstruksi Teks Pesan WhatsApp Follow-up Konfirmasi Bayar
   const messageText = `Halo Kak ${recipientName.trim() || "Kontraktor"}! 🙌
@@ -250,7 +254,9 @@ Apakah ada pertanyaan atau kendala saat checkout tadi yang bisa kami bantu jelas
                   onChange={(e) => setBumpTaken(e.target.checked)}
                   className="rounded text-amber-600 focus:ring-amber-500"
                 />
-                <span>Add-on SOP (+Rp 49.000)</span>
+                <span>
+                  {planTier === "pro" ? "+1 Akun PRO Ekstra (+Rp 99.000)" : "Upgrade ke PRO (+Rp 50.000)"}
+                </span>
               </label>
             </div>
           </div>
