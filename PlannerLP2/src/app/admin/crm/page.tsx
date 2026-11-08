@@ -35,7 +35,9 @@ import {
   Wallet,
   TrendingUp,
   Copy,
+  CreditCard,
 } from "lucide-react";
+import { FollowUpPaymentWaModal } from "@/components/admin/crm/FollowUpPaymentWaModal";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import {
@@ -705,6 +707,8 @@ export default function CRMPage() {
   const [selectedLeadForEmail, setSelectedLeadForEmail] = useState<Lead | null>(null);
   // State untuk Modal Kirim Akun & Password via WhatsApp
   const [selectedLeadForAccountWa, setSelectedLeadForAccountWa] = useState<Lead | null>(null);
+  // State untuk Modal Follow-Up Konfirmasi Bayar (Tinggal Bayar)
+  const [selectedLeadForPaymentFollowUp, setSelectedLeadForPaymentFollowUp] = useState<Lead | null>(null);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -1187,6 +1191,17 @@ export default function CRMPage() {
     }).catch(() => {});
 
     showToast(`Akun & password untuk ${selectedLeadForAccountWa.name} berhasil diarahkan ke WhatsApp!`);
+  };
+
+  const handlePaymentFollowUpSentCallback = (leadId: string, notes: string) => {
+    addActivity(leadId, {
+      type: "whatsapp",
+      content: notes,
+      timestamp: new Date().toISOString(),
+      by: "Admin",
+    });
+
+    showToast("Link pembayaran (Tinggal Bayar) berhasil diarahkan ke WhatsApp pelanggan!");
   };
 
   return (

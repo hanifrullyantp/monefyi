@@ -132,10 +132,11 @@ export default function ConversationalCheckout({
   const co = { ...defaultContent.checkout!, ...(content.checkout || {}) };
 
   // State Management
-  const [product] = useState<ProductTier>(initialProduct);
+  const [product, setProduct] = useState<ProductTier>(initialProduct);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [direction, setDirection] = useState<number>(1);
   const [floatingPill, setFloatingPill] = useState<{ text: string } | null>(null);
+  const [isPrefilledFromUrl, setIsPrefilledFromUrl] = useState(false);
 
   // Form Fields
   const [fullName, setFullName] = useState('');
@@ -143,6 +144,62 @@ export default function ConversationalCheckout({
   const [whatsapp, setWhatsapp] = useState('');
   const [takeOrderBump, setTakeOrderBump] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('qris');
+
+  // Auto-prefill data pelanggan saat membuka link follow-up WhatsApp
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlName = params.get('name');
+      const urlEmail = params.get('email');
+      const urlPhone = params.get('phone') || params.get('whatsapp');
+      const urlPlan = params.get('plan') || params.get('product');
+      const urlBump = params.get('bump');
+      const urlStep = params.get('step');
+      const urlMethod = params.get('method') as PaymentMethodId | null;
+
+      let hasPrefill = false;
+
+      if (urlPlan === 'pro' || urlPlan === 'standard' || urlPlan === 'free') {
+        setProduct(urlPlan);
+      }
+
+      if (urlName && urlName.trim()) {
+        setFullName(urlName.trim());
+        hasPrefill = true;
+      }
+      if (urlEmail && urlEmail.trim()) {
+        setEmail(urlEmail.trim());
+        hasPrefill = true;
+      }
+      if (urlPhone && urlPhone.trim()) {
+        const clean = urlPhone.trim().replace(/[^0-9]/g, '');
+        setWhatsapp(clean.startsWith('62') ? `0${clean.slice(2)}` : clean);
+        hasPrefill = true;
+      }
+      if (urlBump === '1' || urlBump === 'true') {
+        setTakeOrderBump(true);
+      }
+      if (
+        urlMethod &&
+        ['qris', 'bca_va', 'mandiri_va', 'bni_va', 'bri_va', 'cimb_va', 'credit_card'].includes(urlMethod)
+      ) {
+        setPaymentMethod(urlMethod);
+      }
+
+      if (hasPrefill) {
+        setIsPrefilledFromUrl(true);
+        if (urlStep) {
+          const stepNum = parseInt(urlStep, 10);
+          if (stepNum >= 1 && stepNum <= 5) setCurrentStep(stepNum);
+        } else if (urlName && (urlPhone || urlEmail)) {
+          setCurrentStep(5);
+        }
+      }
+    } catch {
+      // Abaikan jika query params tidak dapat dibaca
+    }
+  }, []);
 
   // Payment Active State (Native QRIS / VA Screen)
   const [paymentData, setPaymentData] = useState<{
@@ -1636,6 +1693,21 @@ export default function ConversationalCheckout({
                     <EditableText section="checkout" field="step5Subtitle" value={co.step5Subtitle} />
                   </p>
                 </div>
+
+                {/* Banner Selamat Datang Kembali untuk Link Follow-Up WhatsApp */}
+                {isPrefilledFromUrl && (
+                  <div className="p-4 bg-emerald-50/90 border-2 border-emerald-300 rounded-2xl flex items-center gap-3 text-xs text-emerald-950 shadow-xs">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <div className="leading-tight">
+                      <span className="font-extrabold text-emerald-900 block text-sm">
+                        Data Pesanan Anda Berhasil Dimuat!
+                      </span>
+                      <span className="text-emerald-700 font-medium">
+                        Halo <strong>{fullName}</strong>, data Anda sudah otomatis tersimpan. Silakan pilih metode bayar di bawah dan selesaikan pembayaran untuk aktivasi instan.
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Order Summary Box */}
                 <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-3">
