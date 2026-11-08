@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils/cn";
 import { useLandingCta } from "@/lib/hooks/useLandingCta";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { trackEvent } from "@/lib/analytics/events";
+import { trackMetaAddToCart } from "@/lib/analytics/metaPixel";
 import { plannerAppPath } from "@/lib/config/plannerApp";
 import { resolvePaymentProvider } from "@/lib/checkout/paymentProvider";
 import type { PricingCard } from "@/lib/types/content";
@@ -39,6 +40,20 @@ export function PricingSection() {
 
   const onCta = (planId: string) => {
     if (isAdmin && isEditMode) return;
+    const card = pricing.cards.find((c) => c.id === planId);
+    const numPrice = card?.price
+      ? Number(String(card.price).replace(/[^0-9]/g, ""))
+      : (planId.includes("pro") ? 199000 : 93000);
+    const productName = card?.title || (planId.includes("pro") ? "Estimator PRO" : "Estimator Standard");
+
+    // Meta Pixel: AddToCart saat tombol paket di pricelist diklik
+    trackMetaAddToCart({
+      content_name: productName,
+      content_ids: [planId],
+      value: numPrice || (planId.includes("pro") ? 199000 : 93000),
+      currency: "IDR",
+    });
+
     if (planId === "estimator-standard" || planId === "estimator-pro") {
       void startCheckout(planId);
     }

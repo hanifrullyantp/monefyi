@@ -22,7 +22,7 @@ import {
 } from "@/lib/services/launchPromoService";
 import { ensureOwnerOrg } from "@/lib/services/orgService";
 import { useContentStore } from "@/lib/store/contentStore";
-import { trackLynkCheckoutIntent } from "@/lib/analytics/metaPixel";
+import { trackLynkCheckoutIntent, trackMetaAddToCart } from "@/lib/analytics/metaPixel";
 
 export type LandingCtaVariant = "primary" | "outline" | "dark";
 
@@ -84,6 +84,12 @@ export function useLandingCta() {
 
     if (useMayar) {
       const planQuery = planId.includes("pro") ? "pro" : "standard";
+      trackMetaAddToCart({
+        content_name: planQuery === "pro" ? "Estimator PRO" : "Estimator Standard",
+        content_ids: [planId],
+        value: planQuery === "pro" ? 199_000 : 93_000,
+        currency: "IDR",
+      });
       window.location.assign(`/checkout?plan=${planQuery}`);
       return;
     }

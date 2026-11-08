@@ -314,6 +314,8 @@ export default function ConversationalCheckout({
       currency: 'IDR',
       num_items: 1,
       order_id: orderId,
+      ltv: amt,
+      predicted_ltv: amt,
     });
   };
 

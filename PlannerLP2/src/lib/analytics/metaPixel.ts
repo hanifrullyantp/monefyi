@@ -140,6 +140,8 @@ export function trackMetaPurchase(params: {
   currency?: string;
   num_items?: number;
   order_id?: string;
+  ltv?: number;
+  predicted_ltv?: number;
 }) {
   if (typeof window === "undefined") return;
 
@@ -154,6 +156,9 @@ export function trackMetaPurchase(params: {
   }
 
   try {
+    const ltvValue = params.ltv !== undefined ? params.ltv : params.value;
+    const predictedLtv = params.predicted_ltv !== undefined ? params.predicted_ltv : ltvValue;
+
     window.fbq?.("track", "Purchase", {
       content_name: params.content_name || "Monefyi Estimator",
       content_category: params.content_category || "SaaS / Digital",
@@ -162,6 +167,8 @@ export function trackMetaPurchase(params: {
       currency: params.currency ?? "IDR",
       num_items: params.num_items ?? 1,
       ...(params.order_id ? { order_id: params.order_id } : {}),
+      ltv: ltvValue,
+      predicted_ltv: predictedLtv,
     });
   } catch {
     /* ignore */

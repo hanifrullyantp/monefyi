@@ -32,6 +32,8 @@ export interface CapiEventPayload {
     contentIds?: string[];
     orderId?: string;
     bumpTaken?: boolean;
+    ltv?: number;
+    predicted_ltv?: number;
   };
 }
 
