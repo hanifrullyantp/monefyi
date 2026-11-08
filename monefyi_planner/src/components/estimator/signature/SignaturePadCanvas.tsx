@@ -361,3 +361,4 @@ export const SignaturePadCanvas = React.forwardRef<SignaturePadHandle, Props>(
     );
   },
 );
+
