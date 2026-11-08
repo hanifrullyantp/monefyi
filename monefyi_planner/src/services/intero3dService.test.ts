@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { decompressFromEncodedURIComponent } from 'lz-string';
 import {
   analyzeEstimationForIntero,
-  buildInteroProjectData,
+  buildInteroWizardLaunch,
   generateInteroLaunchUrl,
 } from './intero3dService';
 import { isSuperAdminHanif, SUPER_ADMIN_LAUNCH_ALERT_EMAIL } from '../lib/estimatorLaunchPromo';
@@ -27,7 +27,7 @@ describe('isSuperAdminHanif', () => {
   });
 });
 
-describe('analyzeEstimationForIntero & buildInteroProjectData', () => {
+describe('analyzeEstimationForIntero & buildInteroWizardLaunch', () => {
   const dummyDraft: EstimationFormDraft = {
     code: 'EST-2026-001',
     title: 'Kitchen Set Minimalis Sudut L',
@@ -142,35 +142,49 @@ describe('analyzeEstimationForIntero & buildInteroProjectData', () => {
     expect(proposal.lengthsCm.left).toBeGreaterThan(100);
   });
 
-  it('membangun ProjectData Intero yang valid dan dapat di-render', () => {
+  it('mengirim wizard tanpa koordinat kabinet, dengan panjang dinding dan peralatan yang terdeteksi', () => {
     const proposal = analyzeEstimationForIntero(dummyDraft, dummyDraft.items);
-    const project = buildInteroProjectData(dummyDraft, proposal);
+    const launch = buildInteroWizardLaunch(dummyDraft, proposal);
 
-    expect(project.projectName).toBe(dummyDraft.title);
-    expect(project.walls.length).toBe(2); // Dinding kiri & belakang untuk bentuk L
-    expect(project.cabinets.length).toBeGreaterThan(0);
-    // Memastikan terdapat kabinet bawah dan kabinet atas
-    const hasBase = project.cabinets.some(c => c.type === 'base' || c.type === 'corner_base' || c.type === 'sink_base');
-    const hasWall = project.cabinets.some(c => c.type === 'wall' || c.type === 'corner_wall' || c.type === 'hood');
-    expect(hasBase).toBe(true);
-    expect(hasWall).toBe(true);
+    expect(launch.kind).toBe('wizard');
+    expect(launch.projectName).toBe(dummyDraft.title);
+    expect(launch.input.shape).toBe('L');
+    expect(launch.input.lengths.back).toBeGreaterThan(180);
+    expect(launch.input.sink.enabled).toBe(true);
+    expect(launch.input.cooktop.enabled).toBe(true);
+    expect(launch.input.fridge.wallId).toBe('left');
+    expect(launch.input.options.wallCabinets).toBe(true);
+    expect(launch).not.toHaveProperty('cabinets');
   });
 
-  it('mengompresi data ke URL Hash #s=edit.<lz-string> yang dapat di-decompress kembali', () => {
+  it('dapur lurus 4 m tidak dipaksa menjadi bentuk L', () => {
+    const straight = {
+      ...dummyDraft,
+      title: 'Kitchen Set Bawah Finishing HPL',
+      notes: '',
+      items: dummyDraft.items.map((item) => item.name.includes('Atas') ? { ...item, included: false } : item),
+    };
+    const proposal = analyzeEstimationForIntero(straight, straight.items);
+    expect(proposal.shape).toBe('I');
+    expect(proposal.detectedAppliances.sink).toBe(false);
+    expect(proposal.detectedAppliances.cooktop).toBe(false);
+  });
+
+  it('mengompresi wizard ke URL Hash #s=edit.<lz-string> yang dapat di-decompress kembali', () => {
     const proposal = analyzeEstimationForIntero(dummyDraft, dummyDraft.items);
-    const project = buildInteroProjectData(dummyDraft, proposal);
-    const url = generateInteroLaunchUrl(project, 'https://3d.intero.id');
+    const launch = buildInteroWizardLaunch(dummyDraft, proposal);
+    const url = generateInteroLaunchUrl(launch, 'https://3d.intero.id');
 
     expect(url.startsWith('https://3d.intero.id/#s=edit.')).toBe(true);
     const hashPart = url.split('#s=edit.')[1];
     expect(hashPart).toBeDefined();
 
-    // Verifikasi round-trip decompress sama persis dengan yang dilakukan oleh 3D Intero
     const decompressedJson = decompressFromEncodedURIComponent(hashPart);
     expect(decompressedJson).not.toBeNull();
     const parsed = JSON.parse(decompressedJson!);
+    expect(parsed.kind).toBe('wizard');
     expect(parsed.projectName).toBe(dummyDraft.title);
-    expect(parsed.cabinets.length).toBe(project.cabinets.length);
+    expect(parsed.input.shape).toBe('L');
   });
 });
 

@@ -4,7 +4,7 @@ import { Box, Download, ExternalLink, Layers, Sparkles, X } from 'lucide-react';
 import type { EstimationFormDraft, EstimationItem, EstimationItemDraft } from '../../types/estimator';
 import {
   analyzeEstimationForIntero,
-  buildInteroProjectData,
+  buildInteroWizardLaunch,
   downloadInteroFile,
   generateInteroLaunchUrl,
   type InteroCountertopType,
@@ -55,16 +55,16 @@ export default function Intero3DLaunchModal({ open, onClose, draft, items }: Pro
   };
 
   const handleLaunch3D = () => {
-    const projectData = buildInteroProjectData(draft, proposal);
+    const launch = buildInteroWizardLaunch(draft, proposal);
     const domain = targetDomain === 'local' ? 'http://localhost:5173' : 'https://3d.intero.id';
-    const url = generateInteroLaunchUrl(projectData, domain);
+    const url = generateInteroLaunchUrl(launch, domain);
     window.open(url, '_blank', 'noopener,noreferrer');
     onClose();
   };
 
   const handleDownloadFile = () => {
-    const projectData = buildInteroProjectData(draft, proposal);
-    downloadInteroFile(projectData, draft.title || 'Proyek_Kitchen_Monefyi');
+    const launch = buildInteroWizardLaunch(draft, proposal);
+    downloadInteroFile(launch, draft.title || 'Proyek_Kitchen_Monefyi');
   };
 
   return (
