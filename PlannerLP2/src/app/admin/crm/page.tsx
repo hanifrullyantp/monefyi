@@ -36,8 +36,10 @@ import {
   TrendingUp,
   Copy,
   CreditCard,
+  Edit3,
 } from "lucide-react";
 import { FollowUpPaymentWaModal } from "@/components/admin/crm/FollowUpPaymentWaModal";
+import { EditCustomerModal } from "@/components/admin/crm/EditCustomerModal";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import {
@@ -707,7 +709,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
 import { MayarPayoutGuideModal } from "@/components/admin/MayarPayoutGuideModal";
 
 export default function CRMPage() {
-  const { leads, addLead, deleteLead, deleteLeads, updateLeadStatus, addActivity } = useLeadsStore();
+  const { leads, addLead, updateLead, deleteLead, deleteLeads, updateLeadStatus, addActivity } = useLeadsStore();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
   const [planFilter, setPlanFilter] = useState<"all" | "free" | "standard" | "pro">("all");
@@ -725,6 +727,8 @@ export default function CRMPage() {
   const [selectedLeadForAccountWa, setSelectedLeadForAccountWa] = useState<Lead | null>(null);
   // State untuk Modal Follow-Up Konfirmasi Bayar (Tinggal Bayar)
   const [selectedLeadForPaymentFollowUp, setSelectedLeadForPaymentFollowUp] = useState<Lead | null>(null);
+  // State untuk Modal Edit Pelanggan (Password, Email, Paket, Stats)
+  const [selectedLeadForEdit, setSelectedLeadForEdit] = useState<Lead | null>(null);
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -2088,6 +2092,15 @@ export default function CRMPage() {
                           ) : (
                             <span className="text-[10px] text-slate-400 italic">Tanpa nomor WA</span>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLeadForEdit(lead)}
+                            className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-bold text-[10px] transition-all cursor-pointer"
+                            title="Edit data pelanggan, email, password, dan cek statistik penggunaan"
+                          >
+                            <Edit3 className="w-3 h-3 text-slate-600" />
+                            <span>Edit Akun / Stats</span>
+                          </button>
                         </div>
                       </td>
 
@@ -2257,6 +2270,15 @@ export default function CRMPage() {
                               <Mail className="w-3.5 h-3.5" /> Email
                             </button>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLeadForEdit(lead)}
+                            className="w-full py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            title="Edit data pelanggan, email, password, dan cek statistik penggunaan"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+                            <span>Edit Pelanggan & Stats</span>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -2312,6 +2334,20 @@ export default function CRMPage() {
           lead={selectedLeadForAccountWa}
           onClose={() => setSelectedLeadForAccountWa(null)}
           onAccountSent={handleAccountWaSentCallback}
+        />
+      )}
+
+      {/* Modal Edit Pelanggan (Email, Password, Paket, Stats) */}
+      {selectedLeadForEdit && (
+        <EditCustomerModal
+          lead={selectedLeadForEdit}
+          onClose={() => setSelectedLeadForEdit(null)}
+          onUpdated={(updates) => {
+            updateLead(selectedLeadForEdit.id, updates);
+            setSelectedLeadForEdit(null);
+            setToastMessage("Data pelanggan berhasil diperbarui & disinkronkan ke Supabase Auth!");
+            setTimeout(() => setToastMessage(null), 3000);
+          }}
         />
       )}
 
