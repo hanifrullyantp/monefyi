@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Link2, Mail, Hash, Copy, Share2, UserRoundPlus, Send } from 'lucide-react';
+import { X, Link2, Mail, Hash, Copy, Share2, UserRoundPlus, Send, Users, ShieldAlert } from 'lucide-react';
 import {
   createInvitation,
   sendInvitationEmails,
@@ -9,6 +9,7 @@ import {
 } from '../../services/invitationService';
 import { parseEmailList } from '../../lib/validators';
 import { showToast } from '../../store/uiStore';
+import { useEntitlement } from '../../hooks/useEntitlement';
 import type { InvitationRecord, MemberRole } from '../../types/onboarding';
 
 interface Props {
@@ -41,6 +42,11 @@ type DirectResult = {
 };
 
 export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated }: Props) {
+  const entitlement = useEntitlement();
+  const maxMembers = entitlement.maxMembers || 1;
+  const currentMembers = entitlement.currentMembers || 1;
+  const isSeatExceeded = !entitlement.canInviteMembers || currentMembers >= maxMembers;
+
   const [tab, setTab] = useState<Tab>('link');
   const [role, setRole] = useState<MemberRole>('worker');
   const [expiry, setExpiry] = useState('7d');
@@ -57,6 +63,57 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
 
   const canInviteManager = actorRole === 'owner';
   const canDirectCreate = actorRole === 'owner';
+
+  if (isSeatExceeded) {
+    return (
+      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+        <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl relative text-center border border-slate-100">
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-amber-200">
+            <Users className="w-7 h-7" />
+          </div>
+          <h3 className="text-lg font-black text-slate-900 mb-2">Batas Kuota Lisensi Pengguna Tercapai</h3>
+          <p className="text-xs text-slate-600 leading-relaxed mb-4">
+            Workspace Anda saat ini memiliki kuota <strong>{maxMembers} Lisensi Pengguna</strong> ({currentMembers} pengguna aktif).
+            Sesuai ketentuan, 1 lisensi standar hanya untuk 1 pengguna (Owner).
+          </p>
+          <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 text-xs text-left text-amber-950 mb-5 space-y-2">
+            <div className="font-extrabold flex items-center gap-1.5 text-amber-900">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>Ingin Tambah Karyawan / Rekan Kerja?</span>
+            </div>
+            <p className="leading-relaxed">
+              Anda dapat menambah staf/karyawan ke dalam proyek yang sama dengan membeli <strong>Lisensi Tambahan (Bump Lisensi)</strong>.
+            </p>
+            <p className="text-slate-500 italic text-[11px]">
+              *Contoh: Pembeli yang mengambil bump 1 lisensi lagi berhak memiliki 2 akun pengguna (1 akun utama + 1 karyawan) dalam 1 workspace bersama.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            <a
+              href="https://wa.me/6281214736340?text=Halo%20Admin%20Monefyi%2C%20saya%20ingin%20tambah%20lisensi%20karyawan%20untuk%20workspace%20saya"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs"
+            >
+              <span>Beli Lisensi Tambahan (Hubungi Admin WA)</span>
+            </a>
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const loadCodes = async () => {
     const list = await listInvitations(orgId);

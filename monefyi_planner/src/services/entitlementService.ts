@@ -48,19 +48,34 @@ async function orgHasEstimations(orgId: string): Promise<boolean> {
   return (count ?? 0) > 0;
 }
 
+async function loadOrgLicenseSettings(orgId: string): Promise<{ max_members?: number; license_count?: number } | null> {
+  const { data, error } = await supabase
+    .from('planner_organizations')
+    .select('settings')
+    .eq('id', orgId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return (data.settings as any) || null;
+}
+
 export async function loadEntitlementSnapshot(
   orgId: string,
   orgPlan?: string | null,
 ): Promise<EntitlementSnapshot> {
-  const [subscription, activeProjectCount, memberCount, hasEstimations] = await Promise.all([
+  const [subscription, activeProjectCount, memberCount, hasEstimations, orgSettings] = await Promise.all([
     loadOrgSubscription(orgId),
     countActiveProjects(orgId),
     countActiveMembers(orgId),
     orgHasEstimations(orgId),
+    loadOrgLicenseSettings(orgId),
   ]);
 
+  const maxMembersFromLicense = orgSettings?.max_members || orgSettings?.license_count;
+
   return buildEntitlementSnapshot({
-    subscription,
+    subscription: subscription
+      ? { ...subscription, ...(maxMembersFromLicense ? { max_members: maxMembersFromLicense } : {}) }
+      : (maxMembersFromLicense ? ({ max_members: maxMembersFromLicense } as any) : null),
     orgPlan,
     hasEstimations,
     activeProjectCount,

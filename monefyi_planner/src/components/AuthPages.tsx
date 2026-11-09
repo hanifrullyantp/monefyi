@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Eye, EyeOff, ArrowLeft, ArrowRight, Mail, Lock, User, Building2, CheckCircle,
+  Eye, EyeOff, ArrowLeft, ArrowRight, Mail, Lock, User, Building2, CheckCircle, AlertCircle,
 } from 'lucide-react';
 import { authUserMessage } from '../lib/authMessages';
 import { config } from '../lib/config';
@@ -19,8 +19,10 @@ import { useAppStore } from '../store/appStore';
 import { EstimatorLogo } from './EstimatorLogo';
 import { PlannerLogo } from './MonefyiLogo';
 import { applyEstimatorDocumentBrand, isEstimatorBrandContext } from '../lib/estimatorBrand';
+import { checkAndClearDeviceKickoutReason } from '../services/singleDeviceSessionService';
 
 export function LoginPage() {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -28,7 +30,14 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [deviceKickoutNotice, setDeviceKickoutNotice] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (searchParams.get('reason') === 'other_device' || checkAndClearDeviceKickoutReason()) {
+      setDeviceKickoutNotice(true);
+    }
+  }, [searchParams]);
   const { setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing, customDomainContext } = useAppStore();
   const estimatorBrand = isEstimatorBrandContext();
   const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Monefyi Estimator' : 'Monefyi Planner');
@@ -185,6 +194,15 @@ export function LoginPage() {
 
           {!loginSuccess && (
           <form onSubmit={handleLogin} className="space-y-4">
+            {deviceKickoutNotice && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-black text-amber-950 block mb-0.5">Sesi Berakhir (Login di Perangkat Lain)</span>
+                  Akun ini baru saja digunakan untuk login di perangkat lain. Sistem hanya mengizinkan <strong>1 sesi perangkat aktif</strong> per akun. Silakan login kembali jika ingin menggunakan perangkat ini.
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
               <div className="relative">

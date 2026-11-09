@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X, ArrowLeft,
   Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
-  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User, Eye,
+  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User, Eye, BookOpen,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -267,6 +267,12 @@ export default function Layout({ children }: LayoutProps) {
   const lastSyncText = lastSynced ? `${Math.floor((Date.now() - lastSynced.getTime()) / 60000)} mnt lalu` : 'Belum pernah';
 
   const userMenuItems = [
+    {
+      id: 'guide',
+      label: 'Panduan Aplikasi',
+      icon: <BookOpen className="w-4 h-4 shrink-0 text-emerald-600" />,
+      onClick: () => navigate('/app/estimator/guide'),
+    },
     {
       id: 'profile',
       label: 'Profil saya',

@@ -12,6 +12,7 @@ import {
   Settings,
   Send,
   Sliders,
+  BookOpen,
 } from 'lucide-react';
 
 export type AccountMenuTab =
@@ -207,6 +208,26 @@ export default function AccountMenu({
                       </div>
                       <div className="text-[11px] text-[#5B6B7A] truncate">
                         Bot Token, Chat ID &amp; notifikasi
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = '/app/estimator/guide';
+                      onClose();
+                    }}
+                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                  >
+                    <BookOpen className="w-5 h-5 shrink-0 text-emerald-600" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm text-[#0F172A] flex items-center gap-1.5">
+                        <span>Panduan Aplikasi</span>
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase">Resmi</span>
+                      </div>
+                      <div className="text-[11px] text-[#5B6B7A] truncate">
+                        Tutorial RAB, RAP, PDF &amp; rumus margin
                       </div>
                     </div>
                   </button>

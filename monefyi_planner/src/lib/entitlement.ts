@@ -62,7 +62,8 @@ export function buildEntitlementSnapshot(input: {
   const canAccessEstimator = true;
   const maxEstimations = tier === 'free' ? FREE_ESTIMATION_LIMIT : null;
   const canAccessFinance = tier === 'pro' || tier === 'enterprise';
-  const canInviteMembers = tier === 'pro' || tier === 'enterprise';
+  // Lisensi: 1 lisensi = 1 user (Owner). Hanya bisa undang jika maxMembers > 1 (beli lisensi tambahan/bump) dan slot masih ada.
+  const canInviteMembers = (tier === 'pro' || tier === 'enterprise' || maxMembers > 1) && input.memberCount < maxMembers;
   const remainingProjectSlots = Math.max(0, maxActiveProjects - input.activeProjectCount);
   const canCreateProject = remainingProjectSlots > 0;
 

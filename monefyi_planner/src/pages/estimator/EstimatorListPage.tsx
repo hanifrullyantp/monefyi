@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { Loader2 } from 'lucide-react';
+import { Loader2, BookOpen, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useUiStore } from '../../store/uiStore';
 import EstimationKanbanView from '../../components/estimator/EstimationKanbanView';
@@ -804,7 +804,32 @@ export default function EstimatorListPage() {
         </div>
       )}
 
-      <div className="pt-4">
+      {/* Banner Panduan Penggunaan Estimator & Trik Anti-Boncos */}
+      <div className="mx-4 mt-3 mb-1 rounded-2xl bg-white border border-slate-200/90 p-3 shadow-2xs flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+            <BookOpen className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-black text-slate-900 truncate">
+              Panduan Aplikasi Estimator Resmi
+            </div>
+            <p className="text-[11px] text-slate-500 truncate">
+              Kalkulator margin, rumus waste 8%, kop surat kustom, &amp; kirim WA
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/app/estimator/guide')}
+          className="shrink-0 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl transition-all shadow-xs flex items-center gap-1.5"
+        >
+          <span>Buka Panduan</span>
+          <ChevronRight className="w-3.5 h-3.5 text-emerald-400" />
+        </button>
+      </div>
+
+      <div className="pt-2">
         <EstimatorListDashboard
           stats={dashboardStats}
           activeFilter={dashboardFilter}
