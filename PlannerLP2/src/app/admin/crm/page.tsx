@@ -529,6 +529,22 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
       alert("Nomor WhatsApp belum valid.");
       return;
     }
+
+    // Pastikan user & password tersinkron ke Supabase Auth
+    if (recipientEmail && recipientEmail.includes("@")) {
+      fetch("/api/crm/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: recipientEmail.trim(),
+          password: password.trim(),
+          name: recipientName.trim(),
+          phone: cleanPhone,
+          planTier: lead.projectType?.toLowerCase().includes("pro") ? "pro" : "standard",
+        }),
+      }).catch((e) => console.warn("Provisioning error:", e));
+    }
+
     const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(messageText)}`;
     window.open(waUrl, "_blank");
     onAccountSent(password);

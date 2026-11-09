@@ -108,6 +108,22 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
 
   const handleSendAccountWa = () => {
     const password = lead?.accountPassword || "Estimator2026!";
+
+    // Pastikan user & password tersinkron ke Supabase Auth
+    if (lead.email && lead.email.includes("@")) {
+      fetch("/api/crm/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: lead.email.trim(),
+          password: password.trim(),
+          name: lead.name?.trim(),
+          phone: lead.phone,
+          planTier: lead.projectType?.toLowerCase().includes("pro") ? "pro" : "standard",
+        }),
+      }).catch((e) => console.warn("Provisioning error:", e));
+    }
+
     const msg = `Halo Kak ${lead.name}! 🙌
 Terima kasih telah memesan ${lead.projectType || "Monefyi Estimator"}.
 

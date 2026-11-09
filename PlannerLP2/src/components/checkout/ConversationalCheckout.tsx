@@ -477,6 +477,19 @@ export default function ConversationalCheckout({
         sessionId: activeSid,
       }),
     }).catch(() => {});
+
+    // 3. Provisioning Akun Supabase Auth & set password aktif
+    fetch('/api/crm/provision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.trim(),
+        name: fullName.trim() || 'Pelanggan Estimator',
+        password: 'Estimator2026!',
+        phone: whatsapp.trim(),
+        planTier: product === 'pro' || takeOrderBump ? 'pro' : 'standard',
+      }),
+    }).catch(() => {});
   };
 
   // Auto-fill jika user / admin sudah terautentikasi (Hanif Rullyant)
