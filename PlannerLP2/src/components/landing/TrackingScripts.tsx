@@ -20,50 +20,17 @@ export function TrackingScripts() {
     const gtm = settings.gtmId?.trim();
     const cleanFb = fb ? fb.replace(/'/g, "") : "";
 
-    // Stage 1: Siapkan antrean ringan fbq & kirim beacon PageView instan tanpa membebani main thread
+    // Inisialisasi Meta Pixel tambahan jika menggunakan custom Pixel ID dari settings
     if (cleanFb && typeof window !== "undefined") {
-      type FbqStub = ((...args: unknown[]) => void) & {
-        callMethod?: (...args: unknown[]) => void;
-        queue?: unknown[][];
-        loaded?: boolean;
-        version?: string;
-        push?: (...args: unknown[]) => void;
-      };
       const w = window as unknown as {
-        fbq?: FbqStub;
-        _fbq?: unknown;
-        __fbPageViewBeaconSent?: boolean;
+        fbq?: (...args: unknown[]) => void;
       };
-
-      if (!w.fbq) {
-        const n: FbqStub = function (...args: unknown[]) {
-          if (n.callMethod) {
-            n.callMethod(...args);
-          } else {
-            n.queue?.push(args);
-          }
-        };
-        if (!w._fbq) w._fbq = n;
-        n.push = n;
-        n.loaded = true;
-        n.version = "2.0";
-        n.queue = [];
-        w.fbq = n;
-        n("init", cleanFb);
-        n("track", "PageView");
-      }
-
-      if (!w.__fbPageViewBeaconSent) {
-        w.__fbPageViewBeaconSent = true;
+      if (w.fbq && cleanFb !== "1530674178146899") {
         try {
-          const img = new Image(1, 1);
-          img.src = `https://www.facebook.com/tr?id=${encodeURIComponent(
-            cleanFb
-          )}&ev=PageView&dl=${encodeURIComponent(
-            window.location.href
-          )}&rl=${encodeURIComponent(document.referrer || "")}&if=false&ts=${Date.now()}&v=2.9.179&r=stable&ec=0&o=4126`;
+          w.fbq("init", cleanFb);
+          w.fbq("track", "PageView");
         } catch {
-          // Abaikan jika adblocker aktif
+          /* ignore */
         }
       }
     }
@@ -100,7 +67,7 @@ export function TrackingScripts() {
         gtag("config", ga);
       }
 
-      if (cleanFb && !document.getElementById("fb-pixel-sdk")) {
+      if (cleanFb && !document.getElementById("fb-pixel-sdk") && !document.getElementById("meta-pixel-base")) {
         const s = document.createElement("script");
         s.id = "fb-pixel-sdk";
         s.async = true;
