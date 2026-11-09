@@ -6,6 +6,7 @@ import EstimatorListPage from './EstimatorListPage';
 import EstimatorForm from './EstimatorForm';
 import PricelistPage from './PricelistPage';
 import EstimatorSettings from './EstimatorSettings';
+import EstimatorGuidePage from './EstimatorGuidePage';
 
 export default function EstimatorRoutes() {
   const location = useLocation();
@@ -22,6 +23,8 @@ export default function EstimatorRoutes() {
         <Route path="new" element={<EstimatorForm />} />
         <Route path="pricelist" element={<PricelistPage />} />
         <Route path="settings" element={<EstimatorSettings />} />
+        <Route path="guide" element={<EstimatorGuidePage />} />
+        <Route path="panduan" element={<EstimatorGuidePage />} />
         <Route path=":id" element={<EstimatorForm />} />
       </Routes>
     </EstimatorAccessGuard>
