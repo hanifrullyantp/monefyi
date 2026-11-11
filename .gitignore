@@ -19,3 +19,5 @@ monefyi_planner/refined-project-planner-prompt/.env.local
 *.tsbuildinfo
 .vercel
 .env*
+monefyi-autonomous-ads*
+*.zip
