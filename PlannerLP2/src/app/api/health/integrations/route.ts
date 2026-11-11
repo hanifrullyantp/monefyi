@@ -114,13 +114,19 @@ export async function GET(req: NextRequest) {
   // 4. Cek AI Engine (Gemini / OpenAI / OpenRouter)
   try {
     const aiKey =
+      process.env.OPENROUTER_API_KEY ||
       process.env.GEMINI_API_KEY ||
       process.env.OPENAI_API_KEY ||
-      process.env.OPENROUTER_API_KEY ||
+      dbConfig?.openrouter_api_key ||
       dbConfig?.gemini_api_key ||
       "";
     if (aiKey && aiKey.length > 8) {
-      result.ai = { connected: true, name: "AI Engine", message: "GEMINI Ready" };
+      const isOR = aiKey.startsWith("sk-or") || (dbConfig?.openrouter_api_key && aiKey === dbConfig.openrouter_api_key);
+      result.ai = {
+        connected: true,
+        name: "AI Engine",
+        message: isOR ? "OpenRouter Multi-LLM Ready" : "AI Engine Ready",
+      };
     } else {
       result.ai = { connected: false, name: "AI Engine", message: "API Key AI Belum Diisi" };
     }

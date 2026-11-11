@@ -89,6 +89,7 @@ function SettingsContent() {
     rules,
     updateRules,
     refreshCampaigns,
+    loadConfigFromCloud,
   } = useMarketingStore();
 
   const [tempSettings, setTempSettings] = useState(settings);
@@ -100,31 +101,59 @@ function SettingsContent() {
   const [metaToken, setMetaToken] = useState(apiConfig.metaAccessToken || "");
   const [capiToken, setCapiToken] = useState(apiConfig.capiAccessToken || "");
 
+  // OpenRouter Master Key
+  const [openRouterKey, setOpenRouterKey] = useState(
+    winningEngineConfig.llmRouting.openRouterApiKey ||
+      apiConfig.aiApiKey ||
+      "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"
+  );
+  const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
+
   // Multi-LLM States
   const [strategistProvider, setStrategistProvider] = useState<LlmProviderType>(
-    winningEngineConfig.llmRouting.strategist.provider || "claude"
+    winningEngineConfig.llmRouting.strategist.provider || "openrouter"
   );
   const [strategistKey, setStrategistKey] = useState(
-    winningEngineConfig.llmRouting.strategist.apiKey || ""
+    winningEngineConfig.llmRouting.strategist.apiKey ||
+      winningEngineConfig.llmRouting.openRouterApiKey ||
+      "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"
   );
   const [strategistModel, setStrategistModel] = useState(
-    winningEngineConfig.llmRouting.strategist.model || "claude-3-7-sonnet-latest"
+    winningEngineConfig.llmRouting.strategist.model || "openai/gpt-6-luna-pro"
   );
 
   const [technicalProvider, setTechnicalProvider] = useState<LlmProviderType>(
-    winningEngineConfig.llmRouting.technical.provider || "gemini"
+    winningEngineConfig.llmRouting.technical.provider || "openrouter"
   );
   const [technicalKey, setTechnicalKey] = useState(
-    winningEngineConfig.llmRouting.technical.apiKey || ""
+    winningEngineConfig.llmRouting.technical.apiKey ||
+      winningEngineConfig.llmRouting.openRouterApiKey ||
+      "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"
   );
   const [technicalModel, setTechnicalModel] = useState(
-    winningEngineConfig.llmRouting.technical.model || "gemini-2.5-flash"
+    winningEngineConfig.llmRouting.technical.model || "openai/gpt-6-luna-pro"
   );
 
   const [showStrategistKey, setShowStrategistKey] = useState(false);
   const [showTechnicalKey, setShowTechnicalKey] = useState(false);
   const [showMetaToken, setShowMetaToken] = useState(false);
   const [showCapiToken, setShowCapiToken] = useState(false);
+
+  useEffect(() => {
+    loadConfigFromCloud().then(() => {
+      const state = useMarketingStore.getState();
+      const cfg = state.winningEngineConfig;
+      const api = state.apiConfig;
+      if (cfg.llmRouting.openRouterApiKey) {
+        setOpenRouterKey(cfg.llmRouting.openRouterApiKey);
+        setStrategistKey((k) => k || cfg.llmRouting.openRouterApiKey || "");
+        setTechnicalKey((k) => k || cfg.llmRouting.openRouterApiKey || "");
+      }
+      if (api.metaAccessToken) setMetaToken(api.metaAccessToken);
+      if (api.capiAccessToken) setCapiToken(api.capiAccessToken);
+      if (api.adAccountId) setAdAccountId(api.adAccountId);
+    });
+  }, []);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as SettingsTab;
@@ -137,6 +166,13 @@ function SettingsContent() {
     // 1. Simpan General Settings
     updateSettings(tempSettings);
 
+    const finalOpenRouterKey =
+      openRouterKey.trim() ||
+      (strategistProvider === "openrouter" ? strategistKey.trim() : "") ||
+      (technicalProvider === "openrouter" ? technicalKey.trim() : "") ||
+      winningEngineConfig.llmRouting.openRouterApiKey ||
+      "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";
+
     // 2. Simpan Meta API Config
     updateApiConfig({
       metaAccessToken: metaToken.trim() || undefined,
@@ -144,34 +180,28 @@ function SettingsContent() {
       pixelId: pixelId.trim() || undefined,
       capiAccessToken: capiToken.trim() || undefined,
       aiProvider: strategistProvider,
-      aiApiKey: strategistKey.trim() || technicalKey.trim() || undefined,
+      aiApiKey: finalOpenRouterKey,
     });
-
-    const openRouterSharedKey =
-      (strategistProvider === "openrouter" ? strategistKey.trim() : "") ||
-      (technicalProvider === "openrouter" ? technicalKey.trim() : "") ||
-      winningEngineConfig.llmRouting.openRouterApiKey ||
-      "";
 
     // 3. Simpan Dual-Slot Multi-LLM Config
     updateWinningEngineConfig({
       llmRouting: {
-        openRouterApiKey: openRouterSharedKey || undefined,
+        openRouterApiKey: finalOpenRouterKey,
         strategist: {
           provider: strategistProvider,
-          apiKey: strategistKey.trim() || openRouterSharedKey || undefined,
+          apiKey: strategistKey.trim() || finalOpenRouterKey,
           model: strategistModel,
         },
         processor: {
           provider: "openrouter",
-          apiKey: openRouterSharedKey || undefined,
+          apiKey: finalOpenRouterKey,
           model: technicalModel.includes("luna")
             ? technicalModel
             : winningEngineConfig.llmRouting.processor?.model || "openai/gpt-6-luna-pro",
         },
         technical: {
           provider: technicalProvider,
-          apiKey: technicalKey.trim() || openRouterSharedKey || undefined,
+          apiKey: technicalKey.trim() || finalOpenRouterKey,
           model: technicalModel,
         },
       },
@@ -187,7 +217,7 @@ function SettingsContent() {
           metaAccessToken: metaToken.trim() || undefined,
           metaCapiToken: capiToken.trim() || undefined,
           metaPixelId: pixelId.trim() || "1530674178146899",
-          openRouterApiKey: openRouterSharedKey || undefined,
+          openRouterApiKey: finalOpenRouterKey,
           strategistModel: strategistModel,
           processorModel: technicalModel.includes("luna")
             ? technicalModel
@@ -448,6 +478,44 @@ function SettingsContent() {
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
               Konfigurasi pembagian tugas AI otomatis: <strong>Slot Strategist</strong> menangani evaluasi sudut pandang, hook copy &amp; arah kreatif (Claude/Gemini Pro/GPT-4o), sedangkan <strong>Slot Teknis</strong> mengeksekusi audit metrik, budget scale, dan deteksi boncos secara instan &amp; hemat (Gemini Flash/Groq).
             </p>
+          </div>
+
+          {/* Card Kunci Utama OpenRouter Multi-LLM Cloud Gateway */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-indigo-950/40 to-slate-900 border border-purple-500/40 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span className="text-xs font-black text-white">
+                  Kunci Utama OpenRouter (Multi-LLM Cloud Gateway)
+                </span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                Tersimpan di Supabase Cloud
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              API Key OpenRouter ini otomatis mengaktifkan seluruh model multi-LLM (Claude 3.7 Sonnet, GPT-6 Luna Pro, GPT-4o, DeepSeek V3, dan Gemini) untuk seluruh slot AI Monefyi tanpa perlu mengisi API key satu per satu.
+            </p>
+            <div className="relative">
+              <input
+                type={showOpenRouterKey ? "text" : "password"}
+                value={openRouterKey}
+                onChange={(e) => {
+                  setOpenRouterKey(e.target.value);
+                  if (strategistProvider === "openrouter") setStrategistKey(e.target.value);
+                  if (technicalProvider === "openrouter") setTechnicalKey(e.target.value);
+                }}
+                placeholder="sk-or-v1-..."
+                className="w-full bg-white dark:bg-slate-950 border border-purple-500/50 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-purple-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowOpenRouterKey(!showOpenRouterKey)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
+              >
+                {showOpenRouterKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
