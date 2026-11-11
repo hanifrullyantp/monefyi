@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
-import { MetaCampaign, AdHealthStatus } from "@/lib/types/marketing";
+import { MetaCampaign, MetaAdSet, MetaAd, AdHealthStatus } from "@/lib/types/marketing";
 import {
   Play,
   Pause,
@@ -22,10 +22,33 @@ import {
   Calendar,
   Building2,
   Video,
+  ChevronDown,
+  ChevronRight,
+  Pin,
+  PinOff,
+  Filter,
+  Layers,
+  Image as ImageIcon,
+  Sparkles,
+  BarChart3,
+  Settings,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
-export function MetaAdsCommanderTable() {
+interface MetaAdsCommanderTableProps {
+  onOpenWinningEngine?: () => void;
+  onOpenInsights?: () => void;
+  onOpenCreative?: () => void;
+  onOpenConfig?: () => void;
+}
+
+export function MetaAdsCommanderTable({
+  onOpenWinningEngine,
+  onOpenInsights,
+  onOpenCreative,
+  onOpenConfig,
+}: MetaAdsCommanderTableProps) {
   const {
     campaigns,
     isLiveMeta,
@@ -41,32 +64,91 @@ export function MetaAdsCommanderTable() {
     rules,
   } = useMarketingStore();
 
+  // 2. Default: HARI INI (today) dan YANG AKTIF SAJA (ACTIVE)
+  const [statusFilter, setStatusFilter] = useState<string>("ACTIVE");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [tempBudget, setTempBudget] = useState<number>(0);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Ringkasan KPI Murni dari Data Kampanye Riil (Tanpa Angka Asumsi/Mockup)
-  const totalSpend = campaigns.reduce((acc, c) => acc + Number(c.spend || 0), 0);
-  const totalResults = campaigns.reduce((acc, c) => acc + Number(c.results || 0), 0);
-  const totalPurchases = campaigns.reduce((acc, c) => acc + Number(c.purchases || 0), 0);
-  const totalLeads = campaigns.reduce((acc, c) => acc + Number(c.leads || 0), 0);
-  const totalThruPlays = campaigns.reduce(
+  // 8. Freeze / Pin Kolom Toggle (Bisa digeser atau di-freeze)
+  const [isColumnPinned, setIsColumnPinned] = useState<boolean>(false);
+
+  // 11. Accordion Drilldown Ad Sets & Ads
+  const [expandedCampaignIds, setExpandedCampaignIds] = useState<Set<string>>(new Set());
+
+  // 5. Pengaturan Kata Kunci Campaign (Hanya kampanye berkatakunci yang dianalisa)
+  const [campaignKeywords, setCampaignKeywords] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("monefyi_campaign_keywords") || "monefyi, estimator, rab";
+    }
+    return "monefyi, estimator, rab";
+  });
+  const [isKeywordFilterActive, setIsKeywordFilterActive] = useState<boolean>(true);
+  const [showKeywordModal, setShowKeywordModal] = useState<boolean>(false);
+  const [tempKeywords, setTempKeywords] = useState<string>(campaignKeywords);
+
+  // Set default datePreset ke 'today' jika belum diset
+  useEffect(() => {
+    if (datePreset !== "today" && datePreset === "data_maximum") {
+      setDatePreset("today");
+    }
+  }, []);
+
+  const toggleExpand = (cid: string) => {
+    setExpandedCampaignIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(cid)) next.delete(cid);
+      else next.add(cid);
+      return next;
+    });
+  };
+
+  const handleSaveKeywords = () => {
+    setCampaignKeywords(tempKeywords);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("monefyi_campaign_keywords", tempKeywords);
+    }
+    setShowKeywordModal(false);
+  };
+
+  // Filter Kampanye berdasarkan Kata Kunci
+  const keywordFilteredCampaigns = useMemo(() => {
+    if (!isKeywordFilterActive) return campaigns;
+    const keywordsList = campaignKeywords
+      .split(",")
+      .map((k) => k.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (keywordsList.length === 0) return campaigns;
+
+    return campaigns.filter((c) => {
+      const campName = (c.name || "").toLowerCase();
+      return keywordsList.some((kw) => campName.includes(kw));
+    });
+  }, [campaigns, campaignKeywords, isKeywordFilterActive]);
+
+  // 3. Ringkasan KPI Murni Berdasarkan Kampanye yang Lolos Filter Kata Kunci
+  const totalSpend = keywordFilteredCampaigns.reduce((acc, c) => acc + Number(c.spend || 0), 0);
+  // 10. Di Meta hasilnya adalah PURCHASING riil
+  const totalPurchases = keywordFilteredCampaigns.reduce((acc, c) => acc + Number(c.purchases || 0), 0);
+  const totalResults = totalPurchases;
+  const totalLeads = keywordFilteredCampaigns.reduce((acc, c) => acc + Number(c.leads || 0), 0);
+  const totalThruPlays = keywordFilteredCampaigns.reduce(
     (acc, c) => acc + Number(c.videoThruPlays15s || 0),
     0
   );
-  const totalRevenue = campaigns.reduce(
+  const totalRevenue = keywordFilteredCampaigns.reduce(
     (acc, c) => acc + Number(c.purchasesConversionValue || 0),
     0
   );
   const avgCostPerResult = totalResults > 0 ? Math.round(totalSpend / totalResults) : 0;
   const weightedRoas =
     totalSpend > 0 && totalRevenue > 0 ? (totalRevenue / totalSpend).toFixed(2) : "0.00";
-  const winningCount = campaigns.filter(
+  const winningCount = keywordFilteredCampaigns.filter(
     (c) => c.healthStatus === "winning" || c.healthStatus === "scale_ready"
   ).length;
-  const bleedingCount = campaigns.filter((c) => c.healthStatus === "bleeding").length;
+  const bleedingCount = keywordFilteredCampaigns.filter((c) => c.healthStatus === "bleeding").length;
 
   const handleStartEditBudget = (camp: MetaCampaign) => {
     setEditingBudgetId(camp.id);
@@ -95,7 +177,7 @@ export function MetaAdsCommanderTable() {
       ok
         ? `Scale Up +${pct}% berhasil! Budget "${camp.name}" naik menjadi Rp ${nextBudget.toLocaleString("id-ID")}/hari.`
         : `Gagal menaikkan budget "${camp.name}".`
-    );
+      );
     setTimeout(() => setActionNotice(null), 4000);
   };
 
@@ -166,7 +248,7 @@ export function MetaAdsCommanderTable() {
     }
   };
 
-  const filteredCampaigns = campaigns.filter((c) => {
+  const finalFilteredCampaigns = keywordFilteredCampaigns.filter((c) => {
     if (statusFilter === "ACTIVE" && c.status !== "ACTIVE") return false;
     if (statusFilter === "PAUSED" && c.status !== "PAUSED") return false;
     if (
@@ -178,71 +260,73 @@ export function MetaAdsCommanderTable() {
     if (statusFilter === "BLEEDING" && c.healthStatus !== "bleeding") return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      return (
-        c.name.toLowerCase().includes(q) || c.targetAudience.toLowerCase().includes(q)
-      );
+      return c.name.toLowerCase().includes(q) || c.targetAudience.toLowerCase().includes(q);
     }
     return true;
   });
 
   return (
-    <div className="space-y-2.5">
-      {/* Metric Cards Header (Ramping, 1 Baris Grid, 100% Data Riil) */}
+    <div className="space-y-3">
+      {/* 3. PERTAHANKAN DASHBOARD CARD SEKARANG (TOTAL AMOUNT SPENT, RESULTS & CPA, THRUPLAYS & ROAS, STATUS KAMPANYE) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-2xs transition-colors">
+        {/* Card 1: TOTAL AMOUNT SPENT */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
             <span className="text-[10px] font-extrabold uppercase tracking-wider">
-              Total Spent
+              TOTAL AMOUNT SPENT
             </span>
             <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+          <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
             Rp {totalSpend.toLocaleString("id-ID")}
           </div>
           <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            Conv. Value: Rp {totalRevenue.toLocaleString("id-ID")}
+            Conversion Value: Rp {totalRevenue.toLocaleString("id-ID")}
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-2xs transition-colors">
+        {/* Card 2: TOTAL RESULTS & CPA (PURCHASES) */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
             <span className="text-[10px] font-extrabold uppercase tracking-wider">
-              Results &amp; CPA
+              TOTAL RESULTS &amp; CPA
             </span>
             <Target className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
+          <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
             {totalResults.toLocaleString("id-ID")} Results
           </div>
           <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            CPA: Rp {avgCostPerResult.toLocaleString("id-ID")} ({totalPurchases} Pur, {totalLeads} Lead)
+            Cost / Result: Rp {avgCostPerResult.toLocaleString("id-ID")} ({totalPurchases} Purchase, {totalLeads} Lead)
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-2xs transition-colors">
+        {/* Card 3: 15S THRUPLAYS & ROAS */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
             <span className="text-[10px] font-extrabold uppercase tracking-wider">
-              ThruPlays &amp; ROAS
+              15S THRUPLAYS &amp; ROAS
             </span>
             <Video className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 leading-tight">
+          <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 leading-tight">
             {totalThruPlays.toLocaleString("id-ID")} ThruPlay
           </div>
           <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            ROAS: {weightedRoas}x (Target &ge; {rules.minRoasScaleThreshold}x)
+            Blended ROAS: {weightedRoas}x (Target &ge; {rules.minRoasScaleThreshold}x)
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3 rounded-xl shadow-2xs transition-colors">
+        {/* Card 4: STATUS KAMPANYE LIVE */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
             <span className="text-[10px] font-extrabold uppercase tracking-wider">
-              Status Kampanye Live
+              STATUS KAMPANYE LIVE
             </span>
             <Activity className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
           </div>
           <div className="flex items-center gap-1.5 leading-tight">
-            <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">
+            <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
               {winningCount} Winning
             </span>
             {bleedingCount > 0 && (
@@ -252,9 +336,48 @@ export function MetaAdsCommanderTable() {
             )}
           </div>
           <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            Total {campaigns.length} Kampanye di Akun Ini
+            Total {keywordFilteredCampaigns.length} Kampanye di Analisa Ini
           </div>
         </div>
+      </div>
+
+      {/* 4. TOMBOL DI BAWAH CARD UNTUK MASUK KE WINNING ENGINE, INSIGHT, CREATIVE & PENGATURAN */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <button
+          type="button"
+          onClick={onOpenWinningEngine}
+          className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Winning Engine</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenInsights}
+          className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-700"
+        >
+          <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
+          <span>Ads Insight &amp; Demografi</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenCreative}
+          className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-700"
+        >
+          <ImageIcon className="w-3.5 h-3.5 text-purple-500" />
+          <span>Pabrik Iklan Creative</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onOpenConfig}
+          className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-all active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-700"
+        >
+          <Settings className="w-3.5 h-3.5 text-slate-500" />
+          <span>Konfigurasi &amp; Rules</span>
+        </button>
       </div>
 
       {/* Action Notification Toast */}
@@ -265,36 +388,60 @@ export function MetaAdsCommanderTable() {
         </div>
       )}
 
-      {/* Control Toolbar: 1 Baris Penuh, Super Ramping & Responsif */}
-      <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-1.5 sm:gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-xl transition-colors">
-        {/* Filter Status: Segmented Control Ramping */}
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
-          {["ALL", "ACTIVE", "WINNING", "BLEEDING", "PAUSED"].map((tab) => (
+      {/* 6. FILTER DIJADIKAN SATU BARIS (1 SINGLE COMPACT LINE) */}
+      <div className="flex items-center justify-between gap-1.5 sm:gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 rounded-xl transition-colors overflow-x-auto scrollbar-none whitespace-nowrap">
+        {/* Status Filter Pills */}
+        <div className="flex items-center gap-1 shrink-0">
+          {[
+            { id: "ALL", label: `Semua (${campaigns.length})` },
+            { id: "ACTIVE", label: "Aktif" },
+            { id: "WINNING", label: "Winning" },
+            { id: "BLEEDING", label: "Boncos" },
+            { id: "PAUSED", label: "Off" },
+          ].map((tab) => (
             <button
-              key={tab}
+              key={tab.id}
               type="button"
-              onClick={() => setStatusFilter(tab)}
+              onClick={() => setStatusFilter(tab.id)}
               className={cn(
-                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border cursor-pointer whitespace-nowrap",
-                statusFilter === tab
+                "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border cursor-pointer",
+                statusFilter === tab.id
                   ? "bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-2xs"
                   : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
               )}
             >
-              {tab === "ALL" && `Semua (${campaigns.length})`}
-              {tab === "ACTIVE" && "Aktif"}
-              {tab === "WINNING" && "Winning"}
-              {tab === "BLEEDING" && "Boncos"}
-              {tab === "PAUSED" && "Off"}
+              {tab.label}
             </button>
           ))}
         </div>
 
-        {/* Filter Akun, Tanggal, Search & Tombol AI: Responsif di Mobile & Desktop */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto scrollbar-none py-0.5 shrink-0">
-          {/* Pemilih Ad Account */}
+        {/* Kanan: Akun, Preset, Search, Kata Kunci, Freeze, Kill & Scale */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* 5. Tombol Pengaturan Kata Kunci Campaign */}
+          <button
+            type="button"
+            onClick={() => {
+              setTempKeywords(campaignKeywords);
+              setShowKeywordModal(true);
+            }}
+            className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer",
+              isKeywordFilterActive
+                ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+            )}
+            title={`Filter Kata Kunci Campaign: ${campaignKeywords}`}
+          >
+            <Filter className="w-3 h-3 text-purple-600" />
+            <span className="hidden md:inline">Kata Kunci:</span>
+            <span className="max-w-[100px] truncate font-mono text-[10px]">
+              {campaignKeywords || "Semua"}
+            </span>
+          </button>
+
+          {/* Ad Account Dropdown */}
           {discoveredAccounts.length > 0 && (
-            <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 max-w-[170px]">
+            <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 max-w-[150px]">
               <Building2 className="w-3 h-3 text-emerald-600 shrink-0" />
               <select
                 value={apiConfig.adAccountId || ""}
@@ -311,7 +458,7 @@ export function MetaAdsCommanderTable() {
             </div>
           )}
 
-          {/* Date Preset */}
+          {/* Date Preset (Default Hari Ini) */}
           <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
             <Calendar className="w-3 h-3 text-blue-600 shrink-0" />
             <select
@@ -320,16 +467,45 @@ export function MetaAdsCommanderTable() {
               className="bg-transparent text-[11px] font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
               title="Rentang Waktu"
             >
-              <option value="today">Hari Ini</option>
+              <option value="today">Hari Ini (Default)</option>
+              <option value="yesterday">Kemarin</option>
               <option value="last_7d">7 Hari</option>
               <option value="last_30d">30 Hari</option>
-              <option value="last_90d">90 Hari</option>
               <option value="data_maximum">Semua</option>
             </select>
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-28 sm:w-36">
+          {/* 8. Tombol Freeze Kolom Toggle (Pin / Tidak Pin Kolom Nama) */}
+          <button
+            type="button"
+            onClick={() => setIsColumnPinned(!isColumnPinned)}
+            className={cn(
+              "hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer",
+              isColumnPinned
+                ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800"
+                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+            )}
+            title={
+              isColumnPinned
+                ? "Kolom Nama Sedang Dipin (Freeze). Klik untuk geser semua."
+                : "Kolom Bebas Digeser. Klik untuk freeze kolom nama."
+            }
+          >
+            {isColumnPinned ? (
+              <>
+                <Pin className="w-3 h-3 text-indigo-600" />
+                <span>Pinned</span>
+              </>
+            ) : (
+              <>
+                <PinOff className="w-3 h-3 text-slate-500" />
+                <span>Geser Semua</span>
+              </>
+            )}
+          </button>
+
+          {/* Search Input */}
+          <div className="relative w-24 sm:w-32">
             <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
@@ -340,44 +516,198 @@ export function MetaAdsCommanderTable() {
             />
           </div>
 
-          {/* Kill Boncos Button */}
+          {/* Kill Boncos */}
           <button
             type="button"
             onClick={handleAutoKill}
-            className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+            className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-2xs"
             title="Matikan kampanye boncos"
           >
             <ShieldAlert className="w-3 h-3 text-rose-600 shrink-0" />
-            <span>Kill Boncos</span>
+            <span className="hidden sm:inline">Kill Boncos</span>
           </button>
 
-          {/* Scale Winning Button */}
+          {/* Scale Winning */}
           <button
             type="button"
             onClick={handleAutoScale}
-            className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+            className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold rounded-lg transition-all cursor-pointer shadow-2xs"
             title="Scale budget kampanye winning"
           >
             <TrendingUp className="w-3 h-3 text-emerald-600 shrink-0" />
-            <span>Scale (+{rules.scaleBudgetPercentage}%)</span>
+            <span className="hidden sm:inline">Scale Winning (+{rules.scaleBudgetPercentage}%)</span>
           </button>
         </div>
       </div>
 
-      {/* Main Table: 26 Kolom Standar Agency & Scale Model (100% Data Riil Meta Graph API) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm transition-colors">
-        {filteredCampaigns.length === 0 ? (
+      {/* 9. TAMPILAN MOBILE: DATA BERBENTUK CARD BERBARIS KE BAWAH (SCROLL VERTICAL, BUKAN TABEL KESAMPING) */}
+      <div className="sm:hidden space-y-2.5">
+        {finalFilteredCampaigns.map((camp) => {
+          const isExpanded = expandedCampaignIds.has(camp.id);
+          const health = getHealthBadge(camp.healthStatus);
+          const HealthIcon = health.Icon;
+          const isOff = camp.status === "PAUSED";
+
+          return (
+            <div
+              key={`mob_${camp.id}`}
+              className={cn(
+                "p-3.5 rounded-2xl border transition-all bg-white dark:bg-slate-900 shadow-xs space-y-2.5",
+                isOff
+                  ? "border-slate-200 dark:border-slate-800 opacity-70"
+                  : "border-slate-200 dark:border-slate-800 hover:border-emerald-500/50"
+              )}
+            >
+              {/* Header Card: Nama & Delivery */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  {/* 7. Nama Kampanye Bersih Tanpa ID */}
+                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">
+                    {camp.name}
+                  </h4>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border",
+                        camp.status === "ACTIVE"
+                          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          camp.status === "ACTIVE" ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+                        )}
+                      />
+                      {camp.deliveryStatus || (camp.status === "ACTIVE" ? "Active" : "Off")}
+                    </span>
+
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold border",
+                        health.className
+                      )}
+                    >
+                      <HealthIcon className="w-2.5 h-2.5" />
+                      {health.label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Switch Status Pause/Play */}
+                <button
+                  type="button"
+                  onClick={() => toggleCampaignStatus(camp.id)}
+                  className={cn(
+                    "p-1.5 rounded-lg border text-xs font-bold transition-all shrink-0",
+                    isOff
+                      ? "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+                      : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800"
+                  )}
+                  title={isOff ? "Nyalakan Kampanye" : "Matikan Kampanye"}
+                >
+                  {isOff ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+
+              {/* Metrik Utama Mobile (2 Baris Ramping) */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl text-center text-xs">
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Spent</span>
+                  <span className="font-black text-slate-900 dark:text-white">
+                    Rp {Number(camp.spend || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Purchases</span>
+                  <span className="font-black text-emerald-600 dark:text-emerald-400">
+                    {camp.purchases || 0}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">ROAS</span>
+                  <span className="font-black text-slate-900 dark:text-white">
+                    {camp.roas ? `${camp.roas}x` : "-"}
+                  </span>
+                </div>
+              </div>
+
+              {/* 11. Accordion Drilldown Ad Sets & Ads di Mobile */}
+              <button
+                type="button"
+                onClick={() => toggleExpand(camp.id)}
+                className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Lihat Ad Sets &amp; Ads ({camp.adsets?.length || 0})</span>
+                </span>
+                <ChevronDown
+                  className={cn("w-3.5 h-3.5 transition-transform", isExpanded && "rotate-180")}
+                />
+              </button>
+
+              {/* Tampilan Drilldown Ad Sets & Ads Satu Per Satu di Mobile */}
+              {isExpanded && (
+                <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  {camp.adsets && camp.adsets.length > 0 ? (
+                    camp.adsets.map((adset) => (
+                      <div
+                        key={adset.id}
+                        className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-700/80 space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
+                            AdSet: {adset.name}
+                          </span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                            {adset.status}
+                          </span>
+                        </div>
+
+                        {/* Child Ads */}
+                        {adset.ads && adset.ads.length > 0 && (
+                          <div className="space-y-1.5 pl-2 border-l-2 border-blue-400">
+                            {adset.ads.map((ad) => (
+                              <div
+                                key={ad.id}
+                                className="flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-900 text-xs"
+                              >
+                                <span className="font-semibold text-[11px] text-slate-800 dark:text-slate-200 truncate max-w-[180px]">
+                                  Ad: {ad.name}
+                                </span>
+                                <span className="text-[10px] text-emerald-600 font-bold">
+                                  {ad.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[11px] text-slate-400 text-center py-2">
+                      Belum ada data AdSet/Ad di kampanye ini.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* TAMPILAN DESKTOP & TABLET: TABEL KAMPANYE DENGAN TOGGLE FREEZE & ACCORDION DRILLDOWN */}
+      <div className="hidden sm:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-colors">
+        {finalFilteredCampaigns.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <Target className="w-8 h-8 text-slate-400 mx-auto" />
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">
-              {isLiveMeta
-                ? "Belum Ada Kampanye pada Filter / Akun Iklan Ini"
-                : "Belum Terhubung ke Akun Live Meta Ads"}
+              Tidak Ada Kampanye yang Cocok dengan Filter
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              {isLiveMeta
-                ? "Akun Meta Ads Anda sudah terhubung secara riil (0% data mockup). Jika kampanye berada di akun iklan lain pada Business Portfolio Anda, pilih akun iklan pada dropdown di atas atau buat kampanye baru melalui tab Ads Insight."
-                : "Klik tombol Konfigurasi & Rules di kanan atas, tempel Meta Access Token Anda, lalu klik Tes Koneksi Meta Sekarang untuk memuat data kampanye riil Anda."}
+              Periksa filter kata kunci atau ubah filter status &amp; rentang waktu ke "Semua".
             </p>
           </div>
         ) : (
@@ -385,317 +715,330 @@ export function MetaAdsCommanderTable() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100 dark:bg-slate-950 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-800 whitespace-nowrap">
-                  <th className="p-3.5 sticky left-0 z-20 bg-slate-100 dark:bg-slate-950 min-w-[260px] shadow-[2px_0_5px_rgba(0,0,0,0.04)]">
+                  {/* Kolom Expand */}
+                  <th className="p-3 w-8 text-center"></th>
+
+                  {/* 8. Kolom Campaign: Bisa Freeze (Sticky) atau Geser Bersama Kolom Lain */}
+                  <th
+                    className={cn(
+                      "p-3.5 min-w-[240px] transition-all",
+                      isColumnPinned &&
+                        "sticky left-0 z-20 bg-slate-100 dark:bg-slate-950 shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
+                    )}
+                  >
                     Campaign
                   </th>
-                  <th className="p-3.5 min-w-[130px]">Delivery</th>
-                  <th className="p-3.5 min-w-[145px]">Actions (Human / AI)</th>
-                  <th className="p-3.5 min-w-[140px]">Budget</th>
-                  <th className="p-3.5 min-w-[120px]">Amount spent</th>
-                  <th className="p-3.5 min-w-[100px]">Results</th>
-                  <th className="p-3.5 min-w-[140px]">Purchases conversion value</th>
-                  <th className="p-3.5 min-w-[110px]">Cost per result</th>
-                  <th className="p-3.5 min-w-[100px]">Reach</th>
-                  <th className="p-3.5 min-w-[100px]">Link clicks</th>
-                  <th className="p-3.5 min-w-[130px]">Website landing page views</th>
-                  <th className="p-3.5 min-w-[100px]">Adds to cart</th>
-                  <th className="p-3.5 min-w-[120px]">Checkouts initiated</th>
-                  <th className="p-3.5 min-w-[100px]">Purchases</th>
-                  <th className="p-3.5 min-w-[130px]">Cost per landing page view</th>
-                  <th className="p-3.5 min-w-[120px]">Cost per add to cart</th>
-                  <th className="p-3.5 min-w-[130px]">Cost per checkout initiated</th>
-                  <th className="p-3.5 min-w-[120px]">Cost per purchase</th>
-                  <th className="p-3.5 min-w-[100px] bg-slate-200/50 dark:bg-slate-800/40 font-extrabold text-emerald-700 dark:text-emerald-400">
-                    1. OCLP
+                  <th className="p-3.5 min-w-[120px]">Delivery</th>
+                  <th className="p-3.5 min-w-[130px]">Aksi</th>
+                  <th className="p-3.5 min-w-[130px]">Budget</th>
+                  <th className="p-3.5 min-w-[110px]">Amount spent</th>
+                  <th className="p-3.5 min-w-[100px] text-emerald-600 dark:text-emerald-400 font-black">
+                    Results (Purchases)
                   </th>
-                  <th className="p-3.5 min-w-[100px] bg-slate-200/50 dark:bg-slate-800/40 font-extrabold text-emerald-700 dark:text-emerald-400">
-                    2. LP-ATC
-                  </th>
-                  <th className="p-3.5 min-w-[100px] bg-slate-200/50 dark:bg-slate-800/40 font-extrabold text-emerald-700 dark:text-emerald-400">
-                    3. ATC-IC
-                  </th>
-                  <th className="p-3.5 min-w-[110px] bg-slate-200/50 dark:bg-slate-800/40 font-extrabold text-emerald-700 dark:text-emerald-400">
-                    4. IC-Purchase
-                  </th>
-                  <th className="p-3.5 min-w-[100px]">CPM (cost per 1,000 imp)</th>
-                  <th className="p-3.5 min-w-[100px]">CTR (link click-through)</th>
-                  <th className="p-3.5 min-w-[90px]">CTR (all)</th>
-                  <th className="p-3.5 min-w-[100px]">CPC (cost per link)</th>
-                  <th className="p-3.5 min-w-[90px]">CPC (all)</th>
-                  <th className="p-3.5 min-w-[130px]">15-second ThruPlays</th>
+                  <th className="p-3.5 min-w-[120px]">Conv. Value</th>
+                  <th className="p-3.5 min-w-[100px]">Cost / Result</th>
+                  <th className="p-3.5 min-w-[80px]">ROAS</th>
+                  <th className="p-3.5 min-w-[90px]">Reach</th>
+                  <th className="p-3.5 min-w-[90px]">Link Clicks</th>
+                  <th className="p-3.5 min-w-[100px]">LP Views</th>
+                  <th className="p-3.5 min-w-[90px]">Adds to Cart</th>
+                  <th className="p-3.5 min-w-[100px]">Checkouts</th>
+                  <th className="p-3.5 min-w-[90px]">Purchases</th>
+                  <th className="p-3.5 min-w-[90px]">CPM</th>
+                  <th className="p-3.5 min-w-[90px]">CTR (Link)</th>
+                  <th className="p-3.5 min-w-[90px]">CPC (Link)</th>
+                  <th className="p-3.5 min-w-[110px]">15s ThruPlays</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                {filteredCampaigns.map((camp) => {
+                {finalFilteredCampaigns.map((camp) => {
                   const health = getHealthBadge(camp.healthStatus);
-                  const isEditingThisBudget = editingBudgetId === camp.id;
-                  const isOff = camp.status === "PAUSED";
                   const HealthIcon = health.Icon;
-
-                  const lpv = Number(camp.landingPageViews ?? 0);
-                  const atc = Number(camp.addsToCart ?? 0);
-                  const ic = Number(camp.checkoutsInitiated ?? 0);
-                  const pur = Number(camp.purchases ?? 0);
+                  const isOff = camp.status === "PAUSED";
+                  const isExpanded = expandedCampaignIds.has(camp.id);
+                  const isEditingThisBudget = editingBudgetId === camp.id;
 
                   return (
-                    <tr
-                      key={camp.id}
-                      className={cn(
-                        "hover:bg-slate-50/80 dark:hover:bg-slate-850/60 transition-colors",
-                        isOff && "opacity-60 bg-slate-50/40 dark:bg-slate-950/30"
-                      )}
-                    >
-                      {/* 1. Campaign */}
-                      <td className="p-3.5 sticky left-0 z-10 bg-white dark:bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.04)] font-medium">
-                        <div className="max-w-[280px]">
-                          <div
-                            className="font-bold text-slate-900 dark:text-white truncate"
-                            title={camp.name}
+                    <>
+                      <tr
+                        key={camp.id}
+                        className={cn(
+                          "hover:bg-slate-50/80 dark:hover:bg-slate-850/60 transition-colors",
+                          isOff && "opacity-60 bg-slate-50/40 dark:bg-slate-950/30"
+                        )}
+                      >
+                        {/* 11. Tombol Chevron Accordion Drilldown */}
+                        <td className="p-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => toggleExpand(camp.id)}
+                            className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                            title="Buka detail AdSets & Ads"
                           >
-                            {camp.name}
-                          </div>
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                            ID: {camp.id} • {camp.targetAudience}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* 2. Delivery */}
-                      <td className="p-3.5">
-                        <div className="flex flex-col gap-1 items-start">
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border",
-                              camp.status === "ACTIVE"
-                                ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
-                                : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
-                            )}
-                          >
-                            <span
+                            <ChevronDown
                               className={cn(
-                                "w-1.5 h-1.5 rounded-full",
-                                camp.status === "ACTIVE"
-                                  ? "bg-emerald-500 animate-pulse"
-                                  : "bg-slate-400"
+                                "w-4 h-4 transition-transform",
+                                isExpanded && "rotate-180 text-emerald-600"
                               )}
                             />
-                            {camp.deliveryStatus || (camp.status === "ACTIVE" ? "Active" : "Off")}
-                          </span>
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border",
-                              health.className
-                            )}
-                          >
-                            <HealthIcon className="w-3 h-3 shrink-0" />
-                            {health.label}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* 3. Actions (Pause/Play, Edit Budget, 1-Click Scale +20%) */}
-                      <td className="p-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => toggleCampaignStatus(camp.id, "human")}
-                            className={cn(
-                              "p-1.5 rounded-xl border transition-colors cursor-pointer",
-                              camp.status === "ACTIVE"
-                                ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 border-amber-200 dark:border-amber-800 hover:bg-amber-100"
-                                : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100"
-                            )}
-                            title={
-                              camp.status === "ACTIVE"
-                                ? "Jeda Kampanye di Meta Ads"
-                                : "Aktifkan Kampanye di Meta Ads"
-                            }
-                          >
-                            {camp.status === "ACTIVE" ? (
-                              <Pause className="w-3.5 h-3.5" />
-                            ) : (
-                              <Play className="w-3.5 h-3.5" />
-                            )}
                           </button>
+                        </td>
 
-                          <button
-                            type="button"
-                            onClick={() => handleStartEditBudget(camp)}
-                            className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                            title="Ubah Budget Harian"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                        {/* 7. Campaign Name (Bersih, Ramping, Tanpa ID) */}
+                        <td
+                          className={cn(
+                            "p-3.5 font-medium transition-all",
+                            isColumnPinned &&
+                              "sticky left-0 z-10 bg-white dark:bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
+                          )}
+                        >
+                          <div className="max-w-[260px]">
+                            <span
+                              className="font-bold text-xs text-slate-900 dark:text-white truncate block"
+                              title={camp.name}
+                            >
+                              {camp.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 truncate block mt-0.5">
+                              {camp.targetAudience}
+                            </span>
+                          </div>
+                        </td>
 
-                          <button
-                            type="button"
-                            onClick={() => handleQuickScaleRow(camp)}
-                            className="px-2 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 text-[10px] font-black transition-colors cursor-pointer"
-                            title={`Scale Up Budget +${rules.scaleBudgetPercentage}% langsung ke Meta Ads`}
-                          >
-                            +{rules.scaleBudgetPercentage}%
-                          </button>
-                        </div>
-                      </td>
+                        {/* Delivery */}
+                        <td className="p-3.5">
+                          <div className="flex flex-col gap-1 items-start">
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                                camp.status === "ACTIVE"
+                                  ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "w-1.5 h-1.5 rounded-full",
+                                  camp.status === "ACTIVE"
+                                    ? "bg-emerald-500 animate-pulse"
+                                    : "bg-slate-400"
+                                )}
+                              />
+                              {camp.deliveryStatus || (camp.status === "ACTIVE" ? "Active" : "Off")}
+                            </span>
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold border",
+                                health.className
+                              )}
+                            >
+                              <HealthIcon className="w-2.5 h-2.5" />
+                              {health.label}
+                            </span>
+                          </div>
+                        </td>
 
-                      {/* 4. Budget */}
-                      <td className="p-3.5">
-                        {isEditingThisBudget ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="number"
-                              value={tempBudget}
-                              onChange={(e) => setTempBudget(Number(e.target.value))}
-                              className="w-24 px-2 py-1 bg-white dark:bg-slate-800 border border-emerald-500 rounded-lg text-xs font-mono"
-                            />
+                        {/* Aksi */}
+                        <td className="p-3.5">
+                          <div className="flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => handleSaveBudget(camp.id)}
-                              className="p-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 cursor-pointer"
-                              title="Simpan ke Meta Ads"
+                              onClick={() => toggleCampaignStatus(camp.id)}
+                              className={cn(
+                                "p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer",
+                                isOff
+                                  ? "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+                                  : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800"
+                              )}
+                              title={isOff ? "Nyalakan Kampanye" : "Matikan Kampanye"}
                             >
-                              <Check className="w-3.5 h-3.5" />
+                              {isOff ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                             </button>
                             <button
                               type="button"
-                              onClick={() => setEditingBudgetId(null)}
-                              className="p-1 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-200 rounded-lg cursor-pointer"
-                              title="Batal"
+                              onClick={() => handleQuickScaleRow(camp)}
+                              className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black transition-all cursor-pointer"
+                              title="Scale +20% Budget"
                             >
-                              <X className="w-3.5 h-3.5" />
+                              +20%
                             </button>
                           </div>
-                        ) : (
-                          <div className="font-mono font-bold text-slate-900 dark:text-white">
-                            {camp.dailyBudget > 0
-                              ? `Rp ${camp.dailyBudget.toLocaleString("id-ID")}/hr`
-                              : "AdSet / Lifetime"}
-                          </div>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* 5. Amount spent */}
-                      <td className="p-3.5 font-mono font-semibold">
-                        Rp {Number(camp.spend || 0).toLocaleString("id-ID")}
-                      </td>
+                        {/* Budget */}
+                        <td className="p-3.5 font-bold">
+                          {isEditingThisBudget ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                value={tempBudget}
+                                onChange={(e) => setTempBudget(Number(e.target.value))}
+                                className="w-20 px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-emerald-500 rounded text-xs text-slate-900 dark:text-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveBudget(camp.id)}
+                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                              >
+                                <Check className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <span>Rp {Number(camp.dailyBudget || 0).toLocaleString("id-ID")}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditBudget(camp)}
+                                className="text-slate-400 hover:text-slate-600"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
 
-                      {/* 6. Results */}
-                      <td className="p-3.5 font-mono font-bold">
-                        {Number(camp.results ?? 0).toLocaleString("id-ID")}
-                      </td>
+                        {/* Spent */}
+                        <td className="p-3.5 font-bold">
+                          Rp {Number(camp.spend || 0).toLocaleString("id-ID")}
+                        </td>
 
-                      {/* 7. Purchases conversion value */}
-                      <td className="p-3.5 font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                        Rp {Number(camp.purchasesConversionValue ?? 0).toLocaleString("id-ID")}
-                      </td>
+                        {/* 10. Results (Purchases Riil) */}
+                        <td className="p-3.5 font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                          {camp.purchases || camp.results || 0}
+                        </td>
 
-                      {/* 8. Cost per result */}
-                      <td className="p-3.5 font-mono">
-                        {Number(camp.costPerResult || 0) > 0
-                          ? `Rp ${Number(camp.costPerResult).toLocaleString("id-ID")}`
-                          : "-"}
-                      </td>
+                        {/* Conv Value */}
+                        <td className="p-3.5">
+                          Rp {Number(camp.purchasesConversionValue || 0).toLocaleString("id-ID")}
+                        </td>
 
-                      {/* 9. Reach */}
-                      <td className="p-3.5 font-mono">
-                        {Number(camp.reach ?? 0).toLocaleString("id-ID")}
-                      </td>
+                        {/* Cost per Result */}
+                        <td className="p-3.5">
+                          Rp {Number(camp.costPerResult || 0).toLocaleString("id-ID")}
+                        </td>
 
-                      {/* 10. Link clicks */}
-                      <td className="p-3.5 font-mono font-medium">
-                        {Number(camp.linkClicks ?? 0).toLocaleString("id-ID")}
-                      </td>
+                        {/* ROAS */}
+                        <td className="p-3.5 font-black">
+                          {camp.roas ? `${camp.roas}x` : "-"}
+                        </td>
 
-                      {/* 11. Website landing page views */}
-                      <td className="p-3.5 font-mono">{lpv.toLocaleString("id-ID")}</td>
+                        {/* Reach */}
+                        <td className="p-3.5">
+                          {Number(camp.reach || 0).toLocaleString("id-ID")}
+                        </td>
 
-                      {/* 12. Adds to cart */}
-                      <td className="p-3.5 font-mono">{atc.toLocaleString("id-ID")}</td>
+                        {/* Link Clicks */}
+                        <td className="p-3.5">
+                          {Number(camp.linkClicks || 0).toLocaleString("id-ID")}
+                        </td>
 
-                      {/* 13. Checkouts initiated */}
-                      <td className="p-3.5 font-mono">{ic.toLocaleString("id-ID")}</td>
+                        {/* LP Views */}
+                        <td className="p-3.5">
+                          {Number(camp.landingPageViews || 0).toLocaleString("id-ID")}
+                        </td>
 
-                      {/* 14. Purchases */}
-                      <td className="p-3.5 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        {pur.toLocaleString("id-ID")}
-                      </td>
+                        {/* Adds to Cart */}
+                        <td className="p-3.5">{camp.addsToCart || 0}</td>
 
-                      {/* 15. Cost per landing page view */}
-                      <td className="p-3.5 font-mono">
-                        {lpv > 0 && Number(camp.costPerLpView || 0) > 0
-                          ? `Rp ${Number(camp.costPerLpView).toLocaleString("id-ID")}`
-                          : "-"}
-                      </td>
+                        {/* Checkouts */}
+                        <td className="p-3.5">{camp.checkoutsInitiated || 0}</td>
 
-                      {/* 16. Cost per add to cart */}
-                      <td className="p-3.5 font-mono">
-                        {atc > 0 && Number(camp.costPerAddToCart || 0) > 0
-                          ? `Rp ${Number(camp.costPerAddToCart).toLocaleString("id-ID")}`
-                          : "-"}
-                      </td>
+                        {/* Purchases */}
+                        <td className="p-3.5 font-bold">{camp.purchases || 0}</td>
 
-                      {/* 17. Cost per checkout initiated */}
-                      <td className="p-3.5 font-mono">
-                        {ic > 0 && Number(camp.costPerCheckoutInitiated || 0) > 0
-                          ? `Rp ${Number(camp.costPerCheckoutInitiated).toLocaleString("id-ID")}`
-                          : "-"}
-                      </td>
+                        {/* CPM */}
+                        <td className="p-3.5">
+                          Rp {Number(camp.cpm || 0).toLocaleString("id-ID")}
+                        </td>
 
-                      {/* 18. Cost per purchase */}
-                      <td className="p-3.5 font-mono font-bold">
-                        {pur > 0 && Number(camp.costPerPurchase || 0) > 0
-                          ? `Rp ${Number(camp.costPerPurchase).toLocaleString("id-ID")}`
-                          : "-"}
-                      </td>
+                        {/* CTR */}
+                        <td className="p-3.5">{camp.ctrLink ? `${camp.ctrLink}%` : "-"}</td>
 
-                      {/* 19. 1. OCLP */}
-                      <td className="p-3.5 bg-slate-50 dark:bg-slate-850/50 font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                        {Number(camp.oclpRate ?? 0)}%
-                      </td>
+                        {/* CPC */}
+                        <td className="p-3.5">
+                          Rp {Number(camp.cpcLink || 0).toLocaleString("id-ID")}
+                        </td>
 
-                      {/* 20. 2. LP-ATC */}
-                      <td className="p-3.5 bg-slate-50 dark:bg-slate-850/50 font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                        {Number(camp.lpToAtcRate ?? 0)}%
-                      </td>
+                        {/* ThruPlays */}
+                        <td className="p-3.5">{camp.videoThruPlays15s || 0}</td>
+                      </tr>
 
-                      {/* 21. 3. ATC-IC */}
-                      <td className="p-3.5 bg-slate-50 dark:bg-slate-850/50 font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                        {Number(camp.atcToIcRate ?? 0)}%
-                      </td>
+                      {/* 11. ACCORDION ROW UNTUK MENAMPILKAN AD SETS & ADS DI SAMPING/BAWAH KAMPANYE */}
+                      {isExpanded && (
+                        <tr className="bg-slate-50/90 dark:bg-slate-950/80 border-y-2 border-emerald-500/30">
+                          <td colSpan={20} className="p-4">
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h5 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                  <Layers className="w-4 h-4 text-emerald-500" />
+                                  <span>Daftar Ad Sets &amp; Ads untuk "{camp.name}"</span>
+                                </h5>
+                                <span className="text-[10px] text-slate-500 font-bold">
+                                  Total {camp.adsets?.length || 0} Ad Sets
+                                </span>
+                              </div>
 
-                      {/* 22. 4. IC-Purchase */}
-                      <td className="p-3.5 bg-slate-50 dark:bg-slate-850/50 font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                        {Number(camp.icToPurchaseRate ?? 0)}%
-                      </td>
+                              {camp.adsets && camp.adsets.length > 0 ? (
+                                <div className="space-y-2.5">
+                                  {camp.adsets.map((adset) => (
+                                    <div
+                                      key={adset.id}
+                                      className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2"
+                                    >
+                                      <div className="flex items-center justify-between text-xs">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-extrabold text-slate-900 dark:text-white">
+                                            AdSet: {adset.name}
+                                          </span>
+                                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                            Status: {adset.status}
+                                          </span>
+                                        </div>
+                                        <div className="text-slate-500 font-semibold">
+                                          Budget: Rp {Number(adset.dailyBudget || 0).toLocaleString("id-ID")}/hari
+                                        </div>
+                                      </div>
 
-                      {/* 23. CPM */}
-                      <td className="p-3.5 font-mono">
-                        Rp {Number(camp.cpm ?? 0).toLocaleString("id-ID")}
-                      </td>
-
-                      {/* 24. CTR (link) */}
-                      <td className="p-3.5 font-mono font-bold">
-                        {Number(camp.ctrLink ?? 0)}%
-                      </td>
-
-                      {/* 25. CTR (all) */}
-                      <td className="p-3.5 font-mono">{Number(camp.ctrAll ?? 0)}%</td>
-
-                      {/* 26. CPC (link) */}
-                      <td className="p-3.5 font-mono font-bold">
-                        Rp {Number(camp.cpcLink ?? 0).toLocaleString("id-ID")}
-                      </td>
-
-                      {/* 27. CPC (all) */}
-                      <td className="p-3.5 font-mono">
-                        Rp {Number(camp.cpcAll ?? 0).toLocaleString("id-ID")}
-                      </td>
-
-                      {/* 28. 15-second ThruPlays */}
-                      <td className="p-3.5 font-mono font-bold text-blue-600 dark:text-blue-400">
-                        {Number(camp.videoThruPlays15s ?? 0).toLocaleString("id-ID")}
-                      </td>
-                    </tr>
+                                      {/* Child Ads */}
+                                      {adset.ads && adset.ads.length > 0 ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                          {adset.ads.map((ad) => (
+                                            <div
+                                              key={ad.id}
+                                              className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-2"
+                                            >
+                                              <div className="min-w-0">
+                                                <p className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate">
+                                                  Ad: {ad.name}
+                                                </p>
+                                                <p className="text-[10px] text-slate-400 truncate">
+                                                  ID: {ad.id}
+                                                </p>
+                                              </div>
+                                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                                {ad.status}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-[11px] text-slate-400 italic">
+                                          Tidak ada ads di AdSet ini.
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-slate-500 py-3 text-center">
+                                  Belum ada AdSet riil terdeteksi di level kampanye ini.
+                                </p>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
               </tbody>
@@ -703,6 +1046,75 @@ export function MetaAdsCommanderTable() {
           </div>
         )}
       </div>
+
+      {/* 5. MODAL PENGATURAN KATA KUNCI CAMPAIGN */}
+      {showKeywordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-purple-600" />
+                <h3 className="font-black text-base text-slate-900 dark:text-white">
+                  Pengaturan Kata Kunci Campaign
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowKeywordModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Tentukan kata kunci kampanye iklan Anda. Hanya kampanye yang mengandung salah satu kata kunci berikut yang akan dimasukkan ke dalam perhitungan KPI dashboard dan tabel (kampanye lain akan otomatis disaring).
+            </p>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Kata Kunci (Pisahkan dengan koma):
+              </label>
+              <textarea
+                value={tempKeywords}
+                onChange={(e) => setTempKeywords(e.target.value)}
+                placeholder="monefyi, estimator, rab"
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white focus:border-purple-500 outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={isKeywordFilterActive}
+                  onChange={(e) => setIsKeywordFilterActive(e.target.checked)}
+                  className="rounded text-purple-600 focus:ring-purple-500"
+                />
+                <span>Aktifkan Filter Kata Kunci</span>
+              </label>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowKeywordModal(false)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveKeywords}
+                  className="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black shadow-sm"
+                >
+                  Simpan Kata Kunci
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

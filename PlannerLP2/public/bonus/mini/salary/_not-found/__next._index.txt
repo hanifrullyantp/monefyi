@@ -3,4 +3,4 @@
 3:I[7121,[],""]
 4:I[4581,[],""]
 :HL["/bonus/mini/salary/_next/static/css/dd8e136017e4605c.css","style"]
-0:{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/bonus/mini/salary/_next/static/css/dd8e136017e4605c.css","precedence":"next"}]],["$","html",null,{"lang":"id","className":"scroll-smooth","children":["$","body",null,{"className":"bg-slate-950 text-white antialiased","children":["$","$L2",null,{"children":["$","$L3",null,{"parallelRouterKey":"children","template":["$","$L4",null,{}]}]}]}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"qgcXOXS0T9BebcY82JMJ_"}
+0:{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/bonus/mini/salary/_next/static/css/dd8e136017e4605c.css","precedence":"next"}]],["$","html",null,{"lang":"id","className":"scroll-smooth","children":["$","body",null,{"className":"bg-slate-950 text-white antialiased","children":["$","$L2",null,{"children":["$","$L3",null,{"parallelRouterKey":"children","template":["$","$L4",null,{}]}]}]}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"xngi5ShOw-BOXzRmz7G0Z"}

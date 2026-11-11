@@ -72,11 +72,11 @@ const TECHNICAL_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: stri
   ],
 };
 
-type SettingsTab = "ai" | "meta" | "whatsapp" | "payment" | "general";
+type SettingsTab = "features" | "ai" | "meta" | "whatsapp" | "payment" | "general";
 
 function SettingsContent() {
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as SettingsTab) || "ai";
+  const initialTab = (searchParams.get("tab") as SettingsTab) || "features";
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
 
   // Stores
@@ -128,7 +128,7 @@ function SettingsContent() {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as SettingsTab;
-    if (tabParam && ["ai", "meta", "whatsapp", "payment", "general"].includes(tabParam)) {
+    if (tabParam && ["features", "ai", "meta", "whatsapp", "payment", "general"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -250,6 +250,7 @@ function SettingsContent() {
       {/* Tabs Navigasi Pengaturan (Touch-Friendly di Mobile) */}
       <div className="flex gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 dark:border-slate-800 scrollbar-none">
         {[
+          { id: "features" as const, label: "Pusat Fitur & Halaman", icon: Settings, badge: "Hub" },
           { id: "ai" as const, label: "AI & Dual-LLM", icon: Cpu, badge: "Super Admin" },
           { id: "meta" as const, label: "Meta Ads & CAPI", icon: Key, badge: "API" },
           { id: "whatsapp" as const, label: "WhatsApp Bot", icon: MessageSquare },
@@ -287,6 +288,154 @@ function SettingsContent() {
           );
         })}
       </div>
+
+      {/* TAB 0: PUSAT FITUR & HALAMAN (HUB SELURUH MENU LAINNYA) */}
+      {activeTab === "features" && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs">
+            <h2 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Settings className="w-5 h-5 text-emerald-600" />
+              <span>Pusat Kendali Seluruh Fitur &amp; Halaman Monefyi</span>
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Akses cepat ke seluruh modul landing page, bot komunikasi, integrasi gateway, dan konten.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 mt-5">
+              {[
+                {
+                  title: "Bot WhatsApp CS & Tim",
+                  desc: "Integrasi webhook & pesan otomatis WhatsApp",
+                  href: "/admin/whatsapp",
+                  category: "Komunikasi",
+                  color: "emerald",
+                },
+                {
+                  title: "Template Pesan WhatsApp",
+                  desc: "Template follow-up lead, invoice, & recovery",
+                  href: "/admin/crm-template",
+                  category: "CRM & Penjualan",
+                  color: "emerald",
+                },
+                {
+                  title: "Pricing & Gateway Mayar",
+                  desc: "Manajemen paket harga & pembayaran headless Mayar",
+                  href: "/admin/pricing",
+                  category: "Keuangan",
+                  color: "blue",
+                },
+                {
+                  title: "Konten Visual Landing",
+                  desc: "Visual editor sections & hero landing page",
+                  href: "/admin/konten",
+                  category: "Landing Page",
+                  color: "indigo",
+                },
+                {
+                  title: "Konten JSON Data",
+                  desc: "Editor database mentah JSON konfigurasi landing",
+                  href: "/admin/konten-json",
+                  category: "Landing Page",
+                  color: "indigo",
+                },
+                {
+                  title: "SEO & Tracking Pixel",
+                  desc: "Meta pixel, GA4, GTM & OpenGraph metadata",
+                  href: "/admin/seo",
+                  category: "Marketing",
+                  color: "amber",
+                },
+                {
+                  title: "Toast Notifikasi Live",
+                  desc: "Social proof popup pembelian riil di landing page",
+                  href: "/admin/toast",
+                  category: "Konversi",
+                  color: "purple",
+                },
+                {
+                  title: "Popup Relink Konversi",
+                  desc: "Exit intent & popup promosi diskon spesial",
+                  href: "/admin/relink-popup",
+                  category: "Konversi",
+                  color: "purple",
+                },
+                {
+                  title: "FAQ & Tanya Jawab",
+                  desc: "Kelola pertanyaan umum pelanggan estimator",
+                  href: "/admin/faq",
+                  category: "Konten",
+                  color: "teal",
+                },
+                {
+                  title: "Testimonial Pelanggan",
+                  desc: "Review kepuasan user & rating kontraktor",
+                  href: "/admin/testimonial",
+                  category: "Social Proof",
+                  color: "amber",
+                },
+                {
+                  title: "Fitur & Keunggulan",
+                  desc: "Daftar fitur estimator Monefyi di homepage",
+                  href: "/admin/features",
+                  category: "Landing Page",
+                  color: "indigo",
+                },
+                {
+                  title: "Media Library",
+                  desc: "Galeri gambar, mockup UI & aset grafis",
+                  href: "/admin/media",
+                  category: "Aset",
+                  color: "cyan",
+                },
+                {
+                  title: "Global & Merek",
+                  desc: "Nama brand, logo, favicon & identitas",
+                  href: "/admin/global",
+                  category: "Branding",
+                  color: "rose",
+                },
+                {
+                  title: "Kontak & Sosial Media",
+                  desc: "Nomor CS, Instagram, TikTok & email resmi",
+                  href: "/admin/kontak",
+                  category: "Branding",
+                  color: "rose",
+                },
+                {
+                  title: "Footer & Privasi",
+                  desc: "Kebijakan privasi, syarat layanan & copyright",
+                  href: "/admin/footer",
+                  category: "Legal",
+                  color: "slate",
+                },
+              ].map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition-all group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                        {item.category}
+                      </span>
+                      <span className="text-emerald-500 text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                        Buka &rarr;
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: PENGATURAN AI & DUAL-LLM (SUPER ADMIN) */}
       {activeTab === "ai" && (

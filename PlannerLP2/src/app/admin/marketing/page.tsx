@@ -8,17 +8,11 @@ import { MetaAdsCommanderTable } from "@/components/admin/marketing/MetaAdsComma
 import { MetaAdsDeepInsights } from "@/components/admin/marketing/MetaAdsDeepInsights";
 import { WinningAdCreator } from "@/components/admin/marketing/WinningAdCreator";
 import { VideoAdAuditor } from "@/components/admin/marketing/VideoAdAuditor";
-import { FunnelAovPanel } from "@/components/admin/marketing/FunnelAovPanel";
 import { MarketingConfigModal } from "@/components/admin/marketing/MarketingConfigModal";
 import { analyzeMarketingSystemIntegrations } from "@/lib/services/marketingAgentService";
 import {
   BarChart3,
-  Sparkles,
-  ShoppingBag,
-  Settings,
   Bot,
-  Zap,
-  Video,
   RefreshCw,
   AlertTriangle,
   Info,
@@ -26,25 +20,18 @@ import {
   Cpu,
   X,
   ShieldAlert,
-  Target,
   Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
-type ActiveTab =
-  | "winning_engine"
-  | "commander"
-  | "insights"
-  | "creative"
-  | "video_audit"
-  | "funnel_aov";
-
 export default function MarketingAdminPage() {
-  // Tab utama default adalah Winning Engine (Mesin 5 Pilar: Mode Cuan & Mode Advance)
-  const [activeTab, setActiveTab] = useState<ActiveTab>("winning_engine");
+  // Single Tab Mode: Halaman Ads Manager langsung menampilkan tabel Meta Ads Commander
   const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [isAdspertOpen, setIsAdspertOpen] = useState(false); // Popup chat di kanan bawah (menimpa konten)
-  const [isNotifOpen, setIsNotifOpen] = useState(false); // Dropdown popover notifikasi di lonceng
+  const [isAdspertOpen, setIsAdspertOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [showWinningEngineModal, setShowWinningEngineModal] = useState(false);
+  const [showInsightsModal, setShowInsightsModal] = useState(false);
+  const [showCreativeModal, setShowCreativeModal] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string>("Baru saja");
 
   const {
@@ -63,12 +50,10 @@ export default function MarketingAdminPage() {
     loadConfigFromCloud,
   } = useMarketingStore();
 
-  // Audit Kesiapan Sistem & Diagnosa Tim AI
   const auditReport = analyzeMarketingSystemIntegrations(apiConfig, campaigns, rules);
   const pendingApprovalCount = winningPlans.filter((p) => p.status === "pending").length;
 
   useEffect(() => {
-    // Muat setting dari Supabase Cloud untuk multi-device sync
     loadConfigFromCloud().then(() => {
       refreshCampaigns().catch(() => undefined);
       refreshInsights().catch(() => undefined);
@@ -112,7 +97,7 @@ export default function MarketingAdminPage() {
             <BarChart3 className="w-4 h-4" />
           </span>
           <h1 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
-            <span>Meta Ads &amp; Winning Engine</span>
+            <span>Meta Ads Commander</span>
             <span className="hidden sm:inline-block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.2 rounded">
               {winningEngineConfig.mode === "cuan" ? "Mode Cuan" : "Mode Advance"}
             </span>
@@ -181,7 +166,7 @@ export default function MarketingAdminPage() {
             </span>
           </button>
 
-          {/* Icon Lonceng: Notifikasi & Alert Jumlah Notif Popover */}
+          {/* Icon Lonceng: Notifikasi & Alert Jumlah Notif */}
           <div className="relative">
             <button
               type="button"
@@ -190,7 +175,7 @@ export default function MarketingAdminPage() {
                 "relative p-1.5 rounded-xl border transition-all cursor-pointer",
                 isNotifOpen
                   ? "bg-amber-100 dark:bg-amber-950/60 text-amber-800 border-amber-300"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-750"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
               )}
               title="Notifikasi & Rekomendasi Optimasi Adspert"
             >
@@ -202,14 +187,13 @@ export default function MarketingAdminPage() {
               )}
             </button>
 
-            {/* Popover Notifikasi Dropdown Saat Lonceng Diklik */}
             {isNotifOpen && (
               <div className="absolute right-0 top-10 z-50 w-80 sm:w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-4 animate-in fade-in duration-150">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-500" />
                     <span className="font-extrabold text-xs text-slate-900 dark:text-white">
-                      Notifikasi Adspert &amp; Rencana ({pendingApprovalCount} Pending)
+                      Notifikasi Adspert ({pendingApprovalCount} Pending)
                     </span>
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                       5 Pilar: {winningOverallScore}%
@@ -227,14 +211,14 @@ export default function MarketingAdminPage() {
                 <div className="mt-2.5 space-y-2 max-h-72 overflow-y-auto pr-1">
                   {auditReport.detectedIssues.length === 0 ? (
                     <p className="text-xs text-slate-500 p-2 text-center">
-                      Semua sistem &amp; kampanye optimal.
+                      Semua kampanye berjalan optimal.
                     </p>
                   ) : (
                     auditReport.detectedIssues.map((issue, idx) => (
                       <div
                         key={idx}
                         className={cn(
-                          "p-2.5 rounded-xl border text-xs space-y-1 bg-slate-50 dark:bg-slate-800/60",
+                          "p-2.5 rounded-xl border text-xs space-y-1 bg-slate-50 dark:bg-slate-850",
                           issue.severity === "critical"
                             ? "border-rose-200 dark:border-rose-900/60"
                             : "border-amber-200 dark:border-amber-900/60"
@@ -261,9 +245,6 @@ export default function MarketingAdminPage() {
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
                           {issue.diagnosis}
                         </p>
-                        <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-                          Solusi: {issue.actionableFix}
-                        </p>
                       </div>
                     ))
                   )}
@@ -272,7 +253,7 @@ export default function MarketingAdminPage() {
             )}
           </div>
 
-          {/* Monefyi Adspert: ICON SAJA */}
+          {/* Monefyi Adspert Bot Icon */}
           <button
             type="button"
             onClick={() => setIsAdspertOpen(!isAdspertOpen)}
@@ -280,30 +261,19 @@ export default function MarketingAdminPage() {
               "relative p-1.5 rounded-xl border transition-all cursor-pointer shadow-xs",
               isAdspertOpen
                 ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-900/20"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
             )}
-            title="Buka / Tutup Monefyi Adspert (AI Expert)"
+            title="Buka / Tutup Monefyi Adspert"
           >
             <Bot className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-pulse border-2 border-white dark:border-slate-900" />
           </button>
-
-          {/* Konfigurasi & Rules AI (Terlihat Jelas di Mobile & Desktop) */}
-          <button
-            type="button"
-            onClick={() => setIsConfigOpen(true)}
-            className="px-2.5 py-1 sm:px-3 sm:py-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-black rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95"
-            title="Konfigurasi Meta API, Multi-LLM & Notifikasi (Super Admin)"
-          >
-            <Cpu className="w-3.5 h-3.5 text-indigo-200" />
-            <span className="text-[11px] font-black">AI Rules</span>
-          </button>
         </div>
       </div>
 
-      {/* Banner Informasi: Live Meta vs Sandbox Simulator */}
+      {/* Banner Informasi Token jika belum live */}
       {!isLiveMeta && (
-        <div className="bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+        <div className="bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2.5">
             <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
@@ -311,125 +281,93 @@ export default function MarketingAdminPage() {
                 Token Meta Ads belum terhubung.
               </span>
               <p className="text-slate-500 dark:text-slate-400 mt-0.5">
-                Masukkan Access Token Meta di menu Rules &amp; AI Key agar seluruh metrik kampanye riil dan eksekusi anggaran terhubung langsung ke akun Meta Ads Anda.
+                Masukkan Meta Access Token di menu AI Rules agar seluruh data riil langsung sinkron.
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setIsConfigOpen(true)}
-            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shrink-0 cursor-pointer shadow-xs"
+            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shrink-0 cursor-pointer text-xs"
           >
-            Hubungkan Akun Meta Ads Anda
+            Hubungkan Meta Ads
           </button>
         </div>
       )}
 
-      {/* Pesan Error Sinkronisasi Meta Jika Ada */}
-      {metaSyncError && (
-        <div className="p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/80 rounded-2xl text-xs text-rose-800 dark:text-rose-300 flex items-start justify-between gap-3">
-          <div className="flex items-start gap-2">
-            <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold">Gagal Menyinkronkan Data dari Meta Ads Manager:</p>
-              <p className="mt-0.5 opacity-90">{metaSyncError}</p>
+      {/* 1. HANYA SATU TAB: LANGSUNG MENAMPILKAN TABEL META ADS COMMANDER */}
+      <MetaAdsCommanderTable
+        onOpenWinningEngine={() => setShowWinningEngineModal(true)}
+        onOpenInsights={() => setShowInsightsModal(true)}
+        onOpenCreative={() => setShowCreativeModal(true)}
+        onOpenConfig={() => setIsConfigOpen(true)}
+      />
+
+      {/* MODAL 1: WINNING ENGINE (5 PILAR) */}
+      {showWinningEngineModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Winning Engine (5 Pilar Scale Model)</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowWinningEngineModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <WinningEngineCommandCenter onOpenConfigModal={() => setIsConfigOpen(true)} />
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: ADS INSIGHT & DEMOGRAFI */}
+      {showInsightsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Ads Insight &amp; Demografi (Lokasi, Umur &amp; Gender)</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowInsightsModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <MetaAdsDeepInsights />
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: PABRIK IKLAN CREATIVE */}
+      {showCreativeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Pabrik Iklan Creative (Hook, Copywriting &amp; Video Audit)</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCreativeModal(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <WinningAdCreator />
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+              <VideoAdAuditor />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsConfigOpen(true)}
-            className="font-bold underline hover:opacity-80 shrink-0"
-          >
-            Perbarui Token
-          </button>
         </div>
       )}
-
-      {/* Main Tabs Navigation: Ramping & Maksimal 1 Baris */}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 border-b border-slate-200 dark:border-slate-800 scrollbar-none">
-        {[
-          {
-            id: "winning_engine" as const,
-            label: "Winning Engine (5 Pilar)",
-            icon: Zap,
-            badge: `${pendingApprovalCount} Rencana`,
-          },
-          {
-            id: "commander" as const,
-            label: "Tabel Ads Commander",
-            icon: BarChart3,
-            badge: `${campaigns.length}`,
-          },
-          {
-            id: "insights" as const,
-            label: "Insight & Demografi",
-            icon: Target,
-          },
-          {
-            id: "creative" as const,
-            label: "Pabrik Creative",
-            icon: Sparkles,
-          },
-          {
-            id: "video_audit" as const,
-            label: "Video Audit",
-            icon: Video,
-          },
-          {
-            id: "funnel_aov" as const,
-            label: "Funnel & AOV",
-            icon: ShoppingBag,
-          },
-        ].map((t) => {
-          const isActive = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border cursor-pointer",
-                isActive
-                  ? "bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-2xs"
-                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"
-              )}
-            >
-              <t.icon
-                className={cn(
-                  "w-3.5 h-3.5",
-                  isActive
-                    ? "text-emerald-400 dark:text-white"
-                    : "text-slate-500 dark:text-slate-400"
-                )}
-              />
-              <span>{t.label}</span>
-              {t.badge && (
-                <span
-                  className={cn(
-                    "text-[10px] px-1.5 py-0.2 rounded-full font-extrabold",
-                    isActive
-                      ? "bg-white/20 text-white"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                  )}
-                >
-                  {t.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Konten Tab Aktif */}
-      <div className="w-full space-y-6">
-        {activeTab === "winning_engine" && (
-          <WinningEngineCommandCenter onOpenConfigModal={() => setIsConfigOpen(true)} />
-        )}
-        {activeTab === "commander" && <MetaAdsCommanderTable />}
-        {activeTab === "insights" && <MetaAdsDeepInsights />}
-        {activeTab === "creative" && <WinningAdCreator />}
-        {activeTab === "video_audit" && <VideoAdAuditor />}
-        {activeTab === "funnel_aov" && <FunnelAovPanel />}
-      </div>
 
       {/* Monefyi Adspert: POPUP CHAT MENIMPA KONTEN DI KANAN BAWAH */}
       {isAdspertOpen && (
@@ -439,20 +377,6 @@ export default function MarketingAdminPage() {
             onClose={() => setIsAdspertOpen(false)}
           />
         </div>
-      )}
-
-      {/* Floating Launcher Button Saat Chat Diminimalkan */}
-      {!isAdspertOpen && (
-        <button
-          type="button"
-          onClick={() => setIsAdspertOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl shadow-xl shadow-emerald-950/30 text-xs font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer border border-emerald-400/40 backdrop-blur-md"
-          title="Buka Chat Monefyi Adspert"
-        >
-          <Bot className="w-4 h-4" />
-          <span>Monefyi Adspert</span>
-          <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-        </button>
       )}
 
       {/* Config Modal */}

@@ -24,6 +24,8 @@
     "dev": "vite --config vite.app.config.js",
     "dev:landing": "npm --prefix monefyi-marketing-landing-page run dev",
     "dev:stay": "npm --prefix stay run dev -- --base /stay/",
+    "video:dev": "npm --prefix remotion run dev",
+    "video:render": "npm --prefix remotion run render",
     "preview": "vite preview --outDir dist",
     "refactor": "node scripts/refactor.cjs",
     "smoke": "node scripts/smoke.cjs",

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { getActiveMayarApiKey, getActiveMayarApiUrl } from "@/lib/services/mayarHealthService";
+import { isTestAdminLead } from "@/lib/config/admin";
 
 /**
  * Endpoint untuk Ringkasan Finansial Mayar:
@@ -11,15 +13,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const shouldVerifyPending = searchParams.get("verifyPending") === "true";
 
-    const mayarApiKey = (
-      process.env.MAYAR_API_KEY ||
-      process.env.MAYAR_API_KEY_SANDBOX ||
-      ""
-    ).trim();
-
-    const mayarApiUrl = (
-      process.env.MAYAR_API_URL || "https://api.mayar.id"
-    ).replace(/\/$/, "");
+    const mayarApiKey = await getActiveMayarApiKey();
+    const mayarApiUrl = await getActiveMayarApiUrl();
 
     let activeBalance = 0;
     let pendingBalance = 0;
@@ -62,7 +57,7 @@ export async function GET(req: NextRequest) {
         // Ambil semua orders untuk kalkulasi finansial
         const { data: rows } = await supabase
           .from("orders")
-          .select("id, status, grand_total, created_at, raw_payload")
+          .select("id, status, grand_total, created_at, customer_email, customer_name, raw_payload")
           .order("created_at", { ascending: false });
 
         if (rows) {
@@ -73,6 +68,14 @@ export async function GET(req: NextRequest) {
 
           for (const r of rows) {
             const raw = r.raw_payload || {};
+
+            // Exclude super admin / test leads
+            const email = r.customer_email || raw.customerEmail || raw.email || raw.customer?.email;
+            const name = r.customer_name || raw.customerName || raw.name || raw.customer?.name;
+            if (isTestAdminLead({ email, name, tags: raw.tags })) {
+              continue;
+            }
+
             const amt = Number(r.grand_total || raw.amount || 0);
             const isFree = amt === 0 || raw.planTier === "free" || r.status === "free_active";
             const isPaid = !isFree && (r.status === "paid" || raw.status === "won");
@@ -142,11 +145,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Jika live Mayar balance belum terhubung / 0, sediakan estimasi dari pesanan lunas
-    if (activeBalance === 0 && lifetimeRevenue > 0) {
-      activeBalance = lifetimeRevenue;
-      totalBalance = lifetimeRevenue + pendingBalance;
-    }
+    // CATATAN PENTING: Jangan menimpa activeBalance dengan lifetimeRevenue saat activeBalance === 0!
+    // Ketika user menarik saldo dari Mayar, activeBalance live Mayar memang menjadi 0 atau berkurang.
 
     return NextResponse.json({
       ok: true,

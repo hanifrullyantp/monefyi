@@ -49,13 +49,22 @@ async function fetchRealCampaignsForAccount(
     appSecret
   );
 
-  const [campRes, adsetRes] = await Promise.all([
+  // 3. Ambil daftar Ads riil (iklan & materi kreatif)
+  const adsUrl = buildGraphUrl(
+    `https://graph.facebook.com/v20.0/${actId}/ads?fields=id,name,campaign_id,adset_id,status,effective_status,creative{id,name,title,body,image_url,thumbnail_url}&limit=200`,
+    token,
+    appSecret
+  );
+
+  const [campRes, adsetRes, adsRes] = await Promise.all([
     fetch(campaignsUrl, { cache: "no-store" }),
     fetch(adsetsUrl, { cache: "no-store" }).catch(() => null),
+    fetch(adsUrl, { cache: "no-store" }).catch(() => null),
   ]);
 
   const campJson = await campRes.json().catch(() => ({}));
   const adsetJson = adsetRes ? await adsetRes.json().catch(() => ({})) : {};
+  const adsJson = adsRes ? await adsRes.json().catch(() => ({})) : {};
 
   if (!campRes.ok || campJson.error) {
     return {
@@ -67,6 +76,7 @@ async function fetchRealCampaignsForAccount(
 
   const rawCampaigns: any[] = Array.isArray(campJson.data) ? campJson.data : [];
   const rawAdsets: any[] = Array.isArray(adsetJson.data) ? adsetJson.data : [];
+  const rawAds: any[] = Array.isArray(adsJson.data) ? adsJson.data : [];
 
   // 3. Ambil Insights di level campaign dengan fallback preset tanggal jika preset tertentu ditolak versi Graph API
   let rawInsights: any[] = [];
@@ -112,6 +122,16 @@ async function fetchRealCampaignsForAccount(
     }
   }
 
+  // Kelompokkan ads per adset_id
+  const adsByAdsetId = new Map<string, any[]>();
+  for (const ad of rawAds) {
+    const asid = String(ad.adset_id || "");
+    if (!asid) continue;
+    const list = adsByAdsetId.get(asid) || [];
+    list.push(ad);
+    adsByAdsetId.set(asid, list);
+  }
+
   // Kelompokkan adsets per campaign_id untuk menjumlahkan budget ABO & menyimpan adsetId
   const adsetsByCampaignId = new Map<string, any[]>();
   for (const adset of rawAdsets) {
@@ -126,6 +146,51 @@ async function fetchRealCampaignsForAccount(
     const cid = String(item.id);
     const insights = insightsByCampaignId.get(cid) || item.insights?.data?.[0] || {};
     const campaignAdsets = adsetsByCampaignId.get(cid) || [];
+
+    // Map nested ad sets and their ads
+    const mappedAdsets = campaignAdsets.map((adset: any) => {
+      const asId = String(adset.id);
+      const childAds = (adsByAdsetId.get(asId) || []).map((ad: any) => ({
+        id: String(ad.id),
+        name: ad.name || `Ad #${ad.id}`,
+        adsetId: asId,
+        campaignId: cid,
+        status: ad.status || "ACTIVE",
+        effectiveStatus: ad.effective_status || ad.status,
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        purchases: 0,
+        results: 0,
+        cpa: 0,
+        roas: 0,
+        ctr: 0,
+        cpc: 0,
+        creativeThumbnail: ad.creative?.thumbnail_url || ad.creative?.image_url,
+        creativeTitle: ad.creative?.title || ad.creative?.name,
+        creativeBody: ad.creative?.body,
+      }));
+
+      return {
+        id: asId,
+        name: adset.name || `AdSet #${asId}`,
+        campaignId: cid,
+        status: adset.status || "ACTIVE",
+        effectiveStatus: adset.effective_status || adset.status,
+        dailyBudget: Number(adset.daily_budget || 0),
+        lifetimeBudget: Number(adset.lifetime_budget || 0),
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        purchases: 0,
+        results: 0,
+        cpa: 0,
+        roas: 0,
+        ctr: 0,
+        cpc: 0,
+        ads: childAds,
+      };
+    });
 
     const actions: MetaActionItem[] = Array.isArray(insights.actions) ? insights.actions : [];
     const actionValues: MetaActionItem[] = Array.isArray(insights.action_values)
@@ -201,21 +266,12 @@ async function fetchRealCampaignsForAccount(
       )
     );
 
-    // Total results mengikuti tujuan kampanye (Purchases, Leads, atau ThruPlay/Link Clicks jika kampanye engagement/video)
     const thruplay = Array.isArray(insights.video_thruplay_watched_actions)
       ? Number(insights.video_thruplay_watched_actions[0]?.value || 0)
       : getAction("video_view");
 
-    const results =
-      purchases > 0
-        ? purchases
-        : leads > 0
-        ? leads
-        : landingPageViews > 0
-        ? landingPageViews
-        : linkClicks > 0
-        ? linkClicks
-        : thruplay;
+    // Di Meta, Hasil (Results) adalah PURCHASES (Pembelian) riil, bukan Landing Page Views
+    const results = purchases;
 
     const costPerResult = results > 0 ? Math.round(spend / results) : 0;
     const costPerPurchase = purchases > 0 ? Math.round(spend / purchases) : 0;
@@ -344,6 +400,7 @@ async function fetchRealCampaignsForAccount(
       cpcAll,
       videoThruPlays15s: thruplay,
       isLiveMeta: true,
+      adsets: mappedAdsets,
     };
   });
 

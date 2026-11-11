@@ -64,6 +64,47 @@ export type CampaignStatus = 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
 
 export type AdHealthStatus = 'winning' | 'scale_ready' | 'learning' | 'review' | 'bleeding' | 'fatigued';
 
+export interface MetaAd {
+  id: string;
+  name: string;
+  adsetId: string;
+  campaignId: string;
+  status: string;
+  effectiveStatus?: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  purchases: number;
+  results: number;
+  cpa: number;
+  roas: number;
+  ctr: number;
+  cpc: number;
+  creativeThumbnail?: string;
+  creativeTitle?: string;
+  creativeBody?: string;
+}
+
+export interface MetaAdSet {
+  id: string;
+  name: string;
+  campaignId: string;
+  status: string;
+  effectiveStatus?: string;
+  dailyBudget: number;
+  lifetimeBudget: number;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  purchases: number;
+  results: number;
+  cpa: number;
+  roas: number;
+  ctr: number;
+  cpc: number;
+  ads?: MetaAd[];
+}
+
 export interface MetaCampaign {
   id: string;
   name: string;
@@ -87,6 +128,7 @@ export interface MetaCampaign {
   targetAudience: string;
   creativeHook: string;
   lastUpdated: string;
+  adsets?: MetaAdSet[];
 
   // 26 Metrik Standar Agency & Scale Model
   results?: number;

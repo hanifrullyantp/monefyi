@@ -2,12 +2,19 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Edit3, PanelLeftOpen, LayoutDashboard, Users, Megaphone, MoreHorizontal, Sun, Moon, Cpu } from "lucide-react";
+import {
+  Menu,
+  LayoutDashboard,
+  Users,
+  Megaphone,
+  BarChart3,
+  Settings,
+} from "lucide-react";
 import { Sidebar } from "@/components/admin/Sidebar";
+import { AdminTopBar } from "@/components/admin/AdminTopBar";
 import { AdminAuthGuard } from "@/components/admin/AdminAuthGuard";
 import { ContentHydrator } from "@/components/landing/ContentHydrator";
 import { AuthHydrator } from "@/components/landing/AuthHydrator";
-import { INLINE_EDIT_LANDING_PATH } from "@/lib/hooks/useLandingAdmin";
 import { useUIStore } from "@/lib/store/uiStore";
 import { AdminPwaInstallPrompt } from "@/components/admin/AdminPwaInstallPrompt";
 import { MayarStatusBanner } from "@/components/admin/MayarStatusBanner";
@@ -20,9 +27,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const isAdminSidebarOpen = useUIStore((s) => s.isAdminSidebarOpen);
-  const setAdminSidebarOpen = useUIStore((s) => s.setAdminSidebarOpen);
   const adminTheme = useUIStore((s) => s.adminTheme);
-  const toggleAdminTheme = useUIStore((s) => s.toggleAdminTheme);
 
   useEffect(() => {
     setMounted(true);
@@ -59,56 +64,35 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
     <AdminAuthGuard>
       <AuthHydrator />
       <ContentHydrator />
-      <div className={cn("min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col relative transition-colors duration-200", adminTheme === "dark" && "dark")}>
+      <div
+        className={cn(
+          "min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col relative transition-colors duration-200",
+          adminTheme === "dark" && "dark"
+        )}
+      >
         {/* PWA Install Prompt Banner */}
         <AdminPwaInstallPrompt />
         {/* Mayar Payment Gateway Status & Alert Banner */}
         <MayarStatusBanner />
 
         <div className="flex-1 flex relative">
-          {/* Desktop Sidebar (Collapsible) */}
-          <div
-            className={cn(
-              "hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 transition-transform duration-300 ease-in-out",
-              isAdminSidebarOpen ? "translate-x-0" : "-translate-x-full pointer-events-none"
-            )}
-          >
+          {/* Desktop Sidebar (Selalu ada: w-64 jika terbuka, w-16 icon-only jika ciut) */}
+          <div className="hidden lg:flex flex-col fixed inset-y-0 left-0 z-30 transition-all duration-300 ease-in-out">
             <Sidebar />
           </div>
-
-          {/* Floating Toggle Button when Sidebar is Hidden on Desktop */}
-          {!isAdminSidebarOpen && (
-            <div className="hidden lg:flex fixed top-4 left-4 z-40 items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setAdminSidebarOpen(true)}
-                className="flex items-center gap-2 px-3.5 py-2 bg-slate-900/90 dark:bg-slate-800/90 hover:bg-slate-900 text-white rounded-xl shadow-xl text-xs font-bold transition-all active:scale-95 border border-slate-700/80 backdrop-blur-md cursor-pointer group"
-                title="Tampilkan Menu Sidebar"
-              >
-                <PanelLeftOpen className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-                <span>Tampilkan Menu</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleAdminTheme}
-                className="p-2 bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:text-emerald-500 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 backdrop-blur-md transition-all cursor-pointer"
-                title={adminTheme === "dark" ? "Mode Terang" : "Mode Gelap"}
-              >
-                {adminTheme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-              </button>
-            </div>
-          )}
 
           {/* Mobile Drawer */}
           {mobileSidebarOpen && (
             <>
               <div
-                className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden"
                 onClick={() => setMobileSidebarOpen(false)}
               />
               <div className="fixed inset-y-0 left-0 z-50 lg:hidden">
-                <Sidebar onClose={() => setMobileSidebarOpen(false)} />
+                <Sidebar
+                  onClose={() => setMobileSidebarOpen(false)}
+                  isMobileDrawer={true}
+                />
               </div>
             </>
           )}
@@ -117,61 +101,19 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
           <div
             className={cn(
               "flex-1 transition-all duration-300 ease-in-out min-w-0 pb-24 lg:pb-8",
-              isAdminSidebarOpen ? "lg:ml-64" : "lg:ml-0"
+              isAdminSidebarOpen ? "lg:ml-64" : "lg:ml-16"
             )}
           >
-            {/* Top Bar Mobile */}
-            <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3.5 py-2.5 flex items-center justify-between gap-2 lg:hidden">
-              <div className="flex items-center gap-2 min-w-0">
-                <button
-                  type="button"
-                  onClick={() => setMobileSidebarOpen(true)}
-                  className="p-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex-shrink-0"
-                  aria-label="Buka menu"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
-                <div className="truncate">
-                  <p className="font-extrabold text-slate-900 dark:text-white text-xs leading-tight truncate">Monefyi Admin</p>
-                  <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">CRM Active</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                {/* Tombol Super Admin: Pengaturan AI Cepat di Mobile */}
-                <button
-                  type="button"
-                  onClick={() => setIsGlobalAiConfigOpen(true)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-[11px] font-black shadow-xs active:scale-95 transition-all cursor-pointer"
-                  title="Buka Pengaturan AI & Multi-LLM"
-                >
-                  <Cpu className="w-3.5 h-3.5 text-indigo-200 animate-pulse" />
-                  <span>AI Config</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={toggleAdminTheme}
-                  className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-                  title={adminTheme === "dark" ? "Mode Terang" : "Mode Gelap"}
-                >
-                  {adminTheme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
-                </button>
-                <Link
-                  href={INLINE_EDIT_LANDING_PATH}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-[11px]">Edit</span>
-                </Link>
-              </div>
-            </div>
+            {/* Top Bar Terpadu: Nama Halaman, Status Koneksi API (Mayar, Meta, WA, AI), Test Koneksi */}
+            <AdminTopBar
+              onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+            />
 
             <main className="min-h-screen">{children}</main>
           </div>
         </div>
 
-        {/* Mobile Bottom Navigation Bar (5 Tab Native App Style Termasuk Super AI) */}
+        {/* Mobile Bottom Navigation Bar (5 Tab Utama Sesuai Urutan Baru) */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-800 px-1.5 py-1 shadow-lg safe-bottom">
           <div className="grid grid-cols-5 gap-1 text-center">
             <Link
@@ -188,6 +130,19 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
             </Link>
 
             <Link
+              href="/admin/marketing"
+              className={cn(
+                "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold transition-all",
+                pathname.startsWith("/admin/marketing")
+                  ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+              )}
+            >
+              <Megaphone className="w-4 h-4 mb-0.5" />
+              <span>Ads</span>
+            </Link>
+
+            <Link
               href="/admin/crm"
               className={cn(
                 "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold transition-all relative",
@@ -201,36 +156,30 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
             </Link>
 
             <Link
-              href="/admin/marketing"
+              href="/admin/analytics"
               className={cn(
                 "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold transition-all",
-                pathname.startsWith("/admin/marketing")
+                pathname.startsWith("/admin/analytics")
                   ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400"
                   : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
               )}
             >
-              <Megaphone className="w-4 h-4 mb-0.5" />
-              <span>Ads AI</span>
+              <BarChart3 className="w-4 h-4 mb-0.5" />
+              <span>Analytic</span>
             </Link>
 
-            {/* Tab Super Admin: Pengaturan AI & Multi-LLM */}
-            <button
-              type="button"
-              onClick={() => setIsGlobalAiConfigOpen(true)}
-              className="flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-all cursor-pointer group"
+            <Link
+              href="/admin/settings"
+              className={cn(
+                "flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold transition-all",
+                pathname.startsWith("/admin/settings")
+                  ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+              )}
             >
-              <Cpu className="w-4 h-4 mb-0.5 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
-              <span>Super AI</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              className="flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl text-[9px] font-extrabold text-slate-500 hover:text-slate-900 dark:text-slate-400 transition-all cursor-pointer"
-            >
-              <MoreHorizontal className="w-4 h-4 mb-0.5" />
-              <span>Menu</span>
-            </button>
+              <Settings className="w-4 h-4 mb-0.5" />
+              <span>Setup</span>
+            </Link>
           </div>
         </div>
 
