@@ -1035,10 +1035,10 @@ export default function AdminDashboard() {
 
       {showPayoutModal && (
         <MayarPayoutGuideModal
-          isOpen={showPayoutModal}
           onClose={() => setShowPayoutModal(false)}
           activeBalance={mayarStats.activeBalance}
           pendingBalance={mayarStats.pendingBalance}
+          onRefresh={fetchMayarStats}
         />
       )}
     </div>
