@@ -91,7 +91,7 @@ export const Scene3Tawaran: React.FC = () => {
         </div>
 
         {/* Dilemma Cards */}
-        <div className="w-full bg-[#0E1B17]/95 border-2 border-white/15 rounded-3xl p-6 sm:p-7 backdrop-blur-2xl shadow-2xl space-y-4">
+        <div className="w-full bg-[#0E1B17] border-2 border-white/15 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-4">
           <div className="grid grid-cols-2 gap-4">
             {/* Terlalu Pelit */}
             <div
@@ -133,7 +133,7 @@ export const Scene3Tawaran: React.FC = () => {
                 )}) rotate(${interpolate(stampSpring, [0, 1], [-10, -2])}deg)`,
                 opacity: interpolate(stampSpring, [0, 1], [0, 1]),
               }}
-              className="border-4 border-red-500 bg-red-600/30 backdrop-blur-md p-5 rounded-2xl text-center shadow-2xl shadow-red-500/50"
+              className="border-4 border-red-500 bg-red-950/80 p-5 rounded-2xl text-center shadow-2xl shadow-red-500/50"
             >
               <div className="text-xs font-black text-red-300 tracking-widest uppercase">
                 HASIL AKHIRNYA:
@@ -166,7 +166,7 @@ export const Scene3Tawaran: React.FC = () => {
               </div>
 
               <div className="bg-red-500/30 border-2 border-red-500 p-3.5 rounded-2xl text-center shadow-lg shadow-red-500/40">
-                <XCircle className="w-6 h-6 text-red-400 mx-auto mb-1.5 animate-pulse" />
+                <XCircle className="w-6 h-6 text-red-400 mx-auto mb-1.5" />
                 <div className="text-sm sm:text-base font-black text-red-400">UNTUNG = 0</div>
                 <div className="text-xs text-red-200">Tidak ada sisa margin</div>
               </div>

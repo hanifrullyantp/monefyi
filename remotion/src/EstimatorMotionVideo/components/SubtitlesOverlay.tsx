@@ -1,10 +1,10 @@
 import React from "react";
-import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { SUBTITLES } from "../../data/subtitles";
 
 export const SubtitlesOverlay: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps, width, height } = useVideoConfig();
+  const { width, height } = useVideoConfig();
   const isReels = height > width;
 
   // Find the active subtitle
@@ -16,21 +16,10 @@ export const SubtitlesOverlay: React.FC = () => {
     return null;
   }
 
-  // Calculate cue entrance animation
-  const cueProgress = spring({
-    frame: frame - activeCue.startFrame,
-    fps,
-    config: { damping: 14, stiffness: 180 },
-  });
-
-  const translateY = interpolate(cueProgress, [0, 1], [15, 0]);
-  const opacity = interpolate(cueProgress, [0, 0.4, 1], [0, 1, 1]);
-  const scale = interpolate(cueProgress, [0, 1], [0.94, 1]);
-
   // Words inside active cue
   const words = activeCue.text.trim().split(/\s+/);
-  const totalDuration = activeCue.endFrame - activeCue.startFrame;
-  const timePerWord = Math.max(1, totalDuration / words.length);
+  const totalDuration = Math.max(1, activeCue.endFrame - activeCue.startFrame);
+  const timePerWord = totalDuration / words.length;
   const currentWordIndex = Math.min(
     words.length - 1,
     Math.floor((frame - activeCue.startFrame) / timePerWord)
@@ -42,26 +31,20 @@ export const SubtitlesOverlay: React.FC = () => {
         isReels ? "bottom-20" : "bottom-12"
       }`}
     >
-      <div
-        style={{
-          transform: `translateY(${translateY}px) scale(${scale})`,
-          opacity,
-        }}
-        className="max-w-[960px] bg-black/75 backdrop-blur-xl border border-white/20 px-6 py-4 rounded-3xl shadow-2xl flex flex-wrap justify-center items-center gap-x-2.5 gap-y-1.5 text-center"
-      >
+      <div className="max-w-[960px] bg-[#050B09]/90 border border-white/20 px-6 py-4 rounded-3xl shadow-2xl flex flex-wrap justify-center items-center gap-x-3 gap-y-1.5 text-center">
         {words.map((word, idx) => {
           const isCurrent = idx === currentWordIndex;
           const isPassed = idx < currentWordIndex;
 
-          let colorClass = "text-white/60";
-          let scaleStyle = "scale-100";
-          let glowStyle = {};
+          let colorClass = "text-white/60 font-semibold";
+          let scaleTransform = "scale(1)";
+          let glowStyle: React.CSSProperties = {};
 
           if (isCurrent) {
             colorClass = "text-emerald-400 font-black";
-            scaleStyle = "scale-110";
+            scaleTransform = "scale(1.08)";
             glowStyle = {
-              textShadow: "0 0 18px rgba(52, 211, 153, 0.9)",
+              textShadow: "0 0 16px rgba(52, 211, 153, 0.8)",
             };
           } else if (isPassed) {
             colorClass = "text-white font-bold";
@@ -70,10 +53,13 @@ export const SubtitlesOverlay: React.FC = () => {
           return (
             <span
               key={`${activeCue.id}-${idx}`}
-              style={glowStyle}
-              className={`tracking-tight transition-all duration-150 inline-block transform ${
+              style={{
+                ...glowStyle,
+                transform: scaleTransform,
+              }}
+              className={`tracking-tight inline-block ${
                 isReels ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"
-              } ${colorClass} ${scaleStyle}`}
+              } ${colorClass}`}
             >
               {word}
             </span>

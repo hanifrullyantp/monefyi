@@ -119,19 +119,38 @@ Support 3 responsive formats in `remotion/src/Root.tsx`:
 
 ---
 
-## 6. Commands Quick Reference
+## 6. Anti-Flicker & Render Stability Rules (Crucial)
+
+* **Never use CSS Transitions or Keyframe Animations:** Do not use `transition-*`, `animate-pulse`, `animate-bounce`, `animate-ping`, or `animate-spin` in Remotion components. In headless Chromium rendering, wall-clock CSS keyframes desynchronize across frames, causing severe flickering/strobing. Always drive animations using Remotion's `useCurrentFrame()`, `spring()`, and `interpolate()`.
+* **Add Global Reset in `index.css`:**
+  ```css
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  ```
+* **Bridge Subtitle Cues:** When parsing SRT, if consecutive cues have a gap $\le$ 15 frames (0.5s), extend `current.endFrame = next.startFrame`. This prevents the subtitle container from popping off and on for 1-3 frames. Keep the container steady and highlight words progressively.
+* **Avoid Heavy CSS Blurs & `backdrop-blur`:** Replace `backdrop-blur-*` and large `blur-[140px]` elements with solid high-opacity dark backgrounds (`bg-[#0B1512]/95`) or pure CSS `radial-gradient()`. Headless Chromium frequently drops compositor buffers on heavy filters.
+* **Deterministic Render Concurrency:** Always pass `--concurrency=1` to guarantee 100% sequential, glitch-free frame rendering:
+  ```bash
+  npx remotion render src/index.ts <CompositionName> out/<File>.mp4 --concurrency=1
+  ```
+
+---
+
+## 7. Commands Quick Reference
 
 ```bash
 # Start Remotion Studio preview
 cd remotion && npm run dev
 
-# Render Reels (9:16)
-npx remotion render EstimatorMotionReels out/estimator-reels.mp4
+# Render Reels (9:16) - Flicker-Free
+npx remotion render src/index.ts EstimatorMotionReels out/estimator-reels.mp4 --concurrency=1
 
-# Render Square (1:1)
-npx remotion render EstimatorMotionSquare out/estimator-square.mp4
+# Render Square (1:1) - Flicker-Free
+npx remotion render src/index.ts EstimatorMotionSquare out/estimator-square.mp4 --concurrency=1
 
-# Render Landscape (16:9)
-npx remotion render EstimatorMotionLandscape out/estimator-landscape.mp4
+# Render Landscape (16:9) - Flicker-Free
+npx remotion render src/index.ts EstimatorMotionLandscape out/estimator-landscape.mp4 --concurrency=1
 ```
 

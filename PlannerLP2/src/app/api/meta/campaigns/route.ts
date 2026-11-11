@@ -78,8 +78,72 @@ async function fetchRealCampaignsForAccount(
   const rawAdsets: any[] = Array.isArray(adsetJson.data) ? adsetJson.data : [];
   const rawAds: any[] = Array.isArray(adsJson.data) ? adsJson.data : [];
 
-  // 3. Ambil Insights di level campaign dengan fallback preset tanggal jika preset tertentu ditolak versi Graph API
+  // Helper untuk mengekstrak metrik dari objek insights Meta
+  const extractMetricsFromInsight = (ins: any) => {
+    if (!ins) return null;
+    const actions: MetaActionItem[] = Array.isArray(ins.actions) ? ins.actions : [];
+    const actionValues: MetaActionItem[] = Array.isArray(ins.action_values) ? ins.action_values : [];
+
+    const getAction = (...types: string[]): number => {
+      for (const t of types) {
+        const found = actions.find((a) => a.action_type === t);
+        if (found && Number(found.value) > 0) return Number(found.value);
+      }
+      return 0;
+    };
+
+    const getActionValue = (...types: string[]): number => {
+      for (const t of types) {
+        const found = actionValues.find((a) => a.action_type === t);
+        if (found && Number(found.value) > 0) return Number(found.value);
+      }
+      return 0;
+    };
+
+    const spend = Math.round(Number(ins.spend || 0));
+    const impressions = Number(ins.impressions || 0);
+    const clicks = Number(ins.clicks || 0);
+    const reach = Number(ins.reach || 0);
+    const purchases = getAction(
+      "omni_purchase",
+      "purchase",
+      "offsite_conversion.fb_pixel_purchase",
+      "onsite_conversion.purchase"
+    );
+    const results = purchases;
+    const purchasesConversionValue = Math.round(
+      getActionValue("omni_purchase", "purchase", "offsite_conversion.fb_pixel_purchase")
+    );
+    const cpa = results > 0 ? Math.round(spend / results) : 0;
+    const roas =
+      spend > 0 && purchasesConversionValue > 0
+        ? Number((purchasesConversionValue / spend).toFixed(2))
+        : 0;
+    const ctr = Number(
+      ins.ctr || (impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : 0)
+    );
+    const cpc = Number(ins.cpc || (clicks > 0 ? Math.round(spend / clicks) : 0));
+
+    return {
+      spend,
+      impressions,
+      clicks,
+      reach,
+      purchases,
+      results,
+      purchasesConversionValue,
+      cpa,
+      roas,
+      ctr,
+      cpc,
+    };
+  };
+
+  // 3. Ambil Insights di level campaign, adset, dan ad dengan fallback preset tanggal
   let rawInsights: any[] = [];
+  let rawAdsetInsights: any[] = [];
+  let rawAdInsights: any[] = [];
+
   for (const preset of uniquePresets) {
     try {
       const insightsUrl = buildGraphUrl(
@@ -93,6 +157,40 @@ async function fetchRealCampaignsForAccount(
       const insJson = await insRes.json().catch(() => ({}));
       if (insRes.ok && Array.isArray(insJson.data)) {
         rawInsights = insJson.data;
+
+        // Ambil juga insights level adset dan ad secara paralel untuk mengisi angka riil pada child ads
+        const [adsetInsRes, adInsRes] = await Promise.all([
+          fetch(
+            buildGraphUrl(
+              `https://graph.facebook.com/v20.0/${actId}/insights?level=adset&date_preset=${encodeURIComponent(
+                preset
+              )}&fields=adset_id,adset_name,spend,impressions,reach,clicks,cpc,cpm,ctr,actions,action_values&limit=150`,
+              token,
+              appSecret
+            ),
+            { cache: "no-store" }
+          ).catch(() => null),
+          fetch(
+            buildGraphUrl(
+              `https://graph.facebook.com/v20.0/${actId}/insights?level=ad&date_preset=${encodeURIComponent(
+                preset
+              )}&fields=ad_id,ad_name,spend,impressions,reach,clicks,cpc,cpm,ctr,actions,action_values&limit=200`,
+              token,
+              appSecret
+            ),
+            { cache: "no-store" }
+          ).catch(() => null),
+        ]);
+
+        if (adsetInsRes) {
+          const adsetJson = await adsetInsRes.json().catch(() => ({}));
+          if (Array.isArray(adsetJson?.data)) rawAdsetInsights = adsetJson.data;
+        }
+        if (adInsRes) {
+          const adJson = await adInsRes.json().catch(() => ({}));
+          if (Array.isArray(adJson?.data)) rawAdInsights = adJson.data;
+        }
+
         break;
       }
     } catch {
@@ -100,11 +198,25 @@ async function fetchRealCampaignsForAccount(
     }
   }
 
-  // Petakan insights berdasarkan campaign_id
+  // Petakan insights berdasarkan campaign_id, adset_id, dan ad_id
   const insightsByCampaignId = new Map<string, any>();
   for (const ins of rawInsights) {
     if (ins.campaign_id) {
       insightsByCampaignId.set(String(ins.campaign_id), ins);
+    }
+  }
+
+  const insightsByAdsetId = new Map<string, any>();
+  for (const ins of rawAdsetInsights) {
+    if (ins.adset_id) {
+      insightsByAdsetId.set(String(ins.adset_id), ins);
+    }
+  }
+
+  const insightsByAdId = new Map<string, any>();
+  for (const ins of rawAdInsights) {
+    if (ins.ad_id) {
+      insightsByAdId.set(String(ins.ad_id), ins);
     }
   }
 
@@ -147,29 +259,49 @@ async function fetchRealCampaignsForAccount(
     const insights = insightsByCampaignId.get(cid) || item.insights?.data?.[0] || {};
     const campaignAdsets = adsetsByCampaignId.get(cid) || [];
 
-    // Map nested ad sets and their ads
+    // Map nested ad sets and their ads dengan metrik riil
     const mappedAdsets = campaignAdsets.map((adset: any) => {
       const asId = String(adset.id);
-      const childAds = (adsByAdsetId.get(asId) || []).map((ad: any) => ({
-        id: String(ad.id),
-        name: ad.name || `Ad #${ad.id}`,
-        adsetId: asId,
-        campaignId: cid,
-        status: ad.status || "ACTIVE",
-        effectiveStatus: ad.effective_status || ad.status,
-        spend: 0,
-        impressions: 0,
-        clicks: 0,
-        purchases: 0,
-        results: 0,
-        cpa: 0,
-        roas: 0,
-        ctr: 0,
-        cpc: 0,
-        creativeThumbnail: ad.creative?.thumbnail_url || ad.creative?.image_url,
-        creativeTitle: ad.creative?.title || ad.creative?.name,
-        creativeBody: ad.creative?.body,
-      }));
+      const adsetInsight = insightsByAdsetId.get(asId);
+      const parsedAdset = extractMetricsFromInsight(adsetInsight);
+
+      const childAds = (adsByAdsetId.get(asId) || []).map((ad: any) => {
+        const adId = String(ad.id);
+        const adInsight = insightsByAdId.get(adId);
+        const parsedAd = extractMetricsFromInsight(adInsight);
+
+        return {
+          id: adId,
+          name: ad.name || `Ad #${adId}`,
+          adsetId: asId,
+          campaignId: cid,
+          status: ad.status || "ACTIVE",
+          effectiveStatus: ad.effective_status || ad.status,
+          spend: parsedAd?.spend || 0,
+          impressions: parsedAd?.impressions || 0,
+          clicks: parsedAd?.clicks || 0,
+          purchases: parsedAd?.purchases || 0,
+          results: parsedAd?.results || 0,
+          cpa: parsedAd?.cpa || 0,
+          roas: parsedAd?.roas || 0,
+          ctr: parsedAd?.ctr || 0,
+          cpc: parsedAd?.cpc || 0,
+          creativeThumbnail: ad.creative?.thumbnail_url || ad.creative?.image_url,
+          creativeTitle: ad.creative?.title || ad.creative?.name,
+          creativeBody: ad.creative?.body,
+        };
+      });
+
+      // Hitung agregasi dari childAds jika parsedAdset belum ada di preset
+      const childSpend = childAds.reduce((acc: number, a: any) => acc + (a.spend || 0), 0);
+      const childPurchases = childAds.reduce((acc: number, a: any) => acc + (a.purchases || 0), 0);
+      const childClicks = childAds.reduce((acc: number, a: any) => acc + (a.clicks || 0), 0);
+      const childImpressions = childAds.reduce((acc: number, a: any) => acc + (a.impressions || 0), 0);
+
+      const adsetSpend = parsedAdset?.spend ?? childSpend;
+      const adsetPurchases = parsedAdset?.purchases ?? childPurchases;
+      const adsetCpa =
+        parsedAdset?.cpa ?? (adsetPurchases > 0 ? Math.round(adsetSpend / adsetPurchases) : 0);
 
       return {
         id: asId,
@@ -179,15 +311,15 @@ async function fetchRealCampaignsForAccount(
         effectiveStatus: adset.effective_status || adset.status,
         dailyBudget: Number(adset.daily_budget || 0),
         lifetimeBudget: Number(adset.lifetime_budget || 0),
-        spend: 0,
-        impressions: 0,
-        clicks: 0,
-        purchases: 0,
-        results: 0,
-        cpa: 0,
-        roas: 0,
-        ctr: 0,
-        cpc: 0,
+        spend: adsetSpend,
+        impressions: parsedAdset?.impressions ?? childImpressions,
+        clicks: parsedAdset?.clicks ?? childClicks,
+        purchases: adsetPurchases,
+        results: parsedAdset?.results ?? adsetPurchases,
+        cpa: adsetCpa,
+        roas: parsedAdset?.roas || 0,
+        ctr: parsedAdset?.ctr || 0,
+        cpc: parsedAdset?.cpc || 0,
         ads: childAds,
       };
     });

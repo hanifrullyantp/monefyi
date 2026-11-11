@@ -309,8 +309,42 @@ export async function updateRemoteCampaignStatus(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'update_status',
+        targetType: 'campaign',
         campaignId,
         campaignName,
+        status: newStatus,
+        accessToken,
+        actor,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: Boolean(res.ok && data.ok), log: data.log, error: data.error };
+  } catch (err: any) {
+    return { ok: false, error: err?.message };
+  }
+}
+
+export async function updateRemoteAdStatus(
+  adId: string,
+  newStatus: 'ACTIVE' | 'PAUSED',
+  accessToken?: string,
+  adName?: string,
+  actor: string = 'human',
+  targetType: 'ad' | 'adset' | 'campaign' = 'ad',
+  campaignId?: string
+): Promise<{ ok: boolean; log?: any; error?: string }> {
+  if (!accessToken?.trim()) return { ok: false, error: 'Token Meta belum terpasang' };
+  try {
+    const res = await fetch('/api/meta/actions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'update_status',
+        targetType,
+        targetId: adId,
+        adId,
+        adName,
+        campaignId,
         status: newStatus,
         accessToken,
         actor,

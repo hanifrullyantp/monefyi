@@ -33,6 +33,7 @@ import {
   BarChart3,
   Settings,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -58,6 +59,7 @@ export function MetaAdsCommanderTable({
     apiConfig,
     selectAdAccount,
     toggleCampaignStatus,
+    toggleAdStatus,
     updateCampaignDailyBudget,
     autoKillBleedingCampaigns,
     autoScaleWinningCampaigns,
@@ -179,6 +181,24 @@ export function MetaAdsCommanderTable({
         : `Gagal menaikkan budget "${camp.name}".`
       );
     setTimeout(() => setActionNotice(null), 4000);
+  };
+
+  const [updatingAdId, setUpdatingAdId] = useState<string | null>(null);
+
+  const handleToggleAdStatus = async (adId: string, campaignId: string, currentStatus: string, adName?: string) => {
+    setUpdatingAdId(adId);
+    try {
+      const ok = await toggleAdStatus(adId, campaignId, "human");
+      const nextStatus = currentStatus === "ACTIVE" ? "PAUSED" : "ACTIVE";
+      setActionNotice(
+        ok
+          ? `Status iklan "${adName || adId}" berhasil diubah menjadi ${nextStatus} di Meta Ads.`
+          : `Gagal mengubah status iklan "${adName || adId}".`
+      );
+      setTimeout(() => setActionNotice(null), 4000);
+    } finally {
+      setUpdatingAdId(null);
+    }
   };
 
   const handleAutoKill = async () => {
@@ -540,32 +560,33 @@ export function MetaAdsCommanderTable({
         </div>
       </div>
 
-      {/* 9. TAMPILAN MOBILE: DATA BERBENTUK CARD BERBARIS KE BAWAH (SCROLL VERTICAL, BUKAN TABEL KESAMPING) */}
-      <div className="sm:hidden space-y-2.5">
+      {/* 9. TAMPILAN MOBILE: DATA BERBENTUK CARD BERBARIS KE BAWAH (SCROLL VERTICAL, MAKSIMAL 2-3 KOLOM) */}
+      <div className="sm:hidden space-y-3">
         {finalFilteredCampaigns.map((camp) => {
           const isExpanded = expandedCampaignIds.has(camp.id);
           const health = getHealthBadge(camp.healthStatus);
           const HealthIcon = health.Icon;
           const isOff = camp.status === "PAUSED";
+          const totalChildAds =
+            camp.adsets?.reduce((acc, as) => acc + (as.ads?.length || 0), 0) || 0;
 
           return (
             <div
               key={`mob_${camp.id}`}
               className={cn(
-                "p-3.5 rounded-2xl border transition-all bg-white dark:bg-slate-900 shadow-xs space-y-2.5",
+                "p-3.5 rounded-2xl border transition-all bg-white dark:bg-slate-900 shadow-xs space-y-3",
                 isOff
-                  ? "border-slate-200 dark:border-slate-800 opacity-70"
+                  ? "border-slate-200 dark:border-slate-800 opacity-75"
                   : "border-slate-200 dark:border-slate-800 hover:border-emerald-500/50"
               )}
             >
-              {/* Header Card: Nama & Delivery */}
+              {/* Header Card: Nama, Delivery, & Aksi Cepat */}
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  {/* 7. Nama Kampanye Bersih Tanpa ID */}
+                <div className="min-w-0 flex-1">
                   <h4 className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">
                     {camp.name}
                   </h4>
-                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <span
                       className={cn(
                         "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border",
@@ -595,40 +616,156 @@ export function MetaAdsCommanderTable({
                   </div>
                 </div>
 
-                {/* Switch Status Pause/Play */}
-                <button
-                  type="button"
-                  onClick={() => toggleCampaignStatus(camp.id)}
-                  className={cn(
-                    "p-1.5 rounded-lg border text-xs font-bold transition-all shrink-0",
-                    isOff
-                      ? "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
-                      : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800"
-                  )}
-                  title={isOff ? "Nyalakan Kampanye" : "Matikan Kampanye"}
-                >
-                  {isOff ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-                </button>
+                {/* Tombol Aksi: Scale & Play/Pause */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleQuickScaleRow(camp)}
+                    className="p-1.5 rounded-lg border text-[10px] font-black bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
+                    title={`Scale budget +${rules?.scaleBudgetPercentage || 20}%`}
+                  >
+                    +{rules?.scaleBudgetPercentage || 20}%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleCampaignStatus(camp.id)}
+                    className={cn(
+                      "p-1.5 rounded-lg border text-xs font-bold transition-all shrink-0",
+                      isOff
+                        ? "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+                        : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800"
+                    )}
+                    title={isOff ? "Nyalakan Kampanye" : "Matikan Kampanye"}
+                  >
+                    {isOff ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
               </div>
 
-              {/* Metrik Utama Mobile (2 Baris Ramping) */}
-              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl text-center text-xs">
+              {/* Grid Metrik Desktop ke Mobile (Maksimal 3 Kolom Baca ke Bawah) */}
+              {/* Blok 1: Anggaran, Biaya & ROAS */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Spent</span>
-                  <span className="font-black text-slate-900 dark:text-white">
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Budget</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 text-[11px]">
+                    Rp {Number(camp.dailyBudget || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Amount Spent</span>
+                  <span className="font-black text-slate-900 dark:text-white text-[11px]">
                     Rp {Number(camp.spend || 0).toLocaleString("id-ID")}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Purchases</span>
-                  <span className="font-black text-emerald-600 dark:text-emerald-400">
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">ROAS</span>
+                  <span className="font-black text-indigo-600 dark:text-indigo-400 text-[11px]">
+                    {camp.roas ? `${camp.roas}x` : "-"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Blok 2: Konversi Penjualan & Biaya Hasil */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Results (Purchases)</span>
+                  <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">
                     {camp.purchases || 0}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">ROAS</span>
-                  <span className="font-black text-slate-900 dark:text-white">
-                    {camp.roas ? `${camp.roas}x` : "-"}
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Conv. Value</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 text-[11px]">
+                    Rp {Number(camp.purchasesConversionValue || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Cost / Result</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 text-[11px]">
+                    Rp {Number(camp.costPerResult || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Blok 3: Jangkauan & Traffic Clicks */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Reach</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                    {Number(camp.reach || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Link Clicks</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                    {Number(camp.linkClicks || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">15s ThruPlays</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                    {Number(camp.videoThruPlays15s || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Blok 4: Efisiensi Biaya CPM, CTR & CPC Link */}
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">CPM</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300 text-[10px]">
+                    Rp {Number(camp.cpm || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">CTR (Link)</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300 text-[10px]">
+                    {camp.ctrLink ? `${camp.ctrLink}%` : "-"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">CPC (Link)</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300 text-[10px]">
+                    Rp {Number(camp.cpcLink || 0).toLocaleString("id-ID")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Blok 5: Funnel Konversi Scale Model (2 Kolom Ramping) */}
+              <div className="grid grid-cols-2 gap-2 bg-emerald-50/40 dark:bg-emerald-950/20 p-2.5 rounded-xl text-xs border border-emerald-100 dark:border-emerald-900/40">
+                <div>
+                  <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-bold block">
+                    LP Views (OCLP)
+                  </span>
+                  <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
+                    {Number(camp.landingPageViews || 0).toLocaleString("id-ID")}{" "}
+                    <span className="text-[9px] text-emerald-600 font-bold">({camp.oclpRate || 0}%)</span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-bold block">
+                    Adds to Cart
+                  </span>
+                  <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
+                    {camp.addsToCart || 0}{" "}
+                    <span className="text-[9px] text-emerald-600 font-bold">({camp.lpToAtcRate || 0}%)</span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-bold block">
+                    Checkouts
+                  </span>
+                  <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
+                    {camp.checkoutsInitiated || 0}{" "}
+                    <span className="text-[9px] text-emerald-600 font-bold">({camp.atcToIcRate || 0}%)</span>
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-bold block">
+                    Conv. Rate (IC-Buy)
+                  </span>
+                  <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-[11px]">
+                    {camp.icToPurchaseRate || 0}%
                   </span>
                 </div>
               </div>
@@ -637,52 +774,199 @@ export function MetaAdsCommanderTable({
               <button
                 type="button"
                 onClick={() => toggleExpand(camp.id)}
-                className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition-colors"
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition-colors cursor-pointer"
               >
                 <span className="flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-blue-500" />
-                  <span>Lihat Ad Sets &amp; Ads ({camp.adsets?.length || 0})</span>
+                  <span>
+                    Ad Sets ({camp.adsets?.length || 0}) &amp; Ads ({totalChildAds})
+                  </span>
                 </span>
                 <ChevronDown
-                  className={cn("w-3.5 h-3.5 transition-transform", isExpanded && "rotate-180")}
+                  className={cn("w-3.5 h-3.5 transition-transform", isExpanded && "rotate-180 text-emerald-500")}
                 />
               </button>
 
-              {/* Tampilan Drilldown Ad Sets & Ads Satu Per Satu di Mobile */}
+              {/* Tampilan Drilldown Ad Sets & Ads Lengkap dengan Metrik di Mobile */}
               {isExpanded && (
-                <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+                <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                   {camp.adsets && camp.adsets.length > 0 ? (
                     camp.adsets.map((adset) => (
                       <div
                         key={adset.id}
-                        className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-700/80 space-y-2"
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700/80 space-y-2.5"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
-                            AdSet: {adset.name}
-                          </span>
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                        {/* Header AdSet */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase block">AdSet</span>
+                            <span className="text-xs font-extrabold text-slate-900 dark:text-white truncate block">
+                              {adset.name}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0">
                             {adset.status}
                           </span>
                         </div>
 
-                        {/* Child Ads */}
-                        {adset.ads && adset.ads.length > 0 && (
-                          <div className="space-y-1.5 pl-2 border-l-2 border-blue-400">
-                            {adset.ads.map((ad) => (
-                              <div
-                                key={ad.id}
-                                className="flex items-center justify-between p-1.5 rounded-lg bg-white dark:bg-slate-900 text-xs"
-                              >
-                                <span className="font-semibold text-[11px] text-slate-800 dark:text-slate-200 truncate max-w-[180px]">
-                                  Ad: {ad.name}
-                                </span>
-                                <span className="text-[10px] text-emerald-600 font-bold">
-                                  {ad.status}
-                                </span>
-                              </div>
-                            ))}
+                        {/* Metrik AdSet (3 Kolom Baca ke Bawah) */}
+                        <div className="grid grid-cols-3 gap-1.5 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-center">
+                          <div>
+                            <span className="text-[8px] text-slate-400 font-bold uppercase block">Budget</span>
+                            <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200">
+                              Rp {Number(adset.dailyBudget || 0).toLocaleString("id-ID")}
+                            </span>
                           </div>
+                          <div>
+                            <span className="text-[8px] text-slate-400 font-bold uppercase block">Spent</span>
+                            <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200">
+                              Rp {Number(adset.spend || 0).toLocaleString("id-ID")}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[8px] text-slate-400 font-bold uppercase block">Purchases</span>
+                            <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                              {adset.purchases || 0}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Child Ads dengan Metrik Riil & Kontrol On/Off */}
+                        {adset.ads && adset.ads.length > 0 ? (
+                          <div className="space-y-2 pt-1 border-t border-slate-200 dark:border-slate-750">
+                            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                              Daftar Iklan ({adset.ads.length} Ads)
+                            </span>
+                            {adset.ads.map((ad) => {
+                              const isAdOff = ad.status === "PAUSED";
+                              const isThisAdUpdating = updatingAdId === ad.id;
+
+                              return (
+                                <div
+                                  key={ad.id}
+                                  className={cn(
+                                    "p-2.5 rounded-xl border bg-white dark:bg-slate-900 space-y-2 transition-all shadow-2xs",
+                                    isAdOff
+                                      ? "border-slate-200 dark:border-slate-800 opacity-70"
+                                      : "border-slate-200 dark:border-slate-750"
+                                  )}
+                                >
+                                  {/* Header Ad: Thumbnail, Nama & Switch Play/Pause */}
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      {ad.creativeThumbnail ? (
+                                        <img
+                                          src={ad.creativeThumbnail}
+                                          alt={ad.name}
+                                          className="w-7 h-7 rounded-lg object-cover border border-slate-200 shrink-0"
+                                        />
+                                      ) : (
+                                        <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                          <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
+                                        </div>
+                                      )}
+                                      <div className="min-w-0">
+                                        <p className="font-extrabold text-[11px] text-slate-900 dark:text-white truncate">
+                                          {ad.name}
+                                        </p>
+                                        <p className="text-[9px] text-slate-400 truncate">ID: {ad.id}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Tombol Play/Pause Ad Individu */}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <span
+                                        className={cn(
+                                          "text-[9px] font-black px-1.5 py-0.5 rounded",
+                                          isAdOff
+                                            ? "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                            : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400"
+                                        )}
+                                      >
+                                        {isAdOff ? "OFF" : "ON"}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        disabled={isThisAdUpdating}
+                                        onClick={() => handleToggleAdStatus(ad.id, camp.id, ad.status, ad.name)}
+                                        className={cn(
+                                          "p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer",
+                                          isAdOff
+                                            ? "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
+                                            : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100"
+                                        )}
+                                        title={isAdOff ? "Nyalakan Iklan Ini" : "Matikan Iklan Ini"}
+                                      >
+                                        {isThisAdUpdating ? (
+                                          <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
+                                        ) : isAdOff ? (
+                                          <Play className="w-3 h-3" />
+                                        ) : (
+                                          <Pause className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Metrik Ad Lengkap (3 Kolom Baca ke Bawah) */}
+                                  <div className="grid grid-cols-3 gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-center">
+                                    <div>
+                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
+                                        Spent
+                                      </span>
+                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                        Rp {Number(ad.spend || 0).toLocaleString("id-ID")}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
+                                        Purchases
+                                      </span>
+                                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                                        {ad.purchases || 0}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
+                                        CPA
+                                      </span>
+                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                        Rp {Number(ad.cpa || 0).toLocaleString("id-ID")}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
+                                        ROAS
+                                      </span>
+                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                        {ad.roas ? `${ad.roas}x` : "-"}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
+                                        CTR (Link)
+                                      </span>
+                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                        {ad.ctr ? `${ad.ctr}%` : "-"}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
+                                        Link Clicks
+                                      </span>
+                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                        {Number(ad.clicks || 0).toLocaleString("id-ID")}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 italic text-center py-1">
+                            Tidak ada ads di AdSet ini.
+                          </p>
                         )}
                       </div>
                     ))
@@ -979,47 +1263,159 @@ export function MetaAdsCommanderTable({
                               </div>
 
                               {camp.adsets && camp.adsets.length > 0 ? (
-                                <div className="space-y-2.5">
+                                <div className="space-y-3">
                                   {camp.adsets.map((adset) => (
                                     <div
                                       key={adset.id}
-                                      className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2"
+                                      className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3"
                                     >
-                                      <div className="flex items-center justify-between text-xs">
+                                      {/* Header AdSet & Ringkasan Metrik AdSet */}
+                                      <div className="flex items-center justify-between text-xs flex-wrap gap-2">
                                         <div className="flex items-center gap-2">
                                           <span className="font-extrabold text-slate-900 dark:text-white">
                                             AdSet: {adset.name}
                                           </span>
                                           <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                            Status: {adset.status}
+                                            {adset.status}
                                           </span>
                                         </div>
-                                        <div className="text-slate-500 font-semibold">
-                                          Budget: Rp {Number(adset.dailyBudget || 0).toLocaleString("id-ID")}/hari
+                                        <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-semibold text-[11px]">
+                                          <span>Budget: Rp {Number(adset.dailyBudget || 0).toLocaleString("id-ID")}/hari</span>
+                                          <span>Spent: Rp {Number(adset.spend || 0).toLocaleString("id-ID")}</span>
+                                          <span className="text-emerald-600 font-bold">Purchases: {adset.purchases || 0}</span>
+                                          <span>CPA: Rp {Number(adset.cpa || 0).toLocaleString("id-ID")}</span>
                                         </div>
                                       </div>
 
-                                      {/* Child Ads */}
+                                      {/* Child Ads dengan Metrik Riil & Kontrol On/Off */}
                                       {adset.ads && adset.ads.length > 0 ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                          {adset.ads.map((ad) => (
-                                            <div
-                                              key={ad.id}
-                                              className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between gap-2"
-                                            >
-                                              <div className="min-w-0">
-                                                <p className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate">
-                                                  Ad: {ad.name}
-                                                </p>
-                                                <p className="text-[10px] text-slate-400 truncate">
-                                                  ID: {ad.id}
-                                                </p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                          {adset.ads.map((ad) => {
+                                            const isAdOff = ad.status === "PAUSED";
+                                            const isThisAdUpdating = updatingAdId === ad.id;
+
+                                            return (
+                                              <div
+                                                key={ad.id}
+                                                className={cn(
+                                                  "p-3 rounded-xl border bg-slate-50/70 dark:bg-slate-800/40 space-y-2 transition-all",
+                                                  isAdOff
+                                                    ? "border-slate-200 dark:border-slate-800 opacity-65"
+                                                    : "border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/40"
+                                                )}
+                                              >
+                                                {/* Header Ad: Thumbnail, Nama, & Tombol Switch */}
+                                                <div className="flex items-center justify-between gap-2">
+                                                  <div className="flex items-center gap-2 min-w-0">
+                                                    {ad.creativeThumbnail ? (
+                                                      <img
+                                                        src={ad.creativeThumbnail}
+                                                        alt={ad.name}
+                                                        className="w-7 h-7 rounded-lg object-cover border border-slate-200 shrink-0"
+                                                      />
+                                                    ) : (
+                                                      <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                                                        <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
+                                                      </div>
+                                                    )}
+                                                    <div className="min-w-0">
+                                                      <p className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate">
+                                                        {ad.name}
+                                                      </p>
+                                                      <p className="text-[10px] text-slate-400 truncate">
+                                                        ID: {ad.id}
+                                                      </p>
+                                                    </div>
+                                                  </div>
+
+                                                  <div className="flex items-center gap-1.5 shrink-0">
+                                                    <span
+                                                      className={cn(
+                                                        "text-[9px] font-black px-1.5 py-0.5 rounded",
+                                                        isAdOff
+                                                          ? "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                                          : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400"
+                                                      )}
+                                                    >
+                                                      {isAdOff ? "OFF" : "ON"}
+                                                    </span>
+                                                    <button
+                                                      type="button"
+                                                      disabled={isThisAdUpdating}
+                                                      onClick={() => handleToggleAdStatus(ad.id, camp.id, ad.status, ad.name)}
+                                                      className={cn(
+                                                        "p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer",
+                                                        isAdOff
+                                                          ? "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
+                                                          : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100"
+                                                      )}
+                                                      title={isAdOff ? "Nyalakan Iklan Ini" : "Matikan Iklan Ini"}
+                                                    >
+                                                      {isThisAdUpdating ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
+                                                      ) : isAdOff ? (
+                                                        <Play className="w-3.5 h-3.5" />
+                                                      ) : (
+                                                        <Pause className="w-3.5 h-3.5" />
+                                                      )}
+                                                    </button>
+                                                  </div>
+                                                </div>
+
+                                                {/* Metrik Lengkap Ad */}
+                                                <div className="grid grid-cols-3 gap-1 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 text-center text-[10px]">
+                                                  <div>
+                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
+                                                      Spent
+                                                    </span>
+                                                    <span className="font-extrabold text-slate-800 dark:text-slate-200">
+                                                      Rp {Number(ad.spend || 0).toLocaleString("id-ID")}
+                                                    </span>
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
+                                                      Purchases
+                                                    </span>
+                                                    <span className="font-black text-emerald-600 dark:text-emerald-400">
+                                                      {ad.purchases || 0}
+                                                    </span>
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
+                                                      CPA
+                                                    </span>
+                                                    <span className="font-extrabold text-slate-800 dark:text-slate-200">
+                                                      Rp {Number(ad.cpa || 0).toLocaleString("id-ID")}
+                                                    </span>
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
+                                                      ROAS
+                                                    </span>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                      {ad.roas ? `${ad.roas}x` : "-"}
+                                                    </span>
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
+                                                      CTR (Link)
+                                                    </span>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                      {ad.ctr ? `${ad.ctr}%` : "-"}
+                                                    </span>
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
+                                                      Link Clicks
+                                                    </span>
+                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                      {Number(ad.clicks || 0).toLocaleString("id-ID")}
+                                                    </span>
+                                                  </div>
+                                                </div>
                                               </div>
-                                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                                                {ad.status}
-                                              </span>
-                                            </div>
-                                          ))}
+                                            );
+                                          })}
                                         </div>
                                       ) : (
                                         <p className="text-[11px] text-slate-400 italic">

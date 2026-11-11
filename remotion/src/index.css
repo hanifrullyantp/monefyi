@@ -7,6 +7,12 @@ body {
   color: #ffffff;
 }
 
+/* Enforce frame-deterministic rendering in Remotion - prevent CSS wall-clock desync */
+*, *::before, *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 @layer utilities {
   .text-glow-emerald {
     text-shadow: 0 0 24px rgba(33, 171, 123, 0.45);

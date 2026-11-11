@@ -50,6 +50,7 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
     actionLogs,
     updateCampaignDailyBudget,
     toggleCampaignStatus,
+    toggleAdStatus,
     createWinningCampaignDraft,
   } = useMarketingStore();
 
@@ -87,16 +88,32 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
             : `Gagal menaikkan budget "${act.campaignName}" di Meta Graph API. Pastikan izin ads_management aktif.`,
           timestamp: new Date().toISOString(),
         });
-      } else if (act.action === "update_status" && act.campaignId) {
-        const ok = await toggleCampaignStatus(act.campaignId, act.actor || "ai_bima");
-        addChatMessage({
-          id: `exec_${Date.now()}`,
-          sender: "media_buyer",
-          text: ok
-            ? `Kampanye **"${act.campaignName}"** telah dihentikan (**PAUSED**) di Meta Ads Manager untuk menghentikan pembakaran saldo.`
-            : `Gagal mengubah status kampanye "${act.campaignName}".`,
-          timestamp: new Date().toISOString(),
-        });
+      } else if (act.action === "update_status") {
+        if (act.targetType === "ad" || act.adId) {
+          const adId = act.adId || act.targetId || "";
+          const ok = await toggleAdStatus(adId, act.campaignId, act.actor || "ai_bima");
+          const targetName = act.adName || act.campaignName || adId;
+          const statusText = act.status || "PAUSED";
+          addChatMessage({
+            id: `exec_${Date.now()}`,
+            sender: "media_buyer",
+            text: ok
+              ? `Ad **"${targetName}"** telah berhasil diubah statusnya menjadi **${statusText}** di Meta Ads Manager.`
+              : `Gagal mengubah status ad "${targetName}". Pastikan izin ads_management aktif.`,
+            timestamp: new Date().toISOString(),
+          });
+        } else if (act.campaignId) {
+          const ok = await toggleCampaignStatus(act.campaignId, act.actor || "ai_bima");
+          const statusText = act.status || "PAUSED";
+          addChatMessage({
+            id: `exec_${Date.now()}`,
+            sender: "media_buyer",
+            text: ok
+              ? `Kampanye **"${act.campaignName}"** telah berhasil diubah statusnya menjadi **${statusText}** di Meta Ads Manager.`
+              : `Gagal mengubah status kampanye "${act.campaignName}".`,
+            timestamp: new Date().toISOString(),
+          });
+        }
       } else if (act.action === "create_winning_campaign") {
         const res = await createWinningCampaignDraft({
           name: act.campaignName,

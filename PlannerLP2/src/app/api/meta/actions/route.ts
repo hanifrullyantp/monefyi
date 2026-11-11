@@ -50,14 +50,24 @@ export async function POST(req: NextRequest) {
     const cleanActId = adAccountIdRaw.replace(/^act_/i, "").replace(/[^0-9]/g, "");
     const actId = cleanActId ? `act_${cleanActId}` : "";
 
-    // 1. Aksi Ubah Status Kampanye (ACTIVE / PAUSED)
+    // 1. Aksi Ubah Status (Campaign / AdSet / Ad: ACTIVE / PAUSED)
     if (action === "update_status") {
       const newStatus = body.status === "ACTIVE" ? "ACTIVE" : "PAUSED";
-      if (!campaignId) {
-        return NextResponse.json({ ok: false, error: "campaignId wajib diisi." }, { status: 400 });
+      const targetType: "ad" | "adset" | "campaign" =
+        body.targetType || (body.adId ? "ad" : body.adsetId ? "adset" : "campaign");
+      const targetId = String(body.targetId || body.adId || body.adsetId || campaignId || "").trim();
+      const targetName = String(
+        body.targetName || body.adName || body.adsetName || campaignName || targetId || "Item Meta"
+      );
+
+      if (!targetId) {
+        return NextResponse.json(
+          { ok: false, error: "targetId / adId / campaignId wajib diisi." },
+          { status: 400 }
+        );
       }
 
-      const url = buildGraphUrl(`https://graph.facebook.com/v20.0/${campaignId}`, token, appSecret);
+      const url = buildGraphUrl(`https://graph.facebook.com/v20.0/${targetId}`, token, appSecret);
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,17 +79,24 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             ok: false,
-            error: data.error?.message || `Gagal mengubah status kampanye ke ${newStatus} di Meta Graph API.`,
+            error:
+              data.error?.message ||
+              `Gagal mengubah status ${targetType.toUpperCase()} ke ${newStatus} di Meta Graph API.`,
             rawMetaError: data.error,
           },
           { status: 400 }
         );
       }
 
+      const typeLabel = targetType === "ad" ? "Ad/Iklan" : targetType === "adset" ? "AdSet" : "Kampanye";
+
       return NextResponse.json({
         ok: true,
         liveExecuted: true,
-        campaignId,
+        targetId,
+        targetType,
+        adId: targetType === "ad" ? targetId : undefined,
+        campaignId: campaignId || targetId,
         newStatus,
         log: {
           id: `act_${Date.now()}`,
@@ -87,9 +104,9 @@ export async function POST(req: NextRequest) {
           actor,
           actorLabel,
           actionType: "update_status",
-          campaignId,
-          campaignName,
-          summary: `${actorLabel} mengubah status "${campaignName}" menjadi ${newStatus} di Meta Ads.`,
+          campaignId: campaignId || targetId,
+          campaignName: targetName,
+          summary: `${actorLabel} mengubah status ${typeLabel} "${targetName}" menjadi ${newStatus} di Meta Ads.`,
           newValue: newStatus,
           liveExecuted: true,
         } satisfies MetaActionLogEntry,

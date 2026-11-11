@@ -3,4 +3,4 @@
 3:I[7121,[],""]
 4:I[4581,[],""]
 :HL["/bonus/mini/debt-free/_next/static/css/f803331f9f723752.css","style"]
-0:{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/bonus/mini/debt-free/_next/static/css/f803331f9f723752.css","precedence":"next"}]],["$","html",null,{"lang":"id","className":"scroll-smooth","children":["$","body",null,{"className":"bg-slate-950 text-white antialiased","children":["$","$L2",null,{"children":["$","$L3",null,{"parallelRouterKey":"children","template":["$","$L4",null,{}]}]}]}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"mJ4ORQUKtpaX1LgQgVVeZ"}
+0:{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/bonus/mini/debt-free/_next/static/css/f803331f9f723752.css","precedence":"next"}]],["$","html",null,{"lang":"id","className":"scroll-smooth","children":["$","body",null,{"className":"bg-slate-950 text-white antialiased","children":["$","$L2",null,{"children":["$","$L3",null,{"parallelRouterKey":"children","template":["$","$L4",null,{}]}]}]}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"mc_nEjb7i6mlb3QBmDvWL"}

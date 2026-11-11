@@ -7,29 +7,33 @@ import {
 } from "remotion";
 import { DynamicBackground } from "./components/DynamicBackground";
 import { SubtitlesOverlay } from "./components/SubtitlesOverlay";
-import { Scene1Hook } from "./scenes/Scene1Hook";
-import { Scene2Funneling } from "./scenes/Scene2Funneling";
-import { Scene3FilterHarga } from "./scenes/Scene3FilterHarga";
-import { Scene4EstimatorSolution } from "./scenes/Scene4EstimatorSolution";
-import { Scene5OutroCTA } from "./scenes/Scene5OutroCTA";
+import { Scene0Hook } from "./scenes/Scene0Hook";
+import { Scene1NoModal } from "./scenes/Scene1NoModal";
+import { Scene2OtakAtik } from "./scenes/Scene2OtakAtik";
+import { Scene3Tawaran } from "./scenes/Scene3Tawaran";
+import { Scene4AkarMasalah } from "./scenes/Scene4AkarMasalah";
+import { Scene5EstimatorSolution } from "./scenes/Scene5EstimatorSolution";
+import { Scene6OutroCTA } from "./scenes/Scene6OutroCTA";
 
-export const ESTIMATOR_VIDEO_DURATION = 2745; // 91.5 seconds @ 30 fps
+export const ESTIMATOR_VIDEO_DURATION = 2415; // 80.5 seconds @ 30 fps
 
 export const EstimatorMotionVideo: React.FC = () => {
   const frame = useCurrentFrame();
 
   // Dynamic Mood based on narrative flow
   let mood: "alert" | "problem" | "neutral" | "solution" | "celebrate" = "alert";
-  if (frame < 309) {
-    mood = "alert"; // WA banjir notifikasi & stop buang tenaga
-  } else if (frame < 773) {
-    mood = "problem"; // Funneling: Leads Dingin cuma banding harga
-  } else if (frame < 1205) {
-    mood = "neutral"; // Leads Hangat & Panas
-  } else if (frame < 2150) {
-    mood = "neutral"; // 2 Langkah: Tanya Kebutuhan & Beri Harga
-  } else if (frame < 2620) {
-    mood = "solution"; // Estimator live calculation, bottom sheet, & WhatsApp PDF
+  if (frame < 125) {
+    mood = "alert"; // 3 hal haram saat survei
+  } else if (frame < 437) {
+    mood = "problem"; // Kesalahan 1: Hitung harga tanpa modal
+  } else if (frame < 955) {
+    mood = "problem"; // Kesalahan 2: Otak-atik harga meleset
+  } else if (frame < 1369) {
+    mood = "problem"; // Kesalahan 3: Salah menyikapi tawaran
+  } else if (frame < 1534) {
+    mood = "neutral"; // Akar masalah
+  } else if (frame < 2200) {
+    mood = "solution"; // Estimator: live calculation, slider, batas aman diskon, WA & PDF
   } else {
     mood = "celebrate"; // Outro CTA
   }
@@ -43,24 +47,32 @@ export const EstimatorMotionVideo: React.FC = () => {
       <Audio src={staticFile("audio.mp3")} volume={1} />
 
       {/* Scene Sequences */}
-      <Sequence from={0} durationInFrames={309} name="Scene 1: Hook - Chat WA vs Siap Beli">
-        <Scene1Hook />
+      <Sequence from={0} durationInFrames={125} name="Scene 0: Hook - 3 Hal Haram Saat Survei">
+        <Scene0Hook />
       </Sequence>
 
-      <Sequence from={309} durationInFrames={896} name="Scene 2: Funneling 3 Kategori Leads">
-        <Scene2Funneling />
+      <Sequence from={125} durationInFrames={312} name="Scene 1: Kesalahan Fatal 1 - Tanpa Modal">
+        <Scene1NoModal />
       </Sequence>
 
-      <Sequence from={1205} durationInFrames={945} name="Scene 3: 2 Langkah & Saringan Harga">
-        <Scene3FilterHarga />
+      <Sequence from={437} durationInFrames={518} name="Scene 2: Kesalahan Fatal 2 - Otak Atik Spek">
+        <Scene2OtakAtik />
       </Sequence>
 
-      <Sequence from={2150} durationInFrames={470} name="Scene 4: Solusi Nyata Estimator">
-        <Scene4EstimatorSolution />
+      <Sequence from={955} durationInFrames={414} name="Scene 3: Kesalahan Fatal 3 - Salah Tawaran">
+        <Scene3Tawaran />
       </Sequence>
 
-      <Sequence from={2620} durationInFrames={125} name="Scene 5: Outro & Call To Action">
-        <Scene5OutroCTA />
+      <Sequence from={1369} durationInFrames={165} name="Scene 4: Akar Masalah">
+        <Scene4AkarMasalah />
+      </Sequence>
+
+      <Sequence from={1534} durationInFrames={666} name="Scene 5: Solusi Nyata Estimator">
+        <Scene5EstimatorSolution />
+      </Sequence>
+
+      <Sequence from={2200} durationInFrames={215} name="Scene 6: Outro & Call To Action">
+        <Scene6OutroCTA />
       </Sequence>
 
       {/* Kinetic Animated Subtitles Overlay */}

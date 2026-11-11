@@ -111,7 +111,7 @@ export const Scene2OtakAtik: React.FC = () => {
         </div>
 
         {/* Customer Interaction Dialogue Card */}
-        <div className="w-full bg-[#0E1B17]/95 border-2 border-white/15 rounded-3xl p-6 sm:p-7 backdrop-blur-2xl shadow-2xl space-y-4">
+        <div className="w-full bg-[#0E1B17] border-2 border-white/15 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-4">
           {/* Customer Chat Bubble */}
           <div
             style={{
@@ -143,7 +143,7 @@ export const Scene2OtakAtik: React.FC = () => {
               className="p-4 rounded-2xl bg-amber-950/50 border-2 border-amber-500/50 flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <Calculator className="w-7 h-7 text-amber-400 animate-pulse shrink-0" />
+                <Calculator className="w-7 h-7 text-amber-400 shrink-0" />
                 <div className="text-left">
                   <div className="text-xs font-black text-amber-300 uppercase tracking-wider">
                     Hitungan Manual Tanpa Rumus Pasti
@@ -154,7 +154,7 @@ export const Scene2OtakAtik: React.FC = () => {
                 </div>
               </div>
               <div className="text-2xl sm:text-3xl font-black font-mono text-amber-400 flex items-center gap-1.5">
-                Rp ??? <HelpCircle className="w-5 h-5 text-amber-400 animate-spin" />
+                Rp ??? <HelpCircle className="w-5 h-5 text-amber-400" />
               </div>
             </div>
           )}
@@ -191,7 +191,7 @@ export const Scene2OtakAtik: React.FC = () => {
             <div className="w-full h-4 bg-white/10 rounded-full overflow-hidden p-0.5">
               <div
                 style={{ width: `${trustPercent}%` }}
-                className={`h-full transition-all duration-300 rounded-full ${
+                className={`h-full rounded-full ${
                   trustPercent < 50 ? "bg-gradient-to-r from-red-600 to-amber-500 shadow-lg" : "bg-emerald-500"
                 }`}
               />

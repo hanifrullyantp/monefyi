@@ -62,7 +62,7 @@ export const Scene0Hook: React.FC = () => {
           }}
           className="inline-flex items-center gap-2.5 bg-red-500/15 border-2 border-red-500/50 px-6 py-2.5 rounded-full mb-6 shadow-xl shadow-red-500/20"
         >
-          <AlertTriangle className="w-5 h-5 text-red-400 animate-pulse" />
+          <AlertTriangle className="w-5 h-5 text-red-400" />
           <span className="text-red-300 font-black tracking-wider text-xs sm:text-sm uppercase">
             Peringatan Kontraktor & Bengkel Las / Interior
           </span>

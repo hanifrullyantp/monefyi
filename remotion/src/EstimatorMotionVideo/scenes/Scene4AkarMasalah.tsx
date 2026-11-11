@@ -62,7 +62,7 @@ export const Scene4AkarMasalah: React.FC = () => {
         {/* Revealed Quote Card */}
         <div
           style={{
-            filter: `blur(${blurAmount}px)`,
+            opacity: interpolate(revealSpring, [0, 1], [0.2, 1]),
             transform: `scale(${interpolate(revealSpring, [0, 1], [0.92, 1])})`,
           }}
           className="relative bg-gradient-to-b from-[#11231D] to-[#0A1612] border-2 border-emerald-400/80 p-8 sm:p-12 rounded-3xl shadow-2xl shadow-emerald-500/30 max-w-[900px] w-full"

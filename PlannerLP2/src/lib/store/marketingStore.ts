@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
   MetaCampaign,
+  MetaAdSet,
+  MetaAd,
   WinningAdTemplate,
   MarketingChatMessage,
   OrderBumpConfig,
@@ -16,6 +18,7 @@ import {
 import {
   fetchMetaCampaigns,
   updateRemoteCampaignStatus,
+  updateRemoteAdStatus,
   updateRemoteCampaignBudget,
   evaluateCampaignHealth,
 } from '../services/metaAdsService';
@@ -74,6 +77,7 @@ interface MarketingStore {
   selectAdAccount: (accountId: string) => Promise<void>;
   refreshCampaigns: () => Promise<void>;
   toggleCampaignStatus: (campaignId: string, actor?: string) => Promise<boolean>;
+  toggleAdStatus: (adId: string, campaignId?: string, actor?: string) => Promise<boolean>;
   updateCampaignDailyBudget: (
     campaignId: string,
     newBudget: number,
@@ -770,6 +774,65 @@ export const useMarketingStore = create<MarketingStore>()(
                   }
                 : c
             ),
+          });
+          return true;
+        }
+        return false;
+      },
+
+      toggleAdStatus: async (adId: string, campaignId?: string, actor: string = 'human') => {
+        const { campaigns, apiConfig, addActionLog } = get();
+        let targetAd: MetaAd | undefined;
+        let parentCampaignId = campaignId;
+
+        for (const camp of campaigns) {
+          if (campaignId && camp.id !== campaignId) continue;
+          for (const adset of camp.adsets || []) {
+            const found = adset.ads?.find((a) => a.id === adId);
+            if (found) {
+              targetAd = found;
+              parentCampaignId = camp.id;
+              break;
+            }
+          }
+          if (targetAd) break;
+        }
+
+        if (!targetAd) return false;
+
+        const newStatus = targetAd.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+        const token = apiConfig.metaAccessToken || apiConfig.capiAccessToken;
+        const result = await updateRemoteAdStatus(
+          adId,
+          newStatus,
+          token,
+          targetAd.name,
+          actor,
+          'ad',
+          parentCampaignId
+        );
+
+        if (result.ok) {
+          if (result.log) addActionLog(result.log);
+          set({
+            campaigns: campaigns.map((c) => {
+              if (parentCampaignId && c.id !== parentCampaignId) return c;
+              return {
+                ...c,
+                adsets: c.adsets?.map((adset) => ({
+                  ...adset,
+                  ads: adset.ads?.map((ad) =>
+                    ad.id === adId
+                      ? {
+                          ...ad,
+                          status: newStatus,
+                          effectiveStatus: newStatus,
+                        }
+                      : ad
+                  ),
+                })),
+              };
+            }),
           });
           return true;
         }

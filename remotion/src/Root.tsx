@@ -19,10 +19,41 @@ import {
   EstimatorMotion3DVideo,
   ESTIMATOR_MOTION3D_DURATION,
 } from "./EstimatorMotion3D";
+import {
+  CustomerHilangVideo,
+  CUSTOMER_HILANG_DURATION,
+} from "./CustomerHilangVideo";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* Customer Tiba-Tiba Hilang (Hot-Cold Empathy Gap) Video */}
+      <Folder name="Customer-Hilang-HotColdGap">
+        <Composition
+          id="CustomerHilangReels"
+          component={CustomerHilangVideo}
+          durationInFrames={CUSTOMER_HILANG_DURATION}
+          fps={30}
+          width={1080}
+          height={1920}
+        />
+        <Composition
+          id="CustomerHilangSquare"
+          component={CustomerHilangVideo}
+          durationInFrames={CUSTOMER_HILANG_DURATION}
+          fps={30}
+          width={1080}
+          height={1080}
+        />
+        <Composition
+          id="CustomerHilangLandscape"
+          component={CustomerHilangVideo}
+          durationInFrames={CUSTOMER_HILANG_DURATION}
+          fps={30}
+          width={1920}
+          height={1080}
+        />
+      </Folder>
       {/* Exact WebGL2 3D Motion Graphic ported from motion3d.html */}
       <Folder name="Monefyi-Estimator-Motion3D">
         <Composition

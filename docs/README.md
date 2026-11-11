@@ -11,6 +11,8 @@
 |-------------|------|
 | **Menjelaskan apa itu Monefyi** (presentasi, stakeholder) | [`APA_ITU_MONEFYI.md`](APA_ITU_MONEFYI.md) |
 | **Menjelaskan apa itu Monefyi Planner** (presentasi, stakeholder) | [`APA_ITU_PLANNER.md`](APA_ITU_PLANNER.md) |
+| **Panduan Pemasaran & AI Copywriting Estimator** (manfaat, angle iklan, persona) | [`ESTIMATOR_MARKETING_KNOWLEDGE_BASE.md`](ESTIMATOR_MARKETING_KNOWLEDGE_BASE.md) |
+| **Buku Panduan Penggunaan Estimator** (petunjuk user) | [`PANDUAN_PENGGUNAAN_ESTIMATOR.md`](PANDUAN_PENGGUNAAN_ESTIMATOR.md) |
 | Gambaran lengkap seluruh ekosistem (dev & arsitektur) | [`MONEFYI_MASTER.md`](MONEFYI_MASTER.md) |
 | Gambaran lengkap Planner (dev & arsitektur) | [`MONEFYI_PLANNER_MASTER.md`](MONEFYI_PLANNER_MASTER.md) |
 | Memahami produk PWA & roadmap | [`MONEFYI_PRODUCT_PROMPT.md`](MONEFYI_PRODUCT_PROMPT.md) |
@@ -33,10 +35,12 @@
 
 ```
 docs/
-├── README.md                      ← Indeks ini
-├── APA_ITU_MONEFYI.md             ← ★ Penjelasan produk PWA (untuk perkenalan)
-├── APA_ITU_PLANNER.md             ← ★ Penjelasan produk Planner (untuk perkenalan)
-├── MONEFYI_MASTER.md              ← Referensi teknis lengkap PWA (dev)
+├── README.md                              ← Indeks ini
+├── APA_ITU_MONEFYI.md                     ← ★ Penjelasan produk PWA (untuk perkenalan)
+├── APA_ITU_PLANNER.md                     ← ★ Penjelasan produk Planner (untuk perkenalan)
+├── ESTIMATOR_MARKETING_KNOWLEDGE_BASE.md  ← ★ Marketing Bible & AI Context (Manfaat, Angle Iklan, Hook)
+├── PANDUAN_PENGGUNAAN_ESTIMATOR.md        ← Petunjuk manual pengguna Estimator
+├── MONEFYI_MASTER.md                      ← Referensi teknis lengkap PWA (dev)
 ├── MONEFYI_PLANNER_MASTER.md      ← Referensi teknis lengkap Planner (dev)
 ├── MONEFYI_PRODUCT_PROMPT.md      ← Spec produk PWA + master prompt AI dev
 ├── ARSITEKTUR_PARSING_MONEFYI.md  ← Arsitektur parsing (target L0–L5)

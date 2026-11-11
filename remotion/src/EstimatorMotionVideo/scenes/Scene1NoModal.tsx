@@ -94,7 +94,7 @@ export const Scene1NoModal: React.FC = () => {
           }`}
         >
           {/* Survey Card (Large, High-Contrast, Thumb-friendly) */}
-          <div className="flex-1 w-full bg-[#0E1B17]/95 border-2 border-white/15 rounded-3xl p-6 sm:p-7 backdrop-blur-2xl shadow-2xl space-y-4">
+          <div className="flex-1 w-full bg-[#0E1B17] border-2 border-white/15 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-4">
             <div className="flex justify-between items-center pb-3 border-b border-white/15">
               <span className="text-xs sm:text-sm font-black text-white/70 uppercase tracking-wider">
                 Daftar Kebutuhan Material Survei
@@ -135,7 +135,7 @@ export const Scene1NoModal: React.FC = () => {
                 style={{
                   transform: itemMissed ? `scale(${item3Spring})` : "scale(1)",
                 }}
-                className={`flex justify-between items-center px-4 py-3.5 rounded-2xl border-2 transition-all duration-300 ${
+                className={`flex justify-between items-center px-4 py-3.5 rounded-2xl border-2 ${
                   itemMissed
                     ? "bg-red-500/20 border-red-500 shadow-xl shadow-red-500/30"
                     : "bg-white/5 border-white/10"
@@ -143,7 +143,7 @@ export const Scene1NoModal: React.FC = () => {
               >
                 <div className="flex items-center gap-3">
                   {itemMissed ? (
-                    <XCircle className="w-6 h-6 text-red-400 shrink-0 animate-bounce" />
+                    <XCircle className="w-6 h-6 text-red-400 shrink-0" />
                   ) : (
                     <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
                   )}
@@ -171,7 +171,7 @@ export const Scene1NoModal: React.FC = () => {
 
             {/* Profit Bar */}
             <div
-              className={`p-5 rounded-2xl border-2 transition-all duration-500 flex justify-between items-center ${
+              className={`p-5 rounded-2xl border-2 flex justify-between items-center ${
                 profitLost
                   ? "bg-red-950/60 border-red-500 shadow-xl"
                   : "bg-emerald-950/60 border-emerald-500/60"
@@ -185,7 +185,7 @@ export const Scene1NoModal: React.FC = () => {
                   {profitLost && <ArrowDownRight className="w-8 h-8 text-red-400 shrink-0" />}
                   <div
                     className={`text-3xl sm:text-4xl font-black font-mono tracking-tight ${
-                      profitLost ? "text-red-400 animate-pulse" : "text-emerald-400"
+                      profitLost ? "text-red-400" : "text-emerald-400"
                     }`}
                   >
                     {currentProfit < 0
@@ -197,7 +197,7 @@ export const Scene1NoModal: React.FC = () => {
 
               <div
                 className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider ${
-                  profitLost ? "bg-red-500 text-white animate-bounce shadow-lg" : "bg-emerald-500/20 text-emerald-300"
+                  profitLost ? "bg-red-500 text-white shadow-lg" : "bg-emerald-500/20 text-emerald-300"
                 }`}
               >
                 {profitLost ? "UNTUNGMU HILANG!" : "PROFIT AMAN"}
@@ -221,7 +221,7 @@ export const Scene1NoModal: React.FC = () => {
               transform: `scale(${alertSpring})`,
               opacity: interpolate(alertSpring, [0, 1], [0, 1]),
             }}
-            className="w-full bg-emerald-950/90 border-2 border-emerald-400/60 p-4 rounded-2xl flex items-center justify-between shadow-2xl backdrop-blur-xl"
+            className="w-full bg-emerald-950/90 border-2 border-emerald-400/60 p-4 rounded-2xl flex items-center justify-between shadow-2xl"
           >
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-2xl bg-emerald-500 flex items-center justify-center shrink-0 shadow-lg">

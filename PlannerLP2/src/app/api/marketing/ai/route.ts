@@ -3,10 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 export interface AiExecutableAction {
   id: string;
   action: "scale_budget" | "update_status" | "create_winning_campaign";
+  targetType?: "campaign" | "adset" | "ad";
+  targetId?: string;
   label: string;
   description: string;
   campaignId?: string;
   campaignName?: string;
+  adId?: string;
+  adName?: string;
   previousBudget?: number;
   dailyBudget?: number;
   status?: "ACTIVE" | "PAUSED";
@@ -14,13 +18,124 @@ export interface AiExecutableAction {
   actor: "ai_bima" | "ai_danu" | "ai_sinta" | "ai_aris";
 }
 
-function buildExecutableActions(campaigns: any[], insights: any, rules: any): AiExecutableAction[] {
+function buildExecutableActions(
+  campaigns: any[],
+  insights: any,
+  rules: any,
+  prompt?: string
+): AiExecutableAction[] {
   const actions: AiExecutableAction[] = [];
   const scalePct = Number(rules?.scaleBudgetPercentage || 20);
   const maxCpa = Number(rules?.maxCpaThreshold || 50000);
 
+  // Kumpulkan seluruh data Ads individual dari seluruh campaign & adset
+  const allAds: any[] = [];
+  if (Array.isArray(campaigns)) {
+    for (const c of campaigns) {
+      for (const as of c.adsets || []) {
+        for (const ad of as.ads || []) {
+          allAds.push({
+            ...ad,
+            campaignId: c.id,
+            campaignName: c.name,
+            adsetName: as.name,
+          });
+        }
+      }
+    }
+  }
+
+  // 1. On-Demand Ad Control: Tangkap instruksi eksplisit user ("matikan ad X", "pause iklan Y", "nyalakan Z")
+  if (prompt) {
+    const lowerPrompt = prompt.toLowerCase();
+    const isTurnOff = /matikan|pause|hentikan|stop|matikan\s*ad|matikan\s*iklan/i.test(lowerPrompt);
+    const isTurnOn = /nyalakan|hidupkan|aktifkan|jalankan/i.test(lowerPrompt);
+
+    if (isTurnOff || isTurnOn) {
+      const targetStatus: "ACTIVE" | "PAUSED" = isTurnOff ? "PAUSED" : "ACTIVE";
+
+      // Cari apakah ada Ad tertentu yang namanya disebutkan di prompt
+      const matchedAd = allAds.find(
+        (ad) =>
+          lowerPrompt.includes(ad.name.toLowerCase()) ||
+          lowerPrompt.includes(String(ad.id)) ||
+          (ad.name.length > 3 && lowerPrompt.includes(ad.name.slice(0, 10).toLowerCase()))
+      );
+
+      if (matchedAd) {
+        actions.unshift({
+          id: `req_ad_${matchedAd.id}_${Date.now()}`,
+          action: "update_status",
+          targetType: "ad",
+          targetId: String(matchedAd.id),
+          adId: String(matchedAd.id),
+          adName: matchedAd.name,
+          campaignId: String(matchedAd.campaignId),
+          campaignName: matchedAd.campaignName,
+          label: `${isTurnOff ? "Matikan" : "Nyalakan"} Ad: ${matchedAd.name.slice(0, 26)}...`,
+          description: `Permintaan Anda: Mengubah status iklan "${matchedAd.name}" menjadi ${targetStatus} di Meta Ads.`,
+          status: targetStatus,
+          actor: "ai_bima",
+        });
+      } else {
+        // Cek apakah ada Campaign yang disebutkan
+        const matchedCamp = campaigns.find(
+          (c) =>
+            lowerPrompt.includes(c.name.toLowerCase()) ||
+            lowerPrompt.includes(String(c.id)) ||
+            (c.name.length > 3 && lowerPrompt.includes(c.name.slice(0, 10).toLowerCase()))
+        );
+        if (matchedCamp) {
+          actions.unshift({
+            id: `req_camp_${matchedCamp.id}_${Date.now()}`,
+            action: "update_status",
+            targetType: "campaign",
+            targetId: String(matchedCamp.id),
+            campaignId: String(matchedCamp.id),
+            campaignName: matchedCamp.name,
+            label: `${isTurnOff ? "Matikan" : "Nyalakan"} Kampanye: ${matchedCamp.name.slice(0, 26)}...`,
+            description: `Permintaan Anda: Mengubah status kampanye "${matchedCamp.name}" menjadi ${targetStatus} di Meta Ads.`,
+            status: targetStatus,
+            actor: "ai_bima",
+          });
+        }
+      }
+    }
+  }
+
+  // 2. Pertimbangan Otonom AI Bima: Evaluasi Ad individual yang boncos (Spend > 40k, 0 Purchase atau CPA bengkak)
+  const bleedingAds = allAds.filter(
+    (ad) =>
+      ad.status === "ACTIVE" &&
+      ((ad.spend >= 40000 && (ad.purchases || ad.results || 0) === 0) ||
+        (ad.cpa > maxCpa && (ad.spend || 0) >= 40000))
+  );
+
+  for (const bAd of bleedingAds.slice(0, 2)) {
+    if (!actions.some((a) => a.adId === String(bAd.id))) {
+      actions.push({
+        id: `kill_ad_${bAd.id}`,
+        action: "update_status",
+        targetType: "ad",
+        targetId: String(bAd.id),
+        adId: String(bAd.id),
+        adName: bAd.name,
+        campaignId: String(bAd.campaignId),
+        campaignName: bAd.campaignName,
+        label: `Matikan Ad Boncos: ${bAd.name.slice(0, 24)}...`,
+        description: `Pertimbangan Mandiri AI: Iklan "${bAd.name}" telah menyerap Rp ${(
+          bAd.spend || 0
+        ).toLocaleString("id-ID")} tanpa pembelian (0 purchases, CPA Rp ${(
+          bAd.cpa || 0
+        ).toLocaleString("id-ID")}). Rekomendasi: Matikan segera untuk mengamankan budget.`,
+        status: "PAUSED",
+        actor: "ai_bima",
+      });
+    }
+  }
+
   if (Array.isArray(campaigns) && campaigns.length > 0) {
-    // 1. Cari kampanye terbaik untuk di-scale budget-nya
+    // 3. Cari kampanye terbaik untuk di-scale budget-nya
     const sortedByPerformance = [...campaigns]
       .filter((c) => c.status === "ACTIVE")
       .sort(
@@ -31,13 +146,15 @@ function buildExecutableActions(campaigns: any[], insights: any, rules: any): Ai
       );
 
     const topWinner = sortedByPerformance[0];
-    if (topWinner) {
+    if (topWinner && !actions.some((a) => a.campaignId === String(topWinner.id) && a.action === "scale_budget")) {
       const currentBudget = Number(topWinner.dailyBudget || 100000);
       const baseBudget = currentBudget > 0 ? currentBudget : 100000;
       const newBudget = Math.round(baseBudget * (1 + scalePct / 100));
       actions.push({
         id: `scale_${topWinner.id}`,
         action: "scale_budget",
+        targetType: "campaign",
+        targetId: String(topWinner.id),
         label: `Scale Budget +${scalePct}%: ${topWinner.name.slice(0, 32)}...`,
         description: `Naikkan budget harian dari Rp ${baseBudget.toLocaleString(
           "id-ID"
@@ -52,7 +169,7 @@ function buildExecutableActions(campaigns: any[], insights: any, rules: any): Ai
       });
     }
 
-    // 2. Cari kampanye boncos / bleeding untuk dimatikan
+    // 4. Cari kampanye boncos / bleeding untuk dimatikan (jika belum ada di actions)
     const bleeding = campaigns.find(
       (c) =>
         c.status === "ACTIVE" &&
@@ -61,11 +178,17 @@ function buildExecutableActions(campaigns: any[], insights: any, rules: any): Ai
           (c.cpa > maxCpa && c.cpa > 0))
     );
 
-    if (bleeding && (!topWinner || bleeding.id !== topWinner.id)) {
+    if (
+      bleeding &&
+      (!topWinner || bleeding.id !== topWinner.id) &&
+      !actions.some((a) => a.campaignId === String(bleeding.id) && a.action === "update_status")
+    ) {
       actions.push({
         id: `kill_${bleeding.id}`,
         action: "update_status",
-        label: `Pause Iklan Boncos: ${bleeding.name.slice(0, 32)}...`,
+        targetType: "campaign",
+        targetId: String(bleeding.id),
+        label: `Pause Kampanye Boncos: ${bleeding.name.slice(0, 32)}...`,
         description: `Hentikan pembakaran budget pada "${bleeding.name}" (Spend: Rp ${(
           bleeding.spend || 0
         ).toLocaleString("id-ID")}, CPA: Rp ${(bleeding.cpa || 0).toLocaleString("id-ID")})`,
@@ -77,7 +200,7 @@ function buildExecutableActions(campaigns: any[], insights: any, rules: any): Ai
     }
   }
 
-  // 3. Rekomendasi pembuatan Draft Kampanye Winning baru berdasarkan Demografi Terbaik
+  // 5. Rekomendasi pembuatan Draft Kampanye Winning baru berdasarkan Demografi Terbaik
   const bestAge = insights?.recommendation?.bestAge || "25-44";
   const bestGender = insights?.recommendation?.bestGender || "All Gender";
   const bestRegions = insights?.recommendation?.bestRegions || "Jawa & Jakarta";
@@ -112,7 +235,17 @@ export async function POST(req: NextRequest) {
       funnel_aov: "Aris",
     };
 
-    const executableActions = buildExecutableActions(campaigns, insights, rules);
+    const executableActions = buildExecutableActions(campaigns, insights, rules, prompt);
+
+    // Kumpulkan ringkasan seluruh Ads individual untuk konteks AI
+    const allAdsList = campaigns
+      .flatMap((c) => c.adsets?.flatMap((as: any) => as.ads) || [])
+      .filter(Boolean);
+    const bleedingAdsList = allAdsList.filter(
+      (a) =>
+        a.status === "ACTIVE" &&
+        ((a.spend >= 40000 && (a.purchases || 0) === 0) || (a.cpa > 50000 && (a.spend || 0) >= 40000))
+    );
 
     // Hitung ringkasan riil dari kampanye yang sedang tampil
     const totalSpend = campaigns.reduce((s, c) => s + Number(c.spend || 0), 0);
@@ -224,6 +357,7 @@ Jawab dalam Bahasa Indonesia yang tajam, terstruktur, berbasis data angka riil, 
 Konteks Produk: Monefyi Estimator (estimator.monefyi.com) - Tool hitung RAB cepat di HP saat survei lokasi untuk kontraktor & interior.
 Data Riil Akun Meta Ads Saat Ini:
 - Jumlah Kampanye: ${campaigns.length} kampanye terpantau
+- Total Ads Individu: ${allAdsList.length} ads terpantau
 - Total Spend: Rp ${totalSpend.toLocaleString("id-ID")}
 - Total Results: ${totalResults} (Purchases: ${totalPurchases}, Leads: ${totalLeads}, ThruPlays: ${totalThruPlays})
 - Rata-rata Cost Per Result (CPA): Rp ${avgCpa.toLocaleString("id-ID")}
@@ -231,7 +365,22 @@ Data Riil Akun Meta Ads Saat Ini:
 - OCLP (Outbound Click to LP): ${avgOclp}% (Landing Page Views: ${lpViews || totalLpViews} dari ${lpClicks || totalLinkClicks} Link Clicks)
 - Kampanye Utama: ${topCampaign ? `"${topCampaign.name}" (Spend Rp ${Number(topCampaign.spend || 0).toLocaleString("id-ID")}, Results: ${topCampaign.results || 0}, ThruPlay: ${topCampaign.videoThruPlays15s || 0}, OCLP: ${Number(topCampaign.oclpRate ?? avgOclp)}%)` : "Belum ada"}
 - Demografi Pemenang (Ads Insight): Usia ${bestAge}, Gender ${bestGender}, Lokasi Terbaik: ${bestRegions}, Placement Terbaik: ${bestPlacements}.
-Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol eksekusi di bawah pesan ini untuk menaikkan budget, mematikan iklan boncos, atau membuat draft kampanye winning secara langsung ke Meta Ads.`;
+- Status Ad Boncos (Pertimbangan AI): ${
+        bleedingAdsList.length > 0
+          ? `${bleedingAdsList.length} ad boncos terdeteksi: ${bleedingAdsList
+              .map(
+                (a: any) =>
+                  `"${a.name}" (Spend: Rp ${(a.spend || 0).toLocaleString("id-ID")}, Purchases: ${
+                    a.purchases || 0
+                  })`
+              )
+              .join(", ")}.`
+          : "Tidak ada ad boncos ekstrem saat ini."
+      }
+
+Kemampuan Kontrol Status Ads:
+1. On-Demand: Jika user meminta mematikan atau menyalakan ad/kampanye tertentu (contoh: "matikan ad X", "pause kampanye Y"), konfirmasikan secara spesifik dan jelaskan bahwa tombol eksekusi telah disiapkan di bawah.
+2. Mandiri/Otonom: Anda punya pertimbangan sendiri untuk merekomendasikan mematikan ad yang membakar budget tanpa konversi atau menyalakan/scaling ad berkinerja tinggi. Berikan rasionalisasi berbasis data yang meyakinkan.`;
 
       try {
         if (aiProvider === "gemini" && !aiApiKey.startsWith("sk-or-")) {
@@ -327,7 +476,30 @@ Berikan analisa konkret dan instruksikan user bahwa mereka dapat menekan tombol 
 
     const timestampHeader = `*[Laporan Real-Time ${dateStr} - ${timeStr} WIB | Engine: ${modelToUse}]*\n\n`;
 
-    if (lower.includes("scale") || lower.includes("budget") || lower.includes("naik")) {
+    if (
+      lower.includes("matikan") ||
+      lower.includes("pause") ||
+      lower.includes("hentikan") ||
+      lower.includes("stop") ||
+      lower.includes("nyalakan") ||
+      lower.includes("hidupkan") ||
+      lower.includes("aktifkan")
+    ) {
+      sender = "media_buyer";
+      const statusActions = executableActions.filter((a) => a.action === "update_status");
+      reply = `${timestampHeader}**Kontrol Status Ads (${customNames.media_buyer} - AI Media Buyer)**\n\nSaya telah memproses instruksi pengelolaan iklan Anda:\n${
+        statusActions.length > 0
+          ? statusActions
+              .map(
+                (act) =>
+                  `- **Target**: ${act.targetType === "ad" ? "Ad" : "Kampanye"} **"${
+                    act.adName || act.campaignName
+                  }"**\n  - Status Baru: **${act.status}**\n  - Alasan: ${act.description}`
+              )
+              .join("\n")
+          : `- Tidak ditemukan ad atau kampanye yang cocok dengan kata kunci permintaan Anda di daftar aktif.`
+      }\n\nSilakan klik tombol eksekusi di bawah untuk langsung menerapkan perubahan ke Meta Ads Manager.`;
+    } else if (lower.includes("scale") || lower.includes("budget") || lower.includes("naik")) {
       sender = "media_buyer";
       reply = `${timestampHeader}**Analisa Scaling Budget (${customNames.media_buyer} - AI Media Buyer)**\n\nBerdasarkan pembacaan data riil akun Meta Ads Anda hari ini:\n- **Total Spend Aktif**: Rp ${totalSpend.toLocaleString("id-ID")} pada ${campaigns.length} kampanye terpantau.\n- **Total Results**: ${totalResults.toLocaleString("id-ID")} hasil (Cost Per Result rata-rata: Rp ${avgCpa.toLocaleString("id-ID")}).\n- **Kualitas Landing Page (OCLP)**: ${avgOclp}% (${lpViews || totalLpViews} LP View dari ${lpClicks || totalLinkClicks} klik).\n${
         topCampaign

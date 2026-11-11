@@ -112,7 +112,7 @@ export const Scene5EstimatorSolution: React.FC = () => {
           {/* Big Punchy Highlight Pill */}
           <div className="pt-1">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500/30 via-teal-500/20 to-emerald-500/30 border-2 border-emerald-400 px-5 py-2 rounded-2xl shadow-xl shadow-emerald-500/25">
-              <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping mr-1" />
+              <span className="w-3 h-3 rounded-full bg-emerald-400 mr-1" />
               <span className="text-sm sm:text-base font-black text-emerald-300 font-mono tracking-tight">
                 {phaseMeta.highlight}
               </span>

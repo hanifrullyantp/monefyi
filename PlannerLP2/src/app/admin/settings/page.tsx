@@ -104,8 +104,8 @@ function SettingsContent() {
   // OpenRouter Master Key
   const [openRouterKey, setOpenRouterKey] = useState(
     winningEngineConfig.llmRouting.openRouterApiKey ||
-      apiConfig.aiApiKey ||
-      "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"
+    apiConfig.aiApiKey ||
+    "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"
   );
   const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
 
@@ -115,8 +115,8 @@ function SettingsContent() {
   );
   const [strategistKey, setStrategistKey] = useState(
     winningEngineConfig.llmRouting.strategist.apiKey ||
-      winningEngineConfig.llmRouting.openRouterApiKey ||
-      "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"
+    winningEngineConfig.llmRouting.openRouterApiKey ||
+    "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"
   );
   const [strategistModel, setStrategistModel] = useState(
     winningEngineConfig.llmRouting.strategist.model || "openai/gpt-6-luna-pro"
@@ -127,8 +127,8 @@ function SettingsContent() {
   );
   const [technicalKey, setTechnicalKey] = useState(
     winningEngineConfig.llmRouting.technical.apiKey ||
-      winningEngineConfig.llmRouting.openRouterApiKey ||
-      "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"
+    winningEngineConfig.llmRouting.openRouterApiKey ||
+    "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"
   );
   const [technicalModel, setTechnicalModel] = useState(
     winningEngineConfig.llmRouting.technical.model || "openai/gpt-6-luna-pro"

@@ -91,7 +91,7 @@ export const ExactEstimatorApp: React.FC<ExactEstimatorAppProps> = ({
         <div className="w-full pt-3 px-7 flex justify-between items-center text-xs font-black text-slate-700 bg-white z-30">
           <span>09:41</span>
           <div className="w-26 h-5 bg-black rounded-full flex items-center justify-center">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse mr-2" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-2" />
             <div className="w-2 h-2 rounded-full bg-neutral-800" />
           </div>
           <div className="flex items-center gap-1.5 text-slate-700">
@@ -318,7 +318,7 @@ export const ExactEstimatorApp: React.FC<ExactEstimatorAppProps> = ({
               <div className="bg-gradient-to-br from-[#0F5B42] to-[#0B4230] rounded-3xl p-5 text-white shadow-xl space-y-3">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <span className="bg-black/30 backdrop-blur-md px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1">
+                    <span className="bg-black/40 px-2.5 py-1 rounded-xl text-xs font-extrabold flex items-center gap-1">
                       Draft <ChevronDown className="w-3.5 h-3.5" />
                     </span>
                     <span className="bg-black/20 px-2.5 py-1 rounded-xl text-xs font-medium">
@@ -529,7 +529,7 @@ export const ExactEstimatorApp: React.FC<ExactEstimatorAppProps> = ({
                   transform: `scale(${waModalAnim})`,
                   opacity: interpolate(waModalAnim, [0, 1], [0, 1]),
                 }}
-                className="absolute inset-3 bg-black/90 backdrop-blur-md rounded-3xl p-5 flex flex-col justify-between z-50 border-2 border-emerald-500/50 text-white"
+                className="absolute inset-3 bg-[#07130F] rounded-3xl p-5 flex flex-col justify-between z-50 border-2 border-emerald-500/50 text-white shadow-2xl"
               >
                 <div>
                   <div className="w-12 h-12 rounded-2xl bg-[#25D366] flex items-center justify-center mx-auto mb-2 shadow-lg shadow-[#25D366]/40">
