@@ -96,16 +96,16 @@ function SettingsContent() {
   const [saved, setSaved] = useState(false);
 
   // Meta & AI States
-  const [adAccountId, setAdAccountId] = useState(apiConfig.adAccountId || "act_5763154810473541");
-  const [pixelId, setPixelId] = useState(apiConfig.pixelId || "1530674178146899");
+  const [adAccountId, setAdAccountId] = useState(apiConfig.adAccountId || "");
+  const [pixelId, setPixelId] = useState(apiConfig.pixelId || "");
   const [metaToken, setMetaToken] = useState(apiConfig.metaAccessToken || "");
   const [capiToken, setCapiToken] = useState(apiConfig.capiAccessToken || "");
 
-  // OpenRouter Master Key
+  // OpenRouter Master Key (Loaded securely from Cloud / Store, never hardcoded)
   const [openRouterKey, setOpenRouterKey] = useState(
     winningEngineConfig.llmRouting.openRouterApiKey ||
     apiConfig.aiApiKey ||
-    "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"
+    ""
   );
   const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
 
@@ -116,7 +116,7 @@ function SettingsContent() {
   const [strategistKey, setStrategistKey] = useState(
     winningEngineConfig.llmRouting.strategist.apiKey ||
     winningEngineConfig.llmRouting.openRouterApiKey ||
-    "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"
+    ""
   );
   const [strategistModel, setStrategistModel] = useState(
     winningEngineConfig.llmRouting.strategist.model || "openai/gpt-6-luna-pro"
@@ -128,7 +128,7 @@ function SettingsContent() {
   const [technicalKey, setTechnicalKey] = useState(
     winningEngineConfig.llmRouting.technical.apiKey ||
     winningEngineConfig.llmRouting.openRouterApiKey ||
-    "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"
+    ""
   );
   const [technicalModel, setTechnicalModel] = useState(
     winningEngineConfig.llmRouting.technical.model || "openai/gpt-6-luna-pro"
@@ -171,7 +171,7 @@ function SettingsContent() {
       (strategistProvider === "openrouter" ? strategistKey.trim() : "") ||
       (technicalProvider === "openrouter" ? technicalKey.trim() : "") ||
       winningEngineConfig.llmRouting.openRouterApiKey ||
-      "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";
+      "";
 
     // 2. Simpan Meta API Config
     updateApiConfig({
