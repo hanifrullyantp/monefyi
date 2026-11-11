@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[1749,["730","static/chunks/44530001-c4cca889f307576d.js","298","static/chunks/298-38f28ffb00d16660.js","177","static/chunks/app/layout-88eadc9e51ca7b8a.js"],"MonefyiAppLayout"]
+3:I[7121,[],""]
+4:I[4581,[],""]
+:HL["/bonus/mini/debt-free/_next/static/css/f803331f9f723752.css","style"]
+0:{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/bonus/mini/debt-free/_next/static/css/f803331f9f723752.css","precedence":"next"}]],["$","html",null,{"lang":"id","className":"scroll-smooth","children":["$","body",null,{"className":"bg-slate-950 text-white antialiased","children":["$","$L2",null,{"children":["$","$L3",null,{"parallelRouterKey":"children","template":["$","$L4",null,{}]}]}]}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"mJ4ORQUKtpaX1LgQgVVeZ"}
