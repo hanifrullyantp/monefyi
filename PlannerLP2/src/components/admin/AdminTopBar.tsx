@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useUIStore } from "@/lib/store/uiStore";
 import { cn } from "@/lib/utils/cn";
+import { AdminNotificationCenter } from "@/components/admin/AdminNotificationCenter";
 
 interface IntegrationStatus {
   connected: boolean;
@@ -263,6 +264,9 @@ export function AdminTopBar({
               <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
               <span className="hidden sm:inline">Test Koneksi</span>
             </button>
+
+            {/* Notification Center (HP & Laptop) */}
+            <AdminNotificationCenter />
 
             {/* Dark / Light Mode Toggle */}
             <button

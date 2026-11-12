@@ -65,7 +65,6 @@ export default function RootLayout({
   return (
     <html lang="id" className={plusJakartaSans.variable} suppressHydrationWarning>
       <head>
-        <meta name="apple-mobile-web-app-title" content="Estimator" />
         {/* Meta Pixel Resmi: Aktif instan saat load & terverifikasi oleh Meta Pixel Helper */}
         <script
           id="meta-pixel-base"
@@ -101,10 +100,13 @@ export default function RootLayout({
                 window.addEventListener('beforeinstallprompt', function(e) {
                   e.preventDefault();
                   var path = window.location.pathname || '';
-                  var key = path.startsWith('/admin') ? 'admin' : 'estimator';
-                  window.__pwaPrompts[key] = e;
-                  window.__pwaLastPrompt = e;
-                  window.dispatchEvent(new CustomEvent('pwa-prompt-ready', { detail: { key: key, prompt: e } }));
+                  if (path.startsWith('/admin')) {
+                    window.__pwaPrompts.admin = e;
+                    window.dispatchEvent(new CustomEvent('pwa-admin-prompt-ready', { detail: { prompt: e } }));
+                  } else {
+                    window.__pwaPrompts.estimator = e;
+                    window.dispatchEvent(new CustomEvent('pwa-estimator-prompt-ready', { detail: { prompt: e } }));
+                  }
                 });
 
                 if ('serviceWorker' in navigator) {
@@ -112,7 +114,7 @@ export default function RootLayout({
                     var registerSw = function() {
                       var path = window.location.pathname || '';
                       if (path.startsWith('/admin')) {
-                        navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin' }).catch(function(){});
+                        navigator.serviceWorker.register('/admin-sw.js', { scope: '/admin/' }).catch(function(){});
                       } else {
                         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
                       }

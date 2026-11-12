@@ -18,6 +18,7 @@ import { AuthHydrator } from "@/components/landing/AuthHydrator";
 import { useUIStore } from "@/lib/store/uiStore";
 import { AdminPwaInstallPrompt } from "@/components/admin/AdminPwaInstallPrompt";
 import { MayarStatusBanner } from "@/components/admin/MayarStatusBanner";
+import { AdminInAppToast } from "@/components/admin/AdminInAppToast";
 import { MarketingConfigModal } from "@/components/admin/marketing/MarketingConfigModal";
 import { cn } from "@/lib/utils/cn";
 import { setAccessTokenProvider } from "@/lib/auth/authedFetch";
@@ -42,10 +43,10 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
       return data.session?.access_token ?? null;
     });
 
-    // Register admin-sw.js khusus untuk scope /admin
+    // Register admin-sw.js khusus untuk scope /admin/
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/admin-sw.js", { scope: "/admin" })
+        .register("/admin-sw.js", { scope: "/admin/" })
         .catch((err) => {
           console.warn("[pwa-admin] SW registration:", err);
         });
@@ -82,6 +83,8 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
       >
         {/* PWA Install Prompt Banner */}
         <AdminPwaInstallPrompt />
+        {/* Floating In-App System Toast */}
+        <AdminInAppToast />
         {/* Mayar Payment Gateway Status & Alert Banner */}
         <MayarStatusBanner />
 
