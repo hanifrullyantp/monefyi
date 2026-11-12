@@ -254,6 +254,21 @@ export function useAdminNotificationEngine() {
     });
   };
 
+  const testBillingAlert = async () => {
+    const threshold = Number(
+      (typeof window !== "undefined" && localStorage.getItem("monefyi_billing_threshold")) || 500000
+    );
+    const alertHrs = Number(
+      (typeof window !== "undefined" && localStorage.getItem("monefyi_billing_alert_hours")) || 6
+    );
+    await sendAdminNotification({
+      type: "api_alert",
+      title: `⚠️ [TES] PENARIKAN META ADS DALAM ${alertHrs} JAM!`,
+      body: `Total tagihan saat ini Rp 450.000 mendekati batas Rp ${threshold.toLocaleString("id-ID")}. Pastikan saldo kartu debit Anda sudah terisi sebelum jam penarikan agar akun iklan tidak dinonaktifkan!`,
+      url: "/admin/marketing",
+    });
+  };
+
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return {
@@ -269,6 +284,7 @@ export function useAdminNotificationEngine() {
     testClosing,
     testLead,
     testApiAlert,
+    testBillingAlert,
   };
 }
 

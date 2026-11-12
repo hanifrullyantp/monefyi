@@ -37,6 +37,7 @@ export function AdminNotificationCenter() {
     testClosing,
     testLead,
     testApiAlert,
+    testBillingAlert,
   } = useAdminNotificationEngine();
 
   // Close when clicking outside
@@ -173,6 +174,14 @@ export function AdminNotificationCenter() {
                 title="Simulasi Alert API Terputus"
               >
                 + Alert API
+              </button>
+              <button
+                type="button"
+                onClick={testBillingAlert}
+                className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold border border-amber-500/30 transition-colors cursor-pointer"
+                title="Simulasi Alert Penarikan Tagihan Meta Ads"
+              >
+                + Tagihan
               </button>
             </div>
           </div>

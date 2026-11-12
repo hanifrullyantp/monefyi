@@ -75,6 +75,13 @@ interface MarketingStore {
   metaSyncError?: string | null;
   datePreset: string;
   discoveredAccounts: DiscoveredMetaAccount[];
+  accountBilling?: {
+    balance: number;
+    amountSpent: number;
+    spendCap: number;
+    fundingSource: string;
+    currency: string;
+  };
   setDatePreset: (preset: string) => Promise<void>;
   selectAdAccount: (accountId: string) => Promise<void>;
   refreshCampaigns: () => Promise<void>;
@@ -711,6 +718,7 @@ export const useMarketingStore = create<MarketingStore>()(
                 result.discoveredAccounts && result.discoveredAccounts.length > 0
                   ? result.discoveredAccounts
                   : state.discoveredAccounts,
+              accountBilling: result.accountBilling || state.accountBilling,
               apiConfig:
                 result.resolvedAccountId &&
                 result.resolvedAccountId !== state.apiConfig.adAccountId

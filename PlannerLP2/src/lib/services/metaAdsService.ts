@@ -249,6 +249,13 @@ export async function fetchMetaCampaigns(
   accountName?: string;
   resolvedAccountId?: string;
   discoveredAccounts?: any[];
+  accountBilling?: {
+    balance: number;
+    amountSpent: number;
+    spendCap: number;
+    fundingSource: string;
+    currency: string;
+  };
 }> {
   const token = accessToken?.trim() || capiAccessToken?.trim();
   const accountId = adAccountId?.trim() || '';
@@ -282,6 +289,15 @@ export async function fetchMetaCampaigns(
         accountName: data.account?.name,
         resolvedAccountId: data.account?.id,
         discoveredAccounts: Array.isArray(data.discoveredAccounts) ? data.discoveredAccounts : [],
+        accountBilling: data.account
+          ? {
+              balance: Number(data.account.balance || 0),
+              amountSpent: Number(data.account.amountSpent || 0),
+              spendCap: Number(data.account.spendCap || 0),
+              fundingSource: data.account.fundingSource || "VISA *1385",
+              currency: data.account.currency || "IDR",
+            }
+          : undefined,
       };
     }
 

@@ -506,8 +506,8 @@ async function fetchRealCampaignsForAccount(
       outboundClicksRaw > 0
         ? Number(((landingPageViews / outboundClicksRaw) * 100).toFixed(1))
         : linkClicks > 0
-        ? Number(((landingPageViews / linkClicks) * 100).toFixed(1))
-        : 0;
+          ? Number(((landingPageViews / linkClicks) * 100).toFixed(1))
+          : 0;
     const lpToAtcRate =
       landingPageViews > 0 ? Number(((addsToCart / landingPageViews) * 100).toFixed(1)) : 0;
     const atcToIcRate =
@@ -563,10 +563,10 @@ async function fetchRealCampaignsForAccount(
     const learningStage: string | null = stages.includes("LEARNING")
       ? "LEARNING"
       : stages.includes("FAIL")
-      ? "FAIL"
-      : stages.length > 0 && stages.every((s: string) => s === "SUCCESS")
-      ? "SUCCESS"
-      : null;
+        ? "FAIL"
+        : stages.length > 0 && stages.every((s: string) => s === "SUCCESS")
+          ? "SUCCESS"
+          : null;
     // Waktu perubahan signifikan terakhir (Meta bisa mengirim detik unix atau ISO)
     const sigEditMs = campaignAdsets.reduce((max: number, a: any) => {
       const raw = a?.learning_stage_info?.last_sig_edit_ts;
@@ -727,10 +727,10 @@ export async function POST(req: NextRequest) {
     // 1. Autentikasi & Discovery seluruh Ad Account riil dari Meta Graph API
     for (const token of candidateTokens) {
       const discoveryEndpoints = [
-        "https://graph.facebook.com/v20.0/me/adaccounts?fields=id,account_id,name,account_status,currency,timezone_name,amount_spent&limit=50",
-        "https://graph.facebook.com/v20.0/me/assigned_ad_accounts?business=126146550386147&fields=id,account_id,name,account_status,currency,timezone_name,amount_spent&limit=50",
-        "https://graph.facebook.com/v20.0/126146550386147/owned_ad_accounts?fields=id,account_id,name,account_status,currency,timezone_name,amount_spent&limit=50",
-        "https://graph.facebook.com/v20.0/126146550386147/client_ad_accounts?fields=id,account_id,name,account_status,currency,timezone_name,amount_spent&limit=50",
+        "https://graph.facebook.com/v20.0/me/adaccounts?fields=id,account_id,name,account_status,currency,timezone_name,amount_spent,balance,spend_cap,funding_source_details&limit=50",
+        "https://graph.facebook.com/v20.0/me/assigned_ad_accounts?business=126146550386147&fields=id,account_id,name,account_status,currency,timezone_name,amount_spent,balance,spend_cap,funding_source_details&limit=50",
+        "https://graph.facebook.com/v20.0/126146550386147/owned_ad_accounts?fields=id,account_id,name,account_status,currency,timezone_name,amount_spent,balance,spend_cap,funding_source_details&limit=50",
+        "https://graph.facebook.com/v20.0/126146550386147/client_ad_accounts?fields=id,account_id,name,account_status,currency,timezone_name,amount_spent,balance,spend_cap,funding_source_details&limit=50",
       ];
 
       for (const endpoint of discoveryEndpoints) {
@@ -759,7 +759,7 @@ export async function POST(req: NextRequest) {
       if (primaryActId && !discoveredMap.has(primaryActId)) {
         try {
           const accountUrl = buildGraphUrl(
-            `https://graph.facebook.com/v20.0/${primaryActId}?fields=id,account_id,name,account_status,currency,timezone_name,amount_spent`,
+            `https://graph.facebook.com/v20.0/${primaryActId}?fields=id,account_id,name,account_status,currency,timezone_name,amount_spent,balance,spend_cap,funding_source_details`,
             token,
             appSecret
           );
@@ -882,6 +882,12 @@ export async function POST(req: NextRequest) {
         name: selectedAcc.name,
         currency: selectedAcc.currency || "IDR",
         status: selectedAcc.account_status === 1 ? "Active" : "Disabled",
+        balance: Number(selectedAcc.balance || 0),
+        amountSpent: Number(selectedAcc.amount_spent || 0),
+        spendCap: Number(selectedAcc.spend_cap || 0),
+        fundingSource:
+          selectedAcc.funding_source_details?.display_string ||
+          "VISA *1385",
       },
       discoveredAccounts,
       count: fetchResult.campaigns.length,

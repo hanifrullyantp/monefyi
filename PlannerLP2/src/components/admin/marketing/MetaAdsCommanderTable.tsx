@@ -36,6 +36,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { MetaBillingAlertBanner } from "@/components/admin/marketing/MetaBillingAlertBanner";
 
 interface MetaAdsCommanderTableProps {
   onOpenWinningEngine?: () => void;
@@ -157,6 +158,19 @@ export function MetaAdsCommanderTable({
   ).length;
   const bleedingCount = keywordFilteredCampaigns.filter((c) => c.healthStatus === "bleeding").length;
 
+  // Metrik Tambahan untuk Ringkasan Card Mobile (OCLP, CTR, CPC, CPM)
+  const totalImpressions = keywordFilteredCampaigns.reduce((acc, c) => acc + Number(c.impressions || 0), 0);
+  const totalLinkClicks = keywordFilteredCampaigns.reduce((acc, c) => acc + Number(c.linkClicks || 0), 0);
+  const totalAllClicks = keywordFilteredCampaigns.reduce((acc, c) => acc + Number(c.clicks || c.linkClicks || 0), 0);
+  const totalLandingPageViews = keywordFilteredCampaigns.reduce((acc, c) => acc + Number(c.landingPageViews || 0), 0);
+
+  const oclpRate = totalLinkClicks > 0 ? ((totalLandingPageViews / totalLinkClicks) * 100).toFixed(1) + "%" : "0.0%";
+  const ctrLinkRate = totalImpressions > 0 ? ((totalLinkClicks / totalImpressions) * 100).toFixed(2) + "%" : "0.00%";
+  const ctrAllRate = totalImpressions > 0 ? ((totalAllClicks / totalImpressions) * 100).toFixed(2) + "%" : "0.00%";
+  const cpcLinkVal = totalLinkClicks > 0 ? Math.round(totalSpend / totalLinkClicks) : 0;
+  const cpcAllVal = totalAllClicks > 0 ? Math.round(totalSpend / totalAllClicks) : 0;
+  const cpmVal = totalImpressions > 0 ? Math.round((totalSpend / totalImpressions) * 1000) : 0;
+
   const handleStartEditBudget = (camp: MetaCampaign) => {
     setEditingBudgetId(camp.id);
     setTempBudget(camp.dailyBudget);
@@ -184,7 +198,7 @@ export function MetaAdsCommanderTable({
       ok
         ? `Scale Up +${pct}% berhasil! Budget "${camp.name}" naik menjadi Rp ${nextBudget.toLocaleString("id-ID")}/hari.`
         : `Gagal menaikkan budget "${camp.name}".`
-      );
+    );
     setTimeout(() => setActionNotice(null), 4000);
   };
 
@@ -292,8 +306,130 @@ export function MetaAdsCommanderTable({
 
   return (
     <div className="space-y-3">
-      {/* 3. PERTAHANKAN DASHBOARD CARD SEKARANG (TOTAL AMOUNT SPENT, RESULTS & CPA, THRUPLAYS & ROAS, STATUS KAMPANYE) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
+      {/* 2. ALERT PEMBAYARAN KARTU DEBIT META ADS (TAGIHAN & BATAS WAKTU PENARIKAN DEFAULT 6 JAM) */}
+      <MetaBillingAlertBanner totalSpendToday={totalSpend} />
+
+      {/* 3A. MOBILE DISPLAY: 4 CARD MENJADI 1 CARD TUNGGAL RINGKAS & LENGKAP */}
+      <div className="block sm:hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl shadow-xs space-y-3">
+        {/* Header Ringkasan: Total Spend & Results */}
+        <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+          <div>
+            <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <DollarSign className="w-3 h-3 text-emerald-500" />
+              <span>TOTAL AMOUNT SPENT</span>
+            </div>
+            <div className="text-xl font-black text-slate-900 dark:text-white leading-tight mt-0.5">
+              Rp {totalSpend.toLocaleString("id-ID")}
+            </div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Val: Rp {totalRevenue.toLocaleString("id-ID")} • ROAS: {weightedRoas}x
+            </div>
+          </div>
+
+          <div className="text-right">
+            <div className="flex items-center justify-end gap-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <Target className="w-3 h-3 text-blue-500" />
+              <span>RESULTS</span>
+            </div>
+            <div className="text-xl font-black text-blue-600 dark:text-blue-400 leading-tight mt-0.5">
+              {totalResults.toLocaleString("id-ID")} Results
+            </div>
+            <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              CPR: <strong className="text-slate-900 dark:text-white font-bold">Rp {avgCostPerResult.toLocaleString("id-ID")}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Live Indicator & ThruPlays */}
+        <div className="flex items-center justify-between text-xs px-0.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+              {winningCount} Winning
+            </span>
+            {bleedingCount > 0 && (
+              <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
+                {bleedingCount} Boncos
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+            {totalThruPlays.toLocaleString("id-ID")} ThruPlay (15s)
+          </span>
+        </div>
+
+        {/* Grid Metrik Lengkap: CPR, OCLP, CTR & CTR Link, CPC, CPM */}
+        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+          {/* OCLP */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+              1. OCLP (LP / CLICKS)
+            </div>
+            <div className="text-sm font-black text-indigo-600 dark:text-indigo-400 mt-0.5">
+              {oclpRate}
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5 truncate">
+              {totalLandingPageViews} LP / {totalLinkClicks} Clicks
+            </div>
+          </div>
+
+          {/* CPR */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+              COST PER RESULT (CPR)
+            </div>
+            <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
+              Rp {avgCostPerResult.toLocaleString("id-ID")}
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5 truncate">
+              {totalPurchases} Purchase, {totalLeads} Lead
+            </div>
+          </div>
+
+          {/* CTR & CTR LINK */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+              CTR &amp; CTR LINK
+            </div>
+            <div className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+              {ctrLinkRate} <span className="text-[10px] text-slate-400 font-normal">Link</span>
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5 truncate">
+              CTR All: {ctrAllRate}
+            </div>
+          </div>
+
+          {/* CPC & CPC LINK */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+              CPC &amp; CPC LINK
+            </div>
+            <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
+              Rp {cpcLinkVal.toLocaleString("id-ID")} <span className="text-[10px] text-slate-400 font-normal">Link</span>
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5 truncate">
+              CPC All: Rp {cpcAllVal.toLocaleString("id-ID")}
+            </div>
+          </div>
+
+          {/* CPM */}
+          <div className="col-span-2 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                CPM (COST PER 1,000 IMPRESSIONS)
+              </div>
+              <div className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
+                Rp {cpmVal.toLocaleString("id-ID")}
+              </div>
+            </div>
+            <div className="text-right text-[10px] text-slate-400 font-medium">
+              {totalImpressions.toLocaleString("id-ID")} Total Impresi
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3B. DESKTOP / TABLET DISPLAY: 4 DASHBOARD CARD (TOTAL SPENT, RESULTS & CPA, THRUPLAYS & ROAS, STATUS KAMPANYE) */}
+      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
         {/* Card 1: TOTAL AMOUNT SPENT */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
@@ -1297,7 +1433,7 @@ export function MetaAdsCommanderTable({
                     className={cn(
                       "p-3.5 min-w-[240px] transition-all",
                       isColumnPinned &&
-                        "sticky left-0 z-20 bg-slate-100 dark:bg-slate-950 shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
+                      "sticky left-0 z-20 bg-slate-100 dark:bg-slate-950 shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
                     )}
                   >
                     Campaign
@@ -1374,7 +1510,7 @@ export function MetaAdsCommanderTable({
                           className={cn(
                             "p-3.5 font-medium transition-all",
                             isColumnPinned &&
-                              "sticky left-0 z-10 bg-white dark:bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
+                            "sticky left-0 z-10 bg-white dark:bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
                           )}
                         >
                           <div className="max-w-[260px]">
