@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   Megaphone,
+  Sparkles,
   BarChart3,
   Settings,
   LogOut,
@@ -39,6 +40,11 @@ const mainNavItems = [
     icon: Megaphone,
     label: "Ads Manager",
     hasSettings: true,
+  },
+  {
+    href: "/admin/winning-engine",
+    icon: Sparkles,
+    label: "Winning Engine",
   },
   {
     href: "/admin/crm",

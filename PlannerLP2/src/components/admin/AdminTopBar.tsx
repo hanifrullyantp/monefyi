@@ -65,6 +65,7 @@ export function AdminTopBar({
   // Tentukan nama halaman berdasarkan rute aktif
   const getPageTitle = (path: string): string => {
     if (path === "/admin") return "Dashboard";
+    if (path.startsWith("/admin/winning-engine")) return "Winning Engine (5 Pilar)";
     if (path.startsWith("/admin/marketing")) return "Ads Manager";
     if (path.startsWith("/admin/crm-template")) return "Template WhatsApp";
     if (path.startsWith("/admin/crm")) return "CRM";
@@ -100,9 +101,14 @@ export function AdminTopBar({
   };
 
   useEffect(() => {
-    checkIntegrations(false);
+    const timer = setTimeout(() => {
+      checkIntegrations(false);
+    }, 0);
     const interval = setInterval(() => checkIntegrations(false), 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, []);
 
   const hasDisconnected =

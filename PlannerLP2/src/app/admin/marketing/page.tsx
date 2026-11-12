@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { MarketingWarRoom } from "@/components/admin/marketing/MarketingWarRoom";
-import { WinningEngineCommandCenter } from "@/components/admin/marketing/WinningEngineCommandCenter";
 import { MetaAdsCommanderTable } from "@/components/admin/marketing/MetaAdsCommanderTable";
 import { MetaAdsDeepInsights } from "@/components/admin/marketing/MetaAdsDeepInsights";
 import { WinningAdCreator } from "@/components/admin/marketing/WinningAdCreator";
@@ -25,11 +25,11 @@ import {
 import { cn } from "@/lib/utils/cn";
 
 export default function MarketingAdminPage() {
+  const router = useRouter();
   // Single Tab Mode: Halaman Ads Manager langsung menampilkan tabel Meta Ads Commander
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isAdspertOpen, setIsAdspertOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [showWinningEngineModal, setShowWinningEngineModal] = useState(false);
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showCreativeModal, setShowCreativeModal] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string>("Baru saja");
@@ -61,13 +61,6 @@ export default function MarketingAdminPage() {
   }, []);
 
   useEffect(() => {
-    setLastRefreshed(
-      new Date().toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      })
-    );
     refreshCampaigns().catch(() => undefined);
     refreshInsights().catch(() => undefined);
   }, [apiConfig.metaAccessToken, apiConfig.capiAccessToken, apiConfig.adAccountId]);
@@ -297,32 +290,11 @@ export default function MarketingAdminPage() {
 
       {/* 1. HANYA SATU TAB: LANGSUNG MENAMPILKAN TABEL META ADS COMMANDER */}
       <MetaAdsCommanderTable
-        onOpenWinningEngine={() => setShowWinningEngineModal(true)}
+        onOpenWinningEngine={() => router.push("/admin/winning-engine")}
         onOpenInsights={() => setShowInsightsModal(true)}
         onOpenCreative={() => setShowCreativeModal(true)}
         onOpenConfig={() => setIsConfigOpen(true)}
       />
-
-      {/* MODAL 1: WINNING ENGINE (5 PILAR) */}
-      {showWinningEngineModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Winning Engine (5 Pilar Scale Model)</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowWinningEngineModal(false)}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <WinningEngineCommandCenter onOpenConfigModal={() => setIsConfigOpen(true)} />
-          </div>
-        </div>
-      )}
 
       {/* MODAL 2: ADS INSIGHT & DEMOGRAFI */}
       {showInsightsModal && (

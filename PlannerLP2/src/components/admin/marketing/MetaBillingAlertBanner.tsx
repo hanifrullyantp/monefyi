@@ -24,6 +24,14 @@ interface MetaBillingAlertBannerProps {
 export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlertBannerProps) {
   const { accountBilling, isLiveMeta, metaAccountName } = useMarketingStore();
 
+  // Pengaturan Banner Dismissed per Sesi (SessionStorage)
+  const [isDismissed, setIsDismissed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("monefyi_billing_banner_dismissed") === "true";
+    }
+    return false;
+  });
+
   // Pengaturan Batas Tagihan & Waktu Peringatan (Default: Batas Rp 500.000, Waktu 6 Jam)
   const [billingThreshold, setBillingThreshold] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -95,7 +103,7 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
       localStorage.setItem(LAST_ALERT_KEY, String(now));
       sendAdminNotification({
         type: "api_alert",
-        title: `⚠️ PERINGATAN PEMBAYARAN META ADS (Sisa ~${estimatedHoursLeft} Jam)!`,
+        title: `PERINGATAN PEMBAYARAN META ADS (Sisa ~${estimatedHoursLeft} Jam)!`,
         body: `Total tagihan saat ini Rp ${currentBill.toLocaleString("id-ID")} dari batas Rp ${billingThreshold.toLocaleString("id-ID")}. Pastikan kartu debit ${cardName} terisi sebelum penarikan otomatis agar iklan tidak mati!`,
         url: "/admin/marketing",
       });
@@ -115,11 +123,22 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
   const handleManualTestAlert = () => {
     sendAdminNotification({
       type: "api_alert",
-      title: `⚠️ [SIMULASI] Penarikan Meta Ads dalam ${alertHours} Jam!`,
+      title: `[SIMULASI] Penarikan Meta Ads dalam ${alertHours} Jam!`,
       body: `Total tagihan Rp ${currentBill.toLocaleString("id-ID")} mendekati batas Rp ${billingThreshold.toLocaleString("id-ID")}. Segera isi saldo kartu debit ${cardName}!`,
       url: "/admin/marketing",
     });
   };
+
+  const handleDismiss = () => {
+    setIsDismissed(true);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("monefyi_billing_banner_dismissed", "true");
+    }
+  };
+
+  if (isDismissed) {
+    return null;
+  }
 
   return (
     <>
@@ -153,7 +172,7 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                 </span>
                 {isUrgent ? (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse">
-                    ⚠️ ALERT PENARIKAN (&le; {alertHours} JAM)
+                    ALERT PENARIKAN (&le; {alertHours} JAM)
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
@@ -231,6 +250,17 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
               <span>Bayar di Meta</span>
               <ExternalLink className="w-3 h-3" />
             </a>
+
+            {/* Tombol Silang (Dismiss untuk Sesi Ini) */}
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              title="Tutup notifikasi status pembayaran untuk sesi ini"
+              aria-label="Tutup notifikasi"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
