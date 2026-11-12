@@ -1,4 +1,5 @@
 import { MetaCampaign, MarketingAutomationRules, AdHealthStatus } from '../types/marketing';
+import { authedFetch } from '../auth/authedFetch';
 
 export function enrichCampaignWithScaleMetrics(raw: Partial<MetaCampaign> & { id: string; name: string }): MetaCampaign {
   const spend = raw.spend || 0;
@@ -257,7 +258,7 @@ export async function fetchMetaCampaigns(
   }
 
   try {
-    const res = await fetch('/api/meta/campaigns', {
+    const res = await authedFetch('/api/meta/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -304,7 +305,7 @@ export async function updateRemoteCampaignStatus(
 ): Promise<{ ok: boolean; log?: any; error?: string }> {
   if (!accessToken?.trim()) return { ok: false, error: 'Token Meta belum terpasang' };
   try {
-    const res = await fetch('/api/meta/actions', {
+    const res = await authedFetch('/api/meta/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -335,7 +336,7 @@ export async function updateRemoteAdStatus(
 ): Promise<{ ok: boolean; log?: any; error?: string }> {
   if (!accessToken?.trim()) return { ok: false, error: 'Token Meta belum terpasang' };
   try {
-    const res = await fetch('/api/meta/actions', {
+    const res = await authedFetch('/api/meta/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -367,7 +368,7 @@ export async function updateRemoteCampaignBudget(
 ): Promise<{ ok: boolean; log?: any; error?: string }> {
   if (!accessToken?.trim()) return { ok: false, error: 'Token Meta belum terpasang' };
   try {
-    const res = await fetch('/api/meta/actions', {
+    const res = await authedFetch('/api/meta/actions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -66,8 +66,8 @@ export function MetaAdsCommanderTable({
     rules,
   } = useMarketingStore();
 
-  // 2. Default: HARI INI (today) dan YANG AKTIF SAJA (ACTIVE)
-  const [statusFilter, setStatusFilter] = useState<string>("ACTIVE");
+  // Default: SEMUA (ALL) agar kampanye riil langsung terlihat apa pun statusnya di Meta
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [tempBudget, setTempBudget] = useState<number>(0);
@@ -75,20 +75,21 @@ export function MetaAdsCommanderTable({
 
   // 8. Freeze / Pin Kolom Toggle (Bisa digeser atau di-freeze)
   const [isColumnPinned, setIsColumnPinned] = useState<boolean>(false);
-  // Tabel desktop 26 metrik disembunyikan secara default. Ringkasan di atas tetap tampil.
-  const [showFullTable, setShowFullTable] = useState<boolean>(false);
+  // Tabel desktop 26 metrik ditampilkan langsung secara default
+  const [showFullTable, setShowFullTable] = useState<boolean>(true);
 
   // 11. Accordion Drilldown Ad Sets & Ads
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<Set<string>>(new Set());
 
-  // 5. Pengaturan Kata Kunci Campaign (Hanya kampanye berkatakunci yang dianalisa)
+  // 5. Pengaturan Kata Kunci Campaign (Hanya kampanye berkatakunci jika filter aktif)
   const [campaignKeywords, setCampaignKeywords] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("monefyi_campaign_keywords") || "monefyi, estimator, rab";
     }
     return "monefyi, estimator, rab";
   });
-  const [isKeywordFilterActive, setIsKeywordFilterActive] = useState<boolean>(true);
+  // Default tidak aktif agar seluruh kampanye pengguna dari Meta Ads langsung terlihat
+  const [isKeywordFilterActive, setIsKeywordFilterActive] = useState<boolean>(false);
   const [showKeywordModal, setShowKeywordModal] = useState<boolean>(false);
   const [tempKeywords, setTempKeywords] = useState<string>(campaignKeywords);
 
@@ -984,18 +985,25 @@ export function MetaAdsCommanderTable({
         })}
       </div>
 
-      {/* TAMPILAN DESKTOP & TABLET: TABEL KAMPANYE DENGAN TOGGLE FREEZE & ACCORDION DRILLDOWN (DEFAULT TERSEMBUNYI) */}
-      <div className="hidden sm:flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Ringkasan di atas sudah cukup untuk keputusan harian. Detail kampanye ada di balik tombol ini.
-        </p>
+      {/* TAMPILAN DESKTOP & TABLET: TABEL KAMPANYE DENGAN TOGGLE FREEZE & ACCORDION DRILLDOWN */}
+      <div className="hidden sm:flex items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2">
+          <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+            Tabel Kampanye ({finalFilteredCampaigns.length} dari {campaigns.length} Kampanye)
+          </span>
+          {isKeywordFilterActive && (
+            <span className="text-[10px] bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+              Filter Kata Kunci Aktif
+            </span>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setShowFullTable((v) => !v)}
           aria-expanded={showFullTable}
-          className="shrink-0 min-h-[36px] px-3 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+          className="shrink-0 min-h-[32px] px-3 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
         >
-          {showFullTable ? "Sembunyikan detail" : "Tampilkan detail 26 metrik"}
+          {showFullTable ? "Sembunyikan Tabel 26 Metrik" : "Tampilkan Tabel 26 Metrik"}
         </button>
       </div>
       <div
@@ -1004,15 +1012,57 @@ export function MetaAdsCommanderTable({
           showFullTable ? "hidden sm:block" : "hidden"
         )}
       >
-        {finalFilteredCampaigns.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
+        {campaigns.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
             <Target className="w-8 h-8 text-slate-400 mx-auto" />
             <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">
-              Tidak Ada Kampanye yang Cocok dengan Filter
+              Belum Ada Kampanye yang Termuat dari Meta Ads
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              Periksa filter kata kunci atau ubah filter status &amp; rentang waktu ke "Semua".
+              Periksa apakah token Meta Ads dan Ad Account ID sudah terpasang dengan benar pada menu Konfigurasi, lalu klik Refresh.
             </p>
+            {onOpenConfig && (
+              <button
+                type="button"
+                onClick={onOpenConfig}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-colors"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span>Buka Konfigurasi Akun Meta</span>
+              </button>
+            )}
+          </div>
+        ) : finalFilteredCampaigns.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <Filter className="w-8 h-8 text-purple-400 mx-auto" />
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">
+              {campaigns.length} Kampanye Ditemukan, Namun Tersembunyi oleh Filter
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+              {isKeywordFilterActive
+                ? `Filter kata kunci "${campaignKeywords}" atau status "${statusFilter}" menyaring seluruh kampanye.`
+                : `Tidak ada kampanye dengan status "${statusFilter}".`}
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              {statusFilter !== "ALL" && (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("ALL")}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-emerald-600 text-white font-bold text-xs shadow-xs"
+                >
+                  Tampilkan Semua Status ({campaigns.length})
+                </button>
+              )}
+              {isKeywordFilterActive && (
+                <button
+                  type="button"
+                  onClick={() => setIsKeywordFilterActive(false)}
+                  className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-xs"
+                >
+                  Matikan Filter Kata Kunci
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
