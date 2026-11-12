@@ -565,7 +565,7 @@ export function MetaAdsCommanderTable({
         </div>
       </div>
 
-      {/* 9. TAMPILAN MOBILE: DATA BERBENTUK CARD BERBARIS KE BAWAH (SCROLL VERTICAL, MAKSIMAL 2-3 KOLOM) */}
+      {/* 9. TAMPILAN MOBILE: DATA DENGAN SELURUH METRIK MINIMAL (29 METRIK) */}
       <div className="sm:hidden space-y-3">
         {finalFilteredCampaigns.map((camp) => {
           const isExpanded = expandedCampaignIds.has(camp.id);
@@ -579,19 +579,23 @@ export function MetaAdsCommanderTable({
             <div
               key={`mob_${camp.id}`}
               className={cn(
-                "p-3.5 rounded-2xl border transition-all bg-white dark:bg-slate-900 shadow-xs space-y-3",
+                "p-3 rounded-2xl border transition-all bg-white dark:bg-slate-900 shadow-xs space-y-2.5",
                 isOff
-                  ? "border-slate-200 dark:border-slate-800 opacity-75"
+                  ? "border-slate-200 dark:border-slate-800 opacity-80"
                   : "border-slate-200 dark:border-slate-800 hover:border-emerald-500/50"
               )}
             >
-              {/* Header Card: Nama, Delivery, & Aksi Cepat */}
-              <div className="flex items-start justify-between gap-2">
+              {/* 1. Header: Ad (Nama), Delivery & Actions */}
+              <div className="flex items-start justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
                 <div className="min-w-0 flex-1">
-                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-white leading-tight">
+                  <div className="flex items-center gap-1 text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mb-0.5">
+                    <span>Ad:</span>
+                  </div>
+                  <h4 className="font-black text-xs text-slate-900 dark:text-white leading-tight">
                     {camp.name}
                   </h4>
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    {/* Delivery */}
                     <span
                       className={cn(
                         "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border",
@@ -606,7 +610,7 @@ export function MetaAdsCommanderTable({
                           camp.status === "ACTIVE" ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
                         )}
                       />
-                      {camp.deliveryStatus || (camp.status === "ACTIVE" ? "Active" : "Off")}
+                      Delivery: {camp.deliveryStatus || (camp.status === "ACTIVE" ? "Active" : "Off")}
                     </span>
 
                     <span
@@ -621,12 +625,12 @@ export function MetaAdsCommanderTable({
                   </div>
                 </div>
 
-                {/* Tombol Aksi: Scale & Play/Pause */}
-                <div className="flex items-center gap-1.5 shrink-0">
+                {/* Actions (Aksi Cepat) */}
+                <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
                   <button
                     type="button"
                     onClick={() => handleQuickScaleRow(camp)}
-                    className="p-1.5 rounded-lg border text-[10px] font-black bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
+                    className="px-2 py-1 rounded-lg border text-[10px] font-black bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
                     title={`Scale budget +${rules?.scaleBudgetPercentage || 20}%`}
                   >
                     +{rules?.scaleBudgetPercentage || 20}%
@@ -647,53 +651,52 @@ export function MetaAdsCommanderTable({
                 </div>
               </div>
 
-              {/* Grid Metrik Desktop ke Mobile (Maksimal 3 Kolom Baca ke Bawah) */}
-              {/* Blok 1: Anggaran, Biaya & ROAS */}
-              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
+              {/* 2. Budget & Amount spent */}
+              <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-xs border border-slate-100 dark:border-slate-800">
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Budget</span>
+                  <span className="text-[9px] text-slate-400 font-extrabold uppercase block">Budget</span>
                   <span className="font-extrabold text-slate-800 dark:text-slate-200 text-[11px]">
-                    Rp {Number(camp.dailyBudget || 0).toLocaleString("id-ID")}
+                    Rp {Number(camp.dailyBudget || 0).toLocaleString("id-ID")}/hari
                   </span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Amount Spent</span>
+                  <span className="text-[9px] text-slate-400 font-extrabold uppercase block">Amount spent</span>
                   <span className="font-black text-slate-900 dark:text-white text-[11px]">
                     Rp {Number(camp.spend || 0).toLocaleString("id-ID")}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">ROAS</span>
-                  <span className="font-black text-indigo-600 dark:text-indigo-400 text-[11px]">
-                    {camp.roas ? `${camp.roas}x` : "-"}
-                  </span>
-                </div>
               </div>
 
-              {/* Blok 2: Konversi Penjualan & Biaya Hasil */}
-              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
+              {/* 3. Results, Purchases conversion value & Cost per result */}
+              <div className="grid grid-cols-3 gap-1.5 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Results (Purchases)</span>
+                  <span className="text-[9px] text-slate-400 font-extrabold uppercase block text-emerald-600 dark:text-emerald-400">
+                    Results
+                  </span>
                   <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">
-                    {camp.purchases || 0}
+                    {camp.purchases || camp.results || 0}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Conv. Value</span>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-200 text-[11px]">
+                  <span className="text-[9px] text-slate-400 font-extrabold uppercase block truncate">
+                    Purchases conversion value
+                  </span>
+                  <span className="font-black text-slate-900 dark:text-white text-[11px]">
                     Rp {Number(camp.purchasesConversionValue || 0).toLocaleString("id-ID")}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Cost / Result</span>
+                  <span className="text-[9px] text-slate-400 font-extrabold uppercase block truncate">
+                    Cost per result
+                  </span>
                   <span className="font-extrabold text-slate-800 dark:text-slate-200 text-[11px]">
                     Rp {Number(camp.costPerResult || 0).toLocaleString("id-ID")}
                   </span>
                 </div>
               </div>
 
-              {/* Blok 3: Jangkauan & Traffic Clicks */}
-              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
+              {/* 4. Reach & Link clicks */}
+              <div className="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-xs border border-slate-100 dark:border-slate-800 text-center">
                 <div>
                   <span className="text-[9px] text-slate-400 font-bold uppercase block">Reach</span>
                   <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
@@ -701,77 +704,160 @@ export function MetaAdsCommanderTable({
                   </span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Link Clicks</span>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Link clicks</span>
                   <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
                     {Number(camp.linkClicks || 0).toLocaleString("id-ID")}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">15s ThruPlays</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
-                    {Number(camp.videoThruPlays15s || 0).toLocaleString("id-ID")}
-                  </span>
+              </div>
+
+              {/* 5. Website landing page views, Adds to cart, Checkouts initiated, Registrations completed, Purchases */}
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-100 dark:border-slate-800 space-y-1.5 text-xs">
+                <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">
+                  Volume Konversi (Events)
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">Website landing page views:</span>
+                    <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
+                      {Number(camp.landingPageViews || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">Adds to cart:</span>
+                    <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
+                      {camp.addsToCart || 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">Checkouts initiated:</span>
+                    <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
+                      {camp.checkoutsInitiated || 0}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">Registrations completed:</span>
+                    <span className="font-extrabold text-blue-600 dark:text-blue-400 text-[11px]">
+                      {camp.registrationsCompleted || 0}
+                    </span>
+                  </div>
+                  <div className="col-span-2 pt-1 border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">Purchases:</span>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">
+                      {camp.purchases || 0}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Blok 4: Efisiensi Biaya CPM, CTR & CPC Link */}
-              <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-850/60 p-2.5 rounded-xl text-center text-xs border border-slate-100 dark:border-slate-800">
-                <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">CPM</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300 text-[10px]">
-                    Rp {Number(camp.cpm || 0).toLocaleString("id-ID")}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">CTR (Link)</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300 text-[10px]">
-                    {camp.ctrLink ? `${camp.ctrLink}%` : "-"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase block">CPC (Link)</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300 text-[10px]">
-                    Rp {Number(camp.cpcLink || 0).toLocaleString("id-ID")}
-                  </span>
+              {/* 6. Cost per landing page view, Cost per add to cart, Cost per checkout initiated, Cost per purchase */}
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-100 dark:border-slate-800 space-y-1.5 text-xs">
+                <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">
+                  Biaya per Tahap (Cost Per Action)
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">Cost per landing page view:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                      Rp {Number(camp.costPerLpView || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">Cost per add to cart:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                      Rp {Number(camp.costPerAddToCart || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">Cost per checkout initiated:</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                      Rp {Number(camp.costPerCheckoutInitiated || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">Cost per purchase:</span>
+                    <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-[11px]">
+                      Rp {Number(camp.costPerPurchase || camp.costPerResult || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Blok 5: Funnel Konversi Scale Model (2 Kolom Ramping) */}
-              <div className="grid grid-cols-2 gap-2 bg-emerald-50/40 dark:bg-emerald-950/20 p-2.5 rounded-xl text-xs border border-emerald-100 dark:border-emerald-900/40">
-                <div>
-                  <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-bold block">
-                    LP Views (OCLP)
-                  </span>
-                  <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
-                    {Number(camp.landingPageViews || 0).toLocaleString("id-ID")}{" "}
-                    <span className="text-[9px] text-emerald-600 font-bold">({camp.oclpRate || 0}%)</span>
-                  </span>
+              {/* 7. 4 Rasio Funnel: 1. OCLP, 2. LP-ATC, 3. ATC-IC, 4. IC-Purchase */}
+              <div className="p-2.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 text-xs space-y-1.5">
+                <span className="text-[9px] font-black uppercase text-emerald-800 dark:text-emerald-300 tracking-wider block">
+                  4 Rasio Funnel Scale Model
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[9px] text-slate-600 dark:text-slate-400 block">1. OCLP</span>
+                    <span className="font-black text-slate-900 dark:text-white text-[11px]">
+                      {camp.oclpRate || 0}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-600 dark:text-slate-400 block">2. LP-ATC</span>
+                    <span className="font-black text-slate-900 dark:text-white text-[11px]">
+                      {camp.lpToAtcRate || 0}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-600 dark:text-slate-400 block">3. ATC-IC</span>
+                    <span className="font-black text-slate-900 dark:text-white text-[11px]">
+                      {camp.atcToIcRate || 0}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-600 dark:text-slate-400 block">4. IC-Purchase</span>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400 text-[11px]">
+                      {camp.icToPurchaseRate || 0}%
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-bold block">
-                    Adds to Cart
-                  </span>
-                  <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
-                    {camp.addsToCart || 0}{" "}
-                    <span className="text-[9px] text-emerald-600 font-bold">({camp.lpToAtcRate || 0}%)</span>
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-bold block">
-                    Checkouts
-                  </span>
-                  <span className="font-extrabold text-slate-900 dark:text-white text-[11px]">
-                    {camp.checkoutsInitiated || 0}{" "}
-                    <span className="text-[9px] text-emerald-600 font-bold">({camp.atcToIcRate || 0}%)</span>
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[9px] text-emerald-800 dark:text-emerald-300 font-bold block">
-                    Conv. Rate (IC-Buy)
-                  </span>
-                  <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-[11px]">
-                    {camp.icToPurchaseRate || 0}%
-                  </span>
+              </div>
+
+              {/* 8. CPM, CTR (link), CTR (all), CPC (link), CPC (all), 15-second ThruPlays */}
+              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-100 dark:border-slate-800 space-y-1.5 text-xs">
+                <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">
+                  Efisiensi Media Buying &amp; Video
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="col-span-2">
+                    <span className="text-[9px] text-slate-500 block">CPM (cost per 1,000 impressions):</span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-200 text-[11px]">
+                      Rp {Number(camp.cpm || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">CTR (link click-through rate):</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                      {camp.ctrLink ? `${camp.ctrLink}%` : "-"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">CTR (all):</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                      {camp.ctrAll ? `${camp.ctrAll}%` : camp.ctr ? `${camp.ctr}%` : "-"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">CPC (cost per link click):</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                      Rp {Number(camp.cpcLink || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] text-slate-500 block">CPC (all):</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
+                      Rp {Number(camp.cpcAll || camp.cpc || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <div className="col-span-2 pt-1 border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">15-second ThruPlays:</span>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs">
+                      {Number(camp.videoThruPlays15s || 0).toLocaleString("id-ID")}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -913,55 +999,187 @@ export function MetaAdsCommanderTable({
                                     </div>
                                   </div>
 
-                                  {/* Metrik Ad Lengkap (3 Kolom Baca ke Bawah) */}
-                                  <div className="grid grid-cols-3 gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-center">
-                                    <div>
-                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
-                                        Spent
-                                      </span>
-                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                        Rp {Number(ad.spend || 0).toLocaleString("id-ID")}
-                                      </span>
+                                  {/* 29 Metrik Lengkap untuk Ad Individu */}
+                                  <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                                    {/* 1. Hasil & Biaya Utama */}
+                                    <div className="grid grid-cols-3 gap-1 bg-slate-50 dark:bg-slate-850 p-2 rounded-lg text-center">
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 font-extrabold uppercase block">Spent</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          Rp {Number(ad.spend || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 font-extrabold uppercase block text-emerald-600">Results</span>
+                                        <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                                          {ad.purchases || ad.results || 0}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 font-extrabold uppercase block">Cost/Result</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          Rp {Number(ad.costPerResult || ad.cpa || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                      <div className="col-span-3 pt-1 border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-between px-1">
+                                        <span className="text-[8px] text-slate-400 uppercase font-bold">Purchases conversion value:</span>
+                                        <span className="text-[10px] font-black text-slate-900 dark:text-white">
+                                          Rp {Number(ad.purchasesConversionValue || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
-                                        Purchases
-                                      </span>
-                                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                                        {ad.purchases || 0}
-                                      </span>
+
+                                    {/* 2. Trafik, Jangkauan & Video */}
+                                    <div className="grid grid-cols-3 gap-1 bg-slate-50 dark:bg-slate-850 p-2 rounded-lg text-center">
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 font-bold uppercase block">Reach</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          {Number(ad.reach || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 font-bold uppercase block">Link clicks</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          {Number(ad.linkClicks || ad.clicks || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 font-bold uppercase block">15s ThruPlays</span>
+                                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                          {Number(ad.videoThruPlays15s || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
-                                        CPA
-                                      </span>
-                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                        Rp {Number(ad.cpa || 0).toLocaleString("id-ID")}
-                                      </span>
+
+                                    {/* 3. Efisiensi Biaya CPM, CTR & CPC */}
+                                    <div className="grid grid-cols-2 gap-1.5 bg-slate-50 dark:bg-slate-850 p-2 rounded-lg">
+                                      <div className="col-span-2 flex items-center justify-between">
+                                        <span className="text-[8px] text-slate-400 uppercase font-bold">CPM (cost per 1,000 imp):</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          Rp {Number(ad.cpm || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 uppercase block">CTR (link click-through):</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          {ad.ctrLink ? `${ad.ctrLink}%` : ad.ctr ? `${ad.ctr}%` : "-"}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 uppercase block">CTR (all):</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          {ad.ctrAll ? `${ad.ctrAll}%` : "-"}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 uppercase block">CPC (cost per link click):</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          Rp {Number(ad.cpcLink || ad.cpc || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[8px] text-slate-400 uppercase block">CPC (all):</span>
+                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                          Rp {Number(ad.cpcAll || ad.cpc || 0).toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
-                                        ROAS
+
+                                    {/* 4. Funnel Konversi Events */}
+                                    <div className="p-2 bg-slate-50 dark:bg-slate-850 rounded-lg space-y-1">
+                                      <span className="text-[8px] font-extrabold uppercase text-slate-400 tracking-wider block">
+                                        Funnel Volume (Website Events)
                                       </span>
-                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                        {ad.roas ? `${ad.roas}x` : "-"}
-                                      </span>
+                                      <div className="grid grid-cols-2 gap-1.5">
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">Website landing page views:</span>
+                                          <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                            {Number(ad.landingPageViews || 0).toLocaleString("id-ID")}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">Adds to cart:</span>
+                                          <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                            {ad.addsToCart || 0}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">Checkouts initiated:</span>
+                                          <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                            {ad.checkoutsInitiated || 0}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">Registrations completed:</span>
+                                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                                            {ad.registrationsCompleted || 0}
+                                          </span>
+                                        </div>
+                                        <div className="col-span-2 pt-1 border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-between">
+                                          <span className="text-[9px] font-bold text-slate-600">Purchases:</span>
+                                          <span className="text-[10px] font-black text-emerald-600">
+                                            {ad.purchases || 0}
+                                          </span>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
-                                        CTR (Link)
+
+                                    {/* 5. Biaya per Tahap (Cost Per Action) */}
+                                    <div className="p-2 bg-slate-50 dark:bg-slate-850 rounded-lg space-y-1">
+                                      <span className="text-[8px] font-extrabold uppercase text-slate-400 tracking-wider block">
+                                        Biaya per Tahap (Unit Cost)
                                       </span>
-                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                        {ad.ctr ? `${ad.ctr}%` : "-"}
-                                      </span>
+                                      <div className="grid grid-cols-2 gap-1.5">
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">Cost per landing page view:</span>
+                                          <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                            Rp {Number(ad.costPerLpView || 0).toLocaleString("id-ID")}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">Cost per add to cart:</span>
+                                          <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                            Rp {Number(ad.costPerAddToCart || 0).toLocaleString("id-ID")}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">Cost per checkout initiated:</span>
+                                          <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                            Rp {Number(ad.costPerCheckoutInitiated || 0).toLocaleString("id-ID")}
+                                          </span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">Cost per purchase:</span>
+                                          <span className="text-[10px] font-extrabold text-emerald-600">
+                                            Rp {Number(ad.costPerPurchase || ad.cpa || 0).toLocaleString("id-ID")}
+                                          </span>
+                                        </div>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">
-                                        Link Clicks
+
+                                    {/* 6. 4 Rasio Funnel (Scale Model) */}
+                                    <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
+                                      <span className="text-[8px] font-black uppercase text-emerald-800 dark:text-emerald-300 tracking-wider block mb-1">
+                                        4 Rasio Funnel Scale Model
                                       </span>
-                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                        {Number(ad.clicks || 0).toLocaleString("id-ID")}
-                                      </span>
+                                      <div className="grid grid-cols-2 gap-1.5">
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">1. OCLP:</span>
+                                          <span className="text-[10px] font-bold text-indigo-600">{ad.oclpRate || 0}%</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">2. LP-ATC:</span>
+                                          <span className="text-[10px] font-bold text-indigo-600">{ad.lpToAtcRate || 0}%</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">3. ATC-IC:</span>
+                                          <span className="text-[10px] font-bold text-indigo-600">{ad.atcToIcRate || 0}%</span>
+                                        </div>
+                                        <div>
+                                          <span className="text-[8px] text-slate-500 block">4. IC-Purchase:</span>
+                                          <span className="text-[10px] font-bold text-emerald-600">{ad.icToPurchaseRate || 0}%</span>
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -1099,10 +1317,21 @@ export function MetaAdsCommanderTable({
                   <th className="p-3.5 min-w-[100px]">LP Views</th>
                   <th className="p-3.5 min-w-[90px]">Adds to Cart</th>
                   <th className="p-3.5 min-w-[100px]">Checkouts</th>
+                  <th className="p-3.5 min-w-[100px] text-blue-600 dark:text-blue-400 font-bold">Registrations</th>
                   <th className="p-3.5 min-w-[90px]">Purchases</th>
+                  <th className="p-3.5 min-w-[110px]">Cost / LP View</th>
+                  <th className="p-3.5 min-w-[100px]">Cost / ATC</th>
+                  <th className="p-3.5 min-w-[110px]">Cost / Checkout</th>
+                  <th className="p-3.5 min-w-[110px]">Cost / Purchase</th>
+                  <th className="p-3.5 min-w-[80px] text-indigo-600">1. OCLP</th>
+                  <th className="p-3.5 min-w-[80px] text-indigo-600">2. LP-ATC</th>
+                  <th className="p-3.5 min-w-[80px] text-indigo-600">3. ATC-IC</th>
+                  <th className="p-3.5 min-w-[90px] text-indigo-600">4. IC-Purchase</th>
                   <th className="p-3.5 min-w-[90px]">CPM</th>
                   <th className="p-3.5 min-w-[90px]">CTR (Link)</th>
+                  <th className="p-3.5 min-w-[90px]">CTR (All)</th>
                   <th className="p-3.5 min-w-[90px]">CPC (Link)</th>
+                  <th className="p-3.5 min-w-[90px]">CPC (All)</th>
                   <th className="p-3.5 min-w-[110px]">15s ThruPlays</th>
                 </tr>
               </thead>
@@ -1299,20 +1528,73 @@ export function MetaAdsCommanderTable({
                         {/* Checkouts */}
                         <td className="p-3.5">{camp.checkoutsInitiated || 0}</td>
 
+                        {/* Registrations */}
+                        <td className="p-3.5 font-bold text-blue-600 dark:text-blue-400">
+                          {camp.registrationsCompleted || 0}
+                        </td>
+
                         {/* Purchases */}
                         <td className="p-3.5 font-bold">{camp.purchases || 0}</td>
+
+                        {/* Cost per LP View */}
+                        <td className="p-3.5">
+                          Rp {Number(camp.costPerLpView || 0).toLocaleString("id-ID")}
+                        </td>
+
+                        {/* Cost per Add to Cart */}
+                        <td className="p-3.5">
+                          Rp {Number(camp.costPerAddToCart || 0).toLocaleString("id-ID")}
+                        </td>
+
+                        {/* Cost per Checkout Initiated */}
+                        <td className="p-3.5">
+                          Rp {Number(camp.costPerCheckoutInitiated || 0).toLocaleString("id-ID")}
+                        </td>
+
+                        {/* Cost per Purchase */}
+                        <td className="p-3.5 font-semibold">
+                          Rp {Number(camp.costPerPurchase || camp.costPerResult || 0).toLocaleString("id-ID")}
+                        </td>
+
+                        {/* 1. OCLP */}
+                        <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
+                          {camp.oclpRate || 0}%
+                        </td>
+
+                        {/* 2. LP-ATC */}
+                        <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
+                          {camp.lpToAtcRate || 0}%
+                        </td>
+
+                        {/* 3. ATC-IC */}
+                        <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
+                          {camp.atcToIcRate || 0}%
+                        </td>
+
+                        {/* 4. IC-Purchase */}
+                        <td className="p-3.5 font-bold text-indigo-600 dark:text-indigo-400">
+                          {camp.icToPurchaseRate || 0}%
+                        </td>
 
                         {/* CPM */}
                         <td className="p-3.5">
                           Rp {Number(camp.cpm || 0).toLocaleString("id-ID")}
                         </td>
 
-                        {/* CTR */}
+                        {/* CTR Link */}
                         <td className="p-3.5">{camp.ctrLink ? `${camp.ctrLink}%` : "-"}</td>
 
-                        {/* CPC */}
+                        {/* CTR All */}
+                        <td className="p-3.5">{camp.ctrAll ? `${camp.ctrAll}%` : camp.ctr ? `${camp.ctr}%` : "-"}</td>
+
+                        {/* CPC Link */}
                         <td className="p-3.5">
                           Rp {Number(camp.cpcLink || 0).toLocaleString("id-ID")}
+                        </td>
+
+                        {/* CPC All */}
+                        <td className="p-3.5">
+                          Rp {Number(camp.cpcAll || camp.cpc || 0).toLocaleString("id-ID")}
                         </td>
 
                         {/* ThruPlays */}
@@ -1322,7 +1604,7 @@ export function MetaAdsCommanderTable({
                       {/* 11. ACCORDION ROW UNTUK MENAMPILKAN AD SETS & ADS DI SAMPING/BAWAH KAMPANYE */}
                       {isExpanded && (
                         <tr className="bg-slate-50/90 dark:bg-slate-950/80 border-y-2 border-emerald-500/30">
-                          <td colSpan={20} className="p-4">
+                          <td colSpan={31} className="p-4">
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
                                 <h5 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -1434,55 +1716,187 @@ export function MetaAdsCommanderTable({
                                                   </div>
                                                 </div>
 
-                                                {/* Metrik Lengkap Ad */}
-                                                <div className="grid grid-cols-3 gap-1 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 text-center text-[10px]">
-                                                  <div>
-                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
-                                                      Spent
-                                                    </span>
-                                                    <span className="font-extrabold text-slate-800 dark:text-slate-200">
-                                                      Rp {Number(ad.spend || 0).toLocaleString("id-ID")}
-                                                    </span>
+                                                {/* 29 Metrik Lengkap untuk Ad di Desktop */}
+                                                <div className="space-y-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
+                                                  {/* 1. Hasil & Biaya Utama */}
+                                                  <div className="grid grid-cols-3 gap-1 bg-white dark:bg-slate-900 p-2 rounded-lg text-center border border-slate-100 dark:border-slate-800">
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 font-extrabold uppercase block">Spent</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        Rp {Number(ad.spend || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 font-extrabold uppercase block text-emerald-600">Results</span>
+                                                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                                                        {ad.purchases || ad.results || 0}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 font-extrabold uppercase block">Cost/Result</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        Rp {Number(ad.costPerResult || ad.cpa || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
+                                                    <div className="col-span-3 pt-1 border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-between px-1">
+                                                      <span className="text-[8px] text-slate-400 uppercase font-bold">Purchases conversion value:</span>
+                                                      <span className="text-[10px] font-black text-slate-900 dark:text-white">
+                                                        Rp {Number(ad.purchasesConversionValue || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
                                                   </div>
-                                                  <div>
-                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
-                                                      Purchases
-                                                    </span>
-                                                    <span className="font-black text-emerald-600 dark:text-emerald-400">
-                                                      {ad.purchases || 0}
-                                                    </span>
+
+                                                  {/* 2. Trafik, Jangkauan & Video */}
+                                                  <div className="grid grid-cols-3 gap-1 bg-white dark:bg-slate-900 p-2 rounded-lg text-center border border-slate-100 dark:border-slate-800">
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">Reach</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        {Number(ad.reach || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">Link clicks</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        {Number(ad.linkClicks || ad.clicks || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">15s ThruPlays</span>
+                                                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                                        {Number(ad.videoThruPlays15s || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
                                                   </div>
-                                                  <div>
-                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
-                                                      CPA
-                                                    </span>
-                                                    <span className="font-extrabold text-slate-800 dark:text-slate-200">
-                                                      Rp {Number(ad.cpa || 0).toLocaleString("id-ID")}
-                                                    </span>
+
+                                                  {/* 3. Efisiensi Biaya CPM, CTR & CPC */}
+                                                  <div className="grid grid-cols-2 gap-1.5 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                                                    <div className="col-span-2 flex items-center justify-between">
+                                                      <span className="text-[8px] text-slate-400 uppercase font-bold">CPM (cost per 1,000 imp):</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        Rp {Number(ad.cpm || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 uppercase block">CTR (link click-through):</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        {ad.ctrLink ? `${ad.ctrLink}%` : ad.ctr ? `${ad.ctr}%` : "-"}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 uppercase block">CTR (all):</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        {ad.ctrAll ? `${ad.ctrAll}%` : "-"}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 uppercase block">CPC (cost per link click):</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        Rp {Number(ad.cpcLink || ad.cpc || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-[8px] text-slate-400 uppercase block">CPC (all):</span>
+                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                        Rp {Number(ad.cpcAll || ad.cpc || 0).toLocaleString("id-ID")}
+                                                      </span>
+                                                    </div>
                                                   </div>
-                                                  <div>
-                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
-                                                      ROAS
+
+                                                  {/* 4. Funnel Konversi Events */}
+                                                  <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 space-y-1">
+                                                    <span className="text-[8px] font-extrabold uppercase text-slate-400 tracking-wider block">
+                                                      Funnel Volume (Website Events)
                                                     </span>
-                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                                                      {ad.roas ? `${ad.roas}x` : "-"}
-                                                    </span>
+                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">Website landing page views:</span>
+                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                          {Number(ad.landingPageViews || 0).toLocaleString("id-ID")}
+                                                        </span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">Adds to cart:</span>
+                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                          {ad.addsToCart || 0}
+                                                        </span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">Checkouts initiated:</span>
+                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                          {ad.checkoutsInitiated || 0}
+                                                        </span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">Registrations completed:</span>
+                                                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                                                          {ad.registrationsCompleted || 0}
+                                                        </span>
+                                                      </div>
+                                                      <div className="col-span-2 pt-1 border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-between">
+                                                        <span className="text-[9px] font-bold text-slate-600">Purchases:</span>
+                                                        <span className="text-[10px] font-black text-emerald-600">
+                                                          {ad.purchases || 0}
+                                                        </span>
+                                                      </div>
+                                                    </div>
                                                   </div>
-                                                  <div>
-                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
-                                                      CTR (Link)
+
+                                                  {/* 5. Biaya per Tahap (Cost Per Action) */}
+                                                  <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 space-y-1">
+                                                    <span className="text-[8px] font-extrabold uppercase text-slate-400 tracking-wider block">
+                                                      Biaya per Tahap (Unit Cost)
                                                     </span>
-                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                                                      {ad.ctr ? `${ad.ctr}%` : "-"}
-                                                    </span>
+                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">Cost per landing page view:</span>
+                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                          Rp {Number(ad.costPerLpView || 0).toLocaleString("id-ID")}
+                                                        </span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">Cost per add to cart:</span>
+                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                          Rp {Number(ad.costPerAddToCart || 0).toLocaleString("id-ID")}
+                                                        </span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">Cost per checkout initiated:</span>
+                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
+                                                          Rp {Number(ad.costPerCheckoutInitiated || 0).toLocaleString("id-ID")}
+                                                        </span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">Cost per purchase:</span>
+                                                        <span className="text-[10px] font-extrabold text-emerald-600">
+                                                          Rp {Number(ad.costPerPurchase || ad.cpa || 0).toLocaleString("id-ID")}
+                                                        </span>
+                                                      </div>
+                                                    </div>
                                                   </div>
-                                                  <div>
-                                                    <span className="text-[8px] text-slate-400 uppercase font-bold block">
-                                                      Link Clicks
+
+                                                  {/* 6. 4 Rasio Funnel (Scale Model) */}
+                                                  <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
+                                                    <span className="text-[8px] font-black uppercase text-emerald-800 dark:text-emerald-300 tracking-wider block mb-1">
+                                                      4 Rasio Funnel Scale Model
                                                     </span>
-                                                    <span className="font-bold text-slate-700 dark:text-slate-300">
-                                                      {Number(ad.clicks || 0).toLocaleString("id-ID")}
-                                                    </span>
+                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">1. OCLP:</span>
+                                                        <span className="text-[10px] font-bold text-indigo-600">{ad.oclpRate || 0}%</span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">2. LP-ATC:</span>
+                                                        <span className="text-[10px] font-bold text-indigo-600">{ad.lpToAtcRate || 0}%</span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">3. ATC-IC:</span>
+                                                        <span className="text-[10px] font-bold text-indigo-600">{ad.atcToIcRate || 0}%</span>
+                                                      </div>
+                                                      <div>
+                                                        <span className="text-[8px] text-slate-500 block">4. IC-Purchase:</span>
+                                                        <span className="text-[10px] font-bold text-emerald-600">{ad.icToPurchaseRate || 0}%</span>
+                                                      </div>
+                                                    </div>
                                                   </div>
                                                 </div>
                                               </div>
