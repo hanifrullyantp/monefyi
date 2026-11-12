@@ -5,8 +5,12 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 export function getServiceClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    "https://zzwqfmdyncxbolestkqp.supabase.co";
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NjM0Mjc5NCwiZXhwIjoyMDgxOTE4Nzk0fQ.nQWJJiUTu5YjDcOFI3I1-I1Yf3FFW7_-uNiQXL7RkM8";
   if (!url || !key) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib diisi untuk engine.");
   }

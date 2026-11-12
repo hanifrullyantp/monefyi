@@ -16,6 +16,7 @@ export function enrichCampaignWithScaleMetrics(raw: Partial<MetaCampaign> & { id
   const landingPageViews = raw.landingPageViews ?? Math.round(linkClicks * 0.82);
   const addsToCart = raw.addsToCart ?? Math.round(landingPageViews * 0.28);
   const checkoutsInitiated = raw.checkoutsInitiated ?? Math.round(addsToCart * 0.55);
+  const registrationsCompleted = raw.registrationsCompleted ?? 0;
 
   // Costs
   const costPerResult = results > 0 ? Math.round(spend / results) : 0;
@@ -23,6 +24,7 @@ export function enrichCampaignWithScaleMetrics(raw: Partial<MetaCampaign> & { id
   const costPerAddToCart = addsToCart > 0 ? Math.round(spend / addsToCart) : 0;
   const costPerCheckoutInitiated = checkoutsInitiated > 0 ? Math.round(spend / checkoutsInitiated) : 0;
   const costPerPurchase = purchases > 0 ? Math.round(spend / purchases) : 0;
+  const costPerRegistration = registrationsCompleted > 0 ? Math.round(spend / registrationsCompleted) : 0;
 
   // Rates
   const oclpRate = linkClicks > 0 ? Number(((landingPageViews / linkClicks) * 100).toFixed(1)) : 0;
@@ -66,10 +68,12 @@ export function enrichCampaignWithScaleMetrics(raw: Partial<MetaCampaign> & { id
     landingPageViews,
     addsToCart,
     checkoutsInitiated,
+    registrationsCompleted,
     costPerLpView,
     costPerAddToCart,
     costPerCheckoutInitiated,
     costPerPurchase,
+    costPerRegistration,
     oclpRate,
     lpToAtcRate,
     atcToIcRate,

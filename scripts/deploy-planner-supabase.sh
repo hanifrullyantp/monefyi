@@ -36,14 +36,19 @@ fi
 export SUPABASE_ACCESS_TOKEN
 export SUPABASE_YES=1
 
+SUPABASE_CMD="supabase"
+if ! command -v supabase >/dev/null 2>&1; then
+  SUPABASE_CMD="npx --yes supabase@latest"
+fi
+
 if [[ -n "${SUPABASE_PROJECT_REF:-}" ]]; then
   echo "==> Linking project $SUPABASE_PROJECT_REF..."
-  npx --yes supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
+  $SUPABASE_CMD link --project-ref "$SUPABASE_PROJECT_REF"
 fi
 
 if [[ "${SKIP_DB_PUSH:-}" != "1" ]]; then
   echo "==> Pushing database migrations..."
-  npx --yes supabase@latest db push --remote --include-all --yes
+  $SUPABASE_CMD db push --include-all --yes
   if [[ "${SKIP_RLS_SMOKE:-}" != "1" ]]; then
     echo "==> Running RLS smoke test..."
     "$ROOT/scripts/rls-smoke-test.sh" || {

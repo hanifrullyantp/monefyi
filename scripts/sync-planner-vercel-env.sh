@@ -53,7 +53,7 @@ add_env() {
   local extra=()
   if [[ "$key" == NEXT_PUBLIC_* || "$key" == VITE_* ]]; then
     extra=(--type config)
-  elif [[ "$key" == MAYAR_API_KEY || "$key" == ADMIN_PASSWORD ]]; then
+  elif [[ "$key" == MAYAR_API_KEY || "$key" == ADMIN_PASSWORD || "$key" == SUPABASE_SERVICE_ROLE_KEY ]]; then
     extra=(--type secret)
   fi
   printf '%s' "$val" | npx vercel env add "$key" production --force "${extra[@]}" >/dev/null
@@ -70,6 +70,7 @@ sync_landing_v1() {
     add_env NEXT_PUBLIC_PLANNER_APP_URL "$NEXT_PUBLIC_PLANNER_APP_URL"
     add_env NEXT_PUBLIC_SUPABASE_URL "${NEXT_PUBLIC_SUPABASE_URL:-}"
     add_env NEXT_PUBLIC_SUPABASE_ANON_KEY "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+    add_env SUPABASE_SERVICE_ROLE_KEY "${SUPABASE_SERVICE_ROLE_KEY:-}"
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-}"
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-}"
     add_env NEXT_PUBLIC_LYNK_PLANNER_PRO "${NEXT_PUBLIC_LYNK_PLANNER_PRO:-}"
@@ -90,6 +91,7 @@ sync_landing_root() {
     add_env NEXT_PUBLIC_PLANNER_APP_URL "$NEXT_PUBLIC_PLANNER_APP_URL"
     add_env NEXT_PUBLIC_SUPABASE_URL "${NEXT_PUBLIC_SUPABASE_URL:-}"
     add_env NEXT_PUBLIC_SUPABASE_ANON_KEY "${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+    add_env SUPABASE_SERVICE_ROLE_KEY "${SUPABASE_SERVICE_ROLE_KEY:-}"
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD "${NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD:-}"
     add_env NEXT_PUBLIC_LYNK_ESTIMATOR_PRO "${NEXT_PUBLIC_LYNK_ESTIMATOR_PRO:-}"
     add_env NEXT_PUBLIC_LYNK_PLANNER_PRO "${NEXT_PUBLIC_LYNK_PLANNER_PRO:-}"

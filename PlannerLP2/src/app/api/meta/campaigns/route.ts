@@ -139,10 +139,33 @@ async function fetchRealCampaignsForAccount(
     );
     const cpc = Number(ins.cpc || (clicks > 0 ? Math.round(spend / clicks) : 0));
 
+    const linkClicks = getAction("link_click", "outbound_click", "inline_link_clicks");
+    const landingPageViews = getAction("landing_page_view", "omni_landing_page_view");
+    const addsToCart = getAction("omni_add_to_cart", "add_to_cart", "offsite_conversion.fb_pixel_add_to_cart");
+    const checkoutsInitiated = getAction("omni_initiated_checkout", "initiate_checkout", "offsite_conversion.fb_pixel_initiate_checkout");
+    const registrationsCompleted = getAction("complete_registration", "omni_complete_registration", "offsite_conversion.fb_pixel_complete_registration");
+    const costPerResult = results > 0 ? Math.round(spend / results) : 0;
+    const costPerPurchase = purchases > 0 ? Math.round(spend / purchases) : 0;
+    const costPerLpView = landingPageViews > 0 ? Math.round(spend / landingPageViews) : 0;
+    const costPerAddToCart = addsToCart > 0 ? Math.round(spend / addsToCart) : 0;
+    const costPerCheckoutInitiated = checkoutsInitiated > 0 ? Math.round(spend / checkoutsInitiated) : 0;
+    const costPerRegistration = registrationsCompleted > 0 ? Math.round(spend / registrationsCompleted) : 0;
+    const oclpRate = linkClicks > 0 ? Number(((landingPageViews / linkClicks) * 100).toFixed(1)) : 0;
+    const lpToAtcRate = landingPageViews > 0 ? Number(((addsToCart / landingPageViews) * 100).toFixed(1)) : 0;
+    const atcToIcRate = addsToCart > 0 ? Number(((checkoutsInitiated / addsToCart) * 100).toFixed(1)) : 0;
+    const icToPurchaseRate = checkoutsInitiated > 0 ? Number(((purchases / checkoutsInitiated) * 100).toFixed(1)) : 0;
+    const cpm = Number(ins.cpm || (impressions > 0 ? Math.round((spend / impressions) * 1000) : 0));
+    const ctrLink = impressions > 0 ? Number(((linkClicks / impressions) * 100).toFixed(2)) : 0;
+    const ctrAll = Number(ins.ctr || (impressions > 0 ? ((clicks / impressions) * 100).toFixed(2) : 0));
+    const cpcLink = linkClicks > 0 ? Math.round(spend / linkClicks) : 0;
+    const cpcAll = Number(ins.cpc || (clicks > 0 ? Math.round(spend / clicks) : 0));
+    const videoThruPlays15s = getAction("video_view");
+
     return {
       spend,
       impressions,
       clicks,
+      linkClicks,
       reach,
       purchases,
       results,
@@ -151,6 +174,26 @@ async function fetchRealCampaignsForAccount(
       roas,
       ctr,
       cpc,
+      landingPageViews,
+      addsToCart,
+      checkoutsInitiated,
+      registrationsCompleted,
+      costPerResult,
+      costPerPurchase,
+      costPerLpView,
+      costPerAddToCart,
+      costPerCheckoutInitiated,
+      costPerRegistration,
+      oclpRate,
+      lpToAtcRate,
+      atcToIcRate,
+      icToPurchaseRate,
+      cpm,
+      ctrLink,
+      ctrAll,
+      cpcLink,
+      cpcAll,
+      videoThruPlays15s,
     };
   };
 
@@ -295,12 +338,35 @@ async function fetchRealCampaignsForAccount(
           spend: parsedAd?.spend || 0,
           impressions: parsedAd?.impressions || 0,
           clicks: parsedAd?.clicks || 0,
+          linkClicks: parsedAd?.linkClicks || 0,
+          reach: parsedAd?.reach || 0,
           purchases: parsedAd?.purchases || 0,
           results: parsedAd?.results || 0,
+          purchasesConversionValue: parsedAd?.purchasesConversionValue || 0,
           cpa: parsedAd?.cpa || 0,
           roas: parsedAd?.roas || 0,
           ctr: parsedAd?.ctr || 0,
           cpc: parsedAd?.cpc || 0,
+          landingPageViews: parsedAd?.landingPageViews || 0,
+          addsToCart: parsedAd?.addsToCart || 0,
+          checkoutsInitiated: parsedAd?.checkoutsInitiated || 0,
+          registrationsCompleted: parsedAd?.registrationsCompleted || 0,
+          costPerResult: parsedAd?.costPerResult || 0,
+          costPerPurchase: parsedAd?.costPerPurchase || 0,
+          costPerLpView: parsedAd?.costPerLpView || 0,
+          costPerAddToCart: parsedAd?.costPerAddToCart || 0,
+          costPerCheckoutInitiated: parsedAd?.costPerCheckoutInitiated || 0,
+          costPerRegistration: parsedAd?.costPerRegistration || 0,
+          oclpRate: parsedAd?.oclpRate || 0,
+          lpToAtcRate: parsedAd?.lpToAtcRate || 0,
+          atcToIcRate: parsedAd?.atcToIcRate || 0,
+          icToPurchaseRate: parsedAd?.icToPurchaseRate || 0,
+          cpm: parsedAd?.cpm || 0,
+          ctrLink: parsedAd?.ctrLink || 0,
+          ctrAll: parsedAd?.ctrAll || 0,
+          cpcLink: parsedAd?.cpcLink || 0,
+          cpcAll: parsedAd?.cpcAll || 0,
+          videoThruPlays15s: parsedAd?.videoThruPlays15s || 0,
           creativeThumbnail: ad.creative?.thumbnail_url || ad.creative?.image_url,
           creativeTitle: ad.creative?.title || ad.creative?.name,
           creativeBody: ad.creative?.body,
@@ -405,6 +471,12 @@ async function fetchRealCampaignsForAccount(
       "contact"
     );
 
+    const registrationsCompleted = getAction(
+      "complete_registration",
+      "omni_complete_registration",
+      "offsite_conversion.fb_pixel_complete_registration"
+    );
+
     const purchasesConversionValue = Math.round(
       getActionValue(
         "omni_purchase",
@@ -426,6 +498,8 @@ async function fetchRealCampaignsForAccount(
     const costPerAddToCart = addsToCart > 0 ? Math.round(spend / addsToCart) : 0;
     const costPerCheckoutInitiated =
       checkoutsInitiated > 0 ? Math.round(spend / checkoutsInitiated) : 0;
+    const costPerRegistration =
+      registrationsCompleted > 0 ? Math.round(spend / registrationsCompleted) : 0;
 
     // Rasio Funnel Scale Model (Murni dari angka riil Meta)
     const oclpRate =
@@ -568,12 +642,14 @@ async function fetchRealCampaignsForAccount(
       landingPageViews,
       addsToCart,
       checkoutsInitiated,
+      registrationsCompleted,
       purchases,
       leads,
       costPerLpView,
       costPerAddToCart,
       costPerCheckoutInitiated,
       costPerPurchase,
+      costPerRegistration,
       oclpRate,
       lpToAtcRate,
       atcToIcRate,

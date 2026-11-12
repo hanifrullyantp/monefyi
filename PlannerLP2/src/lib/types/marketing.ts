@@ -74,6 +74,7 @@ export interface MetaAd {
   spend: number;
   impressions: number;
   clicks: number;
+  linkClicks?: number;
   purchases: number;
   results: number;
   cpa: number;
@@ -83,6 +84,28 @@ export interface MetaAd {
   creativeThumbnail?: string;
   creativeTitle?: string;
   creativeBody?: string;
+  reach?: number;
+  landingPageViews?: number;
+  addsToCart?: number;
+  checkoutsInitiated?: number;
+  registrationsCompleted?: number;
+  purchasesConversionValue?: number;
+  costPerResult?: number;
+  costPerLpView?: number;
+  costPerAddToCart?: number;
+  costPerCheckoutInitiated?: number;
+  costPerPurchase?: number;
+  costPerRegistration?: number;
+  oclpRate?: number;
+  lpToAtcRate?: number;
+  atcToIcRate?: number;
+  icToPurchaseRate?: number;
+  cpm?: number;
+  ctrLink?: number;
+  ctrAll?: number;
+  cpcLink?: number;
+  cpcAll?: number;
+  videoThruPlays15s?: number;
 }
 
 export interface MetaAdSet {
@@ -147,10 +170,12 @@ export interface MetaCampaign {
   landingPageViews?: number; // Website landing page views
   addsToCart?: number; // Adds to cart count
   checkoutsInitiated?: number; // Checkouts initiated count
+  registrationsCompleted?: number; // Registrations completed
   costPerLpView?: number; // Cost per landing page view (Rp)
   costPerAddToCart?: number; // Cost per add to cart (Rp)
   costPerCheckoutInitiated?: number; // Cost per checkout initiated (Rp)
   costPerPurchase?: number; // Cost per purchase (Rp)
+  costPerRegistration?: number; // Cost per registration (Rp)
   
   // 4 Rasio Funnel Scale Model
   oclpRate?: number; // 1. OCLP (Link Click ke Landing Page View %)

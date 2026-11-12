@@ -77,6 +77,8 @@ export function MetaAdsCommanderTable({
   const [isColumnPinned, setIsColumnPinned] = useState<boolean>(false);
   // Tabel desktop 26 metrik ditampilkan langsung secara default
   const [showFullTable, setShowFullTable] = useState<boolean>(true);
+  // Mode tampilan mobile: kartu 29 metrik atau tabel geser horizontal
+  const [mobileViewMode, setMobileViewMode] = useState<"cards" | "table">("cards");
 
   // 11. Accordion Drilldown Ad Sets & Ads
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<Set<string>>(new Set());
