@@ -245,7 +245,7 @@ export async function loadUserHolds(hours = 72): Promise<Record<string, string>>
     const { data } = await getServiceClient()
       .from("engine_action_log")
       .select("campaign_id, created_at")
-      .eq("action_type", "undo_pause_bleeding_campaign")
+      .in("action_type", ["undo_pause_bleeding_campaign", "undo_pause_weak_ad"])
       .eq("live_executed", true)
       .gte("created_at", since);
     for (const row of data || []) {

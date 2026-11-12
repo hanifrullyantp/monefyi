@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       before = live.total;
       after = prev;
       summary = `Budget "${log.campaign_name}" dikembalikan dari Rp ${live.total.toLocaleString("id-ID")} ke Rp ${prev.toLocaleString("id-ID")}.`;
-    } else if (log.action_type === "pause_bleeding_campaign") {
+    } else if (log.action_type === "pause_bleeding_campaign" || log.action_type === "pause_weak_ad") {
       // Mengaktifkan kembali menambah risiko belanja: tunduk pada kill switch
       const g = await checkManualLiveChange({ kind: "activate" });
       if (!g.allowed) return NextResponse.json({ ok: false, blockedByGuardrail: true, error: g.reason }, { status: 403 });

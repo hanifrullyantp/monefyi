@@ -12,13 +12,26 @@ export type EngineAuthResult =
   | { ok: true; via: "cron" | "admin"; email?: string }
   | { ok: false; status: number; error: string };
 
+/**
+ * Permintaan dari scheduler. Dua jalur sah, keduanya fail closed bila secret kosong:
+ * - header x-engine-secret == ENGINE_CRON_SECRET (pg_cron, panggilan internal)
+ * - Authorization: Bearer <CRON_SECRET> (Vercel Cron)
+ */
+export function isCronRequest(req: { headers: { get(name: string): string | null } }): boolean {
+  const engineSecret = process.env.ENGINE_CRON_SECRET;
+  if (engineSecret && req.headers.get("x-engine-secret") === engineSecret) return true;
+  const vercelSecret = process.env.CRON_SECRET || engineSecret;
+  const authz = req.headers.get("authorization") || "";
+  if (vercelSecret && authz === `Bearer ${vercelSecret}`) return true;
+  return false;
+}
+
 export async function requireEngineAuth(
   req: { headers: { get(name: string): string | null } },
   opts: { allowCron?: boolean } = {},
   fetchImpl: typeof fetch = fetch
 ): Promise<EngineAuthResult> {
-  const secret = process.env.ENGINE_CRON_SECRET;
-  if (opts.allowCron && secret && req.headers.get("x-engine-secret") === secret) {
+  if (opts.allowCron && isCronRequest(req)) {
     return { ok: true, via: "cron" };
   }
 

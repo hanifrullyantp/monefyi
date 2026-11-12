@@ -167,3 +167,8 @@ export async function POST(req: NextRequest) {
     await releaseRunLock("review");
   }
 }
+
+/** Vercel Cron memanggil dengan GET. */
+export async function GET(req: NextRequest) {
+  return POST(req);
+}

@@ -69,11 +69,15 @@ export function buildEngineStatus(input: {
   return { tone: needsAttention ? "warn" : "ok", headline: parts.join(", "), counts };
 }
 
-export const UNDOABLE_ACTIONS = new Set(["scale_campaign_budget", "pause_bleeding_campaign"]);
+export const UNDOABLE_ACTIONS = new Set(["scale_campaign_budget", "pause_bleeding_campaign", "pause_weak_ad"]);
 
 export const ACTION_LABEL: Record<string, string> = {
   scale_campaign_budget: "Scale budget",
   pause_bleeding_campaign: "Pause kampanye boncos",
   adjust_budget_to_range: "Sesuaikan budget",
   create_rapid_test_campaign: "Buat kampanye uji",
+  pause_weak_ad: "Pause iklan lemah",
+  duplicate_winner: "Duplikasi ad set pemenang",
+  activate_duplicate: "Aktifkan salinan",
+  supervisor_kill_switch: "Pengawas mengaktifkan kill switch",
 };

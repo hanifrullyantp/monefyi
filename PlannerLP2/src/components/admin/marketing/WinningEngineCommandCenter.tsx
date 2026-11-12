@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { EngineStatusPanel } from "./EngineStatusPanel";
+import { ExpertStatusCard } from "./ExpertStatusCard";
+import { CreativeInsightsCard } from "./CreativeInsightsCard";
 import { WinningPillarId, WinningActionPlan } from "@/lib/engine/winningEngine";
 import {
   ShieldCheck,
@@ -171,6 +173,8 @@ export function WinningEngineCommandCenter({
 
   return (
     <div className="space-y-5">
+      <ExpertStatusCard />
+      <CreativeInsightsCard />
       <EngineStatusPanel />
 
       {/* Feedback Banner */}

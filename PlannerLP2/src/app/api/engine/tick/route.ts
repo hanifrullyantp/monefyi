@@ -1,6 +1,19 @@
 import { DEFAULT_LANDING_URL, fetchPageSignals, comparePagePrices } from "@/lib/engine/pageAudit";
 import { MONEFYI_PRICING } from "@/lib/engine/winningEngine";
 import { requireEngineAuth } from "@/lib/auth/adminGuard";
+import { loadDbEngineSettings } from "@/lib/engine/engineConfigDb";
+import { policyAllowsAuto } from "@/lib/engine/autonomyPolicy";
+import { startRun, setPhase, finishRun, BLOCKER } from "@/lib/engine/expertRuns";
+import { sendAdminPush } from "@/lib/engine/pushNotify";
+import type { Blocker } from "@/lib/engine/expertStatus";
+
+/** Konteks satu siklus: diisi handleTick, dibaca POST untuk heartbeat dan notifikasi. */
+interface TickCtx {
+  runId: number | null;
+  via: "cron" | "admin";
+  blockers: Blocker[];
+  stats: Record<string, unknown>;
+}
 import { NextRequest, NextResponse } from "next/server";
 import { hasSucceededToday, logEngineAction, wibDate, acquireRunLock, releaseRunLock, checkManualLiveChange, loadPaidOrderCount, loadUserHolds } from "@/lib/engine/engineDb";
 import { createClient } from "@supabase/supabase-js";
@@ -31,8 +44,9 @@ function getSupabaseServerClient() {
  * 1. Supabase pg_cron setiap 30 menit (otomatis di belakang layar).
  * 2. Tombol "Analisa 5 Pilar & Susun Rencana Winning" di Dashboard Admin.
  */
-async function handleTick(req: NextRequest) {
+async function handleTick(req: NextRequest, ctx: TickCtx) {
   try {
+    const dbSettings = await loadDbEngineSettings();
     const body = await req.json().catch(() => ({}));
     let campaigns = Array.isArray(body.campaigns) && body.campaigns.length > 0 ? body.campaigns : [];
     let insightsData = body.insightsData || null;
@@ -77,12 +91,16 @@ async function handleTick(req: NextRequest) {
       }
     }
 
+    // Database adalah sumber kebenaran untuk guardrail: body tidak boleh melonggarkan kill switch,
+    // otonomi, plafon, atau verifikasi satuan budget.
     const config: WinningEngineConfig = {
       ...DEFAULT_WINNING_ENGINE_CONFIG,
       ...(body.config || {}),
+      ...dbSettings.overrides,
       llmRouting: {
         openRouterApiKey:
-          body.config?.llmRouting?.openRouterApiKey ??
+          body.config?.llmRouting?.openRouterApiKey ||
+          dbSettings.openRouterApiKey ||
           DEFAULT_WINNING_ENGINE_CONFIG.llmRouting.openRouterApiKey,
         strategist: {
           ...DEFAULT_WINNING_ENGINE_CONFIG.llmRouting.strategist,
@@ -139,6 +157,13 @@ async function handleTick(req: NextRequest) {
     const pageSignals = await fetchPageSignals(process.env.LANDING_PAGE_URL || DEFAULT_LANDING_URL).catch(() => null);
     const pagePriceFindings = pageSignals?.ok ? comparePagePrices(pageSignals.prices, MONEFYI_PRICING) : [];
 
+    // Catat kendala yang menahan otonomi supaya terlihat di panel status
+    if (campaigns.length === 0) ctx.blockers.push(BLOCKER.NO_META_DATA());
+    if (config.killSwitch) ctx.blockers.push(BLOCKER.KILL_SWITCH_ON());
+    if (!config.budgetUnitVerified) ctx.blockers.push(BLOCKER.BUDGET_UNIT_UNVERIFIED());
+    if (!config.autonomous) ctx.blockers.push(BLOCKER.AUTONOMY_OFF());
+    await setPhase(ctx.runId, "diagnose", `Menganalisa ${campaigns.length} kampanye dan 5 pilar.`);
+
     // 1. Jalankan Diagnosa Deterministik 5 Pilar Winning (hanya data dalam jendela analisa)
     const diagnostics = runFivePillarDiagnostics({
       campaigns,
@@ -156,6 +181,7 @@ async function handleTick(req: NextRequest) {
 
     // 2. Panggil AI Strategist (Gemini 2.5 Pro / Claude) untuk menyusun Ringkasan Eksekutif 10-Tahun Expert
     //    serta validasi mendalam terhadap 5 pilar
+    await setPhase(ctx.runId, "decide", "Menyusun ringkasan strategi dan rencana aksi.");
     const systemPrompt = `Anda adalah Monefyi Winning Engine (Facebook/Meta Ads & Growth Expert pengalaman 10 tahun mengelola budget hingga miliaran Rupiah).
 KONTEKS PRODUK YANG DIJUAL:
 - Produk Inti: Monefyi Estimator (website: estimator.monefyi.com)
@@ -314,14 +340,13 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
     //    Setiap aksi dikirim ke /api/engine/apply, yang memeriksa Guardrail lagi, membaca budget riil,
     //    lalu memanggil Meta Graph API. Status "executed" hanya diberikan jika Meta benar-benar berubah.
     const autoExecutedIds: string[] = [];
-    const cronAuthorized =
-      Boolean(process.env.ENGINE_CRON_SECRET) &&
-      req.headers.get("x-engine-secret") === process.env.ENGINE_CRON_SECRET;
+    const cronAuthorized = ctx.via === "cron";
     const selfOrigin = req.nextUrl.origin || "http://localhost:3000";
     const finalPlans: WinningActionPlan[] = [];
+    await setPhase(ctx.runId, "act", `Mengeksekusi aksi yang lolos guardrail (${diagnostics.plans.length} rencana).`);
 
     for (const plan of diagnostics.plans) {
-      if (!cronAuthorized || !config.autonomous || config.killSwitch || !config.budgetUnitVerified || !isAutoEligible(plan) || plan.requiresCeilingReapproval) {
+      if (!cronAuthorized || !config.autonomous || config.killSwitch || !config.budgetUnitVerified || !isAutoEligible(plan) || !policyAllowsAuto(dbSettings.policy, plan.actionType) || plan.requiresCeilingReapproval) {
         finalPlans.push(plan);
         continue;
       }
@@ -398,6 +423,16 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
       })
       .eq("id", "default");
 
+    ctx.stats = {
+      campaigns: campaigns.length,
+      analyzed: diagnostics.includedCampaigns.length,
+      plans: finalPlans.length,
+      pendingApproval: finalPlans.filter((p) => p.status === "pending").length,
+      autoExecuted: autoExecutedIds.length,
+      held: diagnostics.dataAudit.filter((a) => a.decision === "held").length,
+      overallScore: diagnostics.overallScore,
+    };
+
     return NextResponse.json({
       ok: true,
       status: "ready",
@@ -427,6 +462,11 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
       notificationResult,
     });
   } catch (err: any) {
+    ctx.blockers.push({
+      code: "TICK_ERROR",
+      message: err?.message || "Siklus analisa gagal.",
+      fix: "Lihat log server. Jalankan ulang analisa setelah penyebab diperbaiki.",
+    });
     return NextResponse.json(
       {
         ok: false,
@@ -453,9 +493,38 @@ export async function POST(req: NextRequest) {
       { status: 423 }
     );
   }
+  const startedAt = Date.now();
+  const ctx: TickCtx = {
+    runId: await startRun(auth.via === "cron" ? "cron" : "manual"),
+    via: auth.via,
+    blockers: [],
+    stats: {},
+  };
+  let res: NextResponse | null = null;
   try {
-    return await handleTick(req);
+    res = await handleTick(req, ctx);
+    return res;
   } finally {
     await releaseRunLock("tick");
+    const failed = !res || res.status >= 500;
+    const hardBlockers = ctx.blockers.filter((b) => b.code === "NO_META_DATA" || b.code === "TICK_ERROR");
+    const outcome = failed ? "error" : hardBlockers.length ? "blocked" : ctx.blockers.length ? "partial" : "ok";
+    const intervalMin = (await loadDbEngineSettings()).intervalMin;
+    await finishRun({ runId: ctx.runId, startedAt, outcome, blockers: ctx.blockers, stats: ctx.stats, intervalMin });
+
+    // Notifikasi ke PWA HP: hanya untuk hal yang perlu Anda tahu
+    try {
+      const executed = Number(ctx.stats.autoExecuted || 0);
+      const pending = Number(ctx.stats.pendingApproval || 0);
+      if (executed > 0) {
+        await sendAdminPush({ title: "Expert menjalankan aksi", body: `${executed} aksi dieksekusi otomatis di Meta. Buka untuk melihat atau membatalkan.`, tag: "expert-executed" });
+      } else if (outcome === "error" || outcome === "blocked") {
+        await sendAdminPush({ title: "Expert terkendala", body: ctx.blockers[0]?.message || "Siklus gagal.", tag: "expert-blocked" });
+      } else if (pending > 0 && auth.via === "cron") {
+        await sendAdminPush({ title: "Menunggu keputusan Anda", body: `${pending} rencana butuh persetujuan.`, tag: "expert-pending" });
+      }
+    } catch {
+      // notifikasi tidak boleh menggagalkan siklus
+    }
   }
 }
