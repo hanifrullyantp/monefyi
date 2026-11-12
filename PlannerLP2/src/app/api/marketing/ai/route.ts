@@ -1,3 +1,4 @@
+import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { NextRequest, NextResponse } from "next/server";
 
 export interface AiExecutableAction {
@@ -221,6 +222,8 @@ function buildExecutableActions(
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireEngineAuth(req);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   try {
     const body = await req.json().catch(() => ({}));
     const prompt: string = String(body.prompt || "").trim();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { authedFetch } from "@/lib/auth/authedFetch";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { MARKETING_AGENTS, MarketingAgentRole } from "@/lib/types/marketing";
 import { processAgentWarRoomMessage } from "@/lib/services/marketingAgentService";
@@ -159,7 +160,7 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
         winningEngineConfig.llmRouting.strategist?.model ||
         "openai/gpt-6-luna-pro";
 
-      const res = await fetch("/api/marketing/ai", {
+      const res = await authedFetch("/api/marketing/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

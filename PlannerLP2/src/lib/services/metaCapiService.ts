@@ -99,6 +99,7 @@ export function getMockCapiStatus(pixelId: string = '1530674178146899'): MetaCap
     browserEvents24h: 310,
     redundancyRate: 98.4,
     lastEventTime: new Date(Date.now() - 1000 * 60 * 4).toLocaleTimeString('id-ID'),
+    verified: false, // data contoh: engine tidak boleh menilai Pilar Tracking dari angka ini
   };
 }
 

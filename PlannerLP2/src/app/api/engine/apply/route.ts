@@ -1,11 +1,15 @@
+import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { NextRequest, NextResponse } from "next/server";
+import { hasSucceededToday, logEngineAction, wibDate, acquireRunLock, releaseRunLock, checkManualLiveChange, loadServerGuardrails } from "@/lib/engine/engineDb";
 import { createClient } from "@supabase/supabase-js";
+import { readLiveBudget, setDailyBudget, MIN_ADSET_BUDGET } from "@/lib/engine/metaBudget";
 import { extractCandidateTokens, buildGraphUrl } from "@/lib/meta/graph";
 import {
   WinningActionPlan,
   WinningEngineConfig,
   DEFAULT_WINNING_ENGINE_CONFIG,
   evaluateGuardrailGate,
+  MONEFYI_PRICING,
 } from "@/lib/engine/winningEngine";
 import { dispatchEngineNotification } from "@/lib/services/telegramBotService";
 
@@ -27,9 +31,16 @@ async function updateSupabaseLandingContent(updates: Record<string, any>): Promi
   }
 }
 
-export async function POST(req: NextRequest) {
+const LIVE_ACTIONS = new Set([
+  "pause_bleeding_campaign",
+  "scale_campaign_budget",
+  "adjust_budget_to_range",
+  "create_rapid_test_campaign",
+]);
+
+async function handleApply(req: NextRequest, preBody?: any) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = preBody ?? (await req.json().catch(() => ({})));
     const plan: WinningActionPlan | undefined = body.plan;
     const config: WinningEngineConfig = {
       ...DEFAULT_WINNING_ENGINE_CONFIG,
@@ -74,17 +85,19 @@ export async function POST(req: NextRequest) {
 
     // 2. Eksekusi berdasarkan jenis aksi 5 Pilar
     if (effectivePlan.actionType === "update_offer_pricing") {
+      // Harga cadangan memakai konstanta resmi yang sama dengan engine. Tidak ada angka terpisah di route ini.
+      const rpText = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
+      const proPrice = payload.recommendedProPrice || rpText(MONEFYI_PRICING.proPrice);
+      const proOriginalPrice = payload.anchorOriginalPrice || rpText(MONEFYI_PRICING.proRegularPrice);
+      const standardPrice = payload.recommendedEntryPrice || rpText(MONEFYI_PRICING.standardPrice);
+
       const updatedDb = await updateSupabaseLandingContent({
-        pro_price: payload.recommendedProPrice || "Rp 249.000",
-        pro_original_price: payload.anchorOriginalPrice || "Rp 600.000",
-        standard_price: payload.recommendedEntryPrice || "Rp 150.000",
+        pro_price: proPrice,
+        pro_original_price: proOriginalPrice,
+        standard_price: standardPrice,
       });
 
-      const summary = `Pilar 1 (Offer & Harga): Struktur penawaran diperbarui (Paket Mandiri ${
-        payload.recommendedEntryPrice || "Rp 150.000"
-      }, Paket Prioritas ${payload.recommendedProPrice || "Rp 249.000"} dengan Harga Coret ${
-        payload.anchorOriginalPrice || "Rp 600.000"
-      } + 3 Bonus Stack).`;
+      const summary = `Pilar 1 (Offer & Harga): harga landing page diselaraskan (Paket Standard ${standardPrice}, Paket Pro ${proPrice} dengan harga coret ${proOriginalPrice}).`;
 
       if (body.sendNotification) {
         await dispatchEngineNotification(
@@ -127,68 +140,59 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Aksi Pilar 2 (kecepatan LP), Pilar 3 (order bump), dan Pilar 5 (CAPI) belum punya eksekutor otomatis.
+    // Respons jujur: liveExecuted=false dan manualActionRequired=true, sehingga UI dan notifikasi tidak menganggap sudah berubah.
     if (effectivePlan.actionType === "optimize_lp_speed") {
-      const summary = `Pilar 2 (Kecepatan LP): Mode prioritas render Hero & penundaan aset berat di bawah lipatan layar diaktifkan untuk menaikkan OCLP ke target ${
-        payload.targetOclp || 88
-      }%.`;
-
       return NextResponse.json({
         ok: true,
+        liveExecuted: false,
+        manualActionRequired: true,
         executedAt: nowIso,
-        summary,
+        summary: `Pilar 2 (Kecepatan LP): Belum ada eksekutor otomatis. Dicatat sebagai rekomendasi manual untuk estimator.monefyi.com (target OCLP ${payload.targetOclp || 88}%).`,
         appliedChanges: payload,
       });
     }
 
     if (effectivePlan.actionType === "optimize_checkout_funnel") {
-      const summary = `Pilar 3 (Checkout & AOV): Order Bump diperbarui ("${payload.headline}") pada harga Rp ${Number(
-        payload.price || 49000
-      ).toLocaleString("id-ID")} untuk menaikkan nilai transaksi rata-rata.`;
-
       return NextResponse.json({
         ok: true,
+        liveExecuted: false,
+        persisted: false,
+        manualActionRequired: true,
         executedAt: nowIso,
-        summary,
-        orderBumpUpdates: {
-          enabled: true,
+        summary: `Pilar 3 (Checkout & AOV): Usulan Order Bump "${payload.headline}" dicatat dan belum diterapkan ke checkout. Perlu diterapkan manual.`,
+        proposedOrderBump: {
           headline: payload.headline,
           description: payload.description,
-          price: Number(payload.price || 49000),
-          originalPrice: Number(payload.originalPrice || 399000),
+          price: Number(payload.price || MONEFYI_PRICING.orderBumpUpgradePrice),
+          originalPrice: Number(payload.originalPrice || MONEFYI_PRICING.orderBumpOriginalPrice),
           badgeText: payload.badgeText || "PENAWARAN KHUSUS SAAT CHECKOUT",
-          takeRateEstimate: 36,
         },
       });
     }
 
     if (effectivePlan.actionType === "repair_tracking_capi") {
-      const summary = `Pilar 5 (Tracking Pixel + CAPI): Deduplikasi event_id Browser-Server dan pengiriman parameter SHA-256 (Nomor WA, Email, IP, User-Agent, fbc/fbp) diaktifkan. Estimasi EMQ naik ke ${
-        payload.targetEmq || 9.3
-      }/10.`;
-
       return NextResponse.json({
         ok: true,
+        liveExecuted: false,
+        manualActionRequired: true,
         executedAt: nowIso,
-        summary,
-        capiUpdates: {
-          pixelConnected: true,
-          capiConnected: true,
-          eventMatchQuality: Number(payload.targetEmq || 9.3),
-          deduplicationActive: true,
-        },
+        summary: `Pilar 5 (Tracking Pixel + CAPI): Belum ada eksekutor otomatis. Perbaikan event_id dan parameter hash perlu dikerjakan manual (target EMQ ${payload.targetEmq || 9.3}/10).`,
+        appliedChanges: payload,
       });
     }
 
     // 3. Aksi Pilar 4: Meta Ads Graph API (Scale Budget, Pause Bleeding, Create Rapid Test)
     const tokens = extractCandidateTokens(rawAccessToken, rawCapiToken);
     if (tokens.length === 0) {
-      return NextResponse.json({
-        ok: true,
-        liveExecuted: false,
-        executedAt: nowIso,
-        summary: `[Simulasi Lokal - Token Meta Belum Diisi] ${effectivePlan.title} berhasil diterapkan di state dashboard.`,
-        appliedChanges: payload,
-      });
+      return NextResponse.json(
+        {
+          ok: false,
+          liveExecuted: false,
+          error: "Token Meta belum diisi. Tidak ada perubahan yang dikirim ke Meta Ads.",
+        },
+        { status: 400 }
+      );
     }
 
     const token = tokens[0];
@@ -238,67 +242,69 @@ export async function POST(req: NextRequest) {
       effectivePlan.actionType === "adjust_budget_to_range"
     ) {
       const campaignId = String(payload.campaignId || "").trim();
-      const finalBudget = gate.clampedBudget || Number(payload.newBudget || config.minDailyBudget);
 
-      // Coba update di level Campaign (CBO), jika gagal karena ABO maka update AdSet di dalamnya
-      const campUrl = buildGraphUrl(
-        `https://graph.facebook.com/v20.0/${campaignId}`,
-        token,
-        appSecret
+      // 1. Baca budget riil dari Meta (tidak menebak)
+      const current = await readLiveBudget(campaignId, token, appSecret);
+      if (!current.ok) {
+        return NextResponse.json({ ok: false, liveExecuted: false, error: current.error }, { status: 400 });
+      }
+
+      // 2. Periksa ulang guardrail dengan budget riil
+      const liveGate = evaluateGuardrailGate(
+        { ...effectivePlan, actionPayload: { ...payload, currentBudget: current.total } },
+        config
       );
-      const campRes = await fetch(campUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ daily_budget: String(Math.round(finalBudget)) }),
-      });
-      const campJson = await campRes.json().catch(() => ({}));
-
-      if (!campRes.ok || campJson.error) {
-        const adsetsUrl = buildGraphUrl(
-          `https://graph.facebook.com/v20.0/${campaignId}/adsets?fields=id,name&limit=25`,
-          token,
-          appSecret
+      if (!liveGate.allowed) {
+        return NextResponse.json(
+          {
+            ok: false,
+            blockedByGuardrail: true,
+            liveExecuted: false,
+            requiresUserReapproval: liveGate.requiresUserReapproval,
+            error: liveGate.reason,
+          },
+          { status: 403 }
         );
-        const adsetsRes = await fetch(adsetsUrl, { cache: "no-store" });
-        const adsetsJson = await adsetsRes.json().catch(() => ({}));
-        const adsets: any[] = Array.isArray(adsetsJson.data) ? adsetsJson.data : [];
+      }
 
-        if (adsets.length === 0) {
-          return NextResponse.json(
-            {
-              ok: false,
-              error:
-                campJson.error?.message ||
-                "Gagal memperbarui anggaran kampanye di Meta Graph API.",
-            },
-            { status: 400 }
-          );
-        }
+      const finalBudget = Math.round(Number(liveGate.clampedBudget || payload.newBudget || current.total));
+      const factor = finalBudget / current.total;
+      const changed: { id: string; from: number; to: number }[] = [];
+      const failures: string[] = [];
 
-        const perAdset = Math.max(15000, Math.round(finalBudget / adsets.length));
-        for (const adset of adsets) {
-          const u = buildGraphUrl(
-            `https://graph.facebook.com/v20.0/${adset.id}`,
-            token,
-            appSecret
-          );
-          await fetch(u, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ daily_budget: String(perAdset) }),
-          });
+      if (current.mode === "CBO") {
+        const r = await setDailyBudget(campaignId, finalBudget, token, appSecret);
+        if (r.ok) changed.push({ id: campaignId, from: current.total, to: finalBudget });
+        else failures.push(r.error);
+      } else {
+        // ABO: pertahankan proporsi antar ad set, jangan samakan rata
+        for (const adset of current.adsets) {
+          const to = Math.max(MIN_ADSET_BUDGET, Math.round(adset.daily_budget * factor));
+          const r = await setDailyBudget(adset.id, to, token, appSecret);
+          if (r.ok) changed.push({ id: adset.id, from: adset.daily_budget, to });
+          else failures.push(`${adset.name}: ${r.error}`);
         }
       }
 
-      const summary = `Pilar 4 (Scaling Meta Ads): Budget harian "${
-        payload.campaignName
-      }" berhasil dinaikkan menjadi Rp ${finalBudget.toLocaleString("id-ID")}/hari (${gate.reason}).`;
+      if (failures.length > 0) {
+        return NextResponse.json(
+          {
+            ok: false,
+            liveExecuted: changed.length > 0,
+            partialFailure: changed.length > 0,
+            changed,
+            error: `Sebagian perubahan gagal di Meta: ${failures.join(" | ")}`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const summary = `Pilar 4 (Scaling Meta Ads): Budget harian "${payload.campaignName}" dinaikkan dari Rp ${current.total.toLocaleString(
+        "id-ID"
+      )} menjadi Rp ${finalBudget.toLocaleString("id-ID")} (${liveGate.reason})`;
 
       if (body.sendNotification) {
-        await dispatchEngineNotification(
-          `[MONEFYI WINNING ENGINE - SCALE BUDGET]\n${summary}`,
-          config.notifications
-        );
+        await dispatchEngineNotification(`[MONEFYI WINNING ENGINE - SCALE BUDGET]\n${summary}`, config.notifications);
       }
 
       return NextResponse.json({
@@ -308,7 +314,9 @@ export async function POST(req: NextRequest) {
         summary,
         appliedChanges: {
           campaignId,
+          previousBudget: current.total,
           newBudget: finalBudget,
+          changed,
         },
       });
     }
@@ -387,3 +395,64 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  const auth = await requireEngineAuth(req, { allowCron: true });
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+
+  const body = await req.json().catch(() => ({}));
+  const plan = body?.plan as WinningActionPlan | undefined;
+
+  // Guardrail diambil dari server. Nilai di body klien diabaikan untuk kill switch dan batas budget.
+  const serverGuard = await loadServerGuardrails();
+  if (!serverGuard) {
+    return NextResponse.json(
+      { ok: false, liveExecuted: false, blockedByGuardrail: true, error: "Guardrail tidak terbaca dari database. Eksekusi dibatalkan." },
+      { status: 503 }
+    );
+  }
+  body.config = {
+    ...(body.config || {}),
+    killSwitch: serverGuard.killSwitch,
+    approvedDailyCeiling: serverGuard.approvedDailyCeiling,
+    minDailyBudget: serverGuard.minDailyBudget,
+    maxDailyBudget: serverGuard.maxDailyBudget || (body.config?.maxDailyBudget ?? serverGuard.minDailyBudget),
+  };
+  const idempotencyKey = plan ? `${plan.id}:${wibDate()}` : null;
+
+  // Satu aksi live per rencana per hari. Mencegah eksekusi dobel saat run bertumpuk.
+  if (plan && idempotencyKey && LIVE_ACTIONS.has(plan.actionType) && (await hasSucceededToday(idempotencyKey))) {
+    return NextResponse.json({
+      ok: true,
+      liveExecuted: false,
+      duplicate: true,
+      summary: "Aksi ini sudah dijalankan hari ini, dilewati agar tidak dobel.",
+    });
+  }
+
+  const res = await handleApply(req, body);
+
+  if (plan) {
+    try {
+      const json = await res.clone().json();
+      const applied = json.appliedChanges || {};
+      await logEngineAction({
+        source: auth.via === "cron" ? "cron" : "manual",
+        actor: auth.via === "cron" ? "engine" : auth.email || "admin",
+        actionType: plan.actionType,
+        planId: plan.id,
+        idempotencyKey: json.liveExecuted ? idempotencyKey : null,
+        campaignId: String(applied.campaignId || plan.actionPayload?.campaignId || ""),
+        campaignName: String(plan.actionPayload?.campaignName || ""),
+        ok: Boolean(json.ok),
+        liveExecuted: Boolean(json.liveExecuted),
+        beforeValue: applied.previousBudget ?? null,
+        afterValue: applied.newBudget ?? null,
+        summary: json.summary || json.error || "",
+        response: { ...json, evidence: plan.actionPayload?.evidence ?? null },
+      });
+    } catch {
+      /* respons tidak bisa dibaca untuk log; aksi tetap sudah diproses */
+    }
+  }
+  return res;
+}

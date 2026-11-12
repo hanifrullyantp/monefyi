@@ -1,3 +1,4 @@
+import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -23,6 +24,8 @@ function maskSecret(token?: string | null): string {
  * Menjamin multi-device sync (laptop, HP, tablet) tanpa bergantung pada browser localStorage.
  */
 export async function GET(req: NextRequest) {
+  const auth = await requireEngineAuth(req);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   try {
     const includeFullSecrets =
       req.nextUrl.searchParams.get("full") === "1" ||
@@ -60,6 +63,7 @@ export async function GET(req: NextRequest) {
         maxScalePctPerStep: Number(data.max_scale_pct || 20),
         scaleCooldownHours: Number(data.scale_cooldown_hours || 48),
         killSwitch: Boolean(data.kill_switch),
+        budgetUnitVerified: Boolean(data.budget_unit_verified),
         advanceMasterPlanApproved: Boolean(data.advance_master_plan_approved),
         metaAccessToken: fmtToken(data.meta_access_token),
         metaCapiToken: fmtToken(data.meta_capi_token),
@@ -88,6 +92,8 @@ export async function GET(req: NextRequest) {
  * Menyimpan token Meta, OpenRouter key, dan setting Winning Engine langsung ke Supabase Cloud.
  */
 export async function POST(req: NextRequest) {
+  const auth = await requireEngineAuth(req);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   try {
     const body = await req.json().catch(() => ({}));
     const supabase = getSupabaseServerClient();
@@ -107,6 +113,7 @@ export async function POST(req: NextRequest) {
     if (body.targetRoas !== undefined) payload.target_roas = Number(body.targetRoas);
     if (body.maxScalePctPerStep !== undefined) payload.max_scale_pct = Number(body.maxScalePctPerStep);
     if (body.killSwitch !== undefined) payload.kill_switch = Boolean(body.killSwitch);
+    if (body.budgetUnitVerified !== undefined) payload.budget_unit_verified = Boolean(body.budgetUnitVerified);
     if (body.advanceMasterPlanApproved !== undefined) payload.advance_master_plan_approved = Boolean(body.advanceMasterPlanApproved);
 
     // Kredensial Meta & OpenRouter Cloud (Abaikan nilai ter-masking ••••)

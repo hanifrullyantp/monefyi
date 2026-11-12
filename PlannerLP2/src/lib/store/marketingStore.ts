@@ -1,3 +1,5 @@
+import { authedFetch } from "@/lib/auth/authedFetch";
+import type { CampaignWindowAuditEntry } from "@/lib/engine/winningEngine";
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
@@ -110,6 +112,7 @@ interface MarketingStore {
   winningPillars: PillarHealthScore[];
   winningPlans: WinningActionPlan[];
   winningLearnings: WinningLearningItem[];
+  winningDataAudit: CampaignWindowAuditEntry[];
   winningExecutiveBrief: string;
   winningLlmInfo: {
     strategistProvider: string;
@@ -205,6 +208,7 @@ export const useMarketingStore = create<MarketingStore>()(
       winningPillars: [],
       winningPlans: [],
       winningLearnings: [],
+      winningDataAudit: [],
       winningExecutiveBrief: '',
       winningLlmInfo: {
         strategistProvider: 'OpenRouter (Claude 3.5 Sonnet)',
@@ -266,7 +270,7 @@ export const useMarketingStore = create<MarketingStore>()(
 
       loadConfigFromCloud: async () => {
         try {
-          const res = await fetch('/api/engine/config?full=1');
+          const res = await authedFetch('/api/engine/config?full=1');
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.ok && data.config) {
             const c = data.config;
@@ -329,7 +333,7 @@ export const useMarketingStore = create<MarketingStore>()(
           }
 
           // Sinkronisasi status batch dari Supabase Cloud (Multi-device tracking)
-          const batchRes = await fetch('/api/engine/batch');
+          const batchRes = await authedFetch('/api/engine/batch');
           const batchData = await batchRes.json().catch(() => ({}));
           if (batchRes.ok && batchData.ok) {
             if (batchData.status === 'processing') {
@@ -352,6 +356,7 @@ export const useMarketingStore = create<MarketingStore>()(
                 winningPlans: batchData.plans?.length ? batchData.plans : get().winningPlans,
                 winningExecutiveBrief: batchData.executiveBrief || get().winningExecutiveBrief,
                 winningLearnings: batchData.learnings || get().winningLearnings,
+                winningDataAudit: batchData.dataAudit || get().winningDataAudit,
                 batchProgressMessage: 'Data siap! Hasil analisa 5 pilar Sonnet 5.5 telah tersedia.',
                 isRunningEngineTick: false,
               });
@@ -364,7 +369,7 @@ export const useMarketingStore = create<MarketingStore>()(
 
       pollBatchStatus: async () => {
         try {
-          const res = await fetch('/api/engine/batch');
+          const res = await authedFetch('/api/engine/batch');
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.ok) {
             if (data.status === 'ready') {
@@ -378,6 +383,7 @@ export const useMarketingStore = create<MarketingStore>()(
                 winningPillars: data.pillars?.length ? data.pillars : get().winningPillars,
                 winningPlans: data.plans?.length ? data.plans : get().winningPlans,
                 winningLearnings: data.learnings || get().winningLearnings,
+                winningDataAudit: data.dataAudit || get().winningDataAudit,
                 winningExecutiveBrief: data.executiveBrief || get().winningExecutiveBrief,
                 isRunningEngineTick: false,
               });
@@ -428,7 +434,7 @@ export const useMarketingStore = create<MarketingStore>()(
 
           const activeCampaigns = get().campaigns;
 
-          const res = await fetch('/api/engine/tick', {
+          const res = await authedFetch('/api/engine/tick', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -475,6 +481,7 @@ export const useMarketingStore = create<MarketingStore>()(
               winningPillars: data.pillars || [],
               winningPlans: data.plans || [],
               winningLearnings: data.learnings || [],
+              winningDataAudit: data.dataAudit || [],
               winningExecutiveBrief: data.executiveBrief || '',
               winningLlmInfo: data.llmInfo || get().winningLlmInfo,
               isRunningEngineTick: false,
@@ -546,7 +553,7 @@ export const useMarketingStore = create<MarketingStore>()(
             set({ winningEngineConfig: activeConfig });
           }
 
-          const res = await fetch('/api/engine/apply', {
+          const res = await authedFetch('/api/engine/apply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -570,14 +577,18 @@ export const useMarketingStore = create<MarketingStore>()(
 
           // Perbarui state lokal sesuai hasil eksekusi 5 pilar
           const nowIso = data.executedAt || new Date().toISOString();
+          // Aksi yang belum punya eksekutor otomatis tidak boleh tampil seolah sudah berjalan
+          const manualOnly = Boolean(data.manualActionRequired);
           set((state) => ({
             winningPlans: state.winningPlans.map((p) =>
               p.id === planId
                 ? {
                     ...mergedPlan,
-                    status: 'executed',
-                    executedAt: nowIso,
-                    executionNote: data.summary,
+                    status: manualOnly ? 'approved' : 'executed',
+                    executedAt: manualOnly ? undefined : nowIso,
+                    executionNote: manualOnly
+                      ? `Disetujui. Perlu dikerjakan manual: ${data.summary || ''}`
+                      : data.summary,
                   }
                 : p
             ),
@@ -719,7 +730,7 @@ export const useMarketingStore = create<MarketingStore>()(
 
         set({ isLoadingInsights: true });
         try {
-          const res = await fetch('/api/meta/insights', {
+          const res = await authedFetch('/api/meta/insights', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -883,7 +894,7 @@ export const useMarketingStore = create<MarketingStore>()(
         }
 
         try {
-          const res = await fetch('/api/meta/actions', {
+          const res = await authedFetch('/api/meta/actions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

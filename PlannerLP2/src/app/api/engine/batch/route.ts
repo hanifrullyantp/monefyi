@@ -1,3 +1,4 @@
+import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { pollOpenRouterBatch } from "@/lib/engine/llmRouter";
@@ -19,6 +20,8 @@ function getSupabaseServerClient() {
  * Jika selesai: mengekstrak output Sonnet, menyimpan ke Supabase Cloud, dan mengembalikan data 'ready'.
  */
 export async function GET(req: NextRequest) {
+  const auth = await requireEngineAuth(req);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   try {
     const supabase = getSupabaseServerClient();
 

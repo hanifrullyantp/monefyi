@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { authedFetch } from "@/lib/auth/authedFetch";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { LlmProviderType } from "@/lib/engine/llmRouter";
 import {
@@ -188,7 +189,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     setMetaTestMsg(null);
 
     try {
-      const res = await fetch("/api/meta/campaigns", {
+      const res = await authedFetch("/api/meta/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -289,7 +290,7 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
 
     // Simpan permanen ke Supabase Cloud Database (Sinkron Multi-Device)
     try {
-      await fetch("/api/engine/config", {
+      await authedFetch("/api/engine/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

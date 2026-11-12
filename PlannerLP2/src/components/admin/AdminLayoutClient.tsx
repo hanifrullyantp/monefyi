@@ -20,6 +20,8 @@ import { AdminPwaInstallPrompt } from "@/components/admin/AdminPwaInstallPrompt"
 import { MayarStatusBanner } from "@/components/admin/MayarStatusBanner";
 import { MarketingConfigModal } from "@/components/admin/marketing/MarketingConfigModal";
 import { cn } from "@/lib/utils/cn";
+import { setAccessTokenProvider } from "@/lib/auth/authedFetch";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -31,6 +33,14 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
+
+    // Wire up accessTokenProvider untuk route engine & marketing
+    setAccessTokenProvider(async () => {
+      const client = getSupabaseClient();
+      if (!client) return null;
+      const { data } = await client.auth.getSession();
+      return data.session?.access_token ?? null;
+    });
 
     // Register admin-sw.js khusus untuk scope /admin
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {

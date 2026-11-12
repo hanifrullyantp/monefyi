@@ -75,6 +75,8 @@ export function MetaAdsCommanderTable({
 
   // 8. Freeze / Pin Kolom Toggle (Bisa digeser atau di-freeze)
   const [isColumnPinned, setIsColumnPinned] = useState<boolean>(false);
+  // Tabel desktop 26 metrik disembunyikan secara default. Ringkasan di atas tetap tampil.
+  const [showFullTable, setShowFullTable] = useState<boolean>(false);
 
   // 11. Accordion Drilldown Ad Sets & Ads
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<Set<string>>(new Set());
@@ -982,8 +984,26 @@ export function MetaAdsCommanderTable({
         })}
       </div>
 
-      {/* TAMPILAN DESKTOP & TABLET: TABEL KAMPANYE DENGAN TOGGLE FREEZE & ACCORDION DRILLDOWN */}
-      <div className="hidden sm:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-colors">
+      {/* TAMPILAN DESKTOP & TABLET: TABEL KAMPANYE DENGAN TOGGLE FREEZE & ACCORDION DRILLDOWN (DEFAULT TERSEMBUNYI) */}
+      <div className="hidden sm:flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Ringkasan di atas sudah cukup untuk keputusan harian. Detail kampanye ada di balik tombol ini.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowFullTable((v) => !v)}
+          aria-expanded={showFullTable}
+          className="shrink-0 min-h-[36px] px-3 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          {showFullTable ? "Sembunyikan detail" : "Tampilkan detail 26 metrik"}
+        </button>
+      </div>
+      <div
+        className={cn(
+          "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-colors",
+          showFullTable ? "hidden sm:block" : "hidden"
+        )}
+      >
         {finalFilteredCampaigns.length === 0 ? (
           <div className="p-12 text-center space-y-2">
             <Target className="w-8 h-8 text-slate-400 mx-auto" />

@@ -1,3 +1,5 @@
+import { requireEngineAuth } from "@/lib/auth/adminGuard";
+import { hasSucceededToday, logEngineAction, wibDate, acquireRunLock, releaseRunLock, checkManualLiveChange } from "@/lib/engine/engineDb";
 import { NextRequest, NextResponse } from "next/server";
 import { extractCandidateTokens, buildGraphUrl } from "@/lib/meta/graph";
 
@@ -15,9 +17,9 @@ export interface MetaActionLogEntry {
   liveExecuted: boolean;
 }
 
-export async function POST(req: NextRequest) {
+async function handleManual(req: NextRequest, preBody?: any) {
   try {
-    const body = await req.json().catch(() => ({}));
+    const body = preBody ?? (await req.json().catch(() => ({})));
     const rawAccessToken = body.accessToken || process.env.META_ACCESS_TOKEN || "";
     const rawCapiToken = body.capiAccessToken || process.env.META_CAPI_TOKEN || "";
     const adAccountIdRaw = (body.adAccountId || process.env.META_AD_ACCOUNT_ID || "").trim();
@@ -53,6 +55,12 @@ export async function POST(req: NextRequest) {
     // 1. Aksi Ubah Status (Campaign / AdSet / Ad: ACTIVE / PAUSED)
     if (action === "update_status") {
       const newStatus = body.status === "ACTIVE" ? "ACTIVE" : "PAUSED";
+      if (newStatus === "ACTIVE") {
+        const g = await checkManualLiveChange({ kind: "activate" });
+        if (!g.allowed) {
+          return NextResponse.json({ ok: false, blockedByGuardrail: true, error: g.reason }, { status: 403 });
+        }
+      }
       const targetType: "ad" | "adset" | "campaign" =
         body.targetType || (body.adId ? "ad" : body.adsetId ? "adset" : "campaign");
       const targetId = String(body.targetId || body.adId || body.adsetId || campaignId || "").trim();
@@ -119,7 +127,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: false, error: "campaignId wajib diisi." }, { status: 400 });
       }
 
-      const targetBudget = Math.max(20000, Math.round(Number(body.dailyBudget || 0)));
+      const budgetGuard = await checkManualLiveChange({
+        kind: "budget",
+        requestedBudget: Number(body.dailyBudget || 0),
+      });
+      if (!budgetGuard.allowed) {
+        return NextResponse.json({ ok: false, blockedByGuardrail: true, error: budgetGuard.reason }, { status: 403 });
+      }
+      const targetBudget = Math.max(budgetGuard.minBudget || 100000, Math.round(Number(body.dailyBudget || 0)));
       const previousBudget = Number(body.previousBudget || 0);
 
       // 2a. Coba update di level Campaign (jika menggunakan Advantage+ Campaign Budget / CBO)
@@ -237,6 +252,10 @@ export async function POST(req: NextRequest) {
 
     // 3. Aksi Buat Draft Kampanye Winning Baru di Meta Ads Manager
     if (action === "create_winning_campaign") {
+      const createGuard = await checkManualLiveChange({ kind: "create" });
+      if (!createGuard.allowed) {
+        return NextResponse.json({ ok: false, blockedByGuardrail: true, error: createGuard.reason }, { status: 403 });
+      }
       if (!actId) {
         return NextResponse.json(
           { ok: false, error: "Ad Account ID wajib diisi untuk membuat kampanye baru." },
@@ -348,3 +367,28 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function POST(req: NextRequest) {
+  const auth = await requireEngineAuth(req);
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+
+  const body = await req.json().catch(() => ({}));
+  const res = await handleManual(req, body);
+
+  try {
+    const json = await res.clone().json();
+    await logEngineAction({
+      source: "manual",
+      actor: auth.email || "admin",
+      actionType: String(body.action || "unknown"),
+      campaignId: String(body.campaignId || ""),
+      campaignName: String(body.campaignName || ""),
+      ok: Boolean(json.ok),
+      liveExecuted: Boolean(json.liveExecuted ?? json.ok),
+      summary: json.summary || json.error || "",
+      response: json,
+    });
+  } catch {
+    /* log gagal tidak membatalkan respons */
+  }
+  return res;
+}

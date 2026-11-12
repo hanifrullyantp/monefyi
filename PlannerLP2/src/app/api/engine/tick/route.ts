@@ -1,10 +1,16 @@
+import { DEFAULT_LANDING_URL, fetchPageSignals, comparePagePrices } from "@/lib/engine/pageAudit";
+import { MONEFYI_PRICING } from "@/lib/engine/winningEngine";
+import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { NextRequest, NextResponse } from "next/server";
+import { hasSucceededToday, logEngineAction, wibDate, acquireRunLock, releaseRunLock, checkManualLiveChange, loadPaidOrderCount, loadUserHolds } from "@/lib/engine/engineDb";
 import { createClient } from "@supabase/supabase-js";
 import {
   runFivePillarDiagnostics,
   WinningEngineConfig,
+  WinningActionPlan,
   DEFAULT_WINNING_ENGINE_CONFIG,
   evaluateGuardrailGate,
+  isAutoEligible,
 } from "@/lib/engine/winningEngine";
 import { runRoutedLlm, submitOpenRouterBatch } from "@/lib/engine/llmRouter";
 import { dispatchEngineNotification } from "@/lib/services/telegramBotService";
@@ -25,7 +31,7 @@ function getSupabaseServerClient() {
  * 1. Supabase pg_cron setiap 30 menit (otomatis di belakang layar).
  * 2. Tombol "Analisa 5 Pilar & Susun Rencana Winning" di Dashboard Admin.
  */
-export async function POST(req: NextRequest) {
+async function handleTick(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     let campaigns = Array.isArray(body.campaigns) && body.campaigns.length > 0 ? body.campaigns : [];
@@ -43,12 +49,12 @@ export async function POST(req: NextRequest) {
         const [campRes, insRes] = await Promise.all([
           fetch(`${origin}/api/meta/campaigns`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-engine-secret": process.env.ENGINE_CRON_SECRET || "" },
             body: JSON.stringify({}),
           }).catch(() => null),
           fetch(`${origin}/api/meta/insights`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-engine-secret": process.env.ENGINE_CRON_SECRET || "" },
             body: JSON.stringify({}),
           }).catch(() => null),
         ]);
@@ -100,15 +106,52 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    // 1. Jalankan Diagnosa Deterministik 5 Pilar Winning
+    const supabase = getSupabaseServerClient();
+
+    // Riwayat perubahan budget dari eksekusi sebelumnya (untuk jeda cooldown scale)
+    const budgetChangedAt: Record<string, string> = {};
+    const carriedExecuted: any[] = [];
+    try {
+      const { data: prev } = await supabase
+        .from("winning_engine_config")
+        .select("last_plans")
+        .eq("id", "default")
+        .maybeSingle();
+      const prevPlans: any[] = Array.isArray(prev?.last_plans) ? prev!.last_plans : [];
+      for (const p of prevPlans) {
+        const cid = String(p?.actionPayload?.campaignId || "");
+        if (cid && p?.status === "executed" && p?.executedAt && p?.actionType === "scale_campaign_budget") {
+          if (!budgetChangedAt[cid] || p.executedAt > budgetChangedAt[cid]) budgetChangedAt[cid] = p.executedAt;
+          const ageH = (Date.now() - Date.parse(p.executedAt)) / 3600000;
+          if (ageH < config.scaleCooldownHours) carriedExecuted.push(p);
+        }
+      }
+    } catch {
+      // Jika riwayat tidak terbaca, scale tetap dibatasi oleh kenaikan maksimal per langkah
+    }
+
+    // Rekonsiliasi penjualan dan keputusan admin (undo) yang harus dihormati mesin
+    const windowSinceIso = new Date(Date.now() - config.analysisWindowDays * 86400000).toISOString();
+    const paidOrders = await loadPaidOrderCount(windowSinceIso);
+    const holdCampaignIds = await loadUserHolds(72);
+
+    // Baca harga di landing page. Gagal membaca tidak menghentikan analisa.
+    const pageSignals = await fetchPageSignals(process.env.LANDING_PAGE_URL || DEFAULT_LANDING_URL).catch(() => null);
+    const pagePriceFindings = pageSignals?.ok ? comparePagePrices(pageSignals.prices, MONEFYI_PRICING) : [];
+
+    // 1. Jalankan Diagnosa Deterministik 5 Pilar Winning (hanya data dalam jendela analisa)
     const diagnostics = runFivePillarDiagnostics({
       campaigns,
+      pagePriceFindings,
       insightsData,
       orderBumpConfig,
       upsellConfig,
       capiStatus,
       config,
       currentLpCopy,
+      budgetChangedAt,
+      holdCampaignIds,
+      paidOrders,
     });
 
     // 2. Panggil AI Strategist (Gemini 2.5 Pro / Claude) untuk menyusun Ringkasan Eksekutif 10-Tahun Expert
@@ -123,6 +166,8 @@ PERINGATAN PENTING: JANGAN menyamakan produk ini dengan aplikasi pengatur keuang
 
 ATURAN KOMUNIKASI WAJIB:
 1. DILARANG menggunakan emoticon/emoji sama sekali.
+1a. Hanya gunakan angka yang ada di data. Jika data suatu pilar belum ada, tulis "data belum cukup" dan jangan mengarang angka.
+1b. Setiap rekomendasi wajib menyebut bukti (angka), jendela data, dan status learning phase. Sebutkan juga apa yang TIDAK dilakukan dan alasannya.
 2. Gunakan bahasa Indonesia bisnis yang jernih, tegas, mudah dipahami oleh pemilik bisnis (tidak membuat pusing), namun berbasis angka riil.
 3. Anda menilai 5 Pilar secara utuh: (1) Produk, Harga & Offer Estimator, (2) Kecepatan & Copywriting Landing Page estimator.monefyi.com, (3) Checkout & AOV Funnel (Order Bump Mayar), (4) Meta Ads & Rapid Testing, (5) Tracking Pixel + CAPI.
 4. Berikan ringkasan eksekutif maksimal 4 poin singkat:
@@ -160,15 +205,21 @@ ${diagnostics.pillars
   .join("\n")}
 
 Daftar Kampanye Utama:
-${campaigns.slice(0, 5).map((c: any) => `- "${c.name}" (Status: ${c.status}, Spend: Rp ${Number(c.spend || 0).toLocaleString("id-ID")}, Results: ${c.results || 0}, OCLP: ${Number(c.oclpRate || 0)}%)`).join("\n")}
+Jendela data keputusan: ${config.analysisWindowDays} hari terakhir. Data di luar jendela ini tidak dipakai.
+Kampanye yang dianalisa (${diagnostics.includedCampaigns.length}):
+${diagnostics.includedCampaigns.length === 0 ? "- Tidak ada kampanye dengan belanja dalam jendela data." : diagnostics.includedCampaigns.map((c: any) => `- "${c.name}" | Spend: Rp ${Number(c.spend || 0).toLocaleString("id-ID")} | Konversi: ${c.purchases || c.results || 0} | CPA: Rp ${Math.round(Number(c.cpa || 0)).toLocaleString("id-ID")} | ${c.inLearning ? "LEARNING (jangan dihentikan kecuali melewati batas darurat)" : "stabil"}`).join("\n")}
+Keputusan yang ditahan atau dikecualikan (beserta alasan):
+${diagnostics.dataAudit.length === 0 ? "- Tidak ada." : diagnostics.dataAudit.map((a) => `- [${a.decision}] "${a.name}": ${a.reason}`).join("\n")}
 
-Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
+Garis rugi per pesanan: Rp ${Math.round(diagnostics.breakEven.cpa).toLocaleString("id-ID")} (break-even), target CPA Rp ${config.targetCpa.toLocaleString("id-ID")}. ${diagnostics.breakEven.note}
+Budget aktif harian di kampanye yang terbukti merugi: Rp ${diagnostics.portfolio.losingDailyBudget.toLocaleString("id-ID")} (${diagnostics.portfolio.losingBudgetSharePct}% dari budget aktif).
+Vonis statistik per kampanye (peluang = probabilitas dari data, bukan kepastian):
+${diagnostics.verdicts.length === 0 ? "- Tidak ada." : diagnostics.verdicts.map((v) => `- "${v.name}": ${v.verdict.kind}. ${v.verdict.reason}`).join("\n")}
+${diagnostics.configWarnings.length > 0 ? `Peringatan konfigurasi:\n${diagnostics.configWarnings.map((w) => `- ${w}`).join("\n")}\n` : ""}Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
 Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (tanpa emoticon) agar pemilik bisnis langsung paham evaluasi performa dan mengapa rencana perbaikan perlu disetujui.`;
 
     const strategistModel = config.llmRouting?.strategist?.model || "";
     const isBatchMode = (strategistModel.includes(":batch") || strategistModel.includes("batch")) && !body.forceRealtime;
-    const supabase = getSupabaseServerClient();
-
     // Jika model dikonfigurasi menggunakan antrean Batch (misal: anthropic/claude-sonnet-5.5:batch)
     if (isBatchMode) {
       let openRouterKey =
@@ -259,35 +310,58 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
           )} s/d Rp ${config.maxDailyBudget.toLocaleString("id-ID")}/hari.`,
         ].join("\n\n");
 
-    // 3. Jika Mode Advance aktif + Master Plan sudah disetujui + Kill-Switch mati,
-    //    evaluasi rencana yang bisa dieksekusi otomatis di dalam Guardrail
+    // 3. Mode Otonom: AI mengeksekusi sendiri aksi Meta yang lolos Guardrail (pause boncos & scale bertahap).
+    //    Setiap aksi dikirim ke /api/engine/apply, yang memeriksa Guardrail lagi, membaca budget riil,
+    //    lalu memanggil Meta Graph API. Status "executed" hanya diberikan jika Meta benar-benar berubah.
     const autoExecutedIds: string[] = [];
-    const finalPlans = diagnostics.plans.map((plan) => {
-      if (
-        config.mode === "advance" &&
-        config.advanceMasterPlanApproved &&
-        !config.killSwitch &&
-        !plan.requiresCeilingReapproval
-      ) {
-        const gate = evaluateGuardrailGate({ ...plan, status: "approved" }, config);
-        if (
-          gate.allowed &&
-          (plan.actionType === "optimize_lp_speed" ||
-            plan.actionType === "repair_tracking_capi" ||
-            plan.actionType === "pause_bleeding_campaign" ||
-            plan.actionType === "scale_campaign_budget")
-        ) {
-          autoExecutedIds.push(plan.id);
-          return {
-            ...plan,
-            status: "executed" as const,
-            executedAt: new Date().toISOString(),
-            executionNote: `Dieksekusi otomatis oleh Mode Advance (${gate.reason})`,
-          };
-        }
+    const cronAuthorized =
+      Boolean(process.env.ENGINE_CRON_SECRET) &&
+      req.headers.get("x-engine-secret") === process.env.ENGINE_CRON_SECRET;
+    const selfOrigin = req.nextUrl.origin || "http://localhost:3000";
+    const finalPlans: WinningActionPlan[] = [];
+
+    for (const plan of diagnostics.plans) {
+      if (!cronAuthorized || !config.autonomous || config.killSwitch || !config.budgetUnitVerified || !isAutoEligible(plan) || plan.requiresCeilingReapproval) {
+        finalPlans.push(plan);
+        continue;
       }
-      return plan;
-    });
+
+      const gate = evaluateGuardrailGate({ ...plan, status: "approved", approvedBy: "engine" }, config);
+      if (!gate.allowed) {
+        finalPlans.push({ ...plan, status: "blocked_guardrail", executionNote: gate.reason });
+        continue;
+      }
+
+      try {
+        const res = await fetch(`${selfOrigin}/api/engine/apply`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-engine-secret": process.env.ENGINE_CRON_SECRET || "" },
+          body: JSON.stringify({ plan: { ...plan, approvedBy: "engine" }, config, userApproved: true, sendNotification: false }),
+        });
+        const json = await res.json().catch(() => ({} as any));
+        if (res.ok && json.ok && json.liveExecuted) {
+          autoExecutedIds.push(plan.id);
+          finalPlans.push({
+            ...plan,
+            status: "executed",
+            executedAt: new Date().toISOString(),
+            executionNote: `Dieksekusi otomatis. ${json.summary || gate.reason}`,
+          });
+        } else {
+          finalPlans.push({
+            ...plan,
+            status: json.blockedByGuardrail ? "blocked_guardrail" : "pending",
+            executionNote: `Belum dijalankan: ${json.error || "respons Meta tidak valid"}`,
+          });
+        }
+      } catch (err: any) {
+        finalPlans.push({
+          ...plan,
+          status: "pending",
+          executionNote: `Ditunda, koneksi ke layanan eksekusi gagal: ${err?.message || "tidak diketahui"}`,
+        });
+      }
+    }
 
     // 4. Kirim Notifikasi ke WhatsApp & Telegram bila diminta
     let notificationResult = null;
@@ -319,7 +393,7 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
         batch_completed_at: new Date().toISOString(),
         last_executive_brief: executiveBrief,
         last_pillars: diagnostics.pillars,
-        last_plans: finalPlans,
+        last_plans: [...finalPlans, ...carriedExecuted.filter((p) => !finalPlans.some((f) => f.id === p.id))],
         updated_at: new Date().toISOString(),
       })
       .eq("id", "default");
@@ -334,6 +408,13 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
       pillars: diagnostics.pillars,
       plans: finalPlans,
       learnings: diagnostics.learnings,
+      dataAudit: diagnostics.dataAudit,
+      reconciliation: diagnostics.reconciliation,
+      verdicts: diagnostics.verdicts,
+      breakEven: diagnostics.breakEven,
+      portfolio: diagnostics.portfolio,
+      configWarnings: diagnostics.configWarnings,
+      analysisWindowDays: config.analysisWindowDays,
       executiveBrief,
       llmInfo: {
         strategistProvider: llmStrategistResult.providerUsed,
@@ -360,3 +441,21 @@ export async function GET(req: NextRequest) {
   return POST(req);
 }
 
+export async function POST(req: NextRequest) {
+  const auth = await requireEngineAuth(req, { allowCron: true });
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+
+  // Lock: dua analisa tidak boleh berjalan bersamaan (pg_cron dan klik manual bisa bertabrakan)
+  const locked = await acquireRunLock("tick");
+  if (!locked) {
+    return NextResponse.json(
+      { ok: false, error: "Analisa lain sedang berjalan. Coba lagi dalam beberapa menit." },
+      { status: 423 }
+    );
+  }
+  try {
+    return await handleTick(req);
+  } finally {
+    await releaseRunLock("tick");
+  }
+}

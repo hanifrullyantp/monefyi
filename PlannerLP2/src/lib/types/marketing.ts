@@ -130,6 +130,15 @@ export interface MetaCampaign {
   lastUpdated: string;
   adsets?: MetaAdSet[];
 
+  // Metadata jendela analisa (ditambahkan untuk otonomi & learning phase)
+  createdTime?: string;        // created_time dari Meta
+  effectiveStatus?: string;    // effective_status dari Meta
+  ageDays?: number | null;     // umur kampanye (hari)
+  inLearning?: boolean;        // true = masih learning phase, keputusan dibatasi
+  learningStage?: string | null;   // status learning dari Meta (LEARNING / SUCCESS / FAIL) jika tersedia
+  learningSource?: "meta" | "heuristic"; // asal penilaian learning
+  lastSigEditAt?: string | null;   // perubahan signifikan terakhir pada ad set (ISO), dari Meta
+
   // 26 Metrik Standar Agency & Scale Model
   results?: number;
   purchasesConversionValue?: number; // Nilai konversi penjualan (Rp)
@@ -230,6 +239,7 @@ export interface MetaCapiStatus {
   browserEvents24h: number;
   redundancyRate: number; // %
   lastEventTime?: string;
+  verified?: boolean; // true hanya jika angka dibaca nyata dari Meta. Data contoh/default harus false atau kosong.
 }
 
 export interface MarketingChatMessage {

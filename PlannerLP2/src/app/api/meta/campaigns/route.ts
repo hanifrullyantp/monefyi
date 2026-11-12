@@ -1,6 +1,12 @@
+import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { extractCandidateTokens, buildGraphUrl } from "@/lib/meta/graph";
+import { DEFAULT_WINNING_ENGINE_CONFIG, resolveLearningState } from "@/lib/engine/winningEngine";
+
+// Sumber kebenaran ambang yang sama dengan engine (sebelumnya angka 85.000 di sini tidak sinkron)
+const TARGET_CPA = DEFAULT_WINNING_ENGINE_CONFIG.targetCpa;
+
 
 interface MetaActionItem {
   action_type: string;
@@ -22,17 +28,12 @@ function getSupabaseServerClient() {
 async function fetchRealCampaignsForAccount(
   actId: string,
   token: string,
-  datePreset: string = "data_maximum",
+  datePreset: string = "last_14d",
   currency: string = "IDR",
   appSecret?: string
 ) {
-  const validPresets = [
-    datePreset,
-    "data_maximum",
-    "last_90d",
-    "last_30d",
-    "maximum",
-  ];
+  // Jendela tanggal harus eksplisit. Tidak ada fallback ke data lifetime agar iklan lama tidak ikut terbaca.
+  const validPresets = [datePreset];
   const uniquePresets = Array.from(new Set(validPresets.filter(Boolean)));
 
   // 1. Ambil daftar Campaigns riil dari Meta
@@ -44,7 +45,7 @@ async function fetchRealCampaignsForAccount(
 
   // 2. Ambil daftar AdSets riil (karena mayoritas iklan mengatur budget harian di level AdSet / ABO)
   const adsetsUrl = buildGraphUrl(
-    `https://graph.facebook.com/v20.0/${actId}/adsets?fields=id,name,campaign_id,daily_budget,lifetime_budget,status,effective_status,optimization_goal&limit=150`,
+    `https://graph.facebook.com/v20.0/${actId}/adsets?fields=id,name,campaign_id,daily_budget,lifetime_budget,status,effective_status,optimization_goal,learning_stage_info&limit=150`,
     token,
     appSecret
   );
@@ -63,7 +64,18 @@ async function fetchRealCampaignsForAccount(
   ]);
 
   const campJson = await campRes.json().catch(() => ({}));
-  const adsetJson = adsetRes ? await adsetRes.json().catch(() => ({})) : {};
+  let adsetJson: any = adsetRes ? await adsetRes.json().catch(() => ({})) : {};
+  // Jika Meta menolak field learning_stage_info, ulangi tanpa field itu agar budget dan ad set tetap terbaca.
+  // Status learning lalu memakai perkiraan (umur dan jumlah konversi).
+  if (adsetJson?.error) {
+    const retryUrl = buildGraphUrl(
+      `https://graph.facebook.com/v20.0/${actId}/adsets?fields=id,name,campaign_id,daily_budget,lifetime_budget,status,effective_status,optimization_goal&limit=150`,
+      token,
+      appSecret
+    );
+    const retryRes = await fetch(retryUrl, { cache: "no-store" }).catch(() => null);
+    adsetJson = retryRes ? await retryRes.json().catch(() => ({})) : {};
+  }
   const adsJson = adsRes ? await adsRes.json().catch(() => ({})) : {};
 
   if (!campRes.ok || campJson.error) {
@@ -74,7 +86,10 @@ async function fetchRealCampaignsForAccount(
     };
   }
 
-  const rawCampaigns: any[] = Array.isArray(campJson.data) ? campJson.data : [];
+  // Buang kampanye yang sudah diarsipkan/dihapus di Meta
+  const rawCampaigns: any[] = (Array.isArray(campJson.data) ? campJson.data : []).filter(
+    (c: any) => !["ARCHIVED", "DELETED"].includes(String(c.effective_status || "").toUpperCase())
+  );
   const rawAdsets: any[] = Array.isArray(adsetJson.data) ? adsetJson.data : [];
   const rawAds: any[] = Array.isArray(adsJson.data) ? adsJson.data : [];
 
@@ -466,18 +481,49 @@ async function fetchRealCampaignsForAccount(
       | "bleeding"
       | "fatigued" = "review";
 
-    if (frequency >= 3.5 && ctrAll < 1.0) {
+    // Umur kampanye dan jumlah konversi menentukan apakah masih learning phase Meta.
+    // Status learning resmi dari Meta (per ad set). Satu ad set LEARNING berarti kampanye masih belajar.
+    const stages = campaignAdsets
+      .map((a: any) => String(a?.learning_stage_info?.status || "").toUpperCase())
+      .filter(Boolean);
+    const learningStage: string | null = stages.includes("LEARNING")
+      ? "LEARNING"
+      : stages.includes("FAIL")
+      ? "FAIL"
+      : stages.length > 0 && stages.every((s: string) => s === "SUCCESS")
+      ? "SUCCESS"
+      : null;
+    // Waktu perubahan signifikan terakhir (Meta bisa mengirim detik unix atau ISO)
+    const sigEditMs = campaignAdsets.reduce((max: number, a: any) => {
+      const raw = a?.learning_stage_info?.last_sig_edit_ts;
+      if (raw === undefined || raw === null) return max;
+      const ms = typeof raw === "number" ? (raw < 1e12 ? raw * 1000 : raw) : Date.parse(String(raw));
+      return Number.isFinite(ms) && ms > max ? ms : max;
+    }, 0);
+    const lastSigEditAt = sigEditMs > 0 ? new Date(sigEditMs).toISOString() : null;
+
+    const createdMs = item.created_time ? Date.parse(item.created_time) : NaN;
+    const ageDays = Number.isFinite(createdMs) ? (Date.now() - createdMs) / 86400000 : null;
+    const optimizationEvents = purchases + leads;
+    const learn = resolveLearningState(
+      { learningStage, ageDays, events: optimizationEvents },
+      DEFAULT_WINNING_ENGINE_CONFIG
+    );
+    const inLearning = spend > 0 && learn.inLearning;
+
+    if (inLearning) {
+      // Kampanye baru jangan dilabeli boncos atau lelah sebelum belajar selesai
+      healthStatus = "learning";
+    } else if (frequency >= 3.5 && ctrAll < 1.0) {
       healthStatus = "fatigued";
-    } else if (spend > 100000 && purchases === 0 && leads === 0 && ctrAll < 0.8) {
+    } else if (spend >= TARGET_CPA * 1.8 && purchases === 0 && leads === 0) {
       healthStatus = "bleeding";
-    } else if (spend > 0 && costPerPurchase > 85000) {
+    } else if (purchases > 0 && costPerPurchase > TARGET_CPA * 1.4) {
       healthStatus = "bleeding";
     } else if (roas >= 3.0 && purchases >= 3) {
       healthStatus = "scale_ready";
-    } else if (roas >= 2.0 || (results >= 3 && costPerResult > 0 && costPerResult <= 45000)) {
+    } else if (roas >= 2.0 || (results >= 3 && costPerResult > 0 && costPerResult <= TARGET_CPA)) {
       healthStatus = "winning";
-    } else if (spend > 0 && impressions < 2500) {
-      healthStatus = "learning";
     }
 
     const thumbstopRate =
@@ -491,6 +537,13 @@ async function fetchRealCampaignsForAccount(
       objective: item.objective || "OUTCOME_SALES",
       status: item.status === "ACTIVE" ? "ACTIVE" : "PAUSED",
       deliveryStatus: item.effective_status || item.status,
+      effectiveStatus: item.effective_status || item.status,
+      createdTime: item.created_time || null,
+      ageDays: ageDays === null ? null : Math.round(ageDays * 10) / 10,
+      inLearning,
+      learningStage,
+      learningSource: learn.source,
+      lastSigEditAt,
       dailyBudget,
       spend,
       impressions,
@@ -540,16 +593,19 @@ async function fetchRealCampaignsForAccount(
     ok: true,
     campaigns: mappedCampaigns,
     rawCount: rawCampaigns.length,
+    analysisWindow: datePreset,
   };
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireEngineAuth(req, { allowCron: true });
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   try {
     const body = await req.json().catch(() => ({}));
     let rawAccessToken = body.accessToken || process.env.META_ACCESS_TOKEN || "";
     let rawCapiToken = body.capiAccessToken || process.env.META_CAPI_TOKEN || "";
     let adAccountIdRaw = (body.adAccountId || process.env.META_AD_ACCOUNT_ID || "").trim();
-    const datePreset = (body.datePreset || "data_maximum").trim();
+    const datePreset = (body.datePreset || "last_14d").trim();
     const appSecret = (body.appSecret || process.env.META_APP_SECRET || "").trim() || undefined;
 
     // Fallback otomatis dari Supabase Cloud Database jika di request body kosong (Multi-Device Persistence)

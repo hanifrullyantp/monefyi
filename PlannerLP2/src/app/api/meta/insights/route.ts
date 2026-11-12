@@ -1,3 +1,4 @@
+import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { extractCandidateTokens, buildGraphUrl } from "@/lib/meta/graph";
@@ -155,12 +156,14 @@ async function fetchBreakdownWithFallback(
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireEngineAuth(req, { allowCron: true });
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   try {
     const body = await req.json().catch(() => ({}));
     let rawAccessToken = body.accessToken || process.env.META_ACCESS_TOKEN || "";
     let rawCapiToken = body.capiAccessToken || process.env.META_CAPI_TOKEN || "";
     let adAccountIdRaw = (body.adAccountId || process.env.META_AD_ACCOUNT_ID || "").trim();
-    const datePreset = (body.datePreset || "data_maximum").trim();
+    const datePreset = (body.datePreset || "last_14d").trim();
     const appSecret = (body.appSecret || process.env.META_APP_SECRET || "").trim() || undefined;
 
     // Fallback otomatis dari Supabase Cloud Database jika di request body kosong (Multi-Device Persistence)
@@ -230,7 +233,7 @@ export async function POST(req: NextRequest) {
     }
 
     const presets = Array.from(
-      new Set([datePreset, "data_maximum", "last_90d", "last_30d", "maximum"])
+      new Set([datePreset])
     );
 
     // Tarik 3 Breakdown utama dari Meta Graph API secara paralel:
