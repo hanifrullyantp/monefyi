@@ -48,11 +48,10 @@ export async function POST(req: NextRequest) {
   const auth = await requireEngineAuth(req);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   const body = await req.json().catch(() => ({}));
-  let ids: string[] | null = null;
-  if (Array.isArray(body.ids)) {
-    ids = body.ids.map((x: unknown) => String(x)).filter((x: string) => /^\d+$/.test(x));
-    if (ids.length === 0) ids = null;
-  }
+  const parsed = Array.isArray(body.ids)
+    ? body.ids.map((x: unknown) => String(x)).filter((x: string) => /^\d+$/.test(x))
+    : [];
+  const ids: string[] | null = parsed.length > 0 ? parsed : null;
   const { error } = await getServiceClient()
     .from("winning_engine_config")
     .upsert({ id: "default", tracked_campaign_ids: ids, updated_at: new Date().toISOString() }, { onConflict: "id" });
