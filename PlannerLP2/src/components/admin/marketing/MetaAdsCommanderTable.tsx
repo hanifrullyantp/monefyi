@@ -13,7 +13,6 @@ import {
   X,
   Target,
   DollarSign,
-  Activity,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -21,7 +20,6 @@ import {
   Search,
   Calendar,
   Building2,
-  Video,
   ChevronDown,
   ChevronRight,
   Pin,
@@ -428,78 +426,73 @@ export function MetaAdsCommanderTable({
         </div>
       </div>
 
-      {/* 3B. DESKTOP / TABLET DISPLAY: 4 DASHBOARD CARD (TOTAL SPENT, RESULTS & CPA, THRUPLAYS & ROAS, STATUS KAMPANYE) */}
-      <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
-        {/* Card 1: TOTAL AMOUNT SPENT */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider">
-              TOTAL AMOUNT SPENT
-            </span>
-            <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+      {/* 3B. DESKTOP: data yang sama dengan kartu mobile, satu baris melebar */}
+      <div className="hidden sm:flex items-stretch bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xs overflow-x-auto">
+        {(
+          [
+            {
+              label: "Amount spent",
+              value: `Rp ${totalSpend.toLocaleString("id-ID")}`,
+              sub: `Val Rp ${totalRevenue.toLocaleString("id-ID")} · ROAS ${weightedRoas}x`,
+              valueClass: "text-slate-900 dark:text-white",
+            },
+            {
+              label: "Results",
+              value: totalResults.toLocaleString("id-ID"),
+              sub: `CPR Rp ${avgCostPerResult.toLocaleString("id-ID")}`,
+              valueClass: "text-blue-600 dark:text-blue-400",
+            },
+            {
+              label: "Winning",
+              value: `${winningCount}${bleedingCount > 0 ? ` · ${bleedingCount} boncos` : ""}`,
+              sub: `${keywordFilteredCampaigns.length} kampanye · ${totalThruPlays.toLocaleString("id-ID")} ThruPlay`,
+              valueClass: "text-emerald-600 dark:text-emerald-400",
+            },
+            {
+              label: "OCLP",
+              value: oclpRate,
+              sub: `${totalLandingPageViews} LP / ${totalLinkClicks} klik`,
+              valueClass: "text-indigo-600 dark:text-indigo-400",
+            },
+            {
+              label: "CPR",
+              value: `Rp ${avgCostPerResult.toLocaleString("id-ID")}`,
+              sub: `${totalPurchases} purchase · ${totalLeads} lead`,
+              valueClass: "text-slate-900 dark:text-white",
+            },
+            {
+              label: "CTR link",
+              value: ctrLinkRate,
+              sub: `CTR all ${ctrAllRate}`,
+              valueClass: "text-emerald-600 dark:text-emerald-400",
+            },
+            {
+              label: "CPC link",
+              value: `Rp ${cpcLinkVal.toLocaleString("id-ID")}`,
+              sub: `CPC all Rp ${cpcAllVal.toLocaleString("id-ID")}`,
+              valueClass: "text-slate-900 dark:text-white",
+            },
+            {
+              label: "CPM",
+              value: `Rp ${cpmVal.toLocaleString("id-ID")}`,
+              sub: `${totalImpressions.toLocaleString("id-ID")} impresi`,
+              valueClass: "text-slate-900 dark:text-white",
+            },
+          ] as const
+        ).map((cell) => (
+          <div
+            key={cell.label}
+            className="flex-1 min-w-[132px] px-3 py-2 border-r border-slate-100 dark:border-slate-800 last:border-r-0"
+          >
+            <div className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+              {cell.label}
+            </div>
+            <div className={cn("text-sm font-black leading-tight truncate mt-0.5", cell.valueClass)}>
+              {cell.value}
+            </div>
+            <div className="text-[9px] text-slate-400 truncate mt-0.5">{cell.sub}</div>
           </div>
-          <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
-            Rp {totalSpend.toLocaleString("id-ID")}
-          </div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            Conversion Value: Rp {totalRevenue.toLocaleString("id-ID")}
-          </div>
-        </div>
-
-        {/* Card 2: TOTAL RESULTS & CPA (PURCHASES) */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider">
-              TOTAL RESULTS &amp; CPA
-            </span>
-            <Target className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
-            {totalResults.toLocaleString("id-ID")} Results
-          </div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            Cost / Result: Rp {avgCostPerResult.toLocaleString("id-ID")} ({totalPurchases} Purchase, {totalLeads} Lead)
-          </div>
-        </div>
-
-        {/* Card 3: 15S THRUPLAYS & ROAS */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider">
-              15S THRUPLAYS &amp; ROAS
-            </span>
-            <Video className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 leading-tight">
-            {totalThruPlays.toLocaleString("id-ID")} ThruPlay
-          </div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            Blended ROAS: {weightedRoas}x (Target &ge; {rules.minRoasScaleThreshold}x)
-          </div>
-        </div>
-
-        {/* Card 4: STATUS KAMPANYE LIVE */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs transition-colors">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-0.5">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider">
-              STATUS KAMPANYE LIVE
-            </span>
-            <Activity className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-          </div>
-          <div className="flex items-center gap-1.5 leading-tight">
-            <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">
-              {winningCount} Winning
-            </span>
-            {bleedingCount > 0 && (
-              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-1.5 py-0.2 rounded-full border border-rose-200 dark:border-rose-800">
-                {bleedingCount} Boncos
-              </span>
-            )}
-          </div>
-          <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            Total {keywordFilteredCampaigns.length} Kampanye di Analisa Ini
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* 4. TOMBOL DI BAWAH CARD UNTUK MASUK KE WINNING ENGINE, INSIGHT, CREATIVE & PENGATURAN */}
