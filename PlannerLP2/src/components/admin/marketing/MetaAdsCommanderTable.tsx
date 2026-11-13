@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { MetaCampaign, MetaAdSet, MetaAd, AdHealthStatus } from "@/lib/types/marketing";
 import {
@@ -41,6 +41,166 @@ interface MetaAdsCommanderTableProps {
   onOpenInsights?: () => void;
   onOpenCreative?: () => void;
   onOpenConfig?: () => void;
+}
+
+interface DrillMetrics {
+  spend: number;
+  results: number;
+  convValue: number;
+  costPerResult: number;
+  roas: number;
+  reach: number;
+  linkClicks: number;
+  lpViews: number;
+  addsToCart: number;
+  checkouts: number;
+  registrations: number;
+  purchases: number;
+  costLp: number;
+  costAtc: number;
+  costIc: number;
+  costPurchase: number;
+  oclp: number;
+  lpAtc: number;
+  atcIc: number;
+  icPur: number;
+  cpm: number;
+  ctrLink: number;
+  ctrAll: number;
+  cpcLink: number;
+  cpcAll: number;
+  thru: number;
+}
+
+function drillMoney(n: number) {
+  return `Rp ${Math.round(Number(n) || 0).toLocaleString("id-ID")}`;
+}
+
+function adDrillMetrics(ad: MetaAd): DrillMetrics {
+  return {
+    spend: ad.spend || 0,
+    results: ad.purchases || ad.results || 0,
+    convValue: ad.purchasesConversionValue || 0,
+    costPerResult: ad.costPerResult || ad.cpa || 0,
+    roas: ad.roas || 0,
+    reach: ad.reach || 0,
+    linkClicks: ad.linkClicks || ad.clicks || 0,
+    lpViews: ad.landingPageViews || 0,
+    addsToCart: ad.addsToCart || 0,
+    checkouts: ad.checkoutsInitiated || 0,
+    registrations: ad.registrationsCompleted || 0,
+    purchases: ad.purchases || 0,
+    costLp: ad.costPerLpView || 0,
+    costAtc: ad.costPerAddToCart || 0,
+    costIc: ad.costPerCheckoutInitiated || 0,
+    costPurchase: ad.costPerPurchase || ad.cpa || 0,
+    oclp: ad.oclpRate || 0,
+    lpAtc: ad.lpToAtcRate || 0,
+    atcIc: ad.atcToIcRate || 0,
+    icPur: ad.icToPurchaseRate || 0,
+    cpm: ad.cpm || 0,
+    ctrLink: ad.ctrLink || ad.ctr || 0,
+    ctrAll: ad.ctrAll || ad.ctr || 0,
+    cpcLink: ad.cpcLink || ad.cpc || 0,
+    cpcAll: ad.cpcAll || ad.cpc || 0,
+    thru: ad.videoThruPlays15s || 0,
+  };
+}
+
+function adsetDrillMetrics(adset: MetaAdSet): DrillMetrics {
+  const ads = adset.ads || [];
+  const sum = (key: keyof MetaAd) => ads.reduce((acc, ad) => acc + Number(ad[key] || 0), 0);
+  const spend = adset.spend || sum("spend");
+  const purchases = adset.purchases || sum("purchases");
+  const linkClicks = sum("linkClicks") || adset.clicks || sum("clicks");
+  const impressions = adset.impressions || sum("impressions");
+  const clicks = adset.clicks || sum("clicks");
+  const lp = sum("landingPageViews");
+  const atc = sum("addsToCart");
+  const ic = sum("checkoutsInitiated");
+  const value = sum("purchasesConversionValue");
+  const rate = (part: number, whole: number) => (whole > 0 ? Number(((part / whole) * 100).toFixed(1)) : 0);
+  const unit = (part: number, whole: number) => (whole > 0 ? Math.round(part / whole) : 0);
+
+  return {
+    spend,
+    results: adset.results || purchases,
+    convValue: value,
+    costPerResult: adset.cpa || unit(spend, purchases),
+    roas: adset.roas || (spend > 0 ? Number((value / spend).toFixed(2)) : 0),
+    reach: sum("reach"),
+    linkClicks,
+    lpViews: lp,
+    addsToCart: atc,
+    checkouts: ic,
+    registrations: sum("registrationsCompleted"),
+    purchases,
+    costLp: unit(spend, lp),
+    costAtc: unit(spend, atc),
+    costIc: unit(spend, ic),
+    costPurchase: unit(spend, purchases),
+    oclp: rate(lp, linkClicks),
+    lpAtc: rate(atc, lp),
+    atcIc: rate(ic, atc),
+    icPur: rate(purchases, ic),
+    cpm: impressions > 0 ? Math.round((spend / impressions) * 1000) : 0,
+    ctrLink: adset.ctr || rate(linkClicks, impressions),
+    ctrAll: rate(clicks, impressions),
+    cpcLink: adset.cpc || unit(spend, linkClicks),
+    cpcAll: unit(spend, clicks),
+    thru: sum("videoThruPlays15s"),
+  };
+}
+
+function DrillMetricCells({ metrics }: { metrics: DrillMetrics }) {
+  const m = metrics;
+  return (
+    <>
+      <td className="p-3 font-bold">{drillMoney(m.spend)}</td>
+      <td className="p-3 font-black text-emerald-600 dark:text-emerald-400">{m.results}</td>
+      <td className="p-3">{drillMoney(m.convValue)}</td>
+      <td className="p-3">{drillMoney(m.costPerResult)}</td>
+      <td className="p-3 font-black">{m.roas ? `${m.roas}x` : "-"}</td>
+      <td className="p-3">{m.reach.toLocaleString("id-ID")}</td>
+      <td className="p-3">{m.linkClicks.toLocaleString("id-ID")}</td>
+      <td className="p-3">{m.lpViews.toLocaleString("id-ID")}</td>
+      <td className="p-3">{m.addsToCart}</td>
+      <td className="p-3">{m.checkouts}</td>
+      <td className="p-3 font-bold text-blue-600 dark:text-blue-400">{m.registrations}</td>
+      <td className="p-3 font-bold">{m.purchases}</td>
+      <td className="p-3">{drillMoney(m.costLp)}</td>
+      <td className="p-3">{drillMoney(m.costAtc)}</td>
+      <td className="p-3">{drillMoney(m.costIc)}</td>
+      <td className="p-3 font-semibold">{drillMoney(m.costPurchase)}</td>
+      <td className="p-3 font-bold text-indigo-600 dark:text-indigo-400">{m.oclp}%</td>
+      <td className="p-3 font-bold text-indigo-600 dark:text-indigo-400">{m.lpAtc}%</td>
+      <td className="p-3 font-bold text-indigo-600 dark:text-indigo-400">{m.atcIc}%</td>
+      <td className="p-3 font-bold text-indigo-600 dark:text-indigo-400">{m.icPur}%</td>
+      <td className="p-3">{drillMoney(m.cpm)}</td>
+      <td className="p-3">{m.ctrLink ? `${m.ctrLink}%` : "-"}</td>
+      <td className="p-3">{m.ctrAll ? `${m.ctrAll}%` : "-"}</td>
+      <td className="p-3">{drillMoney(m.cpcLink)}</td>
+      <td className="p-3">{drillMoney(m.cpcAll)}</td>
+      <td className="p-3">{m.thru}</td>
+    </>
+  );
+}
+
+function DeliveryPill({ status }: { status: string }) {
+  const on = status === "ACTIVE";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border",
+        on
+          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+          : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+      )}
+    >
+      <span className={cn("w-1.5 h-1.5 rounded-full", on ? "bg-emerald-500" : "bg-slate-400")} />
+      {on ? "Active" : status || "Off"}
+    </span>
+  );
 }
 
 export function MetaAdsCommanderTable({
@@ -1499,9 +1659,8 @@ export function MetaAdsCommanderTable({
                   const isEditingThisBudget = editingBudgetId === camp.id;
 
                   return (
-                    <>
+                    <Fragment key={camp.id}>
                       <tr
-                        key={camp.id}
                         className={cn(
                           "hover:bg-slate-50/80 dark:hover:bg-slate-850/60 transition-colors",
                           isOff && "opacity-60 bg-slate-50/40 dark:bg-slate-950/30"
@@ -1756,326 +1915,136 @@ export function MetaAdsCommanderTable({
                         <td className="p-3.5">{camp.videoThruPlays15s || 0}</td>
                       </tr>
 
-                      {/* 11. ACCORDION ROW UNTUK MENAMPILKAN AD SETS & ADS DI SAMPING/BAWAH KAMPANYE */}
                       {isExpanded && (
-                        <tr className="bg-slate-50/90 dark:bg-slate-950/80 border-y-2 border-emerald-500/30">
-                          <td colSpan={31} className="p-4">
-                            <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                  <Layers className="w-4 h-4 text-emerald-500" />
-                                  <span>Daftar Ad Sets &amp; Ads untuk "{camp.name}"</span>
-                                </h5>
-                                <span className="text-[10px] text-slate-500 font-bold">
-                                  Total {camp.adsets?.length || 0} Ad Sets
-                                </span>
-                              </div>
-
-                              {camp.adsets && camp.adsets.length > 0 ? (
-                                <div className="space-y-3">
-                                  {camp.adsets.map((adset) => (
-                                    <div
-                                      key={adset.id}
-                                      className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3"
-                                    >
-                                      {/* Header AdSet & Ringkasan Metrik AdSet */}
-                                      <div className="flex items-center justify-between text-xs flex-wrap gap-2">
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-extrabold text-slate-900 dark:text-white">
-                                            AdSet: {adset.name}
-                                          </span>
-                                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                            {adset.status}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-semibold text-[11px]">
-                                          <span>Budget: Rp {Number(adset.dailyBudget || 0).toLocaleString("id-ID")}/hari</span>
-                                          <span>Spent: Rp {Number(adset.spend || 0).toLocaleString("id-ID")}</span>
-                                          <span className="text-emerald-600 font-bold">Purchases: {adset.purchases || 0}</span>
-                                          <span>CPA: Rp {Number(adset.cpa || 0).toLocaleString("id-ID")}</span>
-                                        </div>
-                                      </div>
-
-                                      {/* Child Ads dengan Metrik Riil & Kontrol On/Off */}
-                                      {adset.ads && adset.ads.length > 0 ? (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                          {adset.ads.map((ad) => {
-                                            const isAdOff = ad.status === "PAUSED";
-                                            const isThisAdUpdating = updatingAdId === ad.id;
-
-                                            return (
-                                              <div
-                                                key={ad.id}
-                                                className={cn(
-                                                  "p-3 rounded-xl border bg-slate-50/70 dark:bg-slate-800/40 space-y-2 transition-all",
-                                                  isAdOff
-                                                    ? "border-slate-200 dark:border-slate-800 opacity-65"
-                                                    : "border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/40"
-                                                )}
-                                              >
-                                                {/* Header Ad: Thumbnail, Nama, & Tombol Switch */}
-                                                <div className="flex items-center justify-between gap-2">
-                                                  <div className="flex items-center gap-2 min-w-0">
-                                                    {ad.creativeThumbnail ? (
-                                                      <img
-                                                        src={ad.creativeThumbnail}
-                                                        alt={ad.name}
-                                                        className="w-7 h-7 rounded-lg object-cover border border-slate-200 shrink-0"
-                                                      />
-                                                    ) : (
-                                                      <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                                                        <ImageIcon className="w-3.5 h-3.5 text-slate-400" />
-                                                      </div>
-                                                    )}
-                                                    <div className="min-w-0">
-                                                      <p className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate">
-                                                        {ad.name}
-                                                      </p>
-                                                      <p className="text-[10px] text-slate-400 truncate">
-                                                        ID: {ad.id}
-                                                      </p>
-                                                    </div>
-                                                  </div>
-
-                                                  <div className="flex items-center gap-1.5 shrink-0">
-                                                    <span
-                                                      className={cn(
-                                                        "text-[9px] font-black px-1.5 py-0.5 rounded",
-                                                        isAdOff
-                                                          ? "bg-slate-100 dark:bg-slate-800 text-slate-500"
-                                                          : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400"
-                                                      )}
-                                                    >
-                                                      {isAdOff ? "OFF" : "ON"}
-                                                    </span>
-                                                    <button
-                                                      type="button"
-                                                      disabled={isThisAdUpdating}
-                                                      onClick={() => handleToggleAdStatus(ad.id, camp.id, ad.status, ad.name)}
-                                                      className={cn(
-                                                        "p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer",
-                                                        isAdOff
-                                                          ? "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
-                                                          : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100"
-                                                      )}
-                                                      title={isAdOff ? "Nyalakan Iklan Ini" : "Matikan Iklan Ini"}
-                                                    >
-                                                      {isThisAdUpdating ? (
-                                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
-                                                      ) : isAdOff ? (
-                                                        <Play className="w-3.5 h-3.5" />
-                                                      ) : (
-                                                        <Pause className="w-3.5 h-3.5" />
-                                                      )}
-                                                    </button>
-                                                  </div>
-                                                </div>
-
-                                                {/* 29 Metrik Lengkap untuk Ad di Desktop */}
-                                                <div className="space-y-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 text-xs">
-                                                  {/* 1. Hasil & Biaya Utama */}
-                                                  <div className="grid grid-cols-3 gap-1 bg-white dark:bg-slate-900 p-2 rounded-lg text-center border border-slate-100 dark:border-slate-800">
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 font-extrabold uppercase block">Spent</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        Rp {Number(ad.spend || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 font-extrabold uppercase block text-emerald-600">Results</span>
-                                                      <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                                                        {ad.purchases || ad.results || 0}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 font-extrabold uppercase block">Cost/Result</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        Rp {Number(ad.costPerResult || ad.cpa || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                    <div className="col-span-3 pt-1 border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-between px-1">
-                                                      <span className="text-[8px] text-slate-400 uppercase font-bold">Purchases conversion value:</span>
-                                                      <span className="text-[10px] font-black text-slate-900 dark:text-white">
-                                                        Rp {Number(ad.purchasesConversionValue || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-
-                                                  {/* 2. Trafik, Jangkauan & Video */}
-                                                  <div className="grid grid-cols-3 gap-1 bg-white dark:bg-slate-900 p-2 rounded-lg text-center border border-slate-100 dark:border-slate-800">
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">Reach</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        {Number(ad.reach || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">Link clicks</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        {Number(ad.linkClicks || ad.clicks || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 font-bold uppercase block">15s ThruPlays</span>
-                                                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                                                        {Number(ad.videoThruPlays15s || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-
-                                                  {/* 3. Efisiensi Biaya CPM, CTR & CPC */}
-                                                  <div className="grid grid-cols-2 gap-1.5 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
-                                                    <div className="col-span-2 flex items-center justify-between">
-                                                      <span className="text-[8px] text-slate-400 uppercase font-bold">CPM (cost per 1,000 imp):</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        Rp {Number(ad.cpm || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 uppercase block">CTR (link click-through):</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        {ad.ctrLink ? `${ad.ctrLink}%` : ad.ctr ? `${ad.ctr}%` : "-"}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 uppercase block">CTR (all):</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        {ad.ctrAll ? `${ad.ctrAll}%` : "-"}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 uppercase block">CPC (cost per link click):</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        Rp {Number(ad.cpcLink || ad.cpc || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-[8px] text-slate-400 uppercase block">CPC (all):</span>
-                                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                        Rp {Number(ad.cpcAll || ad.cpc || 0).toLocaleString("id-ID")}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-
-                                                  {/* 4. Funnel Konversi Events */}
-                                                  <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 space-y-1">
-                                                    <span className="text-[8px] font-extrabold uppercase text-slate-400 tracking-wider block">
-                                                      Funnel Volume (Website Events)
-                                                    </span>
-                                                    <div className="grid grid-cols-2 gap-1.5">
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">Website landing page views:</span>
-                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                          {Number(ad.landingPageViews || 0).toLocaleString("id-ID")}
-                                                        </span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">Adds to cart:</span>
-                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                          {ad.addsToCart || 0}
-                                                        </span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">Checkouts initiated:</span>
-                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                          {ad.checkoutsInitiated || 0}
-                                                        </span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">Registrations completed:</span>
-                                                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
-                                                          {ad.registrationsCompleted || 0}
-                                                        </span>
-                                                      </div>
-                                                      <div className="col-span-2 pt-1 border-t border-slate-200/50 dark:border-slate-800 flex items-center justify-between">
-                                                        <span className="text-[9px] font-bold text-slate-600">Purchases:</span>
-                                                        <span className="text-[10px] font-black text-emerald-600">
-                                                          {ad.purchases || 0}
-                                                        </span>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-
-                                                  {/* 5. Biaya per Tahap (Cost Per Action) */}
-                                                  <div className="p-2 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 space-y-1">
-                                                    <span className="text-[8px] font-extrabold uppercase text-slate-400 tracking-wider block">
-                                                      Biaya per Tahap (Unit Cost)
-                                                    </span>
-                                                    <div className="grid grid-cols-2 gap-1.5">
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">Cost per landing page view:</span>
-                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                          Rp {Number(ad.costPerLpView || 0).toLocaleString("id-ID")}
-                                                        </span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">Cost per add to cart:</span>
-                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                          Rp {Number(ad.costPerAddToCart || 0).toLocaleString("id-ID")}
-                                                        </span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">Cost per checkout initiated:</span>
-                                                        <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200">
-                                                          Rp {Number(ad.costPerCheckoutInitiated || 0).toLocaleString("id-ID")}
-                                                        </span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">Cost per purchase:</span>
-                                                        <span className="text-[10px] font-extrabold text-emerald-600">
-                                                          Rp {Number(ad.costPerPurchase || ad.cpa || 0).toLocaleString("id-ID")}
-                                                        </span>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-
-                                                  {/* 6. 4 Rasio Funnel (Scale Model) */}
-                                                  <div className="p-2 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
-                                                    <span className="text-[8px] font-black uppercase text-emerald-800 dark:text-emerald-300 tracking-wider block mb-1">
-                                                      4 Rasio Funnel Scale Model
-                                                    </span>
-                                                    <div className="grid grid-cols-2 gap-1.5">
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">1. OCLP:</span>
-                                                        <span className="text-[10px] font-bold text-indigo-600">{ad.oclpRate || 0}%</span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">2. LP-ATC:</span>
-                                                        <span className="text-[10px] font-bold text-indigo-600">{ad.lpToAtcRate || 0}%</span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">3. ATC-IC:</span>
-                                                        <span className="text-[10px] font-bold text-indigo-600">{ad.atcToIcRate || 0}%</span>
-                                                      </div>
-                                                      <div>
-                                                        <span className="text-[8px] text-slate-500 block">4. IC-Purchase:</span>
-                                                        <span className="text-[10px] font-bold text-emerald-600">{ad.icToPurchaseRate || 0}%</span>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      ) : (
-                                        <p className="text-[11px] text-slate-400 italic">
-                                          Tidak ada ads di AdSet ini.
-                                        </p>
-                                      )}
+                        <>
+                          {(!camp.adsets || camp.adsets.length === 0) && (
+                            <tr className="bg-slate-50 dark:bg-slate-950">
+                              <td colSpan={31} className="px-4 py-3 text-xs text-slate-500">
+                                Belum ada ad set di kampanye ini.
+                              </td>
+                            </tr>
+                          )}
+                          {(camp.adsets || []).map((adset) => {
+                            const adsetOff = adset.status === "PAUSED";
+                            return (
+                              <Fragment key={adset.id}>
+                                <tr
+                                  className={cn(
+                                    "bg-emerald-50/80 dark:bg-emerald-950/30",
+                                    adsetOff && "opacity-60"
+                                  )}
+                                >
+                                  <td className="p-2" />
+                                  <td
+                                    className={cn(
+                                      "p-3",
+                                      isColumnPinned &&
+                                        "sticky left-0 z-10 bg-emerald-50 dark:bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
+                                    )}
+                                  >
+                                    <div className="pl-3 max-w-[260px]">
+                                      <span className="text-[9px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                                        Ad set
+                                      </span>
+                                      <span className="font-bold text-xs text-slate-900 dark:text-white truncate block" title={adset.name}>
+                                        {adset.name}
+                                      </span>
                                     </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-slate-500 py-3 text-center">
-                                  Belum ada AdSet riil terdeteksi di level kampanye ini.
-                                </p>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+                                  </td>
+                                  <td className="p-3">
+                                    <DeliveryPill status={adset.status} />
+                                  </td>
+                                  <td className="p-3 text-slate-400">—</td>
+                                  <td className="p-3 font-bold">
+                                    Rp {Number(adset.dailyBudget || 0).toLocaleString("id-ID")}
+                                  </td>
+                                  <DrillMetricCells metrics={adsetDrillMetrics(adset)} />
+                                </tr>
+                                {(adset.ads || []).map((ad) => {
+                                  const isAdOff = ad.status === "PAUSED";
+                                  const isThisAdUpdating = updatingAdId === ad.id;
+                                  return (
+                                    <tr
+                                      key={ad.id}
+                                      className={cn(
+                                        "bg-white dark:bg-slate-900",
+                                        isAdOff && "opacity-60"
+                                      )}
+                                    >
+                                      <td className="p-2" />
+                                      <td
+                                        className={cn(
+                                          "p-3",
+                                          isColumnPinned &&
+                                            "sticky left-0 z-10 bg-white dark:bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.06)]"
+                                        )}
+                                      >
+                                        <div className="pl-7 flex items-center gap-2 max-w-[280px]">
+                                          {ad.creativeThumbnail ? (
+                                            <img
+                                              src={ad.creativeThumbnail}
+                                              alt=""
+                                              className="w-6 h-6 rounded object-cover border border-slate-200 shrink-0"
+                                            />
+                                          ) : (
+                                            <div className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                              <ImageIcon className="w-3 h-3 text-slate-400" />
+                                            </div>
+                                          )}
+                                          <div className="min-w-0">
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                              Iklan
+                                            </span>
+                                            <span className="font-bold text-xs text-slate-900 dark:text-white truncate block" title={ad.name}>
+                                              {ad.name}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td className="p-3">
+                                        <DeliveryPill status={ad.status} />
+                                      </td>
+                                      <td className="p-3">
+                                        <button
+                                          type="button"
+                                          disabled={isThisAdUpdating}
+                                          onClick={() => handleToggleAdStatus(ad.id, camp.id, ad.status, ad.name)}
+                                          className={cn(
+                                            "p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer",
+                                            isAdOff
+                                              ? "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+                                              : "bg-emerald-50 dark:bg-emerald-950 text-emerald-600 border-emerald-300 dark:border-emerald-800"
+                                          )}
+                                          title={isAdOff ? "Nyalakan iklan" : "Matikan iklan"}
+                                        >
+                                          {isThisAdUpdating ? (
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                          ) : isAdOff ? (
+                                            <Play className="w-3.5 h-3.5" />
+                                          ) : (
+                                            <Pause className="w-3.5 h-3.5" />
+                                          )}
+                                        </button>
+                                      </td>
+                                      <td className="p-3 text-slate-400">—</td>
+                                      <DrillMetricCells metrics={adDrillMetrics(ad)} />
+                                    </tr>
+                                  );
+                                })}
+                                {(adset.ads || []).length === 0 && (
+                                  <tr className="bg-white dark:bg-slate-900">
+                                    <td colSpan={31} className="px-12 py-2 text-[11px] text-slate-400">
+                                      Tidak ada iklan di ad set ini.
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
+                            );
+                          })}
+                        </>
                       )}
-                    </>
+                    </Fragment>
+
                   );
                 })}
               </tbody>
