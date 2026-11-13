@@ -39,18 +39,18 @@ export function TrackedCampaignsCard() {
   };
 
   return (
-    <section className="rounded-xl border p-4">
-      <button className="flex w-full items-center justify-between text-left text-sm font-semibold" onClick={() => setOpen(!open)}>
+    <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
+      <button className="flex w-full items-center justify-between text-left text-sm font-bold text-slate-900 dark:text-white" onClick={() => setOpen(!open)}>
         <span>Kampanye yang dikelola Expert</span>
-        <span className="text-xs text-slate-500">{saved ? `${saved.length} dipilih` : "semua kampanye (belum difilter)"} | {open ? "Tutup" : "Buka"}</span>
+        <span className="text-xs font-semibold text-slate-500">{saved ? `${saved.length} dipilih` : "semua kampanye (belum difilter)"} | {open ? "Tutup" : "Buka"}</span>
       </button>
       {open && (
         <div className="mt-3 space-y-3">
           <p className="text-xs text-slate-500">Hanya kampanye yang dicentang yang dianalisa, di-pause, di-scale, dan dinilai kreatifnya. Kampanye lain diabaikan sepenuhnya.</p>
           <div className="flex flex-wrap gap-2 text-xs">
-            <button className="rounded-md border px-2 py-1" onClick={() => setDraft(new Set(camps.filter((c) => c.status === "ACTIVE").map((c) => c.id)))}>Pilih semua yang aktif</button>
-            <button className="rounded-md border px-2 py-1" onClick={() => setDraft(new Set())}>Kosongkan</button>
-            <label className="flex items-center gap-1"><input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} /> Tampilkan yang tidak aktif</label>
+            <button className="rounded-xl border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setDraft(new Set(camps.filter((c) => c.status === "ACTIVE").map((c) => c.id)))}>Pilih semua yang aktif</button>
+            <button className="rounded-xl border border-slate-200 dark:border-slate-700 px-2.5 py-1.5 font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => setDraft(new Set())}>Kosongkan</button>
+            <label className="flex items-center gap-1 text-slate-600 dark:text-slate-300"><input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} /> Tampilkan yang tidak aktif</label>
           </div>
           <ul className="max-h-72 space-y-1 overflow-y-auto text-sm">
             {visible.map((c) => (
@@ -67,8 +67,8 @@ export function TrackedCampaignsCard() {
             {loaded && visible.length === 0 && <li className="text-slate-500">Tidak ada kampanye aktif. Centang "Tampilkan yang tidak aktif".</li>}
           </ul>
           <div className="flex flex-wrap gap-2">
-            <button className="rounded-md bg-slate-900 px-3 py-1.5 text-sm text-white dark:bg-white dark:text-slate-900" onClick={() => save([...draft])}>Simpan pilihan ({draft.size})</button>
-            <button className="rounded-md border px-3 py-1.5 text-sm" onClick={() => save(null)}>Baca semua kampanye</button>
+            <button className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-sm font-bold text-white" onClick={() => save([...draft])}>Simpan pilihan ({draft.size})</button>
+            <button className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => save(null)}>Baca semua kampanye</button>
           </div>
           {msg && <p className="text-sm text-slate-600 dark:text-slate-300">{msg}</p>}
         </div>

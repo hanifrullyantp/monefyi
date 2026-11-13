@@ -67,8 +67,8 @@ export function CreativeInsightsCard() {
   const recommended = (report?.actions || []).filter((a) => a.status === "recommended");
 
   return (
-    <section className="rounded-xl border p-4">
-      <button className="flex w-full items-center justify-between text-left text-sm font-semibold" onClick={() => setOpen(!open)}>
+    <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
+      <button className="flex w-full items-center justify-between text-left text-sm font-bold text-slate-900 dark:text-white" onClick={() => setOpen(!open)}>
         <span>Analisa kreatif dan copy iklan</span>
         <span className="text-xs text-slate-500">
           {report ? `${report.summary.adsActive} aktif, ${recommended.length} rekomendasi pause` : "belum ada laporan"} | {open ? "Tutup" : "Buka"}
@@ -77,8 +77,8 @@ export function CreativeInsightsCard() {
       {open && (
         <div className="mt-3 space-y-4">
           <div className="flex flex-wrap gap-2">
-            <button disabled={busy} className="rounded-md bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-slate-900" onClick={() => run(false)}>Analisa metrik</button>
-            <button disabled={busy} className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50" onClick={() => run(true)}>Analisa + kritik visual (berbiaya)</button>
+            <button disabled={busy} className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-sm font-bold text-white disabled:opacity-50" onClick={() => run(false)}>Analisa metrik</button>
+            <button disabled={busy} className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50" onClick={() => run(true)}>Analisa + kritik visual (berbiaya)</button>
           </div>
           {msg && <p className="text-sm text-slate-600 dark:text-slate-300">{msg}</p>}
           {report?.warnings?.map((w) => <p key={w} className="text-xs text-amber-700">{w}</p>)}
@@ -96,12 +96,12 @@ export function CreativeInsightsCard() {
                   <p className="mb-1 text-sm font-semibold">Aksi iklan</p>
                   <ul className="space-y-2">
                     {report.actions.map((a) => (
-                      <li key={a.adId + a.status} className="rounded-lg border p-2 text-sm">
+                      <li key={a.adId + a.status} className="rounded-xl border border-slate-200 dark:border-slate-800 p-2.5 text-sm">
                         <p className="font-medium">{a.adName} <span className="text-xs text-slate-500">({a.status})</span></p>
                         <p className="text-xs text-slate-600 dark:text-slate-300">{a.note}</p>
-                        {a.status === "recommended" && a.type !== "duplicate_winner" && <button className="mt-1 rounded-md border px-2 py-1 text-xs" onClick={() => approve(a)}>Setujui pause</button>}
-                        {a.status === "recommended" && a.type === "duplicate_winner" && a.adsetId && <button className="mt-1 rounded-md border px-2 py-1 text-xs" onClick={() => post({ duplicateAdsetId: a.adsetId }, `Buat salinan PAUSED dari ad set "${a.adName}"?`)}>Setujui duplikasi (dibuat PAUSED)</button>}
-                        {a.status === "executed" && a.type === "duplicate_winner" && a.copiedAdsetId && <button className="mt-1 rounded-md border px-2 py-1 text-xs" onClick={() => post({ activateCopyId: a.copiedAdsetId }, "Aktifkan salinan ini? Total belanja harian akan bertambah sebesar budget ad set tersebut.")}>Aktifkan salinan</button>}
+                        {a.status === "recommended" && a.type !== "duplicate_winner" && <button className="mt-1 rounded-xl border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-bold" onClick={() => approve(a)}>Setujui pause</button>}
+                        {a.status === "recommended" && a.type === "duplicate_winner" && a.adsetId && <button className="mt-1 rounded-xl border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-bold" onClick={() => post({ duplicateAdsetId: a.adsetId }, `Buat salinan PAUSED dari ad set "${a.adName}"?`)}>Setujui duplikasi (dibuat PAUSED)</button>}
+                        {a.status === "executed" && a.type === "duplicate_winner" && a.copiedAdsetId && <button className="mt-1 rounded-xl border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-bold" onClick={() => post({ activateCopyId: a.copiedAdsetId }, "Aktifkan salinan ini? Total belanja harian akan bertambah sebesar budget ad set tersebut.")}>Aktifkan salinan</button>}
                       </li>
                     ))}
                   </ul>
@@ -131,7 +131,7 @@ export function CreativeInsightsCard() {
                 <div className="space-y-3">
                   <p className="text-sm font-semibold">Kritik visual dan copy <span className="text-xs font-normal text-slate-500">(hipotesis AI, bukan dasar eksekusi)</span></p>
                   {report.critiques.map((c) => (
-                    <div key={c.adId} className="rounded-lg border p-3 text-sm">
+                    <div key={c.adId} className="rounded-xl border border-slate-200 dark:border-slate-800 p-3 text-sm">
                       <p className="font-medium">{c.adName}</p>
                       {c.error ? <p className="text-xs text-red-700">{c.error}</p> : (
                         <>

@@ -6,6 +6,7 @@ import { EngineStatusPanel } from "./EngineStatusPanel";
 import { ExpertStatusCard } from "./ExpertStatusCard";
 import { CreativeInsightsCard } from "./CreativeInsightsCard";
 import { TrackedCampaignsCard } from "./TrackedCampaignsCard";
+import { WinningEngineOverview } from "./WinningEngineOverview";
 import { WinningPillarId, WinningActionPlan } from "@/lib/engine/winningEngine";
 import {
   ShieldCheck,
@@ -15,13 +16,11 @@ import {
   AlertTriangle,
   RefreshCw,
   Send,
-  Sliders,
   Layers,
   FileText,
   ShoppingBag,
   BarChart3,
   Activity,
-  Cpu,
   PowerOff,
   Check,
   X,
@@ -174,10 +173,7 @@ export function WinningEngineCommandCenter({
 
   return (
     <div className="space-y-5">
-      <ExpertStatusCard />
-      <TrackedCampaignsCard />
-      <CreativeInsightsCard />
-      <EngineStatusPanel />
+      <WinningEngineOverview />
 
       {/* Feedback Banner */}
       {feedbackBanner && (
@@ -213,30 +209,21 @@ export function WinningEngineCommandCenter({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-xs space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider">
-                10-Year Meta Ads &amp; Growth Expert Engine
-              </span>
-              <span className="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-slate-700">
-                Scheduler: Supabase pg_cron (Tiap 30 Menit)
-              </span>
+            <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+              Mode kerja dan anggaran
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Pilih mode, atur rentang budget, lalu jalankan analisa atau kirim ringkasan.
+            </p>
+            {onOpenConfigModal && (
               <button
                 type="button"
                 onClick={onOpenConfigModal}
-                className="px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 cursor-pointer flex items-center gap-1"
+                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
               >
-                <Cpu className="w-3 h-3" />
-                <span>
-                  OpenRouter: Sonnet 3.5 (Strategi) | Luna 6 Pro | Gemini
-                </span>
+                Pengaturan model
               </button>
-            </div>
-            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-              Pusat Komando Holistic Winning Engine (5 Pilar)
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Mesin cerdas di belakang layar yang mengaudit dan mengoptimalkan Produk &amp; Offer, Landing Page, Checkout, Iklan Meta, serta Tracking CAPI tanpa membuat Anda pusing.
-            </p>
+            )}
           </div>
 
           {/* Tombol Aksi Utama */}
@@ -1195,6 +1182,19 @@ export function WinningEngineCommandCenter({
           </div>
         </div>
       )}
+
+      <section className="space-y-3" aria-label="Fungsi engine">
+        <div className="px-1">
+          <h2 className="text-sm font-black text-slate-900 dark:text-white">Fungsi engine</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Status Expert, kampanye yang dikelola, analisa kreatif, dan timeline aksi.
+          </p>
+        </div>
+        <ExpertStatusCard />
+        <TrackedCampaignsCard />
+        <CreativeInsightsCard />
+        <EngineStatusPanel />
+      </section>
     </div>
   );
 }

@@ -128,15 +128,15 @@ export function ExpertStatusCard() {
     }
   };
 
-  if (error && !data) return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>;
-  if (!data) return <div className="rounded-xl border p-4 text-sm text-slate-500">Memuat status Expert...</div>;
+  if (error && !data) return <div className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-4 text-sm text-rose-800 dark:text-rose-200">{error}</div>;
+  if (!data) return <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-500 shadow-xs">Memuat status Expert...</div>;
 
   const s = data.status;
   const style = STATE_STYLE[s.state];
 
   return (
     <section className="space-y-3">
-      <div className={cn("rounded-xl border p-4", style.box)}>
+      <div className={cn("rounded-2xl border p-4 shadow-xs", style.box)}>
         <div className="flex items-start gap-3">
           <span className="relative mt-1.5 flex h-3 w-3 shrink-0">
             {style.pulse && <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-60", style.dot)} />}
@@ -163,7 +163,7 @@ export function ExpertStatusCard() {
       </div>
 
       {data.supervisor?.latest ? (
-        <div className="rounded-xl border p-4">
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Penilaian pengawas</p>
             <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", GRADE_STYLE[data.supervisor.latest.grade] || GRADE_STYLE.belum_cukup_data)}>
@@ -191,10 +191,10 @@ export function ExpertStatusCard() {
           )}
         </div>
       ) : (
-        <div className="rounded-xl border p-4 text-sm text-slate-500">Pengawas belum menilai. Penilaian pertama muncul setelah job pengawas berjalan.</div>
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-500 shadow-xs">Pengawas belum menilai. Penilaian pertama muncul setelah job pengawas berjalan.</div>
       )}
 
-      <div className="rounded-xl border p-4">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
         <button className="flex w-full items-center justify-between text-left text-sm font-semibold" onClick={() => setOpen(!open)}>
           <span>Rencana kerja dan pengaturan otonomi</span>
           <span className="text-xs text-slate-500">{open ? "Tutup" : "Buka"}</span>
@@ -211,7 +211,7 @@ export function ExpertStatusCard() {
                       <p className="text-xs text-slate-500">{info.detail}</p>
                     </div>
                     <select
-                      className="rounded-md border bg-transparent px-2 py-1 text-sm"
+                      className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-sm"
                       value={policyDraft[key]}
                       disabled={!info.implemented && false}
                       onChange={(e) => setPolicyDraft({ ...policyDraft, [key]: e.target.value as AutonomyLevel })}
@@ -229,7 +229,7 @@ export function ExpertStatusCard() {
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <label className="flex items-center gap-2">
                 Interval cek (menit)
-                <input type="number" min={15} max={1440} className="w-20 rounded-md border bg-transparent px-2 py-1" value={intervalDraft ?? 30} onChange={(e) => setIntervalDraft(Number(e.target.value))} />
+                <input type="number" min={15} max={1440} className="w-20 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1" value={intervalDraft ?? 30} onChange={(e) => setIntervalDraft(Number(e.target.value))} />
               </label>
               <label className="flex items-center gap-2">
                 <input type="checkbox" checked={data.autonomous} onChange={(e) => save({ autonomous: e.target.checked })} />
@@ -237,8 +237,8 @@ export function ExpertStatusCard() {
               </label>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button className="rounded-md bg-slate-900 px-3 py-1.5 text-sm text-white dark:bg-white dark:text-slate-900" onClick={() => save()}>Simpan pengaturan</button>
-              <button className="rounded-md border px-3 py-1.5 text-sm" onClick={enablePush}>Aktifkan notifikasi HP</button>
+              <button className="rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-sm font-bold text-white" onClick={() => save()}>Simpan pengaturan</button>
+              <button className="rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800" onClick={enablePush}>Aktifkan notifikasi HP</button>
             </div>
             {msg && <p className="text-sm text-slate-600 dark:text-slate-300">{msg}</p>}
 

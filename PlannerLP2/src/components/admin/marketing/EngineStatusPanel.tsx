@@ -6,12 +6,6 @@ import { authedFetch } from "@/lib/auth/authedFetch";
 import { buildEngineStatus, ACTION_LABEL, type ActivityItem } from "@/lib/engine/engineStatus";
 import { cn } from "@/lib/utils/cn";
 
-const TONE_CLASS = {
-  ok: "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100",
-  warn: "bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100",
-  idle: "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300",
-} as const;
-
 function formatWib(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
@@ -93,19 +87,20 @@ export function EngineStatusPanel() {
 
   return (
     <section className="space-y-3" aria-label="Status engine dan timeline">
-      <div className={cn("p-4 rounded-2xl border", TONE_CLASS[status.tone])}>
-        <p className="text-[11px] uppercase tracking-wider font-bold opacity-70">Status engine</p>
-        <p className="mt-1 text-sm sm:text-base font-bold leading-snug">{status.headline}</p>
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <span className="text-[11px] opacity-70">Diperbarui otomatis setelah analisa</span>
-          <button
-            type="button"
-            onClick={loadActivity}
-            className="text-xs font-semibold underline underline-offset-2 min-h-[36px] px-2"
-          >
-            Muat ulang
-          </button>
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-slate-900 dark:text-white">Timeline aksi</p>
+          <p className={cn("text-xs mt-0.5 line-clamp-2", status.tone === "warn" ? "text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-slate-400")}>
+            {status.headline}
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={loadActivity}
+          className="shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+        >
+          Muat ulang
+        </button>
       </div>
 
       {notice && (
@@ -128,7 +123,7 @@ export function EngineStatusPanel() {
         </div>
       )}
 
-      <details open className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
+      <details className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
         <summary className="cursor-pointer text-sm font-bold min-h-[36px] flex items-center">
           1. Dianalisa ({analyzed.length} kampanye)
         </summary>
@@ -142,7 +137,7 @@ export function EngineStatusPanel() {
         </ul>
       </details>
 
-      <details open className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
+      <details className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
         <summary className="cursor-pointer text-sm font-bold min-h-[36px] flex items-center">
           2. Ditahan dan alasannya ({heldOrExcluded.length})
         </summary>
@@ -157,7 +152,7 @@ export function EngineStatusPanel() {
         </ul>
       </details>
 
-      <details open className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
+      <details className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
         <summary className="cursor-pointer text-sm font-bold min-h-[36px] flex items-center">
           3. Dieksekusi ke Meta ({executed.length})
         </summary>
@@ -184,7 +179,7 @@ export function EngineStatusPanel() {
                   type="button"
                   onClick={() => undo(item)}
                   disabled={busyId === item.id}
-                  className="shrink-0 min-h-[40px] px-4 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                  className="shrink-0 min-h-[40px] px-4 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
                 >
                   {busyId === item.id ? "Membatalkan..." : "Batalkan"}
                 </button>
@@ -194,7 +189,7 @@ export function EngineStatusPanel() {
         </ul>
       </details>
 
-      <details open className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4">
+      <details className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
         <summary className="cursor-pointer text-sm font-bold min-h-[36px] flex items-center">
           4. Hasil evaluasi ({reviewed.length})
         </summary>
