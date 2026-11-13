@@ -12,6 +12,8 @@ export interface DbEngineSettings {
   openRouterApiKey: string;
   metaTokenPresent: boolean;
   found: boolean;
+  /** null = semua kampanye */
+  trackedCampaignIds: string[] | null;
 }
 
 export async function loadDbEngineSettings(): Promise<DbEngineSettings> {
@@ -22,6 +24,7 @@ export async function loadDbEngineSettings(): Promise<DbEngineSettings> {
     openRouterApiKey: "",
     metaTokenPresent: Boolean(process.env.META_ACCESS_TOKEN),
     found: false,
+    trackedCampaignIds: null,
   };
   try {
     const { data } = await getServiceClient().from("winning_engine_config").select("*").eq("id", "default").maybeSingle();
@@ -52,6 +55,7 @@ export async function loadDbEngineSettings(): Promise<DbEngineSettings> {
       openRouterApiKey: String(data.openrouter_api_key || ""),
       metaTokenPresent: Boolean(data.meta_access_token || process.env.META_ACCESS_TOKEN),
       found: true,
+      trackedCampaignIds: Array.isArray(data.tracked_campaign_ids) && data.tracked_campaign_ids.length > 0 ? data.tracked_campaign_ids.map(String) : null,
     };
   } catch {
     return empty;

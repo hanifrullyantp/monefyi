@@ -5,6 +5,7 @@ import { loadDbEngineSettings } from "@/lib/engine/engineConfigDb";
 import { policyAllowsAuto } from "@/lib/engine/autonomyPolicy";
 import { startRun, setPhase, finishRun, BLOCKER } from "@/lib/engine/expertRuns";
 import { sendAdminPush } from "@/lib/engine/pushNotify";
+import { filterTracked } from "@/lib/engine/trackedCampaigns";
 import type { Blocker } from "@/lib/engine/expertStatus";
 
 /** Konteks satu siklus: diisi handleTick, dibaca POST untuk heartbeat dan notifikasi. */
@@ -156,6 +157,11 @@ async function handleTick(req: NextRequest, ctx: TickCtx) {
     // Baca harga di landing page. Gagal membaca tidak menghentikan analisa.
     const pageSignals = await fetchPageSignals(process.env.LANDING_PAGE_URL || DEFAULT_LANDING_URL).catch(() => null);
     const pagePriceFindings = pageSignals?.ok ? comparePagePrices(pageSignals.prices, MONEFYI_PRICING) : [];
+
+    // Hanya kampanye yang dicentang admin yang dibaca dan dikelola
+    const tracked = filterTracked(campaigns, dbSettings.trackedCampaignIds, (c: any) => String(c.id ?? c.campaignId ?? ""));
+    campaigns = tracked.kept;
+    ctx.stats.filteredOut = tracked.dropped;
 
     // Catat kendala yang menahan otonomi supaya terlihat di panel status
     if (campaigns.length === 0) ctx.blockers.push(BLOCKER.NO_META_DATA());

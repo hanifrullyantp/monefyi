@@ -242,7 +242,7 @@ export const useMarketingStore = create<MarketingStore>()(
         proPrice: 'Rp 199.000',
       },
 
-      updateWinningEngineConfig: (updates) =>
+      updateWinningEngineConfig: (updates) => {
         set((state) => {
           const nextConfig: WinningEngineConfig = {
             ...state.winningEngineConfig,
@@ -273,7 +273,30 @@ export const useMarketingStore = create<MarketingStore>()(
             },
           };
           return { winningEngineConfig: nextConfig };
-        }),
+        });
+        // Simpan ke server supaya tidak kembali ke default saat reload dan supaya cron memakai nilai yang sama.
+        const persistKeys = [
+          'mode', 'advanceMasterPlanApproved', 'minDailyBudget', 'maxDailyBudget', 'approvedDailyCeiling',
+          'monthlySpendCap', 'targetCpa', 'targetRoas', 'maxScalePctPerStep', 'killSwitch',
+        ] as const;
+        const payload: Record<string, unknown> = {};
+        for (const k of persistKeys) {
+          if ((updates as Record<string, unknown>)[k] !== undefined) payload[k] = (updates as Record<string, unknown>)[k];
+        }
+        if (Object.keys(payload).length > 0) {
+          // Berpindah ke mode cuan membatalkan persetujuan master plan advance
+          if (payload.mode === 'cuan') payload.advanceMasterPlanApproved = false;
+          authedFetch('/api/engine/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+            .then(async (res) => {
+              if (!res.ok) console.error('[engine config] gagal menyimpan ke server', res.status, await res.text().catch(() => ''));
+            })
+            .catch((err) => console.error('[engine config] gagal menyimpan ke server', err));
+        }
+      },
 
       loadConfigFromCloud: async () => {
         try {

@@ -43,7 +43,7 @@ export function CreativeInsightsCard() {
     try {
       const res = await authedFetch("/api/engine/creatives", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ critique }) });
       const json = await res.json().catch(() => ({}));
-      setMsg(res.ok && json.ok ? "Analisa selesai." : json.error || "Analisa gagal.");
+      setMsg(res.ok && json.ok ? (json.critiqueNote || (critique ? `Analisa selesai. ${json.critiques?.length ?? 0} iklan dikritik oleh AI.` : "Analisa selesai.")) : json.error || "Analisa gagal.");
       await load();
     } finally { setBusy(false); }
   };

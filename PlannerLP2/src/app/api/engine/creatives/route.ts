@@ -9,6 +9,7 @@ import { analyzeAds, pickDuplicateCandidate, type AdAnalysis } from "@/lib/engin
 import { critiqueAd, type CreativeCritique } from "@/lib/engine/creativeCritic";
 import { DEFAULT_WINNING_ENGINE_CONFIG, type WinningEngineConfig } from "@/lib/engine/winningEngine";
 import { sendAdminPush } from "@/lib/engine/pushNotify";
+import { filterTracked } from "@/lib/engine/trackedCampaigns";
 
 /**
  * Analisa kreatif dan copy iklan.
@@ -102,6 +103,10 @@ async function runAnalysis(opts: { via: "cron" | "admin"; critique: boolean }) {
     const config = { ...DEFAULT_WINNING_ENGINE_CONFIG, ...settings.overrides } as WinningEngineConfig;
     const data = await fetchAdsDataset(creds, 7);
     if (!data.ok) return NextResponse.json({ ok: false, error: data.error || "Gagal membaca iklan." }, { status: 502 });
+    // Hanya iklan dari kampanye yang dicentang admin
+    const trackedAds = filterTracked(data.ads, settings.trackedCampaignIds, (a) => a.campaignId);
+    data.ads = trackedAds.kept;
+    if (trackedAds.dropped > 0) data.warnings.push(`${trackedAds.dropped} iklan dari kampanye yang tidak dicentang diabaikan.`);
 
     const lossLineCpa = config.breakEvenCpa > 0
       ? Math.min(config.breakEvenCpa, config.targetCpa * config.killMaxMultipleOfTarget)
@@ -173,6 +178,8 @@ async function runAnalysis(opts: { via: "cron" | "admin"; critique: boolean }) {
       analysis.fatigued.forEach(add);
       analysis.ads.filter((a) => a.flags.length > 0).forEach(add);
       [...analysis.winners].sort((x, y) => y.spend - x.spend).slice(0, 1).forEach(add);
+      // Tanpa penanda atau pemenang pun, tetap kritik iklan berbelanja terbesar
+      [...analysis.ads].filter((a) => a.impressions > 0).sort((x, y) => y.spend - x.spend).forEach(add);
       const key = settings.openRouterApiKey || process.env.OPENROUTER_API_KEY || "";
       for (const p of picks) {
         const rec = data.ads.find((a) => a.id === p.id);
@@ -196,7 +203,8 @@ async function runAnalysis(opts: { via: "cron" | "admin"; critique: boolean }) {
     if (paused > 0) {
       await sendAdminPush({ title: "Expert menjeda iklan lemah", body: `${paused} iklan dipause otomatis. Buka untuk melihat atau membatalkan.`, tag: "expert-ad-paused" }).catch(() => null);
     }
-    return NextResponse.json({ ok: true, summary, actions, critiques, warnings: data.warnings });
+    const critiqueNote = opts.critique && opts.via === "admin" && critiques.length === 0 ? "Tidak ada iklan dengan tayangan untuk dikritik pada kampanye yang dipilih." : undefined;
+    return NextResponse.json({ ok: true, summary, actions, critiques, warnings: data.warnings, critiqueNote });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || "Analisa kreatif gagal." }, { status: 500 });
   } finally {
