@@ -174,6 +174,10 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const shouldVerifyMayar = req?.nextUrl?.searchParams?.get("verifyMayar") === "true";
+    const requestedLimit = Number(req?.nextUrl?.searchParams?.get("limit"));
+    const orderLimit = Number.isFinite(requestedLimit)
+      ? Math.min(500, Math.max(1, Math.floor(requestedLimit)))
+      : 100;
     const supabase = getSupabaseClient();
     const leadsMap: Map<string, any> = new Map();
 
@@ -198,7 +202,7 @@ export async function GET(req: NextRequest) {
           .from("orders")
           .select("id, email, full_name, phone, status, grand_total, product_title, created_at, raw_payload")
           .order("created_at", { ascending: false })
-          .limit(100);
+          .limit(orderLimit);
 
         if (rows) {
           for (const r of rows) {
