@@ -7,7 +7,6 @@ import {
   Play,
   Pause,
   TrendingUp,
-  ShieldAlert,
   Edit2,
   Check,
   X,
@@ -19,7 +18,6 @@ import {
   Clock,
   Search,
   Calendar,
-  Building2,
   ChevronDown,
   ChevronRight,
   Pin,
@@ -37,6 +35,7 @@ import { cn } from "@/lib/utils/cn";
 import { MetaBillingAlertBanner } from "@/components/admin/marketing/MetaBillingAlertBanner";
 
 interface MetaAdsCommanderTableProps {
+  searchQuery?: string;
   onOpenWinningEngine?: () => void;
   onOpenInsights?: () => void;
   onOpenCreative?: () => void;
@@ -204,6 +203,7 @@ function DeliveryPill({ status }: { status: string }) {
 }
 
 export function MetaAdsCommanderTable({
+  searchQuery = "",
   onOpenWinningEngine,
   onOpenInsights,
   onOpenCreative,
@@ -211,31 +211,23 @@ export function MetaAdsCommanderTable({
 }: MetaAdsCommanderTableProps) {
   const {
     campaigns,
-    isLiveMeta,
     datePreset,
     setDatePreset,
-    discoveredAccounts,
-    apiConfig,
-    selectAdAccount,
     toggleCampaignStatus,
     toggleAdStatus,
     updateCampaignDailyBudget,
-    autoKillBleedingCampaigns,
-    autoScaleWinningCampaigns,
     rules,
   } = useMarketingStore();
 
   // Default: SEMUA (ALL) agar kampanye riil langsung terlihat apa pun statusnya di Meta
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [deliveryFilter, setDeliveryFilter] = useState<string>("ALL");
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [tempBudget, setTempBudget] = useState<number>(0);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   // 8. Freeze / Pin Kolom Toggle (Bisa digeser atau di-freeze)
   const [isColumnPinned, setIsColumnPinned] = useState<boolean>(false);
-  // Tabel desktop 26 metrik ditampilkan langsung secara default
-  const [showFullTable, setShowFullTable] = useState<boolean>(true);
   // Mode tampilan mobile: kartu 29 metrik atau tabel geser horizontal
   const [mobileViewMode, setMobileViewMode] = useState<"cards" | "table">("cards");
 
@@ -378,26 +370,6 @@ export function MetaAdsCommanderTable({
     }
   };
 
-  const handleAutoKill = async () => {
-    const killed = await autoKillBleedingCampaigns();
-    setActionNotice(
-      killed > 0
-        ? `AI Media Buyer berhasil menonaktifkan ${killed} kampanye boncos di Meta Ads.`
-        : "Tidak ada kampanye aktif yang melewati ambang batas boncos saat ini."
-    );
-    setTimeout(() => setActionNotice(null), 4000);
-  };
-
-  const handleAutoScale = async () => {
-    const scaled = await autoScaleWinningCampaigns();
-    setActionNotice(
-      scaled > 0
-        ? `AI Media Buyer berhasil menaikkan budget +${rules?.scaleBudgetPercentage || 20}% pada ${scaled} kampanye potensial.`
-        : "Belum ada kampanye aktif yang memenuhi syarat scale up otomatis."
-    );
-    setTimeout(() => setActionNotice(null), 4000);
-  };
-
   const getHealthBadge = (status: AdHealthStatus) => {
     switch (status) {
       case "scale_ready":
@@ -455,6 +427,10 @@ export function MetaAdsCommanderTable({
     )
       return false;
     if (statusFilter === "BLEEDING" && c.healthStatus !== "bleeding") return false;
+    if (deliveryFilter !== "ALL") {
+      const delivery = c.deliveryStatus || (c.status === "ACTIVE" ? "Active" : "Off");
+      if (delivery !== deliveryFilter) return false;
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return c.name.toLowerCase().includes(q) || c.targetAudience.toLowerCase().includes(q);
@@ -702,181 +678,129 @@ export function MetaAdsCommanderTable({
         </div>
       )}
 
-      {/* 6. CONTROL & FILTER TOOLBAR TERSISTEMASI (2 BARIS TERSTRUKTUR & RAPI) */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-xs space-y-2.5 transition-colors">
-        {/* BARIS 1: STATUS SEGMENTASI & PENCARIAN KAMPANYE */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          {/* Status Segment Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
-            {[
-              { id: "ALL", label: "Semua", count: campaigns.length },
-              { id: "ACTIVE", label: "Aktif", count: campaigns.filter((c) => c.status === "ACTIVE").length },
-              { id: "WINNING", label: "Winning", count: winningCount },
-              { id: "BLEEDING", label: "Boncos", count: bleedingCount },
-              { id: "PAUSED", label: "Off", count: campaigns.filter((c) => c.status === "PAUSED").length },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setStatusFilter(tab.id)}
+      {/* Filter satu baris: status, hari, kata kunci, delivery */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-2 py-1.5 shadow-xs transition-colors">
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+          {[
+            { id: "ALL", label: "Semua", count: campaigns.length },
+            { id: "ACTIVE", label: "Aktif", count: campaigns.filter((c) => c.status === "ACTIVE").length },
+            { id: "WINNING", label: "Winning", count: winningCount },
+            { id: "BLEEDING", label: "Boncos", count: bleedingCount },
+            { id: "PAUSED", label: "Off", count: campaigns.filter((c) => c.status === "PAUSED").length },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setStatusFilter(tab.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all border cursor-pointer shrink-0",
+                statusFilter === tab.id
+                  ? "bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-xs"
+                  : "bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+              )}
+            >
+              <span>{tab.label}</span>
+              <span
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer shrink-0",
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-black",
                   statusFilter === tab.id
-                    ? "bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600 shadow-xs"
-                    : "bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                 )}
               >
-                <span>{tab.label}</span>
-                <span
-                  className={cn(
-                    "text-[10px] px-1.5 py-0.2 rounded-full font-black",
-                    statusFilter === tab.id
-                      ? "bg-white/20 text-white"
-                      : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                  )}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Search, Freeze Kolom & Pilihan Akun */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Input Pencarian */}
-            <div className="relative flex-1 sm:w-48">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari nama kampanye..."
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition-colors"
-              />
-            </div>
-
-            {/* Freeze Kolom Toggle */}
-            <button
-              type="button"
-              onClick={() => setIsColumnPinned(!isColumnPinned)}
-              className={cn(
-                "hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
-                isColumnPinned
-                  ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800"
-                  : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-              )}
-              title={
-                isColumnPinned
-                  ? "Kolom Nama Sedang Dipin (Freeze). Klik untuk geser semua."
-                  : "Kolom Bebas Digeser. Klik untuk freeze kolom nama."
-              }
-            >
-              {isColumnPinned ? (
-                <>
-                  <Pin className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Pinned</span>
-                </>
-              ) : (
-                <>
-                  <PinOff className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Geser Semua</span>
-                </>
-              )}
-            </button>
-
-            {/* Pilihan Akun Iklan (Jika ada multi akun) */}
-            {discoveredAccounts.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 max-w-[160px]">
-                <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <select
-                  value={apiConfig.adAccountId || ""}
-                  onChange={(e) => selectAdAccount(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer truncate w-full"
-                  title="Pilih Akun Iklan"
-                >
-                  {discoveredAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name} ({acc.id})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* BARIS 2: PARAMETER WAKTU, KATA KUNCI & AKSI AI MEDIA BUYER */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-          {/* Kiri: Parameter Analisis (Preset Tanggal & Kata Kunci) */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Date Preset */}
-            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5">
-              <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <select
-                value={datePreset}
-                onChange={(e) => setDatePreset(e.target.value)}
-                className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-                title="Rentang Waktu Data"
-              >
-                <option value="today">Hari Ini</option>
-                <option value="yesterday">Kemarin</option>
-                <option value="last_7d">7 Hari Terakhir</option>
-                <option value="last_30d">30 Hari Terakhir</option>
-                <option value="data_maximum">Semua Data</option>
-              </select>
-            </div>
-
-            {/* Filter Kata Kunci */}
-            <button
-              type="button"
-              onClick={() => {
-                setTempKeywords(campaignKeywords);
-                setShowKeywordModal(true);
-              }}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer",
-                isKeywordFilterActive
-                  ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800"
-                  : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-              )}
-              title={`Filter Kata Kunci Campaign: ${campaignKeywords}`}
-            >
-              <Filter className="w-3.5 h-3.5 text-purple-600" />
-              <span>Kata Kunci:</span>
-              <span className="max-w-[120px] truncate font-mono text-[11px] text-purple-600 dark:text-purple-400">
-                {campaignKeywords || "Semua"}
+                {tab.count}
               </span>
             </button>
+          ))}
+
+          <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 shrink-0" />
+
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 shrink-0">
+            <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <select
+              value={datePreset}
+              onChange={(e) => setDatePreset(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+              title="Rentang waktu data"
+            >
+              <option value="today">Hari Ini</option>
+              <option value="yesterday">Kemarin</option>
+              <option value="last_7d">7 Hari Terakhir</option>
+              <option value="last_30d">30 Hari Terakhir</option>
+              <option value="data_maximum">Semua Data</option>
+            </select>
           </div>
 
-          {/* Kanan: AI Media Buyer Automation Actions */}
-          <div className="flex items-center gap-2 self-end sm:self-center">
-            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 hidden lg:inline">
-              Aksi Cepat AI:
+          <button
+            type="button"
+            onClick={() => {
+              setTempKeywords(campaignKeywords);
+              setShowKeywordModal(true);
+            }}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer shrink-0",
+              isKeywordFilterActive
+                ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800"
+                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+            )}
+            title={`Filter kata kunci: ${campaignKeywords}`}
+          >
+            <Filter className="w-3.5 h-3.5 text-purple-600" />
+            <span>Kata Kunci:</span>
+            <span className="max-w-[90px] truncate font-mono text-[11px] text-purple-600 dark:text-purple-400">
+              {campaignKeywords || "Semua"}
             </span>
+          </button>
 
-            {/* Kill Boncos */}
-            <button
-              type="button"
-              onClick={handleAutoKill}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
-              title="Matikan kampanye boncos secara otomatis"
+          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 shrink-0">
+            <select
+              value={deliveryFilter}
+              onChange={(e) => setDeliveryFilter(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+              title="Filter delivery"
             >
-              <ShieldAlert className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-              <span>Kill Boncos</span>
-            </button>
-
-            {/* Scale Winning */}
-            <button
-              type="button"
-              onClick={handleAutoScale}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
-              title="Scale budget kampanye winning secara otomatis"
-            >
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Scale Winning (+{rules.scaleBudgetPercentage}%)</span>
-            </button>
+              <option value="ALL">Delivery</option>
+              {Array.from(
+                new Set(
+                  campaigns.map((c) => c.deliveryStatus || (c.status === "ACTIVE" ? "Active" : "Off"))
+                )
+              )
+                .sort()
+                .map((delivery) => (
+                  <option key={delivery} value={delivery}>
+                    {delivery}
+                  </option>
+                ))}
+            </select>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsColumnPinned(!isColumnPinned)}
+            className={cn(
+              "hidden md:flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold border transition-all cursor-pointer shrink-0 ml-auto",
+              isColumnPinned
+                ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800"
+                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+            )}
+            title={
+              isColumnPinned
+                ? "Kolom nama sedang dipin. Klik untuk geser semua."
+                : "Kolom bebas digeser. Klik untuk freeze kolom nama."
+            }
+          >
+            {isColumnPinned ? (
+              <>
+                <Pin className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Pinned</span>
+              </>
+            ) : (
+              <>
+                <PinOff className="w-3.5 h-3.5 text-slate-500" />
+                <span>Geser Semua</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -1520,33 +1444,7 @@ export function MetaAdsCommanderTable({
         })}
       </div>
 
-      {/* TAMPILAN DESKTOP & TABLET: TABEL KAMPANYE DENGAN TOGGLE FREEZE & ACCORDION DRILLDOWN */}
-      <div className="hidden sm:flex items-center justify-between gap-3 pt-1">
-        <div className="flex items-center gap-2">
-          <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
-            Tabel Kampanye ({finalFilteredCampaigns.length} dari {campaigns.length} Kampanye)
-          </span>
-          {isKeywordFilterActive && (
-            <span className="text-[10px] bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold px-2 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
-              Filter Kata Kunci Aktif
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowFullTable((v) => !v)}
-          aria-expanded={showFullTable}
-          className="shrink-0 min-h-[32px] px-3 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
-        >
-          {showFullTable ? "Sembunyikan Tabel 26 Metrik" : "Tampilkan Tabel 26 Metrik"}
-        </button>
-      </div>
-      <div
-        className={cn(
-          "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-colors",
-          showFullTable ? "hidden sm:block" : "hidden"
-        )}
-      >
+      <div className="hidden sm:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-colors">
         {campaigns.length === 0 ? (
           <div className="p-12 text-center space-y-3">
             <Target className="w-8 h-8 text-slate-400 mx-auto" />

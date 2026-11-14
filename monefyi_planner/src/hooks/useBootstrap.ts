@@ -30,7 +30,11 @@ import { useAppStore } from '../store/appStore';
 import { bootstrapCustomDomainContext } from '../services/customDomainService';
 import { userHasProduct, PRODUCT_NOT_REGISTERED } from '../services/productEntitlements';
 import { signOutGlobal } from '../services/authService';
-import { registerActiveDeviceSession, startSingleDeviceWatcher } from '../services/singleDeviceSessionService';
+import {
+  isExemptFromSingleDeviceSession,
+  registerActiveDeviceSession,
+  startSingleDeviceWatcher,
+} from '../services/singleDeviceSessionService';
 
 function resolvePlatformRole(profile: { role?: string }): 'user' | 'admin' {
   if (String(profile?.role || '').toLowerCase() === 'admin') return 'admin';
@@ -188,6 +192,7 @@ export function useBootstrap() {
     user,
     tenant,
     refreshData,
+    platformRole,
   } = useAppStore();
 
   useEffect(() => {
@@ -299,9 +304,10 @@ export function useBootstrap() {
     };
   }, [user?.id, tenant?.id, refreshData]);
 
-  // Single Device Login Watcher: pastikan hanya 1 perangkat aktif per akun
+  // Single Device Login Watcher: 1 perangkat per akun (kecuali super admin)
   useEffect(() => {
     if (!user?.id || useAppStore.getState().isDemoMode) return;
+    if (isExemptFromSingleDeviceSession(platformRole, user.email)) return;
 
     void registerActiveDeviceSession(user.id);
     const stopWatcher = startSingleDeviceWatcher(user.id, (msg) => {
@@ -311,7 +317,7 @@ export function useBootstrap() {
     return () => {
       stopWatcher();
     };
-  }, [user?.id]);
+  }, [user?.id, user?.email, platformRole]);
 }
 
 export async function runBootstrap(session: Session) {

@@ -21,6 +21,8 @@ import {
   X,
   ShieldAlert,
   Bell,
+  Search,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -33,11 +35,14 @@ export default function MarketingAdminPage() {
   const [showInsightsModal, setShowInsightsModal] = useState(false);
   const [showCreativeModal, setShowCreativeModal] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string>("Baru saja");
+  const [campaignSearch, setCampaignSearch] = useState("");
 
   const {
     apiConfig,
     campaigns,
     rules,
+    discoveredAccounts,
+    selectAdAccount,
     winningEngineConfig,
     winningOverallScore,
     winningPlans,
@@ -98,7 +103,7 @@ export default function MarketingAdminPage() {
         </div>
 
         {/* Kanan: Seluruh Status & Aksi Dalam 1 Baris */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-x-auto scrollbar-none">
           {/* Status Meta */}
           <div
             className={cn(
@@ -124,6 +129,35 @@ export default function MarketingAdminPage() {
             <span className="text-[11px] hidden sm:inline max-w-[120px] truncate">
               {isLiveMeta ? metaAccountName || "Meta Live" : "Sandbox"}
             </span>
+          </div>
+
+          {discoveredAccounts.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1 max-w-[150px]">
+              <Building2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <select
+                value={apiConfig.adAccountId || ""}
+                onChange={(e) => selectAdAccount(e.target.value)}
+                className="bg-transparent text-[11px] font-bold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer truncate w-full"
+                title="Pilih akun iklan"
+              >
+                {discoveredAccounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="relative w-28 sm:w-40 lg:w-52">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={campaignSearch}
+              onChange={(e) => setCampaignSearch(e.target.value)}
+              placeholder="Cari nama kampanye..."
+              className="w-full pl-8 pr-2.5 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[11px] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+            />
           </div>
 
           {/* Status Dual-LLM Engine */}
@@ -290,6 +324,7 @@ export default function MarketingAdminPage() {
 
       {/* 1. HANYA SATU TAB: LANGSUNG MENAMPILKAN TABEL META ADS COMMANDER */}
       <MetaAdsCommanderTable
+        searchQuery={campaignSearch}
         onOpenWinningEngine={() => router.push("/admin/winning-engine")}
         onOpenInsights={() => setShowInsightsModal(true)}
         onOpenCreative={() => setShowCreativeModal(true)}

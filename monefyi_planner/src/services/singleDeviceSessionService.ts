@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabase';
+import { isPlatformAdmin } from './adminService';
 import { signOutGlobal } from './authService';
+
+/** Super admin boleh login di banyak perangkat sekaligus. */
+export function isExemptFromSingleDeviceSession(platformRole: string, email?: string): boolean {
+  return isPlatformAdmin(platformRole, email);
+}
 
 const SESSION_TOKEN_KEY = 'monefyi_active_device_session_v1';
 const KICKOUT_REASON_KEY = 'monefyi_logout_reason';
