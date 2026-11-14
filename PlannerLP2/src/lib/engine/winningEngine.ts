@@ -75,6 +75,7 @@ export interface WinningActionPlan {
     | "pause_bleeding_campaign"
     | "adjust_budget_to_range"
     | "create_rapid_test_campaign"
+    | "create_ad_variant"
     | "repair_tracking_capi"
     | "approve_ceiling_increase";
   actionPayload: Record<string, any>;

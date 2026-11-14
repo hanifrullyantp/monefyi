@@ -1,4 +1,5 @@
-import { DEFAULT_LANDING_URL, fetchPageSignals, comparePagePrices } from "@/lib/engine/pageAudit";
+import { DEFAULT_LANDING_URL, fetchPageSignals, comparePagePrices, evaluatePageExperience } from "@/lib/engine/pageAudit";
+import { loadRecentLearnings } from "@/lib/engine/learnings";
 import { MONEFYI_PRICING } from "@/lib/engine/winningEngine";
 import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { loadDbEngineSettings } from "@/lib/engine/engineConfigDb";
@@ -154,9 +155,14 @@ async function handleTick(req: NextRequest, ctx: TickCtx) {
     const paidOrders = await loadPaidOrderCount(windowSinceIso);
     const holdCampaignIds = await loadUserHolds(72);
 
-    // Baca harga di landing page. Gagal membaca tidak menghentikan analisa.
-    const pageSignals = await fetchPageSignals(process.env.LANDING_PAGE_URL || DEFAULT_LANDING_URL).catch(() => null);
-    const pagePriceFindings = pageSignals?.ok ? comparePagePrices(pageSignals.prices, MONEFYI_PRICING) : [];
+    // Baca harga, kecepatan & kesiapan mobile landing page + memori pembelajaran.
+    const [pageSignals, storedLearnings] = await Promise.all([
+      fetchPageSignals(process.env.LANDING_PAGE_URL || DEFAULT_LANDING_URL).catch(() => null),
+      loadRecentLearnings(8).catch(() => []),
+    ]);
+    const pagePriceFindings = pageSignals?.ok
+      ? [...comparePagePrices(pageSignals.prices, MONEFYI_PRICING), ...evaluatePageExperience(pageSignals)]
+      : [];
 
     // Hanya kampanye yang dicentang admin yang dibaca dan dikelola
     const tracked = filterTracked(campaigns, dbSettings.trackedCampaignIds, (c: any) => String(c.id ?? c.campaignId ?? ""));
@@ -247,7 +253,7 @@ Garis rugi per pesanan: Rp ${Math.round(diagnostics.breakEven.cpa).toLocaleStrin
 Budget aktif harian di kampanye yang terbukti merugi: Rp ${diagnostics.portfolio.losingDailyBudget.toLocaleString("id-ID")} (${diagnostics.portfolio.losingBudgetSharePct}% dari budget aktif).
 Vonis statistik per kampanye (peluang = probabilitas dari data, bukan kepastian):
 ${diagnostics.verdicts.length === 0 ? "- Tidak ada." : diagnostics.verdicts.map((v) => `- "${v.name}": ${v.verdict.kind}. ${v.verdict.reason}`).join("\n")}
-${diagnostics.configWarnings.length > 0 ? `Peringatan konfigurasi:\n${diagnostics.configWarnings.map((w) => `- ${w}`).join("\n")}\n` : ""}Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
+${diagnostics.configWarnings.length > 0 ? `Peringatan konfigurasi:\n${diagnostics.configWarnings.map((w) => `- ${w}`).join("\n")}\n` : ""}${storedLearnings.length > 0 ? `Pembelajaran historis dari eksekusi & kreatif sebelumnya:\n${storedLearnings.map((l) => `- [${l.category}] ${l.finding} (${l.evidenceMetric})`).join("\n")}\n` : ""}Jumlah Rencana Tindakan yang Disiapkan: ${diagnostics.plans.length}
 Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (tanpa emoticon) agar pemilik bisnis langsung paham evaluasi performa dan mengapa rencana perbaikan perlu disetujui.`;
 
     const strategistModel = config.llmRouting?.strategist?.model || "";
@@ -448,7 +454,7 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
       overallScore: diagnostics.overallScore,
       pillars: diagnostics.pillars,
       plans: finalPlans,
-      learnings: diagnostics.learnings,
+      learnings: [...storedLearnings, ...diagnostics.learnings].slice(0, 12),
       dataAudit: diagnostics.dataAudit,
       reconciliation: diagnostics.reconciliation,
       verdicts: diagnostics.verdicts,

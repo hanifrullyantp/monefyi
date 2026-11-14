@@ -277,7 +277,11 @@ export const useMarketingStore = create<MarketingStore>()(
         // Simpan ke server supaya tidak kembali ke default saat reload dan supaya cron memakai nilai yang sama.
         const persistKeys = [
           'mode', 'advanceMasterPlanApproved', 'minDailyBudget', 'maxDailyBudget', 'approvedDailyCeiling',
-          'monthlySpendCap', 'targetCpa', 'targetRoas', 'maxScalePctPerStep', 'killSwitch',
+          'monthlySpendCap', 'targetCpa', 'targetRoas', 'maxScalePctPerStep', 'scaleCooldownHours', 'killSwitch',
+          'autonomous', 'analysisWindowDays', 'minPurchasesToScale', 'learningMinAgeDays',
+          'learningMinOptimizationEvents', 'learningHardStopSpend', 'minLinkClicksToJudge',
+          'breakEvenCpa', 'contributionMarginPct', 'killMaxMultipleOfTarget',
+          'winProbabilityToScale', 'lossProbabilityToPause', 'priorStrengthClicks',
         ] as const;
         const payload: Record<string, unknown> = {};
         for (const k of persistKeys) {
@@ -326,6 +330,34 @@ export const useMarketingStore = create<MarketingStore>()(
                 targetRoas: c.targetRoas || state.winningEngineConfig.targetRoas,
                 maxScalePctPerStep:
                   c.maxScalePctPerStep || state.winningEngineConfig.maxScalePctPerStep,
+                scaleCooldownHours:
+                  c.scaleCooldownHours ?? state.winningEngineConfig.scaleCooldownHours,
+                autonomous:
+                  c.autonomous !== undefined ? Boolean(c.autonomous) : state.winningEngineConfig.autonomous,
+                analysisWindowDays:
+                  c.analysisWindowDays ?? state.winningEngineConfig.analysisWindowDays,
+                minPurchasesToScale:
+                  c.minPurchasesToScale ?? state.winningEngineConfig.minPurchasesToScale,
+                learningMinAgeDays:
+                  c.learningMinAgeDays ?? state.winningEngineConfig.learningMinAgeDays,
+                learningMinOptimizationEvents:
+                  c.learningMinOptimizationEvents ?? state.winningEngineConfig.learningMinOptimizationEvents,
+                learningHardStopSpend:
+                  c.learningHardStopSpend ?? state.winningEngineConfig.learningHardStopSpend,
+                minLinkClicksToJudge:
+                  c.minLinkClicksToJudge ?? state.winningEngineConfig.minLinkClicksToJudge,
+                breakEvenCpa:
+                  c.breakEvenCpa ?? state.winningEngineConfig.breakEvenCpa,
+                contributionMarginPct:
+                  c.contributionMarginPct ?? state.winningEngineConfig.contributionMarginPct,
+                killMaxMultipleOfTarget:
+                  c.killMaxMultipleOfTarget ?? state.winningEngineConfig.killMaxMultipleOfTarget,
+                winProbabilityToScale:
+                  c.winProbabilityToScale ?? state.winningEngineConfig.winProbabilityToScale,
+                lossProbabilityToPause:
+                  c.lossProbabilityToPause ?? state.winningEngineConfig.lossProbabilityToPause,
+                priorStrengthClicks:
+                  c.priorStrengthClicks ?? state.winningEngineConfig.priorStrengthClicks,
                 killSwitch: Boolean(c.killSwitch),
                 advanceMasterPlanApproved: Boolean(c.advanceMasterPlanApproved),
                 llmRouting: {

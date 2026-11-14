@@ -49,6 +49,10 @@ export async function GET(req: NextRequest) {
     const fmtToken = (raw?: string | null) =>
       includeFullSecrets ? String(raw || "") : maskSecret(raw);
 
+    const adv = (data.advanced_params && typeof data.advanced_params === "object" && !Array.isArray(data.advanced_params)
+      ? data.advanced_params
+      : {}) as Record<string, unknown>;
+
     return NextResponse.json({
       ok: true,
       config: {
@@ -63,8 +67,21 @@ export async function GET(req: NextRequest) {
         maxScalePctPerStep: Number(data.max_scale_pct || 20),
         scaleCooldownHours: Number(data.scale_cooldown_hours || 48),
         killSwitch: Boolean(data.kill_switch),
+        autonomous: data.autonomous !== false,
         budgetUnitVerified: Boolean(data.budget_unit_verified),
         advanceMasterPlanApproved: Boolean(data.advance_master_plan_approved),
+        analysisWindowDays: Number(adv.analysisWindowDays || 14),
+        minPurchasesToScale: Number(adv.minPurchasesToScale || 5),
+        learningMinAgeDays: Number(adv.learningMinAgeDays || 7),
+        learningMinOptimizationEvents: Number(adv.learningMinOptimizationEvents || 50),
+        learningHardStopSpend: Number(adv.learningHardStopSpend || 135000),
+        minLinkClicksToJudge: Number(adv.minLinkClicksToJudge || 100),
+        breakEvenCpa: Number(adv.breakEvenCpa ?? 0),
+        contributionMarginPct: Number(adv.contributionMarginPct || 90),
+        killMaxMultipleOfTarget: Number(adv.killMaxMultipleOfTarget || 2.5),
+        winProbabilityToScale: Number(adv.winProbabilityToScale || 0.8),
+        lossProbabilityToPause: Number(adv.lossProbabilityToPause || 0.9),
+        priorStrengthClicks: Number(adv.priorStrengthClicks || 40),
         metaAccessToken: fmtToken(data.meta_access_token),
         metaCapiToken: fmtToken(data.meta_capi_token),
         metaPixelId: data.meta_pixel_id || "1530674178146899",
@@ -112,9 +129,34 @@ export async function POST(req: NextRequest) {
     if (body.targetCpa !== undefined) payload.target_cpa = Number(body.targetCpa);
     if (body.targetRoas !== undefined) payload.target_roas = Number(body.targetRoas);
     if (body.maxScalePctPerStep !== undefined) payload.max_scale_pct = Number(body.maxScalePctPerStep);
+    if (body.scaleCooldownHours !== undefined) payload.scale_cooldown_hours = Number(body.scaleCooldownHours);
+    if (body.autonomous !== undefined) payload.autonomous = Boolean(body.autonomous);
     if (body.killSwitch !== undefined) payload.kill_switch = Boolean(body.killSwitch);
     if (body.budgetUnitVerified !== undefined) payload.budget_unit_verified = Boolean(body.budgetUnitVerified);
     if (body.advanceMasterPlanApproved !== undefined) payload.advance_master_plan_approved = Boolean(body.advanceMasterPlanApproved);
+
+    const advKeys = [
+      "analysisWindowDays", "minPurchasesToScale", "learningMinAgeDays", "learningMinOptimizationEvents",
+      "learningHardStopSpend", "minLinkClicksToJudge", "breakEvenCpa", "contributionMarginPct",
+      "killMaxMultipleOfTarget", "winProbabilityToScale", "lossProbabilityToPause", "priorStrengthClicks",
+    ];
+    if (advKeys.some((k) => body[k] !== undefined)) {
+      const { data: existing } = await supabase
+        .from("winning_engine_config")
+        .select("advanced_params")
+        .eq("id", "default")
+        .maybeSingle();
+      const mergedAdv: Record<string, number> = {
+        ...((existing?.advanced_params && typeof existing.advanced_params === "object") ? existing.advanced_params : {}),
+      };
+      for (const k of advKeys) {
+        if (body[k] !== undefined) {
+          const val = Number(body[k]);
+          if (Number.isFinite(val)) mergedAdv[k] = val;
+        }
+      }
+      payload.advanced_params = mergedAdv;
+    }
 
     // Kredensial Meta & OpenRouter Cloud (Abaikan nilai ter-masking ••••)
     const isUnmasked = (v: unknown) => typeof v === "string" && !v.includes("••••");

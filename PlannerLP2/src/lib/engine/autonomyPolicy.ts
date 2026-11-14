@@ -33,10 +33,10 @@ export const POLICY_LABEL: Record<PolicyAction, { title: string; detail: string;
   pause_weak_ad: { title: "Pause iklan lemah", detail: "Iklan terbukti merugi, bukan satu-satunya di ad set, dan tidak sedang learning.", implemented: true },
   scale_budget: { title: "Naikkan budget pemenang", detail: "Maks per langkah sesuai pengaturan, dengan jeda cooldown.", implemented: true },
   duplicate_winner: { title: "Duplikasi ad set pemenang", detail: "Salinan selalu dibuat PAUSED. Mengaktifkannya selalu butuh persetujuan Anda.", implemented: true },
-  create_ad: { title: "Buat iklan baru dari aset Anda", detail: "Belum tersedia (Fase 3).", implemented: false },
-  create_campaign: { title: "Buat kampanye baru", detail: "Belum tersedia (Fase 3).", implemented: false },
+  create_ad: { title: "Buat iklan baru dari aset Anda", detail: "Dibuat PAUSED memakai gambar/video yang sudah ada di akun dan varian copy angle menang.", implemented: true },
+  create_campaign: { title: "Buat kampanye baru", detail: "Kampanye rapid testing dibuat dalam status PAUSED sesuai batas harian.", implemented: true },
   change_offer: { title: "Ubah harga / offer", detail: "Selalu butuh persetujuan Anda.", implemented: true },
-  change_lp_copy: { title: "Ubah teks landing page", detail: "Belum tersedia (Fase 3).", implemented: false },
+  change_lp_copy: { title: "Ubah teks landing page", detail: "Selalu dengan pratinjau sebelum/sesudah menuju database landing page.", implemented: true },
 };
 
 const LEVELS: AutonomyLevel[] = ["auto", "approve", "recommend"];
@@ -60,7 +60,9 @@ export function policyActionForPlan(actionType: string): PolicyAction | null {
     case "pause_bleeding_campaign": return "pause_campaign";
     case "scale_campaign_budget": return "scale_budget";
     case "update_offer_pricing": return "change_offer";
+    case "update_lp_copy": return "change_lp_copy";
     case "create_rapid_test_campaign": return "create_campaign";
+    case "create_ad_variant": return "create_ad";
     default: return null;
   }
 }

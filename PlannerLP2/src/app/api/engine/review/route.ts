@@ -16,6 +16,7 @@ import {
   readCampaignWindowMetrics,
 } from "@/lib/engine/metaBudget";
 import { dispatchEngineNotification } from "@/lib/services/telegramBotService";
+import { recordEngineLearning } from "@/lib/engine/learnings";
 
 const REVIEW_AFTER_HOURS = 48;
 const GIVE_UP_AFTER_HOURS = 120;
@@ -157,6 +158,15 @@ export async function POST(req: NextRequest) {
           rollbackNote,
         },
       });
+      if (verdictFinal === "membaik" || verdictFinal === "memburuk") {
+        await recordEngineLearning({
+          pillar: "ads_testing",
+          category: verdictFinal === "membaik" ? "scale_success" : "scale_rollback",
+          finding: `Scale budget "${log.campaign_name || campaignId}" (${verdictFinal}): ${judged.reason}`,
+          evidenceMetric: `CPA pasca-scale: Rp ${Math.round(judged.afterCpa ?? 0).toLocaleString("id-ID")} | ${metrics.purchases} beli`,
+          confidence: verdictFinal === "membaik" ? 85 : 90,
+        }).catch(() => false);
+      }
       results.push({ logId: log.id, campaignId, verdict: verdictFinal, reason: judged.reason, rolledBack, rollbackNote });
     }
 

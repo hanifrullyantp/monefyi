@@ -47,6 +47,29 @@ export async function loadDbEngineSettings(): Promise<DbEngineSettings> {
     num("targetRoas", data.target_roas);
     num("maxScalePctPerStep", data.max_scale_pct);
     num("scaleCooldownHours", data.scale_cooldown_hours);
+    if (data.advanced_params && typeof data.advanced_params === "object" && !Array.isArray(data.advanced_params)) {
+      const adv = data.advanced_params as Record<string, unknown>;
+      const advKeys = [
+        "analysisWindowDays",
+        "minPurchasesToScale",
+        "learningMinAgeDays",
+        "learningMinOptimizationEvents",
+        "learningHardStopSpend",
+        "minLinkClicksToJudge",
+        "breakEvenCpa",
+        "contributionMarginPct",
+        "killMaxMultipleOfTarget",
+        "winProbabilityToScale",
+        "lossProbabilityToPause",
+        "priorStrengthClicks",
+      ];
+      for (const k of advKeys) {
+        const n = Number(adv[k]);
+        if (Number.isFinite(n) && (k === "breakEvenCpa" ? n >= 0 : n > 0)) {
+          o[k] = n;
+        }
+      }
+    }
     if (data.mode === "cuan" || data.mode === "advance") o.mode = data.mode;
     return {
       overrides: o,

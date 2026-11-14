@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:engine": "tsx src/lib/engine/__tests__/winningEngine.scenarios.ts"
+    "test:engine": "tsx src/lib/engine/__tests__/winningEngine.scenarios.ts",
+    "eval:engine": "tsx src/lib/engine/__tests__/evalHarness.ts",
+    "test:all-engine": "tsx src/lib/engine/__tests__/winningEngine.scenarios.ts && tsx src/lib/engine/__tests__/expert.scenarios.ts && tsx src/lib/engine/__tests__/supervisor.scenarios.ts && tsx src/lib/engine/__tests__/creativeAnalyzer.scenarios.ts && tsx src/lib/engine/__tests__/creativeCritic.scenarios.ts && tsx src/lib/engine/__tests__/phase3_4.scenarios.ts && tsx src/lib/engine/__tests__/evalHarness.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

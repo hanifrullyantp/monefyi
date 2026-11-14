@@ -13,6 +13,15 @@ export interface PriceMention {
   snippet: string; // potongan teks untuk audit
 }
 
+export interface MobileCtaAudit {
+  hasViewportMeta: boolean;
+  ctaCount: number;
+  hasLargeMobileCta: boolean;
+  heroHeadline: string;
+  heroSubheadline: string;
+  bodyTextSample: string;
+}
+
 export interface PageSignals {
   ok: boolean;
   error?: string;
@@ -20,6 +29,16 @@ export interface PageSignals {
   title: string;
   prices: PriceMention[];
   hasOrderCta: boolean;
+  responseTimeMs?: number;
+  speedGrade?: "cepat" | "sedang" | "lambat";
+  mobileAudit?: MobileCtaAudit;
+}
+
+export interface MessageMatchReport {
+  matchScorePct: number;
+  sharedKeywords: string[];
+  missingOnLp: string[];
+  findings: string[];
 }
 
 export interface PricingSnapshot {
@@ -148,6 +167,86 @@ export function comparePagePrices(prices: PriceMention[], pricing: PricingSnapsh
   return findings;
 }
 
+function stripTags(s: string): string {
+  return s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+export function extractMobileCtaAudit(html: string): MobileCtaAudit {
+  const hasViewportMeta = /<meta[^>]+name=["']viewport["'][^>]*width=device-width/i.test(html);
+  const ctaMatches = html.match(/<(a|button)\b[^>]*>[\s\S]{0,160}?(beli|order|pesan|checkout|daftar|mulai|coba|ambil|lihat pilihan)[\s\S]{0,80}?<\/(a|button)>/gi) || [];
+  const ctaCount = ctaMatches.length;
+  const hasLargeMobileCta = ctaMatches.some((el) =>
+    /(py-3|py-4|py-5|p-4|w-full|min-h-\[4|btn-lg|text-base|text-lg)/i.test(el)
+  );
+  const h1Match = html.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
+  const heroHeadline = stripTags(h1Match?.[1] || "").slice(0, 220);
+  const afterH1 = h1Match?.index !== undefined ? html.slice(h1Match.index + h1Match[0].length, h1Match.index + h1Match[0].length + 1200) : html;
+  const pMatch = afterH1.match(/<p\b[^>]*>([\s\S]*?)<\/p>/i);
+  const heroSubheadline = stripTags(pMatch?.[1] || "").slice(0, 320);
+  const cleanedBody = stripTags(
+    html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
+  );
+  return {
+    hasViewportMeta,
+    ctaCount,
+    hasLargeMobileCta,
+    heroHeadline,
+    heroSubheadline,
+    bodyTextSample: cleanedBody.slice(0, 2000),
+  };
+}
+
+export function evaluatePageExperience(signals: PageSignals): string[] {
+  if (!signals.ok) return [signals.error || "Landing page tidak dapat diakses."];
+  const findings: string[] = [];
+  if (signals.responseTimeMs !== undefined && signals.responseTimeMs >= 2000) {
+    findings.push(`Respon server landing page lambat (${signals.responseTimeMs} ms). Target < 800 ms agar OCLP tidak bocor.`);
+  }
+  if (!signals.hasOrderCta) {
+    findings.push("Tombol CTA order/checkout tidak terdeteksi jelas di HTML awal landing page.");
+  }
+  if (signals.mobileAudit) {
+    if (!signals.mobileAudit.hasViewportMeta) {
+      findings.push("Meta viewport width=device-width tidak terdeteksi; tampilan di HP berisiko mengecil.");
+    }
+    if (signals.mobileAudit.ctaCount > 0 && !signals.mobileAudit.hasLargeMobileCta) {
+      findings.push("Ukuran tombol CTA di mobile terlihat standar/kecil (disarankan py-3+ atau w-full untuk layar HP).");
+    }
+  }
+  return findings;
+}
+
+const MATCH_TERMS = [
+  "rab", "survei", "pdf", "whatsapp", "kitchen set", "kontraktor",
+  "interior", "excel", "estimasi", "penawaran", "hpp", "margin", "cepat", "1 menit",
+];
+
+/** Kesesuaian pesan antara iklan aktif dan teks hero/halaman landing (message match). */
+export function evaluateMessageMatch(
+  adCopies: { id: string; name: string; title: string; body: string }[],
+  lpText: { title: string; heroHeadline: string; heroSubheadline: string; bodyTextSample: string }
+): MessageMatchReport {
+  const adsCorpus = adCopies.map((a) => `${a.title || ""} ${a.body || ""}`).join(" ").toLowerCase();
+  const lpCorpus = `${lpText.title || ""} ${lpText.heroHeadline || ""} ${lpText.heroSubheadline || ""} ${lpText.bodyTextSample || ""}`.toLowerCase();
+
+  const adKeywords = MATCH_TERMS.filter((t) => adsCorpus.includes(t));
+  if (adKeywords.length === 0) {
+    return { matchScorePct: 100, sharedKeywords: [], missingOnLp: [], findings: [] };
+  }
+
+  const sharedKeywords = adKeywords.filter((t) => lpCorpus.includes(t));
+  const missingOnLp = adKeywords.filter((t) => !lpCorpus.includes(t));
+  const matchScorePct = Math.round((sharedKeywords.length / adKeywords.length) * 100);
+
+  const findings: string[] = [];
+  if (matchScorePct < 60 && missingOnLp.length > 0) {
+    findings.push(
+      `Kesesuaian pesan iklan ke LP baru ${matchScorePct}%. Kata kunci iklan (${missingOnLp.slice(0, 4).join(", ")}) belum muncul menonjol di landing page.`
+    );
+  }
+  return { matchScorePct, sharedKeywords, missingOnLp, findings };
+}
+
 function fail(url: string, error: string): PageSignals {
   return { ok: false, error, url, title: "", prices: [], hasOrderCta: false };
 }
@@ -167,19 +266,31 @@ export async function fetchPageSignals(
   if (url.protocol !== "https:" || !allowedHosts.has(url.hostname)) {
     return fail(rawUrl, "Hanya halaman https di host yang diizinkan yang boleh dibaca.");
   }
+  const started = Date.now();
   try {
     const res = await fetchImpl(url.toString(), {
       headers: { "User-Agent": "MonefyiEngine/1.0 (page audit)", Accept: "text/html" },
       signal: AbortSignal.timeout(8000),
     });
+    const responseTimeMs = Date.now() - started;
     if (!res.ok) return fail(url.toString(), `Halaman mengembalikan status ${res.status}.`);
     const finalHost = new URL(res.url || url.toString()).hostname;
     if (!allowedHosts.has(finalHost)) return fail(url.toString(), "Redirect mengarah ke host yang tidak diizinkan.");
 
     const html = (await res.text()).slice(0, MAX_CHARS);
     const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "").trim().slice(0, 200);
-    const hasOrderCta = /<(a|button)\b[^>]*>[^<]{0,60}(beli|order|pesan|checkout|daftar|mulai)/i.test(html);
-    return { ok: true, url: url.toString(), title, prices: extractPagePrices(html), hasOrderCta };
+    const hasOrderCta = /<(a|button)\b[^>]*>[^<]{0,80}(beli|order|pesan|checkout|daftar|mulai|lihat pilihan)/i.test(html);
+    const speedGrade: PageSignals["speedGrade"] = responseTimeMs < 800 ? "cepat" : responseTimeMs < 2000 ? "sedang" : "lambat";
+    return {
+      ok: true,
+      url: url.toString(),
+      title,
+      prices: extractPagePrices(html),
+      hasOrderCta,
+      responseTimeMs,
+      speedGrade,
+      mobileAudit: extractMobileCtaAudit(html),
+    };
   } catch (err: any) {
     return fail(
       url.toString(),

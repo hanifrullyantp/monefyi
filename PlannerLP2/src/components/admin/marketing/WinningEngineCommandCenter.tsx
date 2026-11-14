@@ -6,6 +6,7 @@ import { EngineStatusPanel } from "./EngineStatusPanel";
 import { ExpertStatusCard } from "./ExpertStatusCard";
 import { CreativeInsightsCard } from "./CreativeInsightsCard";
 import { TrackedCampaignsCard } from "./TrackedCampaignsCard";
+import { AdvancedEngineParamsCard } from "./AdvancedEngineParamsCard";
 import { WinningEngineOverview } from "./WinningEngineOverview";
 import { WinningPillarId, WinningActionPlan } from "@/lib/engine/winningEngine";
 import {
@@ -1193,6 +1194,7 @@ export function WinningEngineCommandCenter({
         <ExpertStatusCard />
         <TrackedCampaignsCard />
         <CreativeInsightsCard />
+        <AdvancedEngineParamsCard />
         <EngineStatusPanel />
       </section>
     </div>

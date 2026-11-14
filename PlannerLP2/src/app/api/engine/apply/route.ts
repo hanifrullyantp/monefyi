@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { hasSucceededToday, logEngineAction, wibDate, acquireRunLock, releaseRunLock, checkManualLiveChange, loadServerGuardrails } from "@/lib/engine/engineDb";
 import { createClient } from "@supabase/supabase-js";
 import { readLiveBudget, setDailyBudget, MIN_ADSET_BUDGET } from "@/lib/engine/metaBudget";
+import { findTemplateCreative, createPausedAdVariant, countCreatedAdsToday } from "@/lib/engine/adCreation";
 import { extractCandidateTokens, buildGraphUrl } from "@/lib/meta/graph";
 import {
   WinningActionPlan,
@@ -39,6 +40,8 @@ const LIVE_ACTIONS = new Set([
   "scale_campaign_budget",
   "adjust_budget_to_range",
   "create_rapid_test_campaign",
+  "create_ad_variant",
+  "update_lp_copy",
 ]);
 
 async function handleApply(req: NextRequest, preBody?: any) {
@@ -125,9 +128,11 @@ async function handleApply(req: NextRequest, preBody?: any) {
         cta_button_text: payload.afterCtaText,
       });
 
-      const summary = `Pilar 2 (Copywriting LP): Headline Landing Page diperbarui menjadi "${payload.afterHeroTitle}" dengan tombol CTA "${payload.afterCtaText}".`;
+      const summary = updatedDb
+        ? `Pilar 2 (Copywriting LP): Headline Landing Page diperbarui menjadi "${payload.afterHeroTitle}" dengan tombol CTA "${payload.afterCtaText}".`
+        : "Pilar 2 (Copywriting LP): Gagal menyimpan pembaruan copywriting ke database landing page.";
 
-      if (body.sendNotification) {
+      if (updatedDb && body.sendNotification) {
         await dispatchEngineNotification(
           `[MONEFYI WINNING ENGINE - COPYWRITING LP]\n${summary}`,
           config.notifications
@@ -135,12 +140,13 @@ async function handleApply(req: NextRequest, preBody?: any) {
       }
 
       return NextResponse.json({
-        ok: true,
+        ok: updatedDb,
+        liveExecuted: updatedDb,
         executedAt: nowIso,
         persistedToDb: updatedDb,
         summary,
         appliedChanges: payload,
-      });
+      }, { status: updatedDb ? 200 : 500 });
     }
 
     // Aksi Pilar 2 (kecepatan LP), Pilar 3 (order bump), dan Pilar 5 (CAPI) belum punya eksekutor otomatis.
@@ -379,6 +385,62 @@ async function handleApply(req: NextRequest, preBody?: any) {
         executedAt: nowIso,
         createdCampaignId: createJson.id,
         summary,
+      });
+    }
+
+    if (effectivePlan.actionType === "create_ad_variant") {
+      const actRaw = adAccountIdRaw || process.env.META_AD_ACCOUNT_ID || "";
+      if (!actRaw) {
+        return NextResponse.json(
+          { ok: false, error: "Ad Account ID belum diatur untuk membuat varian iklan." },
+          { status: 400 }
+        );
+      }
+      const adsetId = String(payload.adsetId || "").trim();
+      const headline = String(payload.headline || "").trim();
+      const primaryText = String(payload.primaryText || "").trim();
+      if (!adsetId || !headline || !primaryText) {
+        return NextResponse.json(
+          { ok: false, error: "adsetId, headline, dan primaryText wajib diisi untuk membuat iklan baru." },
+          { status: 400 }
+        );
+      }
+      const createdToday = await countCreatedAdsToday();
+      if (createdToday >= 2) {
+        return NextResponse.json(
+          { ok: false, error: "Batas harian pembuatan iklan baru (maks 2/hari) sudah tercapai." },
+          { status: 429 }
+        );
+      }
+      const creds = { token, capiToken: rawCapiToken || undefined, appSecret };
+      const tmpl = await findTemplateCreative({ actId: actRaw, adsetId, creds });
+      if (!tmpl.ok) {
+        return NextResponse.json({ ok: false, error: tmpl.error }, { status: 400 });
+      }
+      const created = await createPausedAdVariant({
+        actId: actRaw,
+        adsetId,
+        name: String(payload.adName || `[EXPERT] ${headline.slice(0, 40)}`),
+        headline,
+        primaryText,
+        template: tmpl.template,
+        creds,
+      });
+      if (!created.ok) {
+        return NextResponse.json({ ok: false, error: created.error }, { status: 400 });
+      }
+      const summary = `Pilar 4 (Varian Iklan Baru): Iklan "${headline}" berhasil dibuat di Ad Set ${adsetId} dalam status PAUSED (ID: ${created.adId}).`;
+      if (body.sendNotification) {
+        await dispatchEngineNotification(`[MONEFYI WINNING ENGINE - IKLAN BARU PAUSED]\n${summary}`, config.notifications);
+      }
+      return NextResponse.json({
+        ok: true,
+        liveExecuted: true,
+        executedAt: nowIso,
+        createdAdId: created.adId,
+        creativeId: created.creativeId,
+        summary,
+        appliedChanges: { campaignId: adsetId, campaignName: headline },
       });
     }
 

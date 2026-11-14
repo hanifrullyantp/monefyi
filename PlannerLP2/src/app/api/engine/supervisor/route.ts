@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { getServiceClient, acquireRunLock, releaseRunLock, logEngineAction } from "@/lib/engine/engineDb";
 import { evaluateSupervisor, type SupervisorAction, type Finding } from "@/lib/engine/supervisor";
+import { critiqueSupervisorEffectiveness, type SupervisorLlmCritique, type ReviewedActionSummary } from "@/lib/engine/supervisorCritic";
+import { loadDbEngineSettings } from "@/lib/engine/engineConfigDb";
 import { sendAdminPush } from "@/lib/engine/pushNotify";
 
 /**
@@ -21,9 +23,9 @@ async function run(req: NextRequest) {
 
     const [{ data: hb }, { data: cfg }, { data: logs }, { data: prev }] = await Promise.all([
       sb.from("engine_heartbeat").select("*").eq("id", "expert").maybeSingle(),
-      sb.from("winning_engine_config").select("kill_switch, tick_interval_minutes").eq("id", "default").maybeSingle(),
-      sb.from("engine_action_log").select("id, created_at, action_type, ok, live_executed, response").gte("created_at", since).order("created_at", { ascending: false }).limit(500),
-      sb.from("engine_supervisor_reports").select("findings").order("created_at", { ascending: false }).limit(1),
+      sb.from("winning_engine_config").select("kill_switch, tick_interval_minutes, openrouter_api_key, target_cpa, max_scale_pct, scale_cooldown_hours").eq("id", "default").maybeSingle(),
+      sb.from("engine_action_log").select("id, created_at, action_type, campaign_name, before_value, after_value, ok, live_executed, response").gte("created_at", since).order("created_at", { ascending: false }).limit(500),
+      sb.from("engine_supervisor_reports").select("findings, llm_critique").order("created_at", { ascending: false }).limit(1),
     ]);
 
     const all = logs || [];
@@ -38,7 +40,7 @@ async function run(req: NextRequest) {
     const ids = primary.map((l) => Number(l.id));
     const { data: reviews } = await sb
       .from("engine_action_review")
-      .select("log_id, verdict, rolled_back")
+      .select("log_id, verdict, rolled_back, details")
       .in("log_id", ids.length ? ids : [0]);
     const revBy = new Map((reviews || []).map((r: any) => [Number(r.log_id), r]));
 
@@ -78,6 +80,44 @@ async function run(req: NextRequest) {
       });
     }
 
+    // Fase 2B: Pengawas efektivitas harian (LLM Critic). Jalan max sekali / 20 jam atau jika ?critic=1 oleh admin.
+    const forceCritic = auth.via === "admin" && req.nextUrl.searchParams.get("critic") === "1";
+    const prevCritique = (prev?.[0] as any)?.llm_critique as SupervisorLlmCritique | null | undefined;
+    const prevCritiqueAgeH = prevCritique?.generatedAt ? (Date.now() - Date.parse(prevCritique.generatedAt)) / 3600000 : Infinity;
+    let llmCritique: SupervisorLlmCritique | null = prevCritique ?? null;
+
+    if (forceCritic || (prevCritiqueAgeH >= 20 && report.metrics.reviewed > 0)) {
+      const dbSettings = await loadDbEngineSettings();
+      const apiKey = dbSettings.openRouterApiKey || String(cfg?.openrouter_api_key || "") || process.env.OPENROUTER_API_KEY || "";
+      const reviewedSummaries: ReviewedActionSummary[] = primary
+        .filter((l) => revBy.has(Number(l.id)))
+        .map((l) => {
+          const rev: any = revBy.get(Number(l.id));
+          return {
+            logId: Number(l.id),
+            campaignName: String(l.campaign_name || ""),
+            actionType: String(l.action_type || ""),
+            verdict: String(rev?.verdict || ""),
+            rolledBack: Boolean(rev?.rolled_back),
+            beforeBudget: l.before_value ? Number(l.before_value) : null,
+            afterBudget: l.after_value ? Number(l.after_value) : null,
+            afterSpend: Number(rev?.details?.after?.spend || 0),
+            afterPurchases: Number(rev?.details?.after?.purchases || 0),
+            reason: String(rev?.details?.reason || ""),
+          };
+        });
+      llmCritique = await critiqueSupervisorEffectiveness({
+        report,
+        reviewedActions: reviewedSummaries,
+        currentThresholds: {
+          targetCpa: Number(cfg?.target_cpa || 45000),
+          maxScalePct: Number(cfg?.max_scale_pct || 20),
+          scaleCooldownHours: Number(cfg?.scale_cooldown_hours || 48),
+        },
+        apiKey,
+      });
+    }
+
     await sb.from("engine_supervisor_reports").insert({
       score: report.score,
       grade: report.grade,
@@ -85,6 +125,7 @@ async function run(req: NextRequest) {
       metrics: report.metrics,
       suggestions: report.suggestions,
       kill_switch_engaged: engaged,
+      llm_critique: llmCritique,
     });
 
     // Push hanya untuk temuan kritis yang baru (hindari spam tiap 15 menit)
@@ -98,7 +139,7 @@ async function run(req: NextRequest) {
       }).catch(() => null);
     }
 
-    return NextResponse.json({ ok: true, report, killSwitchEngaged: engaged });
+    return NextResponse.json({ ok: true, report, llmCritique, killSwitchEngaged: engaged });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || "Supervisor gagal." }, { status: 500 });
   } finally {

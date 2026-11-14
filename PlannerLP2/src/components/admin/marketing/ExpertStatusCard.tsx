@@ -16,7 +16,26 @@ interface StatusPayload {
   pushConfigured: boolean;
   vapidPublicKey: string | null;
   preflight: { checks: { id: string; label: string; status: "pass" | "warn" | "fail"; message: string; fix?: string }[]; ready: boolean };
-  supervisor?: { latest: { created_at: string; score: number | null; grade: string; findings: { code: string; severity: string; message: string }[]; metrics: Record<string, number | null>; suggestions: string[]; kill_switch_engaged: boolean } | null; history: { at: string; score: number | null; grade: string }[] };
+  supervisor?: {
+    latest: {
+      created_at: string;
+      score: number | null;
+      grade: string;
+      findings: { code: string; severity: string; message: string }[];
+      metrics: Record<string, number | null>;
+      suggestions: string[];
+      kill_switch_engaged: boolean;
+      llm_critique?: {
+        generatedAt: string;
+        summary: string;
+        costOfMistakesIdr: number;
+        thresholdProposals: { param: string; current: string; suggested: string; reason: string }[];
+        model: string;
+        error?: string;
+      } | null;
+    } | null;
+    history: { at: string; score: number | null; grade: string }[];
+  };
   runs: { id: number; started_at: string; trigger: string; outcome: string | null; phase: string | null; duration_ms: number | null; stats: Record<string, number> }[];
 }
 
@@ -64,6 +83,7 @@ export function ExpertStatusCard() {
   const [intervalDraft, setIntervalDraft] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [criticBusy, setCriticBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -128,6 +148,21 @@ export function ExpertStatusCard() {
     }
   };
 
+  const runSupervisorCritic = async () => {
+    setCriticBusy(true);
+    setMsg(null);
+    try {
+      const res = await authedFetch("/api/engine/supervisor?critic=1", { method: "POST" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) setMsg(json.error || "Gagal menjalankan kritik AI pengawas.");
+      else if (json.llmCritique?.error) setMsg(`Kritik pengawas: ${json.llmCritique.error}`);
+      else setMsg("Kritik efektivitas pengawas AI diperbarui.");
+      await load();
+    } finally {
+      setCriticBusy(false);
+    }
+  };
+
   if (error && !data) return <div className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 p-4 text-sm text-rose-800 dark:text-rose-200">{error}</div>;
   if (!data) return <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-500 shadow-xs">Memuat status Expert...</div>;
 
@@ -164,17 +199,37 @@ export function ExpertStatusCard() {
 
       {data.supervisor?.latest ? (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold">Penilaian pengawas</p>
-            <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", GRADE_STYLE[data.supervisor.latest.grade] || GRADE_STYLE.belum_cukup_data)}>
-              {GRADE_LABEL[data.supervisor.latest.grade] || data.supervisor.latest.grade}
-              {data.supervisor.latest.score !== null ? ` | ${data.supervisor.latest.score}/100` : ""}
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={criticBusy}
+                onClick={runSupervisorCritic}
+                className="rounded-lg border border-slate-200 dark:border-slate-700 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+              >
+                {criticBusy ? "Menilai..." : "Audit AI harian"}
+              </button>
+              <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", GRADE_STYLE[data.supervisor.latest.grade] || GRADE_STYLE.belum_cukup_data)}>
+                {GRADE_LABEL[data.supervisor.latest.grade] || data.supervisor.latest.grade}
+                {data.supervisor.latest.score !== null ? ` | ${data.supervisor.latest.score}/100` : ""}
+              </span>
+            </div>
           </div>
           <p className="mt-1 text-xs text-slate-500">
             Dinilai {wib(data.supervisor.latest.created_at)}.
             {data.supervisor.latest.metrics?.hitRatePct != null ? ` Keputusan membaik atau stabil: ${data.supervisor.latest.metrics.hitRatePct}% dari ${data.supervisor.latest.metrics.reviewed} aksi.` : ""}
           </p>
+          {data.supervisor.history.length > 1 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+              <span>Tren:</span>
+              {data.supervisor.history.slice(0, 5).map((h, i) => (
+                <span key={h.at + i} className={cn("rounded px-1.5 py-0.5", GRADE_STYLE[h.grade] || GRADE_STYLE.belum_cukup_data)}>
+                  {h.score !== null ? `${h.score}` : "-"} ({wib(h.at)})
+                </span>
+              ))}
+            </div>
+          )}
           <ul className="mt-2 space-y-1 text-sm">
             {data.supervisor.latest.findings.map((f) => (
               <li key={f.code} className="flex gap-2">
@@ -188,6 +243,34 @@ export function ExpertStatusCard() {
             <ul className="mt-2 list-disc pl-5 text-xs text-slate-600 dark:text-slate-300">
               {data.supervisor.latest.suggestions.map((t) => <li key={t}>{t}</li>)}
             </ul>
+          )}
+          {data.supervisor.latest.llm_critique && (
+            <div className="mt-3 rounded-xl border border-indigo-200/70 dark:border-indigo-800/50 bg-indigo-50/40 dark:bg-indigo-950/20 p-3 text-xs space-y-1.5">
+              <p className="font-semibold text-indigo-900 dark:text-indigo-200">
+                Audit Efektivitas AI ({wib(data.supervisor.latest.llm_critique.generatedAt)})
+              </p>
+              {data.supervisor.latest.llm_critique.error ? (
+                <p className="text-rose-700 dark:text-rose-300">{data.supervisor.latest.llm_critique.error}</p>
+              ) : (
+                <>
+                  <p className="text-slate-700 dark:text-slate-200">{data.supervisor.latest.llm_critique.summary}</p>
+                  {data.supervisor.latest.llm_critique.costOfMistakesIdr > 0 && (
+                    <p className="text-amber-700 dark:text-amber-300">
+                      Biaya aksi memburuk (7h): Rp {data.supervisor.latest.llm_critique.costOfMistakesIdr.toLocaleString("id-ID")}
+                    </p>
+                  )}
+                  {data.supervisor.latest.llm_critique.thresholdProposals.length > 0 && (
+                    <ul className="list-disc pl-4 space-y-0.5 text-slate-600 dark:text-slate-300">
+                      {data.supervisor.latest.llm_critique.thresholdProposals.map((tp) => (
+                        <li key={tp.param}>
+                          <span className="font-semibold">{tp.param}</span>: {tp.current || "-"} -&gt; <span className="font-semibold">{tp.suggested}</span> ({tp.reason})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
       ) : (
