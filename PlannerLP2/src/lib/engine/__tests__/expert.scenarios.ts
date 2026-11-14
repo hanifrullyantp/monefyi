@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { computeExpertStatus } from "../expertStatus";
 import { resolvePolicy, policyAllowsAuto, DEFAULT_AUTONOMY_POLICY } from "../autonomyPolicy";
 import { evaluatePreflight } from "../preflight";
+import { filterTracked } from "../trackedCampaigns";
 
 let passed = 0;
 const failures: string[] = [];
@@ -50,6 +51,21 @@ test("preflight: tanpa secret = fail", () => {
 test("preflight: semua siap", () => {
   const c = evaluatePreflight({ settings: { overrides: { budgetUnitVerified: true }, metaTokenPresent: true, found: true }, env: { ENGINE_CRON_SECRET: "x" }, tablesOk: true, subscriptions: 1, pushReady: true });
   assert.ok(c.every((x) => x.status === "pass"));
+});
+
+test("filterTracked: null atau kosong mempertahankan semua", () => {
+  const items = [{ id: "c1" }, { id: "c2" }];
+  assert.equal(filterTracked(items, null, (x) => x.id).kept.length, 2);
+  assert.equal(filterTracked(items, [], (x) => x.id).kept.length, 2);
+  assert.equal(filterTracked(items, undefined, (x) => x.id).dropped, 0);
+});
+
+test("filterTracked: menyaring kampanye yang tidak dicentang", () => {
+  const items = [{ id: "c1" }, { id: "c2" }, { id: "c3" }];
+  const res = filterTracked(items, ["c1", "c3"], (x) => x.id);
+  assert.equal(res.kept.length, 2);
+  assert.equal(res.dropped, 1);
+  assert.deepEqual(res.kept.map((x) => x.id), ["c1", "c3"]);
 });
 
 console.log(`\n${passed} lulus, ${failures.length} gagal`);
