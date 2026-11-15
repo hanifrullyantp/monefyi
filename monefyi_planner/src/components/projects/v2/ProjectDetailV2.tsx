@@ -23,6 +23,7 @@ import {
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
+import { isDemoOrInvalidUuid } from '../../../lib/demo/demoMode';
 import { useShellStore } from '../../../store/shellStore';
 import {
   getProject,
@@ -85,7 +86,7 @@ type Props = {
 
 export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
   const navigate = useNavigate();
-  const { user, tenant, platformRole, updateProject, removeProject } = useAppStore();
+  const { user, tenant, platformRole, isDemoMode, updateProject, removeProject } = useAppStore();
   const canManage =
     user?.role === 'owner' ||
     user?.role === 'manager' ||
@@ -121,26 +122,46 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const reload = useCallback(async () => {
     if (!loadedOnceRef.current) setLoading(true);
     try {
-      const fresh = await getProject(project.id, tenant?.currency);
-      const proj = fresh || projectRef.current;
-      if (fresh) setProject(fresh);
+      const isDemoProject = isDemoOrInvalidUuid(
+        project.id,
+        Boolean(isDemoMode || tenant?.id === 'demo'),
+      );
 
-      const orgId = tenant?.id;
-      const [rap, costs, incomes, wi, recs, pays, sourceEst, logs] = await Promise.all([
-        loadRapItems(proj.id),
-        loadCostRealizations(proj.id),
-        loadProjectIncomes(proj.id),
-        loadWorkItems(proj.id),
-        orgId ? loadReceivablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
-        orgId ? loadPayablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
-        loadSourceEstimationForProject(proj.id).catch(() => null),
-        loadDailyLogs(proj.id).catch(() => []),
-      ]);
+      let proj = projectRef.current;
+      let rap: Awaited<ReturnType<typeof loadRapItems>> = [];
+      let costs: Awaited<ReturnType<typeof loadCostRealizations>> = [];
+      let incomes: Awaited<ReturnType<typeof loadProjectIncomes>> = [];
+      let wi: Awaited<ReturnType<typeof loadWorkItems>> = [];
+      let recs: Awaited<ReturnType<typeof loadReceivablesByProject>> = [];
+      let pays: Awaited<ReturnType<typeof loadPayablesByProject>> = [];
+      let sourceEst: SourceEstimationInfo | null = null;
+      let logs: DailyLog[] = [];
+      let actuals: Record<string, { qty: number; amount: number }> = {};
+
+      if (!isDemoProject) {
+        const fresh = await getProject(project.id, tenant?.currency);
+        proj = fresh || projectRef.current;
+        if (fresh) setProject(fresh);
+
+        const orgId = tenant?.id;
+        [rap, costs, incomes, wi, recs, pays, sourceEst, logs] = await Promise.all([
+          loadRapItems(proj.id),
+          loadCostRealizations(proj.id),
+          loadProjectIncomes(proj.id),
+          loadWorkItems(proj.id),
+          orgId ? loadReceivablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
+          orgId ? loadPayablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
+          loadSourceEstimationForProject(proj.id).catch(() => null),
+          loadDailyLogs(proj.id).catch(() => []),
+        ]);
+        actuals = await aggregateCostByRapItem(proj.id);
+      }
+
       setRapItems(rap);
       setSourceEstimation(sourceEst);
       setWorkItems(wi);
       setProjectLogs(logs);
-      setRapActuals(await aggregateCostByRapItem(proj.id));
+      setRapActuals(actuals);
       const view = mapPlannerProject({
         project: {
           id: proj.id,
@@ -228,7 +249,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     } finally {
       setLoading(false);
     }
-  }, [project.id, tenant?.currency, tenant?.id, showToast]);
+  }, [project.id, tenant?.currency, tenant?.id, isDemoMode, showToast]);
 
   useEffect(() => {
     void reload();

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Home, FolderOpen, Wallet, Settings, Bell, Menu, X, ArrowLeft,
+  Home, FolderOpen, Wallet, Settings, Bell, Menu, X, ArrowLeft, LogOut,
   Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
   BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User, Eye, BookOpen,
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import { AppHeader, AccountMenu, BottomNav } from './common';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
+import ErrorBoundary from './ErrorBoundary';
 import PreviewModeMenu from './layout/PreviewModeMenu';
 import EntitlementPreviewPanel from './layout/EntitlementPreviewPanel';
 import { PlannerLogo } from './MonefyiLogo';
@@ -51,7 +52,7 @@ export default function Layout({ children }: LayoutProps) {
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
     rightPanelHidden, toggleRightPanelHidden,
     platformRole, uiViewMode, setUiViewMode, entitlementPreviewMode,
-    selectedProjectId, logout,
+    selectedProjectId, logout, isDemoMode,
   } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -65,14 +66,14 @@ export default function Layout({ children }: LayoutProps) {
   const { isLoading: entitlementLoading } = entitlement;
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || isDemoMode || tenant?.id === 'demo') return;
     loadFinanceVersion(user.id)
       .then(setFinanceVersionPreference)
       .catch(() => setFinanceVersionPreference('v3'));
     loadMigrationFlags(user.id)
       .then(setMigrationFlags)
       .catch(() => setMigrationFlags({ ...DEFAULT_MIGRATION_FLAGS }));
-  }, [user?.id, setFinanceVersionPreference, setMigrationFlags]);
+  }, [user?.id, isDemoMode, tenant?.id, setFinanceVersionPreference, setMigrationFlags]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -88,6 +89,8 @@ export default function Layout({ children }: LayoutProps) {
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
   const estimatorOnly = !adminFullAccess && isEstimatorOnlyPlan(entitlement);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
+  const canEditOrg = user?.role === 'owner';
+  const defaultSettingsTab = canEditOrg ? 'organisasi' : 'profil';
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
   const hideMobileProductNav = estimatorOnly && isEstimatorShell;
@@ -246,6 +249,11 @@ export default function Layout({ children }: LayoutProps) {
     setSidebarOpen(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   const openCommandModal = () => {
     if (estimatorOnly) {
       openUpgrade('pro_feature', 'Monefyi AI');
@@ -289,7 +297,7 @@ export default function Layout({ children }: LayoutProps) {
       id: 'settings',
       label: isEstimatorShell ? 'Semua Pengaturan' : 'Pengaturan',
       icon: <Settings className="w-4 h-4 shrink-0" />,
-      onClick: () => goSettingsTab('organisasi'),
+      onClick: () => goSettingsTab(defaultSettingsTab),
     },
     ...(isSuperAdmin ? [{
       id: 'admin',
@@ -460,6 +468,23 @@ export default function Layout({ children }: LayoutProps) {
         {isSuperAdmin && (
           <EntitlementPreviewPanel collapsed={navSidebarCollapsed} />
         )}
+
+        <div className={`border-t border-[#E5EAE8] shrink-0 ${navSidebarCollapsed ? 'p-2' : 'p-3'}`}>
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            title={navSidebarCollapsed ? (isDemoMode ? 'Keluar Demo' : 'Keluar') : undefined}
+            aria-label={isDemoMode ? 'Keluar Demo' : 'Keluar'}
+            className={`w-full flex items-center rounded-xl text-sm font-bold text-[#9F1239] bg-[#FFF1F2] border border-[#FECDD3] hover:bg-rose-100 transition-colors min-h-11 ${
+              navSidebarCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3.5 py-2.5'
+            }`}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            {!navSidebarCollapsed && (
+              <span className="truncate">{isDemoMode ? 'Keluar Demo' : 'Keluar'}</span>
+            )}
+          </button>
+        </div>
       </aside>
 
       {/* Mobile Drawer (Account Menu) */}
@@ -472,7 +497,17 @@ export default function Layout({ children }: LayoutProps) {
           setSidebarOpen(false);
         }}
         userName={user?.name || 'User'}
-        userRole={user?.role === 'owner' ? 'Pemilik' : user?.role === 'manager' ? 'Manajer' : user?.role === 'admin' ? 'Admin' : 'Staff'}
+        userRole={
+          user?.role === 'owner'
+            ? 'Pemilik'
+            : user?.role === 'manager'
+              ? 'Manajer'
+              : user?.role === 'admin'
+                ? 'Admin'
+                : user?.role === 'worker'
+                  ? 'Pekerja'
+                  : 'Staff'
+        }
         tenantName={tenant?.name || 'Monefyi'}
         isSuperAdmin={isSuperAdmin}
         uiViewMode={uiViewMode}
@@ -485,7 +520,7 @@ export default function Layout({ children }: LayoutProps) {
           if (isEstimatorShell) {
             void goSettingsTab('estimator');
           } else {
-            void goSettingsTab('organisasi');
+            void goSettingsTab(defaultSettingsTab);
           }
           setSidebarOpen(false);
         }}
@@ -494,12 +529,12 @@ export default function Layout({ children }: LayoutProps) {
           setSidebarOpen(false);
         }}
         onOpenFullSettings={() => {
-          void goSettingsTab('organisasi');
+          void goSettingsTab(defaultSettingsTab);
           setSidebarOpen(false);
         }}
         onLogout={() => {
           setSidebarOpen(false);
-          void logout();
+          void handleLogout();
         }}
         isOnline={isOnline}
         isEstimator={showEstimatorBrand}
@@ -627,9 +662,11 @@ export default function Layout({ children }: LayoutProps) {
                   </span>
                 )}
               </button>
-              <AnimatePresence>
-                {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
-              </AnimatePresence>
+              <ErrorBoundary componentName="NotificationPanel">
+                <AnimatePresence>
+                  {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+                </AnimatePresence>
+              </ErrorBoundary>
             </div>
 
             {isSuperAdmin && <PreviewModeMenu />}
@@ -648,10 +685,10 @@ export default function Layout({ children }: LayoutProps) {
 
             <button
               type="button"
-              onClick={() => goSettingsTab('organisasi')}
+              onClick={() => goSettingsTab(defaultSettingsTab)}
               className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#F4F7F5] text-[#5B6B7A] hover:text-[#0F172A] transition-colors"
-              aria-label="Pengaturan organisasi"
-              title="Pengaturan organisasi"
+              aria-label={canEditOrg ? 'Pengaturan organisasi' : 'Pengaturan akun'}
+              title={canEditOrg ? 'Pengaturan organisasi' : 'Pengaturan akun'}
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -665,14 +702,27 @@ export default function Layout({ children }: LayoutProps) {
             >
               {user?.name?.charAt(0) || 'U'}
             </button>
+
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="ml-1 inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-[#FECDD3] bg-[#FFF1F2] text-[#9F1239] hover:bg-rose-100 text-xs font-bold transition-colors shrink-0"
+              aria-label={isDemoMode ? 'Keluar Demo' : 'Keluar'}
+              title={isDemoMode ? 'Keluar Demo' : 'Keluar'}
+            >
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xl:inline">{isDemoMode ? 'Keluar Demo' : 'Keluar'}</span>
+            </button>
           </div>
         </header>
 
         {/* Mobile Notification Panel overlay */}
         <div className="lg:hidden">
-          <AnimatePresence>
-            {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
-          </AnimatePresence>
+          <ErrorBoundary componentName="NotificationPanel">
+            <AnimatePresence>
+              {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+            </AnimatePresence>
+          </ErrorBoundary>
         </div>
 
         {/* Page Content + Right Panel */}

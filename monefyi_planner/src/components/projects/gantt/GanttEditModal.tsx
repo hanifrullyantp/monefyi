@@ -42,23 +42,42 @@ export default function GanttEditModal({ task, project, onClose, onSaved }: Gant
       return;
     }
 
-    pushHistory();
-
+    const trimmedName = form.name.trim();
     const wiStatus = !isProject
       ? (form.progress >= 100 ? 'completed' : form.progress > 0 ? 'in_progress' : form.status)
       : form.status;
+    const nextColor = form.barColor || null;
+    const prevColor = task.barColor || null;
 
-    updateTask(task.id, {
-      name: form.name.trim(),
-      startDate: form.start_date,
-      endDate: form.end_date,
-      progress: form.progress,
-      status: wiStatus,
-    }, false);
+    const taskChanged =
+      trimmedName !== task.name ||
+      form.start_date !== task.startDate ||
+      form.end_date !== task.endDate ||
+      form.progress !== task.progress ||
+      wiStatus !== task.status;
+    const colorChanged = nextColor !== prevColor;
 
-    setBarColor(task.id, form.barColor || null);
+    if (!taskChanged && !colorChanged) {
+      onClose();
+      return;
+    }
 
-    useGanttStore.setState({ isDirty: true });
+    pushHistory();
+
+    if (taskChanged) {
+      updateTask(task.id, {
+        name: trimmedName,
+        startDate: form.start_date,
+        endDate: form.end_date,
+        progress: form.progress,
+        status: wiStatus,
+      }, false);
+    }
+
+    if (colorChanged) {
+      setBarColor(task.id, nextColor, { skipHistory: true });
+    }
+
     showToast('Perubahan diterapkan — klik Simpan untuk persist', 'info');
     onSaved();
     onClose();

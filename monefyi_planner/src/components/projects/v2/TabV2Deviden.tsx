@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Coins, Loader2, Plus, Trash2 } from 'lucide-react';
 import type { Project } from '../../../store/appStore';
+import { useAppStore } from '../../../store/appStore';
+import { isDemoOrInvalidUuid } from '../../../lib/demo/demoMode';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import { formatRupiah } from '../../../utils/projectUi';
 import {
@@ -24,6 +26,7 @@ type Props = {
 export default function TabV2Deviden({
   project, normalized, orgId, userId, canManage = true, onRefresh,
 }: Props) {
+  const isDemoMode = useAppStore(s => s.isDemoMode);
   const [config, setConfig] = useState<DividendConfig>({ parties: [], payouts: [] });
   const [lines, setLines] = useState<DividendPreviewLine[]>([]);
   const [pool, setPool] = useState(0);
@@ -39,6 +42,14 @@ export default function TabV2Deviden({
 
   const reload = useCallback(async (next?: DividendConfig) => {
     if (!orgId) return;
+    if (isDemoOrInvalidUuid(orgId, isDemoMode) || isDemoOrInvalidUuid(project.id, isDemoMode)) {
+      setLines([]);
+      setPool(Math.max(0, contractValue - spent));
+      setOwnerPiutang(0);
+      setPctTotal(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const preview = await buildProjectDividendPreview({
@@ -59,7 +70,7 @@ export default function TabV2Deviden({
     } finally {
       setLoading(false);
     }
-  }, [orgId, project.id, received, spent, contractValue]);
+  }, [orgId, project.id, received, spent, contractValue, isDemoMode]);
 
   useEffect(() => { void reload(); }, [reload]);
 

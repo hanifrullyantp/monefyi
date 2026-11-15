@@ -25,13 +25,16 @@ export default function FinanceV2Routes() {
   const setActiveTab = useAppStore(s => s.setActiveTab);
   const setFinanceVersionPreference = useAppStore(s => s.setFinanceVersionPreference);
   const user = useAppStore(s => s.user);
+  const tenant = useAppStore(s => s.tenant);
+  const isDemoMode = useAppStore(s => s.isDemoMode);
+  const demoActive = isDemoMode || tenant?.id === 'demo';
 
   useEffect(() => {
     setActiveTab('finance');
   }, [setActiveTab]);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || demoActive) return;
     let cancelled = false;
     loadFinanceVersion(user.id)
       .then(version => {
@@ -42,7 +45,7 @@ export default function FinanceV2Routes() {
         if (!cancelled) setFinanceVersionPreference('v3');
       });
     return () => { cancelled = true; };
-  }, [user?.id, setFinanceVersionPreference]);
+  }, [user?.id, demoActive, setFinanceVersionPreference]);
 
   return (
     <FinanceAccessGuard>

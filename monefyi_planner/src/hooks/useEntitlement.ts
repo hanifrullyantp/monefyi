@@ -24,7 +24,7 @@ export function invalidateEntitlementCache(): void {
 
 export function useEntitlement() {
   const {
-    tenant, user, platformRole, projects, authInitializing, entitlementPreviewMode,
+    tenant, user, platformRole, projects, authInitializing, entitlementPreviewMode, isDemoMode,
   } = useAppStore();
   const [entitlement, setEntitlement] = useState<EntitlementSnapshot>(EMPTY);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +36,20 @@ export function useEntitlement() {
       const snap = entitlementPreviewMode === 'full'
         ? buildFullAccessEntitlement(activeCount, 1)
         : buildPreviewEntitlement(entitlementPreviewMode, activeCount, 1);
+      setEntitlement(snap);
+      setIsLoading(false);
+      return;
+    }
+
+    if (isDemoMode || tenant?.id === 'demo') {
+      const activeCount = projects.filter(p => p.status !== 'archived' && p.status !== 'completed').length;
+      const snap = buildEntitlementSnapshot({
+        subscription: null,
+        orgPlan: tenant?.plan ?? 'pro',
+        activeProjectCount: activeCount,
+        memberCount: 3,
+        hasEstimations: true,
+      });
       setEntitlement(snap);
       setIsLoading(false);
       return;
@@ -76,7 +90,7 @@ export function useEntitlement() {
       loadingRef.current = false;
       setIsLoading(false);
     }
-  }, [tenant?.id, tenant?.plan, platformRole, user?.email, projects, authInitializing, entitlementPreviewMode]);
+  }, [tenant?.id, tenant?.plan, platformRole, user?.email, projects, authInitializing, entitlementPreviewMode, isDemoMode]);
 
   useEffect(() => {
     void refresh();
@@ -84,11 +98,15 @@ export function useEntitlement() {
 
   useEffect(() => {
     const onRefresh = () => { void refresh(); };
+    const onInvalidate = () => {
+      cache = null;
+      void refresh();
+    };
     window.addEventListener('focus', onRefresh);
-    window.addEventListener('monefyi:entitlement-invalidate', onRefresh);
+    window.addEventListener('monefyi:entitlement-invalidate', onInvalidate);
     return () => {
       window.removeEventListener('focus', onRefresh);
-      window.removeEventListener('monefyi:entitlement-invalidate', onRefresh);
+      window.removeEventListener('monefyi:entitlement-invalidate', onInvalidate);
     };
   }, [refresh]);
 

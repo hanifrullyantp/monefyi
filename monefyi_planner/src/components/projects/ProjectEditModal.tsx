@@ -48,6 +48,14 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
       setError('Tanggal selesai harus setelah tanggal mulai');
       return;
     }
+    if (!Number.isFinite(form.contract_value) || form.contract_value < 0) {
+      setError('Nilai kontrak tidak boleh negatif');
+      return;
+    }
+    if (!Number.isFinite(form.total_budget_planned) || form.total_budget_planned < 0) {
+      setError('Total RAP / budget rencana tidak boleh negatif');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -112,6 +120,13 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
           </button>
         </div>
 
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            void handleSave();
+          }}
+          className="flex flex-col flex-1 min-h-0 overflow-hidden"
+        >
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
           <input
             value={form.name}
@@ -185,7 +200,7 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
               type="number"
               min={0}
               value={form.contract_value || ''}
-              onChange={e => setForm({ ...form, contract_value: Number(e.target.value) })}
+              onChange={e => setForm({ ...form, contract_value: e.target.value === '' ? 0 : Number(e.target.value) })}
               placeholder="Total nilai kontrak dengan klien"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
             />
@@ -204,7 +219,7 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
               type="number"
               min={0}
               value={form.total_budget_planned || ''}
-              onChange={e => setForm({ ...form, total_budget_planned: Number(e.target.value) })}
+              onChange={e => setForm({ ...form, total_budget_planned: e.target.value === '' ? 0 : Number(e.target.value) })}
               placeholder="Jumlah RAP (material + tenaga)"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
             />
@@ -239,7 +254,7 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
                       <p className="font-bold text-sm">Arsipkan proyek ini?</p>
                       <p className="text-xs mt-1 text-rose-700 leading-relaxed">
                         Proyek disembunyikan dari daftar aktif. Data disimpan di arsip selama <strong>30 hari</strong>.
-                        Hanya <strong>Super Admin</strong> yang dapat memulihkan proyek sebelum masa arsip habis.
+                        <strong>Owner</strong>, <strong>Manager</strong> organisasi, atau <strong>Super Admin</strong> dapat memulihkan proyek sebelum masa arsip habis.
                       </p>
                     </div>
                   </div>
@@ -297,8 +312,7 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
             Batal
           </button>
           <button
-            type="button"
-            onClick={handleSave}
+            type="submit"
             disabled={saving}
             className="flex-1 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-60 flex items-center justify-center gap-2"
           >
@@ -306,6 +320,7 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
             Simpan perubahan
           </button>
         </div>
+        </form>
       </motion.div>
     </motion.div>
   );

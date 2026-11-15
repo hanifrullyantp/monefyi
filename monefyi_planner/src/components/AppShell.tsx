@@ -26,20 +26,25 @@ function AppContent() {
   const { id: projectIdParam } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, tenant, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion, entitlementPreviewMode } = useAppStore();
+  const {
+    user, tenant, activeTab, isDemoMode, setOnline, setSyncStatus,
+    setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion, entitlementPreviewMode,
+  } = useAppStore();
   const entitlement = useEntitlement();
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
 
   useEffect(() => {
-    if (user?.id) void hydrateAIConfigFromAccount(user.id);
-  }, [user?.id]);
+    if (user?.id && !isDemoMode && tenant?.id !== 'demo') {
+      void hydrateAIConfigFromAccount(user.id);
+    }
+  }, [user?.id, isDemoMode, tenant?.id]);
 
   useEffect(() => {
-    if (tenant?.id) {
+    if (tenant?.id && !isDemoMode && tenant.id !== 'demo') {
       void fetchTelegramConfigFromSupabase(tenant.id);
       void fetchFieldMemberContactsFromSupabase(tenant.id);
     }
-  }, [tenant?.id]);
+  }, [tenant?.id, isDemoMode]);
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -114,6 +119,7 @@ function AppContent() {
   ]);
 
   const renderPage = () => {
+    if (activeTab === 'settings') return <Settings />;
     if (isWorker) return <WorkerDashboard />;
     switch (activeTab) {
       case 'home':
@@ -143,8 +149,6 @@ function AppContent() {
             {canAccessHr ? <HrEmployees /> : null}
           </PlannerModuleGuard>
         );
-      case 'settings':
-        return <Settings />;
       case 'estimator':
       case 'database':
         return null;
@@ -204,12 +208,21 @@ function DatabaseShell() {
   );
 }
 
+function SettingsShell() {
+  return (
+    <Layout>
+      <Settings />
+    </Layout>
+  );
+}
+
 export default function AppShell() {
   return (
     <Routes>
         <Route index element={<AppContent />} />
         <Route path="projects/:id" element={<AppContent />} />
         <Route path="database" element={<DatabaseShell />} />
+        <Route path="settings" element={<SettingsShell />} />
         <Route path="estimator/*" element={<EstimatorShell />} />
         <Route path="finance-v2/*" element={<FinanceV2Shell />} />
         <Route path="uji-agen" element={<Layout><AgentTrialPage /></Layout>} />

@@ -28,7 +28,8 @@ type FinanceView = 'dashboard' | 'laporan';
 
 export default function Finance() {
   const navigate = useNavigate();
-  const { tenant, projects, setCommandModalOpen, setActiveTab, user } = useAppStore();
+  const { tenant, projects, isDemoMode, setCommandModalOpen, setActiveTab, user } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const [transactions, setTransactions] = useState<UnifiedTransaction[]>([]);
   const [byProject, setByProject] = useState<Array<{
     projectId: string;
@@ -60,6 +61,39 @@ export default function Finance() {
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
+    if (demoActive) {
+      // Mode demo menyusun ringkasan lokal dari state proyek (menghindari query tenant_id='demo' -> 22P02).
+      const demoProjects = projects.map(p => {
+        const budget = p.total_budget_planned || 0;
+        const spent = p.spent_amount || 0;
+        const received = p.total_received || 0;
+        return {
+          projectId: p.id,
+          name: p.name,
+          budget,
+          spent,
+          received,
+          surplus: received - spent,
+          interProjectDebt: 0,
+        };
+      });
+      const totalOutflow = demoProjects.reduce((s, p) => s + p.spent, 0);
+      const totalInflow = demoProjects.reduce((s, p) => s + p.received, 0);
+      const totalBudget = demoProjects.reduce((s, p) => s + p.budget, 0);
+      setTransactions([]);
+      setByProject(demoProjects);
+      setTotals({
+        totalInflow,
+        totalOutflow,
+        netCash: totalInflow - totalOutflow,
+        totalBudget,
+        interProjectDebtOutstanding: 0,
+      });
+      setCashflow([]);
+      setTransfers([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [tx, finance, cf, tr] = await Promise.all([
@@ -84,7 +118,7 @@ export default function Finance() {
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id, period]);
+  }, [tenant?.id, period, demoActive, projects]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -195,7 +229,13 @@ export default function Finance() {
       </div>
 
       {view === 'laporan' ? (
-        <BusinessReportPanel />
+        demoActive ? (
+          <div className="bg-white rounded-2xl border border-[#E5EAE8] p-8 text-center text-sm text-[#5B6B7A]">
+            Laporan Bisnis tidak tersedia di mode demo.
+          </div>
+        ) : (
+          <BusinessReportPanel />
+        )
       ) : loading && transactions.length === 0 ? (
         <div className="flex items-center justify-center h-48">
           <Loader2 className="w-8 h-8 animate-spin text-[#059669]" />

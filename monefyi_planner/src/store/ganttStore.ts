@@ -56,7 +56,7 @@ interface GanttState {
   setBarColors: (colors: Record<string, string>) => void;
   commitBaseline: () => void;
   restoreSnapshot: (snap: GanttSnapshot) => void;
-  pushHistory: () => void;
+  pushHistory: (snapshot?: GanttSnapshot) => void;
   undo: () => void;
   redo: () => void;
   updateTask: (id: string, patch: Partial<GanttTask>, recordHistory?: boolean) => void;
@@ -82,7 +82,11 @@ interface GanttState {
   resetAdvancedFilters: () => void;
   setShowAdvancedFilters: (v: boolean) => void;
   setEditTaskId: (id: string | null) => void;
-  setBarColor: (taskId: string, color: string | null) => void;
+  setBarColor: (
+    taskId: string,
+    color: string | null,
+    options?: boolean | { skipHistory?: boolean },
+  ) => void;
   setIsSaving: (v: boolean) => void;
   setHasDraft: (v: boolean) => void;
   getSnapshot: () => GanttSnapshot;
@@ -151,25 +155,44 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   },
 
   restoreSnapshot: snap => {
+    const cloned = cloneSnapshot(snap);
+    const nextBarColors = { ...(cloned.barColors || {}) };
+    const syncedTasks = cloned.tasks.map(t => ({
+      ...t,
+      barColor: nextBarColors[t.id] || undefined,
+    }));
+    const normalizedSnap: GanttSnapshot = {
+      tasks: syncedTasks,
+      dependencies: cloned.dependencies,
+      projectOrder: [...cloned.projectOrder],
+      barColors: nextBarColors,
+    };
     set({
-      tasks: cloneSnapshot(snap).tasks,
-      dependencies: cloneSnapshot(snap).dependencies,
-      projectOrder: [...snap.projectOrder],
-      barColors: { ...snap.barColors },
-      isDirty: computeDirty(snap, get().baseline),
+      tasks: normalizedSnap.tasks,
+      dependencies: normalizedSnap.dependencies,
+      projectOrder: normalizedSnap.projectOrder,
+      barColors: normalizedSnap.barColors,
+      isDirty: computeDirty(normalizedSnap, get().baseline),
     });
   },
 
-  pushHistory: () => {
-    const snap = pickSnapshot(get());
-    set(s => ({
-      undoStack: [...s.undoStack.slice(-(MAX_HISTORY - 1)), snap],
-      redoStack: [],
-    }));
+  pushHistory: snapshot => {
+    const isSnap = snapshot && typeof snapshot === 'object' && Array.isArray(snapshot.tasks);
+    const snap = isSnap ? cloneSnapshot(snapshot) : pickSnapshot(get());
+    set(s => {
+      const top = s.undoStack[s.undoStack.length - 1];
+      if (top && snapshotsEqual(top, snap)) {
+        return s.redoStack.length ? { redoStack: [] } : s;
+      }
+      return {
+        undoStack: [...s.undoStack.slice(-(MAX_HISTORY - 1)), snap],
+        redoStack: [],
+      };
+    });
   },
 
   undo: () => {
-    const { undoStack, baseline } = get();
+    const { undoStack } = get();
     if (!undoStack.length) return;
     const prev = undoStack[undoStack.length - 1];
     const current = pickSnapshot(get());
@@ -178,11 +201,10 @@ export const useGanttStore = create<GanttState>((set, get) => ({
       redoStack: [...get().redoStack, current],
     });
     get().restoreSnapshot(prev);
-    set({ isDirty: computeDirty(prev, baseline) });
   },
 
   redo: () => {
-    const { redoStack, baseline } = get();
+    const { redoStack } = get();
     if (!redoStack.length) return;
     const next = redoStack[redoStack.length - 1];
     const current = pickSnapshot(get());
@@ -191,7 +213,6 @@ export const useGanttStore = create<GanttState>((set, get) => ({
       undoStack: [...get().undoStack, current],
     });
     get().restoreSnapshot(next);
-    set({ isDirty: computeDirty(next, baseline) });
   },
 
   setTasks: tasks => {
@@ -201,7 +222,14 @@ export const useGanttStore = create<GanttState>((set, get) => ({
 
   setDependencies: deps => set({ dependencies: deps }),
 
-  setBarColors: colors => set({ barColors: colors }),
+  setBarColors: colors =>
+    set(s => ({
+      barColors: { ...colors },
+      tasks: s.tasks.map(t => ({
+        ...t,
+        barColor: colors[t.id] || undefined,
+      })),
+    })),
 
   updateTask: (id, patch, recordHistory = true) => {
     if (recordHistory) get().pushHistory();
@@ -310,16 +338,23 @@ export const useGanttStore = create<GanttState>((set, get) => ({
 
   setEditTaskId: id => set({ editTaskId: id }),
 
-  setBarColor: (taskId, color) => {
-    get().pushHistory();
+  setBarColor: (taskId, color, options = true) => {
+    const shouldRecord = typeof options === 'boolean' ? options : !options?.skipHistory;
+    const nextColor = color || undefined;
+    const currentState = get();
+    const prevColor = currentState.barColors[taskId] || undefined;
+    const prevTaskColor = currentState.tasks.find(t => t.id === taskId)?.barColor || undefined;
+    if (prevColor === nextColor && prevTaskColor === nextColor) {
+      return;
+    }
+    if (shouldRecord) get().pushHistory();
     set(s => {
       const next = { ...s.barColors };
-      if (color) next[taskId] = color;
+      if (nextColor) next[taskId] = nextColor;
       else delete next[taskId];
       return {
         barColors: next,
-        tasks: s.tasks.map(t => t.id === taskId ? { ...t, barColor: color || undefined } : t),
-        isDirty: true,
+        tasks: s.tasks.map(t => (t.id === taskId ? { ...t, barColor: nextColor } : t)),
       };
     });
     set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
