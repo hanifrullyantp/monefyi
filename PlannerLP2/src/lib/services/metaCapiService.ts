@@ -58,7 +58,7 @@ export async function sendMetaCapiEvent(
           event_name: event.eventName,
           event_time: Math.floor(Date.now() / 1000),
           action_source: 'website',
-          event_source_url: event.eventSourceUrl || (typeof window !== 'undefined' ? window.location.href : 'https://estimator.monefyi.com'),
+          event_source_url: event.eventSourceUrl || (typeof window !== 'undefined' ? window.location.href : 'https://estimator.froyek.com'),
           user_data: {
             em: hashedEmail ? [hashedEmail] : undefined,
             ph: hashedPhone ? [hashedPhone] : undefined,

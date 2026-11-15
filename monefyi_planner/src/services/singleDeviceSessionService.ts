@@ -2,9 +2,26 @@ import { supabase } from '../lib/supabase';
 import { isPlatformAdmin } from './adminService';
 import { signOutGlobal } from './authService';
 
-/** Super admin boleh login di banyak perangkat sekaligus. */
-export function isExemptFromSingleDeviceSession(platformRole: string, email?: string): boolean {
-  return isPlatformAdmin(platformRole, email);
+/** Super admin atau akun dengan izin multi-device (seperti Indra di tim Hanif Rullyant) boleh login di banyak perangkat sekaligus. */
+export function isExemptFromSingleDeviceSession(
+  platformRole: string,
+  email?: string,
+  settings?: Record<string, any>
+): boolean {
+  if (isPlatformAdmin(platformRole, email)) return true;
+  if (settings?.exempt_single_device || settings?.allow_multi_device) return true;
+  if (!email) return false;
+  const lower = email.trim().toLowerCase();
+  if (
+    lower === 'indra@fdfd.com' ||
+    lower === 'indragunawan.anzon93@gmail.com' ||
+    lower === 'indra@gmail.com' ||
+    lower.startsWith('indra@') ||
+    lower.includes('indra')
+  ) {
+    return true;
+  }
+  return false;
 }
 
 const SESSION_TOKEN_KEY = 'monefyi_active_device_session_v1';
@@ -79,6 +96,9 @@ export function startSingleDeviceWatcher(
         .maybeSingle();
 
       const remoteSettings = profile?.settings as Record<string, any> | undefined;
+      if (remoteSettings?.exempt_single_device || remoteSettings?.allow_multi_device) {
+        return;
+      }
       const remoteToken = remoteSettings?.active_device_session;
 
       // Jika remote token ada dan berbeda dari token lokal perangkat ini, berarti ada login baru di perangkat lain
@@ -137,6 +157,9 @@ export function startSingleDeviceWatcher(
       },
       (payload) => {
         const newSettings = (payload.new as any)?.settings;
+        if (newSettings?.exempt_single_device || newSettings?.allow_multi_device) {
+          return;
+        }
         const newRemoteToken = newSettings?.active_device_session;
         if (newRemoteToken && newRemoteToken !== localToken) {
           handleConflict();

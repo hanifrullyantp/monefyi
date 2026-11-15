@@ -43,7 +43,7 @@ export async function findTemplateCreative(input: {
   let pageId = "";
   let imageHash = "";
   let instagramUserId = "";
-  let linkUrl = "https://estimator.monefyi.com/";
+  let linkUrl = "https://estimator.froyek.com/";
   let sourceAdId = "";
 
   for (const ad of prioritized) {

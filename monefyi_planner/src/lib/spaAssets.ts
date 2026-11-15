@@ -3,7 +3,7 @@ const SPA_ORIGIN =
   (import.meta.env.VITE_PLANNER_APP_ORIGIN as string | undefined)?.replace(/\/$/, '')
   || 'https://monefyi-planner.vercel.app';
 
-const PROXIED_HOSTS = ['estimator.monefyi.com', 'planner.monefyi.com'];
+const PROXIED_HOSTS = ['estimator.froyek.com', 'froyek.com', 'estimator.monefyi.com', 'planner.monefyi.com'];
 
 /** Resolve /icons/... when app runs behind estimator/planner domain proxy. */
 export function resolveSpaAssetUrl(path: string): string {

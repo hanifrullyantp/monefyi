@@ -1,4 +1,4 @@
-export const FREE_ESTIMATOR_WATERMARK = 'Dibuat dengan Estimator · estimator.monefyi.com';
+export const FREE_ESTIMATOR_WATERMARK = 'Dibuat dengan Estimator · estimator.froyek.com';
 
 export type PdfPlanPolicy = {
   /** Paket gratis selalu membawa watermark Estimator. */

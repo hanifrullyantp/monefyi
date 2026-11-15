@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-/** Landing v1 — served at planner.monefyi.com/lp2 via planner-lp2 rewrites. */
+/** Landing v1 — served at froyek.com/lp2 via planner-lp2 rewrites. */
 const basePath = (process.env.NEXT_PUBLIC_BASE_PATH || "/lp2").replace(/\/$/, "") || "/lp2";
 
 function resolvePlannerAppOrigin(): string {
@@ -16,7 +16,7 @@ function resolvePlannerAppOrigin(): string {
 const plannerAppOrigin = resolvePlannerAppOrigin();
 const publicPlannerUrl =
   process.env.NEXT_PUBLIC_PLANNER_APP_URL?.trim()?.replace(/\/$/, "") ||
-  "https://planner.monefyi.com";
+  "https://froyek.com";
 
 const nextConfig: NextConfig = {
   basePath,

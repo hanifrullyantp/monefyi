@@ -132,7 +132,7 @@ export const OverlayUI60s: React.FC = () => {
             {/* Glowing CTA Button in Emerald */}
             <div className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-7 py-3 rounded-2xl shadow-xl mt-2 cursor-pointer">
               <Globe className="w-5 h-5 text-emerald-200" />
-              <span className="text-xl font-black font-mono tracking-tight">estimator.monefyi.com</span>
+              <span className="text-xl font-black font-mono tracking-tight">estimator.froyek.com</span>
               <div className="w-7 h-7 rounded-full bg-white text-emerald-800 flex items-center justify-center font-black shadow">
                 <ArrowRight className="w-4 h-4 stroke-[3]" />
               </div>

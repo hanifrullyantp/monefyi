@@ -304,10 +304,11 @@ export function useBootstrap() {
     };
   }, [user?.id, tenant?.id, refreshData]);
 
-  // Single Device Login Watcher: 1 perangkat per akun (kecuali super admin)
+  // Single Device Login Watcher: 1 perangkat per akun (kecuali super admin / multi-device)
   useEffect(() => {
     if (!user?.id || useAppStore.getState().isDemoMode) return;
-    if (isExemptFromSingleDeviceSession(platformRole, user.email)) return;
+    const profileSettings = (useAppStore.getState().user as any)?.settings;
+    if (isExemptFromSingleDeviceSession(platformRole, user.email, profileSettings)) return;
 
     void registerActiveDeviceSession(user.id);
     const stopWatcher = startSingleDeviceWatcher(user.id, (msg) => {

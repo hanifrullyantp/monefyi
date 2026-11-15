@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const host = req.headers.get("host") || "estimator.monefyi.com";
+    const host = req.headers.get("host") || "estimator.froyek.com";
     const protocol = host.includes("localhost") ? "http" : "https";
     const appUrl = `${protocol}://${host}/app/estimator`;
 

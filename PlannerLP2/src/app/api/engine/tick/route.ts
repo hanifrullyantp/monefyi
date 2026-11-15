@@ -196,51 +196,50 @@ async function handleTick(req: NextRequest, ctx: TickCtx) {
     await setPhase(ctx.runId, "decide", "Menyusun ringkasan strategi dan rencana aksi.");
     const systemPrompt = `Anda adalah Monefyi Winning Engine (Facebook/Meta Ads & Growth Expert pengalaman 10 tahun mengelola budget hingga miliaran Rupiah).
 KONTEKS PRODUK YANG DIJUAL:
-- Produk Inti: Monefyi Estimator (website: estimator.monefyi.com)
+- Produk Inti: Monefyi Estimator (website: estimator.froyek.com)
 - Target Audiens Iklan: Kontraktor Umum, Interior Designer, Kitchen Set Vendor, dan Subkontraktor Sipil.
 - Nilai & Masalah Utama: Kontraktor sering kalah tender atau telat closing karena butuh 2-3 hari hitung RAB manual di rumah. Monefyi Estimator memampukan mereka hitung harga akurat dalam 1 menit langsung di HP saat survei lokasi, lalu kirim PDF penawaran berlogo ke WhatsApp klien sebelum mereka sempat membandingkan dengan vendor lain.
 - Struktur Harga: Sekali Bayar (Lifetime) — Paket Standard Rp 93.000 / Rp 150.000, Paket Pro Rp 199.000 / Rp 250.000. Add-on Order Bump: Upgrade ke Estimator PRO +Rp 50.000 (Hemat Rp 50.000).
-PERINGATAN PENTING: JANGAN menyamakan produk ini dengan aplikasi pengatur keuangan pribadi atau chat bot personal finance monefyi.com. Segala evaluasi Offer, Copywriting Landing Page, Funnel, dan Iklan WAJIB 100% berfokus pada Monefyi Estimator (estimator.monefyi.com) untuk kontraktor/interior.
+PERINGATAN PENTING: JANGAN menyamakan produk ini dengan aplikasi pengatur keuangan pribadi atau chat bot personal finance monefyi.com. Segala evaluasi Offer, Copywriting Landing Page, Funnel, dan Iklan WAJIB 100% berfokus pada Monefyi Estimator (estimator.froyek.com) untuk kontraktor/interior.
 
 ATURAN KOMUNIKASI WAJIB:
 1. DILARANG menggunakan emoticon/emoji sama sekali.
 1a. Hanya gunakan angka yang ada di data. Jika data suatu pilar belum ada, tulis "data belum cukup" dan jangan mengarang angka.
 1b. Setiap rekomendasi wajib menyebut bukti (angka), jendela data, dan status learning phase. Sebutkan juga apa yang TIDAK dilakukan dan alasannya.
 2. Gunakan bahasa Indonesia bisnis yang jernih, tegas, mudah dipahami oleh pemilik bisnis (tidak membuat pusing), namun berbasis angka riil.
-3. Anda menilai 5 Pilar secara utuh: (1) Produk, Harga & Offer Estimator, (2) Kecepatan & Copywriting Landing Page estimator.monefyi.com, (3) Checkout & AOV Funnel (Order Bump Mayar), (4) Meta Ads & Rapid Testing, (5) Tracking Pixel + CAPI.
+3. Anda menilai 5 Pilar secara utuh: (1) Produk, Harga & Offer Estimator, (2) Kecepatan & Copywriting Landing Page estimator.froyek.com, (3) Checkout & AOV Funnel (Order Bump Mayar), (4) Meta Ads & Rapid Testing, (5) Tracking Pixel + CAPI.
 4. Berikan ringkasan eksekutif maksimal 4 poin singkat:
    - Diagnosa Jujur Saat Ini (Apa penghambat terbesar menuju winning kampanye Monefyi Estimator)
    - Strategi Produk & Offer (Paket Standard vs Pro & Bonus Stacking Kontraktor)
-   - Strategi Copywriting Landing Page estimator.monefyi.com & Checkout
-   - Langkah Meta Ads sesuai ${
-     config.mode === "cuan"
-       ? `Mode Cuan (Aman di rentang Rp ${config.minDailyBudget.toLocaleString(
-           "id-ID"
-         )} - Rp ${config.maxDailyBudget.toLocaleString("id-ID")}/hari, menunggu persetujuan user)`
-       : `Mode Advance (Skala besar dengan plafon Rp ${config.approvedDailyCeiling.toLocaleString(
-           "id-ID"
-         )}/hari)`
-   }.`;
+   - Strategi Copywriting Landing Page estimator.froyek.com & Checkout
+   - Langkah Meta Ads sesuai ${config.mode === "cuan"
+        ? `Mode Cuan (Aman di rentang Rp ${config.minDailyBudget.toLocaleString(
+          "id-ID"
+        )} - Rp ${config.maxDailyBudget.toLocaleString("id-ID")}/hari, menunggu persetujuan user)`
+        : `Mode Advance (Skala besar dengan plafon Rp ${config.approvedDailyCeiling.toLocaleString(
+          "id-ID"
+        )}/hari)`
+      }.`;
 
-     const now = new Date();
-     const dateStr = now.toLocaleDateString("id-ID", {
-       weekday: "long",
-       year: "numeric",
-       month: "long",
-       day: "numeric",
-     });
-     const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-     const totalCampSpend = campaigns.reduce((s: number, c: any) => s + Number(c.spend || 0), 0);
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("id-ID", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+    const totalCampSpend = campaigns.reduce((s: number, c: any) => s + Number(c.spend || 0), 0);
 
-     const userPrompt = `Waktu Analisa Real-Time: ${dateStr}, ${timeStr} WIB.
+    const userPrompt = `Waktu Analisa Real-Time: ${dateStr}, ${timeStr} WIB.
 Jumlah Kampanye Terdeteksi: ${campaigns.length}
 Total Spend Terpantau: Rp ${totalCampSpend.toLocaleString("id-ID")}
 Skor Keseluruhan 5 Pilar: ${diagnostics.overallScore}/100
 
 Detail 5 Pilar:
 ${diagnostics.pillars
-  .map((p) => `- ${p.label}: Skor ${p.score}/100 (${p.headlineMetric}) -> ${p.honestDiagnosis}`)
-  .join("\n")}
+        .map((p) => `- ${p.label}: Skor ${p.score}/100 (${p.headlineMetric}) -> ${p.honestDiagnosis}`)
+        .join("\n")}
 
 Daftar Kampanye Utama:
 Jendela data keputusan: ${config.analysisWindowDays} hari terakhir. Data di luar jendela ini tidak dipakai.
@@ -337,16 +336,15 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
     const executiveBrief = llmStrategistResult.ok && llmStrategistResult.text
       ? llmStrategistResult.text
       : [
-          `Ringkasan Eksekutif Real-Time (${dateStr} - ${timeStr} WIB):`,
-          `1. Diagnosa 5 Pilar: Skor kesiapan sistem berada di ${diagnostics.overallScore}/100 dari ${campaigns.length} kampanye terpantau (Total Spend: Rp ${totalCampSpend.toLocaleString("id-ID")}). Fokus utama adalah menyelaraskan kekuatan Offer, kecepatan/copywriting Landing Page, dan efisiensi belanja iklan.`,
-          `2. Evaluasi Produk & Offer: ${diagnostics.pillars[0]?.honestDiagnosis || ""}`,
-          `3. Evaluasi Landing Page & Checkout: ${diagnostics.pillars[1]?.honestDiagnosis || ""}`,
-          `4. Rencana Meta Ads (${
-            config.mode === "cuan" ? "Mode Cuan - Menunggu Persetujuan Anda" : "Mode Advance - Otonom Terkendali"
-          }): Terdapat ${diagnostics.plans.length} langkah terstruktur yang siap dieksekusi di dalam batas anggaran Rp ${config.minDailyBudget.toLocaleString(
-            "id-ID"
-          )} s/d Rp ${config.maxDailyBudget.toLocaleString("id-ID")}/hari.`,
-        ].join("\n\n");
+        `Ringkasan Eksekutif Real-Time (${dateStr} - ${timeStr} WIB):`,
+        `1. Diagnosa 5 Pilar: Skor kesiapan sistem berada di ${diagnostics.overallScore}/100 dari ${campaigns.length} kampanye terpantau (Total Spend: Rp ${totalCampSpend.toLocaleString("id-ID")}). Fokus utama adalah menyelaraskan kekuatan Offer, kecepatan/copywriting Landing Page, dan efisiensi belanja iklan.`,
+        `2. Evaluasi Produk & Offer: ${diagnostics.pillars[0]?.honestDiagnosis || ""}`,
+        `3. Evaluasi Landing Page & Checkout: ${diagnostics.pillars[1]?.honestDiagnosis || ""}`,
+        `4. Rencana Meta Ads (${config.mode === "cuan" ? "Mode Cuan - Menunggu Persetujuan Anda" : "Mode Advance - Otonom Terkendali"
+        }): Terdapat ${diagnostics.plans.length} langkah terstruktur yang siap dieksekusi di dalam batas anggaran Rp ${config.minDailyBudget.toLocaleString(
+          "id-ID"
+        )} s/d Rp ${config.maxDailyBudget.toLocaleString("id-ID")}/hari.`,
+      ].join("\n\n");
 
     // 3. Mode Otonom: AI mengeksekusi sendiri aksi Meta yang lolos Guardrail (pause boncos & scale bertahap).
     //    Setiap aksi dikirim ke /api/engine/apply, yang memeriksa Guardrail lagi, membaca budget riil,
@@ -404,14 +402,12 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
     let notificationResult = null;
     if (body.sendNotification) {
       const notifMessage = [
-        `[LAPORAN MONEFYI WINNING ENGINE - ${
-          config.mode === "cuan" ? "MODE CUAN" : "MODE ADVANCE"
+        `[LAPORAN MONEFYI WINNING ENGINE - ${config.mode === "cuan" ? "MODE CUAN" : "MODE ADVANCE"
         }]`,
         `Skor Kesehatan 5 Pilar: ${diagnostics.overallScore}/100`,
         ...diagnostics.pillars.map((p) => `- ${p.label}: ${p.score}/100 (${p.headlineMetric})`),
         ``,
-        `Rencana Tindakan Siap: ${finalPlans.filter((p) => p.status === "pending").length} menunggu persetujuan${
-          autoExecutedIds.length > 0 ? `, ${autoExecutedIds.length} dieksekusi otomatis` : ""
+        `Rencana Tindakan Siap: ${finalPlans.filter((p) => p.status === "pending").length} menunggu persetujuan${autoExecutedIds.length > 0 ? `, ${autoExecutedIds.length} dieksekusi otomatis` : ""
         }.`,
         `Buka dashboard Monefyi > tab Winning Engine untuk meninjau & menyetujui rencana.`,
       ].join("\n");

@@ -112,7 +112,7 @@ async function run() {
     assert.equal(mob.hasLargeMobileCta, true);
     assert.equal(mob.heroHeadline, "Hitung Penawaran Proyek");
 
-    const exp = evaluatePageExperience({ ok: true, url: "https://estimator.monefyi.com/", title: "Monefyi Estimator", prices: [], hasOrderCta: true, responseTimeMs: 2600, mobileAudit: mob });
+    const exp = evaluatePageExperience({ ok: true, url: "https://estimator.froyek.com/", title: "Monefyi Estimator", prices: [], hasOrderCta: true, responseTimeMs: 2600, mobileAudit: mob });
     assert.ok(exp.some((x) => x.includes("lambat")));
 
     const mm = evaluateMessageMatch([mkAd("a1", { title: "Hitung RAB Kitchen Set", body: "Kirim PDF survei ke WhatsApp klien" })], { title: "Monefyi Estimator", ...mob });

@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
             type: "account_access",
             planTier: resolvedPlanTier,
             password: accountPassword,
-            appUrl: "https://estimator.monefyi.com/app/estimator?status=activated",
+            appUrl: "https://estimator.froyek.com/app/estimator?status=activated",
           });
 
           newEmailLogs.push({

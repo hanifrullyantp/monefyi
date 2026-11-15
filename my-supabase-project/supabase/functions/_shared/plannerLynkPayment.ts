@@ -287,8 +287,8 @@ async function sendPurchaseConfirmation(params: {
   setupPasswordUrl: string | null;
 }): Promise<{ ok: boolean; skipped?: boolean; reason?: string; resendId?: string }> {
   const isEstimator = params.mapped.tier === "estimator";
-  const plannerSiteUrl = pickEnv("APP_URL", "https://planner.monefyi.com").replace(/\/$/, "");
-  const estimatorSiteUrl = pickEnv("ESTIMATOR_SITE_URL", "https://estimator.monefyi.com").replace(/\/$/, "");
+  const plannerSiteUrl = pickEnv("APP_URL", "https://froyek.com").replace(/\/$/, "");
+  const estimatorSiteUrl = pickEnv("ESTIMATOR_SITE_URL", "https://estimator.froyek.com").replace(/\/$/, "");
   const plannerAppUrl = pickEnv("PLANNER_APP_URL", `${plannerSiteUrl}/app`).replace(/\/$/, "");
   const estimatorAppUrl = pickEnv("ESTIMATOR_APP_URL", `${estimatorSiteUrl}/app`).replace(/\/$/, "");
   const mailParams = {
@@ -355,8 +355,8 @@ export async function processPlannerPurchaseActivation(
 
   const mapped = mapProductFromPayload(item, custom, amount);
   const isEstimatorPurchase = mapped.tier === "estimator";
-  const plannerSiteUrl = pickEnv("APP_URL", "https://planner.monefyi.com").replace(/\/$/, "");
-  const estimatorSiteUrl = pickEnv("ESTIMATOR_SITE_URL", "https://estimator.monefyi.com").replace(/\/$/, "");
+  const plannerSiteUrl = pickEnv("APP_URL", "https://froyek.com").replace(/\/$/, "");
+  const estimatorSiteUrl = pickEnv("ESTIMATOR_SITE_URL", "https://estimator.froyek.com").replace(/\/$/, "");
   const estimatorAppUrl = pickEnv("ESTIMATOR_APP_URL", `${estimatorSiteUrl}/app`).replace(/\/$/, "");
   const plannerAppUrl = pickEnv("PLANNER_APP_URL", `${plannerSiteUrl}/app`).replace(/\/$/, "");
   const appBaseUrl = isEstimatorPurchase ? estimatorAppUrl : plannerAppUrl;

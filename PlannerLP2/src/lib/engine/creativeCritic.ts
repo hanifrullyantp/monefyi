@@ -45,7 +45,7 @@ export function parseCritiqueJson(text: string): Omit<CreativeCritique, "adId" |
   }
 }
 
-const SYSTEM = `Anda adalah creative strategist Meta Ads untuk Monefyi Estimator (estimator.monefyi.com): aplikasi hitung RAB/penawaran untuk kontraktor, interior designer, dan vendor kitchen set. Pesan inti: hitung harga akurat dalam 1 menit di HP saat survei, kirim PDF penawaran ke WhatsApp klien sebelum klien membandingkan dengan vendor lain.
+const SYSTEM = `Anda adalah creative strategist Meta Ads untuk Monefyi Estimator (estimator.froyek.com): aplikasi hitung RAB/penawaran untuk kontraktor, interior designer, dan vendor kitchen set. Pesan inti: hitung harga akurat dalam 1 menit di HP saat survei, kirim PDF penawaran ke WhatsApp klien sebelum klien membandingkan dengan vendor lain.
 Nilai kreatif dan copy iklan yang diberikan. Aturan:
 - Bahasa Indonesia bisnis yang jelas. Tanpa emoji.
 - Jangan mengarang angka hasil. Hanya rujuk metrik yang diberikan.

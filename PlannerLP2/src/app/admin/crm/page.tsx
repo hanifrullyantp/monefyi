@@ -508,7 +508,7 @@ function SendAccountWaModal({
     ? `62${cleanPhone}`
     : "";
 
-  const loginUrl = "https://estimator.monefyi.com/app/estimator";
+  const loginUrl = "https://estimator.froyek.com/app/estimator";
 
   const messageText = `Halo Kak ${recipientName.trim()}! 🙌
 Terima kasih telah memesan ${lead.projectType || "Monefyi Estimator"}.

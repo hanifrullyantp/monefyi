@@ -2,7 +2,7 @@
 export function getPlannerAppOrigin(): string {
   const fromEnv = process.env.NEXT_PUBLIC_PLANNER_APP_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
-  return "https://planner.monefyi.com";
+  return "https://froyek.com";
 }
 
 export function plannerAppPath(path: string): string {

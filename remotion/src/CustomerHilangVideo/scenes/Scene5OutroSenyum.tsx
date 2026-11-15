@@ -144,7 +144,7 @@ export const Scene5OutroSenyum: React.FC = () => {
           {/* Website URL Button */}
           <div className="z-10 inline-flex items-center gap-3 bg-gradient-to-r from-emerald-400 to-teal-400 text-black px-8 py-4 rounded-2xl font-black text-2xl sm:text-3xl tracking-tight shadow-xl shadow-emerald-400/40">
             <Globe className="w-6 h-6 text-black" />
-            <span>estimator.monefyi.com</span>
+            <span>estimator.froyek.com</span>
             <ArrowRight className="w-6 h-6 text-black" />
           </div>
         </div>

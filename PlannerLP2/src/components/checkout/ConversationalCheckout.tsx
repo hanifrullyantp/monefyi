@@ -548,7 +548,7 @@ export default function ConversationalCheckout({
           }
           clearInterval(checkInterval);
           setTimeout(() => {
-            window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
+            window.location.href = 'https://estimator.froyek.com/app/estimator?status=activated';
           }, 2500);
         }
       } catch {
@@ -727,7 +727,7 @@ export default function ConversationalCheckout({
         sendAutoResendEmails(true);
         if (onSuccess) onSuccess(resData);
         setTimeout(() => {
-          window.location.href = resData.redirectUrl || 'https://estimator.monefyi.com/app/estimator?status=activated&plan=free';
+          window.location.href = resData.redirectUrl || 'https://estimator.froyek.com/app/estimator?status=activated&plan=free';
         }, 1800);
         return;
       }
@@ -827,7 +827,7 @@ export default function ConversationalCheckout({
           );
         }
         setTimeout(() => {
-          window.location.href = 'https://estimator.monefyi.com/app/estimator?status=activated';
+          window.location.href = 'https://estimator.froyek.com/app/estimator?status=activated';
         }, 2000);
       } else {
         alert('Pembayaran belum terdeteksi. Silakan selesaikan scan QRIS terlebih dahulu.');

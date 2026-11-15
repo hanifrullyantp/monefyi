@@ -1,3 +1,4 @@
+import { ESTIMATOR_ORIGIN, PLANNER_ORIGIN } from "@/lib/config/publicHosts";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 function authRedirectUrl(path: string): string {
@@ -7,8 +8,8 @@ function authRedirectUrl(path: string): string {
       : process.env.NEXT_PUBLIC_PLANNER_APP_URL?.replace(/\/app\/?$/, "") ||
         process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
         (process.env.ESTIMATOR_STANDALONE === "true"
-          ? "https://estimator.monefyi.com"
-          : "https://planner.monefyi.com");
+          ? ESTIMATOR_ORIGIN
+          : PLANNER_ORIGIN);
   return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
 }
 

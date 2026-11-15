@@ -702,7 +702,7 @@ export function runFivePillarDiagnostics(params: {
       evidenceWindow: `${config.analysisWindowDays} hari terakhir`,
       actionType: "update_offer_pricing",
       actionPayload: {
-        productContext: "Monefyi Estimator (estimator.monefyi.com)",
+        productContext: "Monefyi Estimator (estimator.froyek.com)",
         recommendedEntryPrice: `Rp ${MONEFYI_PRICING.standardPrice.toLocaleString("id-ID")}`,
         recommendedProPrice: `Rp ${MONEFYI_PRICING.proPrice.toLocaleString("id-ID")}`,
         anchorOriginalPrice: `Rp ${MONEFYI_PRICING.proRegularPrice.toLocaleString("id-ID")}`,

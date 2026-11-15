@@ -564,7 +564,7 @@ void main(){ vec4 c=texture(uTex,vUV); if(c.a<0.02) discard; o=vec4(c.rgb,c.a*uA
     pillTex("tag1", 512, 200, "2,4 m", C.white, C.ink, C.ink, 100);
     pillTex("tag2", 512, 200, "× harga", C.white, C.ink, C.ink, 100);
     pillTex("tag3", 512, 200, "+ ini itu", C.white, C.ink, C.ink, 100);
-    pillTex("url", 1024, 170, "estimator.monefyi.com", C.ink, C.white, null, 80);
+    pillTex("url", 1024, 170, "estimator.froyek.com", C.ink, C.white, null, 80);
     pillTex("word", 700, 220, "Estimator", C.white, C.ink, C.ink, 118);
 
     mkTex("bubble", 384, 300, (c, w, h) => {
@@ -1112,7 +1112,7 @@ void main(){ vec4 c=texture(uTex,vUV); if(c.a<0.02) discard; o=vec4(c.rgb,c.a*uA
     [9.25, 12.57, "Klien mulai menunggu, dan kamu masih sibuk dengan kalkulator."],
     [13.85, 17.91, "Pakai Estimator, masukkan ukuran dapur, pilih material, dan"],
     [17.91, 19.97, "RAB yang rapi langsung keluar."],
-    [20.49, 23.43, "Coba sekarang di estimator.monefyi.com"],
+    [20.49, 23.43, "Coba sekarang di estimator.froyek.com"],
   ];
 
   function wrapWords(words: string[], maxW: number) {

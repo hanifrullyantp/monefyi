@@ -22,7 +22,7 @@ export function getResendFrom(): string {
 }
 
 export function getAppUrl(): string {
-  return (Deno.env.get("APP_URL") || "https://planner.monefyi.com").replace(/\/$/, "");
+  return (Deno.env.get("APP_URL") || "https://froyek.com").replace(/\/$/, "");
 }
 
 export function isResendConfigured(): boolean {

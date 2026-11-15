@@ -835,6 +835,7 @@ export default function EstimatorListPage() {
           activeFilter={dashboardFilter}
           onToggleFilter={toggleDashboardFilter}
           onCreate={goNew}
+          onOpenPricelist={() => navigate('/app/estimator/pricelist')}
         />
       </div>
 

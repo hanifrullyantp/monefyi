@@ -106,7 +106,7 @@ export function createDemoPdfSettings(): PdfSettings {
     address: 'Jakarta',
     phone: '+62 21-0000-0000',
     email: 'demo@contoh.local',
-    website: 'https://estimator.monefyi.com',
+    website: 'https://estimator.froyek.com',
     bank_name: null,
     bank_account: null,
     bank_account_name: null,

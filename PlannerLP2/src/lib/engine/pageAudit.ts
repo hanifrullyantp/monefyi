@@ -1,10 +1,12 @@
 /**
- * Pembaca landing page untuk engine. Tidak bergantung pada modul lain selain tipe,
- * sehingga fungsi murninya bisa diuji langsung tanpa server.
+ * Pembaca landing page untuk engine.
+ * Host yang boleh dibaca ada di publicHosts; fungsi murninya tetap bisa diuji tanpa server.
  */
 
-export const DEFAULT_LANDING_URL = "https://estimator.monefyi.com/";
-const ALLOWED_HOSTS = new Set(["estimator.monefyi.com"]);
+import { ESTIMATOR_HOST, ESTIMATOR_ORIGIN, LEGACY_ESTIMATOR_HOSTS } from "@/lib/config/publicHosts";
+
+export const DEFAULT_LANDING_URL = `${ESTIMATOR_ORIGIN}/`;
+const ALLOWED_HOSTS = new Set<string>([ESTIMATOR_HOST, ...LEGACY_ESTIMATOR_HOSTS]);
 const MAX_CHARS = 2_000_000;
 
 export interface PriceMention {

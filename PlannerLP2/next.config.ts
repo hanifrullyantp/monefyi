@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { ESTIMATOR_ORIGIN, PLANNER_ORIGIN, legacyHostRedirects } from "./src/lib/config/publicHosts";
 
 function resolveOrigin(
   envKey: string,
@@ -26,7 +27,7 @@ const isEstimatorStandalone = process.env.ESTIMATOR_STANDALONE === "true";
 
 const publicPlannerUrl =
   process.env.NEXT_PUBLIC_PLANNER_APP_URL?.trim()?.replace(/\/$/, "") ||
-  (isEstimatorStandalone ? "https://estimator.monefyi.com" : "https://planner.monefyi.com");
+  (isEstimatorStandalone ? ESTIMATOR_ORIGIN : PLANNER_ORIGIN);
 
 const landingBasePath = (process.env.PLANNER_LANDING_BASE_PATH || "/lp2").replace(/\/$/, "") || "/lp2";
 
@@ -82,6 +83,14 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
+  },
+  async redirects() {
+    return legacyHostRedirects().map((rule) => ({
+      source: rule.source,
+      has: [{ type: "host" as const, value: rule.host }],
+      destination: rule.destination,
+      permanent: rule.permanent,
+    }));
   },
   async rewrites() {
     const lp = landingBasePath;

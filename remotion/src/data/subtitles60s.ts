@@ -94,7 +94,7 @@ export const SUBTITLES_60S: SubtitleCue[] = [
     endSec: 68.0,
     startFrame: 1902,
     endFrame: 2040,
-    text: "Tinggalkan cara lama, amankan keuntungan setiap proyekmu sekarang di estimator.monefyi.com",
+    text: "Tinggalkan cara lama, amankan keuntungan setiap proyekmu sekarang di estimator.froyek.com",
   },
 ];
 

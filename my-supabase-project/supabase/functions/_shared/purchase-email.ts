@@ -11,7 +11,7 @@ import {
 
 export type PurchaseEmailParams = {
   appUrl: string;
-  /** Full SPA base incl. /app — e.g. https://estimator.monefyi.com/app */
+  /** Full SPA base incl. /app — e.g. https://estimator.froyek.com/app */
   appBaseUrl?: string;
   name: string;
   planLabel: string;

@@ -75,7 +75,7 @@ export function EvergreenFunnelPlanner({
     const used = lead.estimatorActivity?.usedEstimations ?? 0;
 
     if (stageType === "onboarding") {
-      return `Halo ${name}, terima kasih telah mengaktifkan akun trial Monefyi Estimator. Kami ingin memastikan apakah Anda sudah sempat mencoba kalkulator estimasi untuk proyek pertama Anda? Jika butuh panduan cepat, Anda dapat langsung login di estimator.monefyi.com atau balas pesan ini jika ada kendala saat mulai menghitung.`;
+      return `Halo ${name}, terima kasih telah mengaktifkan akun trial Monefyi Estimator. Kami ingin memastikan apakah Anda sudah sempat mencoba kalkulator estimasi untuk proyek pertama Anda? Jika butuh panduan cepat, Anda dapat langsung login di estimator.froyek.com atau balas pesan ini jika ada kendala saat mulai menghitung.`;
     }
 
     if (stageType === "exploration") {
@@ -273,7 +273,7 @@ export function EvergreenFunnelPlanner({
             <div className="mt-4 pt-3 border-t border-slate-200">
               <span className="text-[11px] font-extrabold text-teal-700 block mb-1.5">Contoh Pesan Sapaan:</span>
               <p className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 leading-normal">
-                Halo Bapak/Ibu, terima kasih telah mengaktifkan trial Monefyi Estimator. Kami ingin memastikan apakah Anda sudah sempat mencoba kalkulator estimasi untuk proyek pertama Anda? Jika butuh panduan cepat, Anda dapat langsung login di estimator.monefyi.com.
+                Halo Bapak/Ibu, terima kasih telah mengaktifkan trial Monefyi Estimator. Kami ingin memastikan apakah Anda sudah sempat mencoba kalkulator estimasi untuk proyek pertama Anda? Jika butuh panduan cepat, Anda dapat langsung login di estimator.froyek.com.
               </p>
             </div>
           </div>

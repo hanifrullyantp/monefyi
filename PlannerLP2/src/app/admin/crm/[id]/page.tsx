@@ -202,7 +202,7 @@ Berikut adalah data akses login akun Estimator Kakak:
 👤 *Nama*: ${lead.name}
 📧 *Email / User*: ${lead.email || "-"}
 🔑 *Password*: ${password}
-🌐 *Link Login*: https://estimator.monefyi.com/app/estimator
+🌐 *Link Login*: https://estimator.froyek.com/app/estimator
 
 💡 *Panduan Akses:*
 1. Buka tautan di atas melalui browser HP atau Laptop Anda.

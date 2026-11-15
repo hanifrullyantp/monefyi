@@ -5,7 +5,7 @@ function authRedirectUrl(path: string): string {
     typeof window !== "undefined"
       ? window.location.origin
       : process.env.NEXT_PUBLIC_PLANNER_APP_URL?.replace(/\/app\/?$/, "") ||
-        "https://planner.monefyi.com";
+        "https://froyek.com";
   return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
 }
 

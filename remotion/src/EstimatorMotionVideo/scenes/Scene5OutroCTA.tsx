@@ -109,7 +109,7 @@ export const Scene5OutroCTA: React.FC = () => {
                   COBA SEKARANG — GRATIS
                 </div>
                 <div className="text-lg sm:text-xl font-black font-mono text-white tracking-tight">
-                  estimator.monefyi.com
+                  estimator.froyek.com
                 </div>
               </div>
             </div>

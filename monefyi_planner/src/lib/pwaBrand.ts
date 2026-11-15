@@ -4,7 +4,7 @@ import {
   isEstimatorBrandContext,
 } from './estimatorBrand';
 
-const PROXIED_PWA_HOSTS = ['estimator.monefyi.com', 'planner.monefyi.com'];
+const PROXIED_PWA_HOSTS = ['estimator.froyek.com', 'froyek.com', 'estimator.monefyi.com', 'planner.monefyi.com'];
 
 /** Sesuaikan manifest & meta PWA saat di domain/rute Estimator. */
 export function initEstimatorPwaDocument(): void {
@@ -15,7 +15,7 @@ export function initEstimatorPwaDocument(): void {
   const onProxiedHost = PROXIED_PWA_HOSTS.includes(window.location.hostname);
   const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
   if (manifest) {
-    // estimator.monefyi.com: LP rewrite /manifest.webmanifest → manifest Estimator.
+    // estimator.froyek.com (dan host lama): LP rewrite /manifest.webmanifest → manifest Estimator.
     // Dev / vercel.app langsung: pakai file manifest-estimator.
     manifest.href = onProxiedHost
       ? '/manifest.webmanifest'

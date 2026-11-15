@@ -3,6 +3,8 @@
  * Single source for logos, theme-color, titles.
  */
 
+import { ESTIMATOR_HOST, isEstimatorHost } from "@/lib/config/publicHosts";
+
 export type BrandId = "estimator" | "planner";
 
 export type BrandAssetSet = {
@@ -92,8 +94,7 @@ export function resolveBrand(
     hostname ??
     (typeof window !== "undefined" ? window.location.hostname : "");
 
-  const onEstimatorHost =
-    host === "estimator.monefyi.com" || host.startsWith("estimator.");
+  const onEstimatorHost = isEstimatorHost(host);
 
   const products = hint?.products ?? [];
   const hasPlanner = products.includes("planner");
@@ -113,8 +114,8 @@ export function resolveBrand(
 export function defaultBrandForHost(hostname?: string): BrandDefinition {
   const host =
     hostname ??
-    (typeof window !== "undefined" ? window.location.hostname : "estimator.monefyi.com");
-  if (host === "estimator.monefyi.com" || host.startsWith("estimator.")) {
+    (typeof window !== "undefined" ? window.location.hostname : ESTIMATOR_HOST);
+  if (isEstimatorHost(host)) {
     return BRANDS.estimator;
   }
   return BRANDS.planner;

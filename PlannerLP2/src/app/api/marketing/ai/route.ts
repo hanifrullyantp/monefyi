@@ -357,7 +357,7 @@ export async function POST(req: NextRequest) {
 Model AI Aktif: ${modelToUse} (${aiProvider.toUpperCase()}).
 Waktu Analisis Real-Time: ${dateStr}, ${timeStr} WIB.
 Jawab dalam Bahasa Indonesia yang tajam, terstruktur, berbasis data angka riil, tanpa emoticon sama sekali.
-Konteks Produk: Monefyi Estimator (estimator.monefyi.com) - Tool hitung RAB cepat di HP saat survei lokasi untuk kontraktor & interior.
+Konteks Produk: Monefyi Estimator (estimator.froyek.com) - Tool hitung RAB cepat di HP saat survei lokasi untuk kontraktor & interior.
 Data Riil Akun Meta Ads Saat Ini:
 - Jumlah Kampanye: ${campaigns.length} kampanye terpantau
 - Total Ads Individu: ${allAdsList.length} ads terpantau

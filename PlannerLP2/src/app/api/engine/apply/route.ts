@@ -157,7 +157,7 @@ async function handleApply(req: NextRequest, preBody?: any) {
         liveExecuted: false,
         manualActionRequired: true,
         executedAt: nowIso,
-        summary: `Pilar 2 (Kecepatan LP): Belum ada eksekutor otomatis. Dicatat sebagai rekomendasi manual untuk estimator.monefyi.com (target OCLP ${payload.targetOclp || 88}%).`,
+        summary: `Pilar 2 (Kecepatan LP): Belum ada eksekutor otomatis. Dicatat sebagai rekomendasi manual untuk estimator.froyek.com (target OCLP ${payload.targetOclp || 88}%).`,
         appliedChanges: payload,
       });
     }

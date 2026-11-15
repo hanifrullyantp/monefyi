@@ -99,7 +99,7 @@ serve(async (req) => {
     : resolvePlannerPaymentProvider(platform);
 
   const returnUrl = String(
-    body.returnUrl ?? body.return_url ?? pickEnv("ESTIMATOR_APP_URL", "https://estimator.monefyi.com/app/estimator"),
+    body.returnUrl ?? body.return_url ?? pickEnv("ESTIMATOR_APP_URL", "https://estimator.froyek.com/app/estimator"),
   ).trim();
 
   const checkoutAmount = Number(body.checkoutAmount ?? body.amount ?? 0) || undefined;

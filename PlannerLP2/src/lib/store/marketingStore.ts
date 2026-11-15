@@ -603,8 +603,8 @@ export const useMarketingStore = create<MarketingStore>()(
               winningEngineConfig.approvedDailyCeiling,
               Number(
                 mergedPlan.actionPayload.newBudget ||
-                  mergedPlan.actionPayload.dailyBudget ||
-                  winningEngineConfig.maxDailyBudget
+                mergedPlan.actionPayload.dailyBudget ||
+                winningEngineConfig.maxDailyBudget
               )
             );
             activeConfig = {
@@ -645,31 +645,31 @@ export const useMarketingStore = create<MarketingStore>()(
             winningPlans: state.winningPlans.map((p) =>
               p.id === planId
                 ? {
-                    ...mergedPlan,
-                    status: manualOnly ? 'approved' : 'executed',
-                    executedAt: manualOnly ? undefined : nowIso,
-                    executionNote: manualOnly
-                      ? `Disetujui. Perlu dikerjakan manual: ${data.summary || ''}`
-                      : data.summary,
-                  }
+                  ...mergedPlan,
+                  status: manualOnly ? 'approved' : 'executed',
+                  executedAt: manualOnly ? undefined : nowIso,
+                  executionNote: manualOnly
+                    ? `Disetujui. Perlu dikerjakan manual: ${data.summary || ''}`
+                    : data.summary,
+                }
                 : p
             ),
             currentLpCopySnapshot:
               mergedPlan.actionType === 'update_lp_copy'
                 ? {
-                    ...state.currentLpCopySnapshot,
-                    heroTitle:
-                      mergedPlan.actionPayload.afterHeroTitle ||
-                      state.currentLpCopySnapshot.heroTitle,
-                    heroSubtitle:
-                      mergedPlan.actionPayload.afterHeroSubtitle ||
-                      state.currentLpCopySnapshot.heroSubtitle,
-                    ctaText:
-                      mergedPlan.actionPayload.afterCtaText ||
-                      state.currentLpCopySnapshot.ctaText,
-                  }
+                  ...state.currentLpCopySnapshot,
+                  heroTitle:
+                    mergedPlan.actionPayload.afterHeroTitle ||
+                    state.currentLpCopySnapshot.heroTitle,
+                  heroSubtitle:
+                    mergedPlan.actionPayload.afterHeroSubtitle ||
+                    state.currentLpCopySnapshot.heroSubtitle,
+                  ctaText:
+                    mergedPlan.actionPayload.afterCtaText ||
+                    state.currentLpCopySnapshot.ctaText,
+                }
                 : mergedPlan.actionType === 'update_offer_pricing'
-                ? {
+                  ? {
                     ...state.currentLpCopySnapshot,
                     standardPrice:
                       mergedPlan.actionPayload.recommendedEntryPrice ||
@@ -678,7 +678,7 @@ export const useMarketingStore = create<MarketingStore>()(
                       mergedPlan.actionPayload.recommendedProPrice ||
                       state.currentLpCopySnapshot.proPrice,
                   }
-                : state.currentLpCopySnapshot,
+                  : state.currentLpCopySnapshot,
             orderBumpConfig: data.orderBumpUpdates
               ? { ...state.orderBumpConfig, ...data.orderBumpUpdates }
               : state.orderBumpConfig,
@@ -696,8 +696,8 @@ export const useMarketingStore = create<MarketingStore>()(
               mergedPlan.actionType === 'scale_campaign_budget'
                 ? 'scale_budget'
                 : mergedPlan.actionType === 'pause_bleeding_campaign'
-                ? 'update_status'
-                : 'create_campaign',
+                  ? 'update_status'
+                  : 'create_campaign',
             campaignId: String(mergedPlan.actionPayload.campaignId || mergedPlan.pillar),
             campaignName: String(
               mergedPlan.actionPayload.campaignName || mergedPlan.pillarLabel
@@ -776,7 +776,7 @@ export const useMarketingStore = create<MarketingStore>()(
               accountBilling: result.accountBilling || state.accountBilling,
               apiConfig:
                 result.resolvedAccountId &&
-                result.resolvedAccountId !== state.apiConfig.adAccountId
+                  result.resolvedAccountId !== state.apiConfig.adAccountId
                   ? { ...state.apiConfig, adAccountId: result.resolvedAccountId }
                   : state.apiConfig,
             };
@@ -841,11 +841,11 @@ export const useMarketingStore = create<MarketingStore>()(
             campaigns: campaigns.map((c) =>
               c.id === campaignId
                 ? {
-                    ...c,
-                    status: newStatus,
-                    deliveryStatus: newStatus,
-                    lastUpdated: new Date().toISOString(),
-                  }
+                  ...c,
+                  status: newStatus,
+                  deliveryStatus: newStatus,
+                  lastUpdated: new Date().toISOString(),
+                }
                 : c
             ),
           });
@@ -898,10 +898,10 @@ export const useMarketingStore = create<MarketingStore>()(
                   ads: adset.ads?.map((ad) =>
                     ad.id === adId
                       ? {
-                          ...ad,
-                          status: newStatus,
-                          effectiveStatus: newStatus,
-                        }
+                        ...ad,
+                        status: newStatus,
+                        effectiveStatus: newStatus,
+                      }
                       : ad
                   ),
                 })),
@@ -1155,18 +1155,18 @@ export const useMarketingStore = create<MarketingStore>()(
     {
       name: 'monefyi_marketing_store',
       partialize: (state: any) =>
-        ({
-          rules: state.rules,
-          apiConfig: state.apiConfig,
-          winningEngineConfig: state.winningEngineConfig,
-          currentLpCopySnapshot: state.currentLpCopySnapshot,
-          customAgentNames: state.customAgentNames,
-          orderBumpConfig: state.orderBumpConfig,
-          upsellConfig: state.upsellConfig,
-          adBank: state.adBank,
-          actionLogs: state.actionLogs.slice(0, 50),
-          chatMessages: state.chatMessages.slice(-30),
-        } as any),
+      ({
+        rules: state.rules,
+        apiConfig: state.apiConfig,
+        winningEngineConfig: state.winningEngineConfig,
+        currentLpCopySnapshot: state.currentLpCopySnapshot,
+        customAgentNames: state.customAgentNames,
+        orderBumpConfig: state.orderBumpConfig,
+        upsellConfig: state.upsellConfig,
+        adBank: state.adBank,
+        actionLogs: state.actionLogs.slice(0, 50),
+        chatMessages: state.chatMessages.slice(-30),
+      } as any),
       merge: (persisted: unknown, current: MarketingStore): MarketingStore => {
         const persistedObj = (persisted as Partial<MarketingStore>) || {};
         const merged: MarketingStore = { ...current, ...persistedObj };

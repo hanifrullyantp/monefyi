@@ -45,7 +45,7 @@ function getPaymentConfirmationTemplate(opts: SendEmailOptions) {
   const plan = escapeHtml((opts.planTier || "standard").toUpperCase());
   const amountStr = opts.amount ? formatCurrency(opts.amount) : "Rp 0 (Akses Gratis)";
   const method = escapeHtml((opts.paymentMethod || "QRIS").toUpperCase());
-  const loginUrl = escapeHtml(opts.appUrl || "https://estimator.monefyi.com/app/estimator");
+  const loginUrl = escapeHtml(opts.appUrl || "https://estimator.froyek.com/app/estimator");
 
   return `
 <!DOCTYPE html>
@@ -120,7 +120,7 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
   const name = escapeHtml(opts.name || "Pelanggan Monefyi");
   const email = escapeHtml(opts.to);
   const password = escapeHtml(opts.password || "Estimator2026!");
-  const loginUrl = escapeHtml(opts.appUrl || "https://estimator.monefyi.com/app/estimator");
+  const loginUrl = escapeHtml(opts.appUrl || "https://estimator.froyek.com/app/estimator");
 
   return `
 <!DOCTYPE html>
@@ -152,7 +152,7 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
           <tr>
             <td style="color: #64748b; padding: 6px 0; width: 120px;">URL Login:</td>
             <td style="color: #1e3a8a; font-weight: 700; padding: 6px 0;">
-              <a href="${loginUrl}" style="color: #2563eb; text-decoration: underline;">estimator.monefyi.com</a>
+              <a href="${loginUrl}" style="color: #2563eb; text-decoration: underline;">estimator.froyek.com</a>
             </td>
           </tr>
           <tr>
@@ -192,7 +192,7 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
 function getPasswordResetTemplate(opts: SendEmailOptions) {
   const name = escapeHtml(opts.name || "Pengguna Monefyi");
   const password = escapeHtml(opts.password || "MonefyiBaru2026!");
-  const loginUrl = escapeHtml(opts.resetLink || opts.appUrl || "https://estimator.monefyi.com/app/estimator");
+  const loginUrl = escapeHtml(opts.resetLink || opts.appUrl || "https://estimator.froyek.com/app/estimator");
 
   return `
 <!DOCTYPE html>
@@ -245,7 +245,7 @@ function getPasswordResetTemplate(opts: SendEmailOptions) {
 // 4. Template: Follow-Up Checkout Tertunda
 function getFollowupTemplate(opts: SendEmailOptions) {
   const name = escapeHtml(opts.name || "Kakak");
-  const checkoutUrl = "https://estimator.monefyi.com/checkout";
+  const checkoutUrl = "https://estimator.froyek.com/checkout";
 
   return `
 <!DOCTYPE html>

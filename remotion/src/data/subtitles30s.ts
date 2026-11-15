@@ -70,7 +70,7 @@ export const SUBTITLES_30S: SubtitleCue[] = [
     endSec: 28.2,
     startFrame: 750,
     endFrame: 846,
-    text: "Coba gratis di estimator.monefyi.com",
+    text: "Coba gratis di estimator.froyek.com",
   },
 ];
 

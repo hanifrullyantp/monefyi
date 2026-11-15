@@ -96,7 +96,7 @@ export const Scene5Outro3D: React.FC = () => {
                     COBA GRATIS SEKARANG
                   </div>
                   <div className="text-lg sm:text-xl font-black font-mono text-white tracking-tight">
-                    estimator.monefyi.com
+                    estimator.froyek.com
                   </div>
                 </div>
               </div>

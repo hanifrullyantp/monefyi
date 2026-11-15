@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         isFree: true,
         amount: 0,
         paymentId: `free_${Date.now()}`,
-        redirectUrl: `https://estimator.monefyi.com/app/estimator?status=activated&plan=free&email=${encodeURIComponent(
+        redirectUrl: `https://estimator.froyek.com/app/estimator?status=activated&plan=free&email=${encodeURIComponent(
           email.trim().toLowerCase()
         )}`,
       });
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const host = req.headers.get("host") || "estimator.monefyi.com";
+    const host = req.headers.get("host") || "estimator.froyek.com";
     const protocol = host.includes("localhost") ? "http" : "https";
     const appBaseUrl =
       process.env.NEXT_PUBLIC_PLANNER_APP_URL || `${protocol}://${host}`;

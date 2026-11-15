@@ -1,11 +1,13 @@
+import { ESTIMATOR_ORIGIN, PLANNER_ORIGIN } from "./publicHosts";
+
 /** Public site origin (landing root). App lives at /app on same host. */
 export function getPlannerAppOrigin(): string {
   const fromEnv = process.env.NEXT_PUBLIC_PLANNER_APP_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
   if (process.env.ESTIMATOR_STANDALONE === "true") {
-    return "https://estimator.monefyi.com";
+    return ESTIMATOR_ORIGIN;
   }
-  return "https://planner.monefyi.com";
+  return PLANNER_ORIGIN;
 }
 
 /**

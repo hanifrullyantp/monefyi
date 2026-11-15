@@ -3,7 +3,7 @@ import type { LandingContent } from "@/lib/types/content";
 export const defaultContent: LandingContent = {
   global: {
     siteName: "Monefyi Planner",
-    domain: "https://planner.monefyi.com",
+    domain: "https://froyek.com",
     colors: {
       primary: "#2563eb",
       navy: "#0f172a",
@@ -403,7 +403,7 @@ export const defaultContent: LandingContent = {
       {
         question: "Bagaimana cara mulai setelah pembayaran?",
         answer:
-          "1. Selesaikan pembayaran via BCA, Mandiri, QRIS, atau e-wallet di Lynk.id.\n2. Cek email konfirmasi (inbox & spam) — untuk akun baru, klik \"Atur password & masuk\".\n3. Login di planner.monefyi.com/app dan ikuti setup wizard (~5 menit).\n4. Estimator langsung aktif; support WA tersedia jika butuh bantuan.",
+          "1. Selesaikan pembayaran via BCA, Mandiri, QRIS, atau e-wallet di Lynk.id.\n2. Cek email konfirmasi (inbox & spam) — untuk akun baru, klik \"Atur password & masuk\".\n3. Login di froyek.com/app dan ikuti setup wizard (~5 menit).\n4. Estimator langsung aktif; support WA tersedia jika butuh bantuan.",
       },
       {
         question: "Support-nya bagaimana?",

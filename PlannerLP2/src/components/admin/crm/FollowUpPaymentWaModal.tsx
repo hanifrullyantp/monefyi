@@ -58,7 +58,7 @@ export function FollowUpPaymentWaModal({
   const appBaseUrl =
     typeof window !== "undefined"
       ? window.location.origin
-      : "https://estimator.monefyi.com";
+      : "https://estimator.froyek.com";
 
   const directCheckoutUrl = `${appBaseUrl}/checkout?plan=${planTier}&name=${encodeURIComponent(
     recipientName.trim()
