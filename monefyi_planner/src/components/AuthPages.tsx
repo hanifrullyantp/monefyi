@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Eye, EyeOff, ArrowLeft, ArrowRight, Mail, Lock, User, Building2, CheckCircle, AlertCircle,
+  Eye, EyeOff, ArrowLeft, ArrowRight, Mail, Lock, CheckCircle, AlertCircle,
 } from 'lucide-react';
 import { authUserMessage } from '../lib/authMessages';
 import { config } from '../lib/config';
@@ -15,30 +15,208 @@ import {
   resetPasswordForEmail,
 } from '../services/authService';
 import { setActiveOrgTimeZone } from '../lib/adapters';
-import { useAppStore } from '../store/appStore';
+import {
+  useAppStore,
+  type Notification,
+  type Project,
+  type Tenant,
+  type Todo,
+  type Transaction,
+  type User,
+} from '../store/appStore';
 import { EstimatorLogo } from './EstimatorLogo';
 import { PlannerLogo } from './MonefyiLogo';
 import { applyEstimatorDocumentBrand, isEstimatorBrandContext } from '../lib/estimatorBrand';
+import { estimatorAppEntryPath } from '../lib/pwaBrand';
 import { checkAndClearDeviceKickoutReason } from '../services/singleDeviceSessionService';
+
+export function resolvePostLoginDestination(
+  rawNext?: string | null,
+  fromPath?: string | null,
+  fallback = '/app',
+): string {
+  for (const candidate of [rawNext, fromPath]) {
+    if (
+      typeof candidate === 'string'
+      && candidate.startsWith('/')
+      && !candidate.startsWith('//')
+      && !candidate.startsWith('/login')
+    ) {
+      return candidate;
+    }
+  }
+  return fallback;
+}
+
+export function buildDemoSeedData(role: 'owner' | 'manager' | 'worker'): {
+  user: User;
+  tenant: Tenant;
+  projects: Project[];
+  notifications: Notification[];
+  transactions: Transaction[];
+  todos: Todo[];
+} {
+  const users: Record<'owner' | 'manager' | 'worker', User> = {
+    owner: { id: 'demo-u-1', name: 'Budi Santoso', email: 'demo@local', role: 'owner', tenant_id: 'demo' },
+    manager: { id: 'demo-u-2', name: 'Sari Dewi', email: 'demo@local', role: 'manager', tenant_id: 'demo' },
+    worker: { id: 'demo-u-3', name: 'Ahmad Rizky', email: 'demo@local', role: 'worker', tenant_id: 'demo' },
+  };
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+  const tenant: Tenant = {
+    id: 'demo',
+    name: 'CV Buana Konstruksi (Demo)',
+    slug: 'demo',
+    business_type: 'construction',
+    plan: 'pro',
+    currency: 'IDR',
+    timezone: 'Asia/Jakarta',
+  };
+  const projects: Project[] = [
+    {
+      id: 'demo-proj-1',
+      tenant_id: 'demo',
+      name: 'Renovasi Rumah Kemang',
+      code: 'PRJ-DEMO-01',
+      client_name: 'Ibu Rina Wijaya',
+      location: 'Jakarta Selatan',
+      type: 'construction',
+      status: 'active',
+      start_date: today,
+      end_date: '2027-02-28',
+      total_budget_planned: 185_000_000,
+      contract_value: 245_000_000,
+      currency: 'IDR',
+      progress_percentage: 62,
+      health_status: 'on_track',
+      planned_progress: 60,
+      spent_amount: 112_000_000,
+      total_received: 150_000_000,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: 'demo-proj-2',
+      tenant_id: 'demo',
+      name: 'Interior Kitchen Set BSD',
+      code: 'PRJ-DEMO-02',
+      client_name: 'Pak Hendra',
+      location: 'Tangerang Selatan',
+      type: 'construction',
+      status: 'active',
+      start_date: today,
+      end_date: '2027-01-31',
+      total_budget_planned: 64_000_000,
+      contract_value: 88_000_000,
+      currency: 'IDR',
+      progress_percentage: 38,
+      health_status: 'at_risk',
+      planned_progress: 52,
+      spent_amount: 34_500_000,
+      total_received: 44_000_000,
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+  const notifications: Notification[] = [
+    {
+      id: 'demo-notif-1',
+      type: 'alert',
+      title: 'Progress Interior BSD tertinggal',
+      message: 'Realisasi 38% dibanding target rencana 52%. Periksa jadwal tim lapangan.',
+      read: false,
+      created_at: now,
+      action_url: '/app?tab=projects',
+      priority: 'high',
+    },
+    {
+      id: 'demo-notif-2',
+      type: 'update',
+      title: 'Termin proyek Kemang diterima',
+      message: 'Pembayaran termin ke-2 sebesar Rp 75.000.000 tercatat pada proyek demo.',
+      read: false,
+      created_at: now,
+      action_url: '/app?tab=projects',
+      priority: 'medium',
+    },
+  ];
+  const transactions: Transaction[] = [
+    {
+      id: 'demo-tx-1',
+      type: 'income',
+      amount: 150_000_000,
+      description: 'Termin 1 & 2 Renovasi Rumah Kemang',
+      category: 'termin',
+      account: 'Bank BCA Operasional',
+      date: today,
+      project_id: 'demo-proj-1',
+      created_at: now,
+    },
+    {
+      id: 'demo-tx-2',
+      type: 'expense',
+      amount: 18_500_000,
+      description: 'Material semen & besi beton',
+      category: 'material',
+      account: 'Kas Proyek',
+      date: today,
+      project_id: 'demo-proj-1',
+      created_at: now,
+    },
+  ];
+  const todos: Todo[] = [
+    {
+      id: 'demo-todo-1',
+      title: 'Cek pemasangan keramik lantai 2',
+      priority: 'high',
+      status: 'in_progress',
+      due_date: today,
+      assigned_to: users[role].id,
+      project_id: 'demo-proj-1',
+      created_at: now,
+    },
+    {
+      id: 'demo-todo-2',
+      title: 'Konfirmasi pengiriman HPL kitchen set',
+      priority: 'medium',
+      status: 'pending',
+      due_date: today,
+      assigned_to: users[role].id,
+      project_id: 'demo-proj-2',
+      created_at: now,
+    },
+  ];
+  return { user: users[role], tenant, projects, notifications, transactions, todos };
+}
 
 export function LoginPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
-  const [loginSuccess, setLoginSuccess] = useState(false);
   const [deviceKickoutNotice, setDeviceKickoutNotice] = useState(false);
   const navigate = useNavigate();
+
+  const fromLocation = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
+  const fromPath = fromLocation?.pathname
+    ? `${fromLocation.pathname}${fromLocation.search || ''}${fromLocation.hash || ''}`
+    : null;
 
   useEffect(() => {
     if (searchParams.get('reason') === 'other_device' || checkAndClearDeviceKickoutReason()) {
       setDeviceKickoutNotice(true);
     }
   }, [searchParams]);
-  const { setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing, customDomainContext } = useAppStore();
+  const {
+    setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing,
+    setHasMembership, setOnboardingCompleted, setEmailVerified, setAuthError,
+    setSyncStatus, setLastSynced, setProjects, setNotifications, setTransactions, setTodos,
+    customDomainContext,
+  } = useAppStore();
   const estimatorBrand = isEstimatorBrandContext();
   const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Monefyi Estimator' : 'Monefyi Planner');
   const loginSubtitle = customDomainContext
@@ -56,27 +234,26 @@ export function LoginPage() {
   const handleDemoLogin = async (role: 'owner' | 'manager' | 'worker') => {
     if (!config.devDemoAuth) return;
     setLoading(true);
-    const users = {
-      owner: { id: 'demo-u-1', name: 'Budi Santoso', email: 'demo@local', role: 'owner' as const, tenant_id: 'demo' },
-      manager: { id: 'demo-u-2', name: 'Sari Dewi', email: 'demo@local', role: 'manager' as const, tenant_id: 'demo' },
-      worker: { id: 'demo-u-3', name: 'Ahmad Rizky', email: 'demo@local', role: 'worker' as const, tenant_id: 'demo' },
-    };
-    setUser(users[role]);
+    const seed = buildDemoSeedData(role);
+    setUser(seed.user);
     setActiveOrgTimeZone('Asia/Jakarta');
-    setTenant({
-      id: 'demo',
-      name: 'CV Buana Konstruksi (Demo)',
-      slug: 'demo',
-      business_type: 'construction',
-      plan: 'pro',
-      currency: 'IDR',
-      timezone: 'Asia/Jakarta',
-    });
+    setTenant(seed.tenant);
+    setProjects(seed.projects);
+    setNotifications(seed.notifications);
+    setTransactions(seed.transactions);
+    setTodos(seed.todos);
+    setHasMembership(true);
+    setOnboardingCompleted(true);
+    setEmailVerified(true);
+    setAuthError(null);
+    setSyncStatus('synced');
+    setLastSynced(new Date());
     setDemoMode(true);
     setAuthenticated(true);
     setAuthInitializing(false);
     setLoading(false);
-    navigate('/app');
+    const dest = resolvePostLoginDestination(searchParams.get('next'), fromPath, '/app');
+    navigate(dest, { replace: true });
   };
 
   const handleLogin = async (e?: React.FormEvent) => {
@@ -100,7 +277,9 @@ export function LoginPage() {
         } finally {
           setAuthInitializing(false);
         }
-        setLoginSuccess(true);
+        const defaultDest = estimatorBrand ? estimatorAppEntryPath() : '/app';
+        const dest = resolvePostLoginDestination(searchParams.get('next'), fromPath, defaultDest);
+        navigate(dest, { replace: true });
       } else {
         setError('Login berhasil tetapi sesi tidak tersedia. Verifikasi email terlebih dahulu.');
       }
@@ -158,23 +337,7 @@ export function LoginPage() {
             </p>
           )}
 
-          {loginSuccess ? (
-            <div className="space-y-4 text-center">
-              <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto" />
-              <div>
-                <h3 className="font-black text-xl text-slate-900">Login berhasil!</h3>
-                <p className="text-sm text-slate-500 mt-2">Klik tombol di bawah untuk masuk ke dashboard.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/app')}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
-              >
-                Masuk ke Dashboard
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          ) : config.devDemoAuth && (
+          {config.devDemoAuth && (
             <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
               <p className="text-xs text-emerald-700 font-semibold mb-3">Demo — Pilih role:</p>
               <div className="grid grid-cols-3 gap-2">
@@ -192,7 +355,6 @@ export function LoginPage() {
             </div>
           )}
 
-          {!loginSuccess && (
           <form onSubmit={handleLogin} className="space-y-4">
             {deviceKickoutNotice && (
               <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in">
@@ -264,10 +426,7 @@ export function LoginPage() {
               )}
             </button>
           </form>
-          )}
 
-          {!loginSuccess && (
-          <>
           <p className="text-center text-sm text-slate-500 mt-4">
             <Link to="/join" className="text-emerald-600 font-semibold hover:underline">
               Punya undangan? Klik di sini
@@ -279,8 +438,6 @@ export function LoginPage() {
               Daftar gratis
             </Link>
           </p>
-          </>
-          )}
         </motion.div>
       </div>
     </div>

@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Palette, RefreshCw } from 'lucide-react';
 import { useGanttStore } from '../../../store/ganttStore';
 import { addDays, daysBetween, getBarStyle } from '../../../lib/gantt/utils';
 import type { FlatGanttRow, GanttDragState } from '../../../lib/gantt/types';
+import type { GanttSnapshot } from '../../../lib/gantt/snapshot';
 import { BAR_COLOR_PRESETS, GANTT_COLORS, getEffectivePxPerDay, MIN_BAR_WIDTH, ROW_HEIGHT, WORK_ITEM_STATUS_LABEL } from '../../../lib/gantt/constants';
 import type { TimelineRange } from '../../../lib/gantt/types';
 import GanttContextMenu, { type GanttContextMenuItem } from './GanttContextMenu';
@@ -36,52 +37,90 @@ export default function GanttTaskBar({
   const [hovered, setHovered] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
+  const cleanupDragRef = useRef<(() => void) | null>(null);
   const dayCount = daysBetween(task.startDate, task.endDate);
   const pxPerDay = getEffectivePxPerDay(viewMode, zoomScale);
 
+  useEffect(() => () => {
+    cleanupDragRef.current?.();
+  }, []);
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, mode: GanttDragState['mode']) => {
+      if (e.button !== 0) return;
       e.stopPropagation();
       e.preventDefault();
-      pushHistory();
+      cleanupDragRef.current?.();
+
+      const origStart = task.startDate;
+      const origEnd = task.endDate;
       setDrag({
         taskId: task.id,
         mode,
         startX: e.clientX,
-        origStart: task.startDate,
-        origEnd: task.endDate,
+        origStart,
+        origEnd,
       });
 
-      const origStart = task.startDate;
-      const origEnd = task.endDate;
+      let preDragSnap: GanttSnapshot | null = null;
+      let lastStart = origStart;
+      let lastEnd = origEnd;
 
       const onMove = (ev: MouseEvent) => {
         const dx = ev.clientX - e.clientX;
         const daysDelta = Math.round(dx / pxPerDay);
 
+        let nextStart = lastStart;
+        let nextEnd = lastEnd;
+
         if (mode === 'move') {
-          useGanttStore.getState().updateTask(task.id, {
-            startDate: addDays(origStart, daysDelta),
-            endDate: addDays(origEnd, daysDelta),
-          }, false);
+          nextStart = addDays(origStart, daysDelta);
+          nextEnd = addDays(origEnd, daysDelta);
         } else if (mode === 'resize-start') {
           const newStart = addDays(origStart, daysDelta);
           if (new Date(newStart) <= new Date(origEnd)) {
-            useGanttStore.getState().updateTask(task.id, { startDate: newStart }, false);
+            nextStart = newStart;
           }
         } else if (mode === 'resize-end') {
           const newEnd = addDays(origEnd, daysDelta);
           if (new Date(newEnd) >= new Date(origStart)) {
-            useGanttStore.getState().updateTask(task.id, { endDate: newEnd }, false);
+            nextEnd = newEnd;
           }
         }
+
+        if (nextStart === lastStart && nextEnd === lastEnd) return;
+
+        if (!preDragSnap && (nextStart !== origStart || nextEnd !== origEnd)) {
+          preDragSnap = useGanttStore.getState().getSnapshot();
+        }
+
+        lastStart = nextStart;
+        lastEnd = nextEnd;
+        useGanttStore.getState().updateTask(task.id, {
+          startDate: nextStart,
+          endDate: nextEnd,
+        }, false);
+      };
+
+      const removeListeners = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        cleanupDragRef.current = null;
       };
 
       const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+        removeListeners();
         const t = useGanttStore.getState().tasks.find(x => x.id === task.id);
-        if (t) onCommitDates(task.id, t.startDate, t.endDate);
+        const changed = !!t && (t.startDate !== origStart || t.endDate !== origEnd);
+        if (changed && t) {
+          pushHistory(preDragSnap ?? undefined);
+          onCommitDates(task.id, t.startDate, t.endDate);
+        }
+        setDrag(null);
+      };
+
+      cleanupDragRef.current = () => {
+        removeListeners();
         setDrag(null);
       };
 
@@ -113,9 +152,9 @@ export default function GanttTaskBar({
       id: `status-${status}`,
       label: statusLabels[status] || status,
       onClick: () => {
+        if (task.status === status) return;
         pushHistory();
         updateTask(task.id, { status }, false);
-        useGanttStore.setState({ isDirty: true });
       },
     }));
 

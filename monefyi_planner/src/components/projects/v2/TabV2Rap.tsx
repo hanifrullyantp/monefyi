@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileSignature, Calculator, Wallet, TrendingUp,
   Package, HardHat, Search, Filter, CheckSquare, Table2, Plus,
@@ -220,7 +220,8 @@ function RapColumnPanel({
 export default function TabV2Rap({
   projectId, normalized, rapItems, rapActuals, onRefresh, userId, onDraftChange,
 }: Props) {
-  const { tenant, user } = useAppStore();
+  const { tenant, user, isDemoMode } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const showToast = useUiStore(s => s.showToast);
   const [materialSuggestions, setMaterialSuggestions] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<RapViewMode>('checklist');
@@ -248,7 +249,7 @@ export default function TabV2Rap({
   const p = normalized.project;
 
   const reloadDbNames = useCallback(async () => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || demoActive) return;
     try {
       const [mats, workers] = await Promise.all([
         loadMaterials(tenant.id),
@@ -260,7 +261,7 @@ export default function TabV2Rap({
     } catch {
       setMaterialSuggestions([]);
     }
-  }, [tenant?.id]);
+  }, [tenant?.id, demoActive]);
 
   useEffect(() => { void reloadDbNames(); }, [reloadDbNames]);
 
@@ -303,7 +304,7 @@ export default function TabV2Rap({
   );
 
   const handleSaveToDatabase = useCallback(async (item: MappedRapItem, kind: 'material' | 'labor') => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || demoActive) return;
     try {
       if (kind === 'material') {
         await upsertMaterialFromRapLine(tenant.id, {
@@ -329,35 +330,117 @@ export default function TabV2Rap({
     checklistDraft.patchField(rapId, patch);
   }, [checklistDraft]);
 
-  const notifyDraft = useCallback(() => {
-    if (viewMode === 'excel' && excelControls) {
-      onDraftChange?.({
-        ...excelControls,
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
+  const checklistDraftRef = useRef(checklistDraft);
+  checklistDraftRef.current = checklistDraft;
+  const excelControlsRef = useRef(excelControls);
+  excelControlsRef.current = excelControls;
+  const lastEmittedSigRef = useRef<string | null>(null);
+
+  const handleManualControls = useCallback((ctrl: {
+    changeCount: number;
+    hasChanges: boolean;
+    saving: boolean;
+    undo: () => void;
+    redo: () => void;
+    save: () => Promise<void>;
+    discard: () => void;
+  } | null) => {
+    setExcelControls(prev => {
+      if (!ctrl && !prev) return prev;
+      if (!ctrl) return null;
+      if (
+        prev
+        && prev.changeCount === ctrl.changeCount
+        && prev.hasChanges === ctrl.hasChanges
+        && prev.saving === ctrl.saving
+        && prev.undo === ctrl.undo
+        && prev.redo === ctrl.redo
+        && prev.save === ctrl.save
+        && prev.discard === ctrl.discard
+      ) {
+        return prev;
+      }
+      return {
+        changeCount: ctrl.changeCount,
+        hasChanges: ctrl.hasChanges,
+        saving: ctrl.saving,
         canUndo: true,
         canRedo: true,
-      });
-      return;
-    }
-    if (viewMode !== 'checklist') {
-      onDraftChange?.(null);
-      return;
-    }
-    onDraftChange?.({
-      changeCount: checklistDraft.changeCount,
-      hasChanges: checklistDraft.hasChanges,
-      saving: checklistDraft.saving,
-      canUndo: checklistDraft.canUndo,
-      canRedo: checklistDraft.canRedo,
-      undo: checklistDraft.undo,
-      redo: checklistDraft.redo,
-      save: checklistDraft.save,
-      discard: checklistDraft.discard,
+        undo: ctrl.undo,
+        redo: ctrl.redo,
+        save: ctrl.save,
+        discard: ctrl.discard,
+      };
     });
-  }, [viewMode, onDraftChange, checklistDraft, excelControls]);
+  }, []);
 
-  useEffect(() => { notifyDraft(); }, [notifyDraft]);
+  const stableChecklistActions = useMemo(() => ({
+    undo: () => checklistDraftRef.current.undo(),
+    redo: () => checklistDraftRef.current.redo(),
+    save: () => checklistDraftRef.current.save(),
+    discard: () => checklistDraftRef.current.discard(),
+  }), []);
 
-  useEffect(() => () => onDraftChange?.(null), [onDraftChange]);
+  const stableExcelActions = useMemo(() => ({
+    undo: () => excelControlsRef.current?.undo(),
+    redo: () => excelControlsRef.current?.redo(),
+    save: () => excelControlsRef.current?.save() ?? Promise.resolve(),
+    discard: () => excelControlsRef.current?.discard(),
+  }), []);
+
+  const hasExcelControls = excelControls !== null;
+  const activeChangeCount = viewMode === 'excel'
+    ? (excelControls?.changeCount ?? 0)
+    : checklistDraft.changeCount;
+  const activeHasChanges = viewMode === 'excel'
+    ? (excelControls?.hasChanges ?? false)
+    : checklistDraft.hasChanges;
+  const activeSaving = viewMode === 'excel'
+    ? (excelControls?.saving ?? false)
+    : checklistDraft.saving;
+  const activeCanUndo = viewMode === 'excel' ? true : checklistDraft.canUndo;
+  const activeCanRedo = viewMode === 'excel' ? true : checklistDraft.canRedo;
+
+  useEffect(() => {
+    const emit = onDraftChangeRef.current;
+    if (!emit) return;
+    if (viewMode === 'excel' && !hasExcelControls) {
+      if (lastEmittedSigRef.current !== 'null') {
+        lastEmittedSigRef.current = 'null';
+        emit(null);
+      }
+      return;
+    }
+    const sig = `${viewMode}:${activeChangeCount}:${activeHasChanges}:${activeSaving}:${activeCanUndo}:${activeCanRedo}`;
+    if (lastEmittedSigRef.current === sig) return;
+    lastEmittedSigRef.current = sig;
+    const actions = viewMode === 'excel' ? stableExcelActions : stableChecklistActions;
+    emit({
+      changeCount: activeChangeCount,
+      hasChanges: activeHasChanges,
+      saving: activeSaving,
+      canUndo: activeCanUndo,
+      canRedo: activeCanRedo,
+      ...actions,
+    });
+  }, [
+    viewMode,
+    hasExcelControls,
+    activeChangeCount,
+    activeHasChanges,
+    activeSaving,
+    activeCanUndo,
+    activeCanRedo,
+    stableExcelActions,
+    stableChecklistActions,
+  ]);
+
+  useEffect(() => () => {
+    lastEmittedSigRef.current = null;
+    onDraftChangeRef.current?.(null);
+  }, []);
 
   const handleToggle = useCallback((item: MappedRapItem) => {
     checklistDraft.toggle(item);
@@ -621,17 +704,7 @@ export default function TabV2Rap({
             showFloatingToolbar
             manualSave
             onPendingChangeCount={setExcelChangeCount}
-            onManualControls={ctrl => setExcelControls(ctrl ? {
-              changeCount: ctrl.changeCount,
-              hasChanges: ctrl.hasChanges,
-              saving: ctrl.saving,
-              canUndo: true,
-              canRedo: true,
-              undo: ctrl.undo,
-              redo: ctrl.redo,
-              save: ctrl.save,
-              discard: ctrl.discard,
-            } : null)}
+            onManualControls={handleManualControls}
           />
         </>
       )}

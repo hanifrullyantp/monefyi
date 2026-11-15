@@ -15,9 +15,11 @@ import {
   getCustomerSupportReply,
 } from '../../services/customerSupportService';
 import { escalateQuestionToOwnerTelegram } from '../../services/telegramService';
+import { useAppStore } from '../../store/appStore';
 
 export default function CustomerSupportWidget() {
   const navigate = useNavigate();
+  const { isDemoMode, tenant } = useAppStore();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<CSMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -121,6 +123,25 @@ export default function CustomerSupportWidget() {
       navigate(action.payload);
       setIsOpen(false);
     } else if (action.action === 'escalate_telegram') {
+      if (isDemoMode || tenant?.id === 'demo') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `cs_${Date.now()}`,
+            sender: 'cs',
+            text: 'ℹ️ Mode Demo aktif: eskalasi ke Telegram Owner dinonaktifkan pada sesi demo lokal.\n\nSilakan lanjutkan tanya via WhatsApp Support jika butuh info produk.',
+            timestamp: new Date(),
+            suggestedActions: [
+              {
+                label: '💬 Chat WhatsApp Owner Sekarang',
+                action: 'link_whatsapp',
+                payload: `https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Owner, saya mau tanya: "${action.payload}"`)}`,
+              },
+            ],
+          },
+        ]);
+        return;
+      }
       setIsTyping(true);
       const res = await escalateQuestionToOwnerTelegram(action.payload, 'User Aplikasi Monefyi Planner');
       setIsTyping(false);

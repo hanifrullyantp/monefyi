@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { useAppStore } from '../store/appStore';
+import { isDemoOrInvalidUuid } from '../lib/demo/demoMode';
 import { updateProfileSettings } from './profileService';
 import { updateUserAccount } from './adminService';
 import {
@@ -10,6 +12,11 @@ import {
 
 const SETTINGS_KEY = 'planner_ai_config';
 const PROVIDERS: AIProviderId[] = ['openrouter', 'gemini', 'groq', 'anthropic', 'openai'];
+
+function isDemoOrNonUuidUser(userId?: string | null): boolean {
+  const state = useAppStore.getState();
+  return isDemoOrInvalidUuid(userId, Boolean(state.isDemoMode || state.tenant?.id === 'demo'));
+}
 
 function cloudSlice(raw: unknown): Partial<AIConfig> | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -53,6 +60,9 @@ export function mergeCloudAIConfig(
 }
 
 export async function hydrateAIConfigFromAccount(userId: string): Promise<AIConfig> {
+  if (isDemoOrNonUuidUser(userId)) {
+    return loadAIConfig();
+  }
   const { data } = await supabase
     .from('profiles')
     .select('settings, gemini_key')
@@ -66,6 +76,7 @@ export async function hydrateAIConfigFromAccount(userId: string): Promise<AIConf
 }
 
 export async function persistAIConfigToAccount(userId: string, config: AIConfig): Promise<void> {
+  if (isDemoOrNonUuidUser(userId)) return;
   await updateProfileSettings(userId, {
     [SETTINGS_KEY]: {
       activeProvider: config.activeProvider,

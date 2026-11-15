@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, CheckSquare, Square } from 'lucide-react';
 import { generateRapDraft, type ProjectDraft } from '../../lib/migration/suggestion-engine';
 import { loadRppMaster } from '../../services/rpp/masterLoader';
+import { useAppStore } from '../../store/appStore';
 import type { JobTemplate } from '../../types/rpp';
 import { formatRupiah } from '../../utils/projectUi';
 
@@ -12,12 +13,32 @@ type Props = {
 };
 
 export default function CreateProjectRapDraft({ orgId, selections, onDraftChange }: Props) {
+  const isDemoMode = useAppStore(s => s.isDemoMode);
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<JobTemplate[]>([]);
   const [draft, setDraft] = useState<ProjectDraft | null>(null);
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
+
+  const selectionKey = useMemo(() => JSON.stringify(selections), [selections]);
 
   useEffect(() => {
     let cancelled = false;
+    const parsedSelections = JSON.parse(selectionKey) as Props['selections'];
+
+    if (!orgId || isDemoMode || orgId === 'demo') {
+      const emptyDraft = generateRapDraft({
+        selections: parsedSelections,
+        templates: [],
+        materials: [],
+      });
+      setTemplates([]);
+      setDraft(emptyDraft);
+      onDraftChangeRef.current?.(emptyDraft);
+      setLoading(false);
+      return;
+    }
+
     (async () => {
       setLoading(true);
       try {
@@ -25,18 +46,28 @@ export default function CreateProjectRapDraft({ orgId, selections, onDraftChange
         if (cancelled) return;
         setTemplates(master.templates);
         const next = generateRapDraft({
-          selections,
+          selections: parsedSelections,
           templates: master.templates,
           materials: master.materials,
         });
         setDraft(next);
-        onDraftChange?.(next);
+        onDraftChangeRef.current?.(next);
+      } catch {
+        if (cancelled) return;
+        const fallback = generateRapDraft({
+          selections: parsedSelections,
+          templates: [],
+          materials: [],
+        });
+        setTemplates([]);
+        setDraft(fallback);
+        onDraftChangeRef.current?.(fallback);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [orgId, selections, onDraftChange]);
+  }, [orgId, selectionKey, isDemoMode]);
 
   const selectedTemplates = useMemo(
     () => selections.map(s => templates.find(t => t.id === s.templateId)).filter(Boolean) as JobTemplate[],
@@ -50,7 +81,7 @@ export default function CreateProjectRapDraft({ orgId, selections, onDraftChange
       materials: draft.materials.map(m => (m.key === key ? { ...m, enabled: !m.enabled } : m)),
     };
     setDraft(next);
-    onDraftChange?.(next);
+    onDraftChangeRef.current?.(next);
   };
 
   if (loading || !draft) {

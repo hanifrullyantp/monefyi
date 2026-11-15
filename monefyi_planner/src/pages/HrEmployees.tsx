@@ -55,7 +55,8 @@ function roleBadge(role: string) {
 }
 
 export default function HrEmployees() {
-  const { tenant, user, projects } = useAppStore();
+  const { tenant, user, projects, isDemoMode } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const [tab, setTab] = useState<HrTab>('overview');
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
@@ -99,6 +100,28 @@ export default function HrEmployees() {
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
+    if (demoActive) {
+      // Mode demo memakai data anggota lokal tanpa query UUID ke Supabase ('demo' -> 22P02).
+      setMembers([
+        { id: 'demo-m-1', org_id: 'demo', user_id: 'demo-u-1', role: 'owner', status: 'active', position: 'Direktur Utama', department: 'Manajemen', profile: { name: 'Indra Pratama' } },
+        { id: 'demo-m-2', org_id: 'demo', user_id: 'demo-u-2', role: 'manager', status: 'active', position: 'Project Manager', department: 'Operasional', profile: { name: 'Budi Santoso' } },
+        { id: 'demo-m-3', org_id: 'demo', user_id: 'demo-u-3', role: 'worker', status: 'active', position: 'Pelaksana Lapangan', department: 'Lapangan', profile: { name: 'Andi Wijaya' } },
+      ]);
+      setRequests([]);
+      setAudit([]);
+      setWorkerLogs([]);
+      setWorkItemCount(0);
+      setTodayAttendance(new Map());
+      setRecentAttendance([]);
+      setMonthAttendanceRecords([]);
+      setMonthAttendanceStats(new Map());
+      setPayrollEntries([]);
+      setBonRequests([]);
+      setCompensation([]);
+      setUndoableActions([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [m, r, a, logs, items, todayMap, attendance, payroll, bons, comp, orgDetails] = await Promise.all([
@@ -136,7 +159,7 @@ export default function HrEmployees() {
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id, canInvite, isOwner]);
+  }, [tenant?.id, canInvite, isOwner, demoActive]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -166,6 +189,10 @@ export default function HrEmployees() {
 
   const handleRoleChange = async (memberId: string, role: string) => {
     if (!tenant?.id || !user?.id) return;
+    if (demoActive) {
+      showToast('Perubahan role tidak tersedia di mode demo', 'info');
+      return;
+    }
     try {
       const { undoActionId } = await changeMemberRole(memberId, role as 'manager' | 'worker', {
         orgId: tenant.id,
@@ -180,6 +207,10 @@ export default function HrEmployees() {
   };
 
   const handleRemove = async (memberId: string) => {
+    if (demoActive) {
+      showToast('Hapus anggota tidak tersedia di mode demo', 'info');
+      return;
+    }
     if (!confirm('Hapus anggota ini?')) return;
     try {
       await removeMember(memberId);
@@ -224,7 +255,17 @@ export default function HrEmployees() {
               <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading ? 'animate-spin' : ''}`} />
             </button>
             {canInvite && (
-              <button type="button" onClick={() => setInviteOpen(true)} className="min-h-11 flex items-center gap-2 px-4 py-2.5 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors">
+              <button
+                type="button"
+                onClick={() => {
+                  if (demoActive) {
+                    showToast('Undang karyawan tidak tersedia di mode demo', 'info');
+                    return;
+                  }
+                  setInviteOpen(true);
+                }}
+                className="min-h-11 flex items-center gap-2 px-4 py-2.5 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors"
+              >
                 <UserPlus className="w-4 h-4" /> Undang Karyawan
               </button>
             )}
@@ -271,7 +312,7 @@ export default function HrEmployees() {
               ))}
             </div>
 
-            {tenant?.id && (
+            {!demoActive && tenant?.id && (
               <TeamTodoBoard orgId={tenant.id} members={members} title="Todo Tim (Semua Proyek)" />
             )}
 
@@ -384,7 +425,13 @@ export default function HrEmployees() {
                   <button
                     key={m.id}
                     type="button"
-                    onClick={() => setSelectedMember(m)}
+                    onClick={() => {
+                      if (demoActive) {
+                        showToast('Detail karyawan tidak tersedia di mode demo', 'info');
+                        return;
+                      }
+                      setSelectedMember(m);
+                    }}
                     className="bg-white rounded-2xl border border-[#E5EAE8] p-4 hover:border-[#059669] hover:shadow-md transition-all text-left w-full shadow-sm"
                   >
                     <div className="flex items-start gap-3">
@@ -527,7 +574,7 @@ export default function HrEmployees() {
 
         {tab === 'payroll' && (
           <div className="space-y-4">
-            {canInvite && tenant?.id && (
+            {!demoActive && canInvite && tenant?.id && (
               <AttendanceSettingsPanel orgId={tenant.id} canEdit={canInvite} actorId={user?.id} />
             )}
 
@@ -581,7 +628,13 @@ export default function HrEmployees() {
 
                   <button
                     type="button"
-                    onClick={() => setShowAiHrdModal(true)}
+                    onClick={() => {
+                      if (demoActive) {
+                        showToast('AI HRD tidak tersedia di mode demo', 'info');
+                        return;
+                      }
+                      setShowAiHrdModal(true);
+                    }}
                     className="px-5 py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-rose-950 flex items-center gap-2 shrink-0 transition-all cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
@@ -595,6 +648,10 @@ export default function HrEmployees() {
                     disabled={payrollBusy}
                     onClick={async () => {
                       if (!tenant?.id) return;
+                      if (demoActive) {
+                        showToast('Generate payroll tidak tersedia di mode demo', 'info');
+                        return;
+                      }
                       setPayrollBusy(true);
                       try {
                         await generatePayrollForOrg(
@@ -648,6 +705,10 @@ export default function HrEmployees() {
                           <button
                             type="button"
                             onClick={async () => {
+                              if (demoActive) {
+                                showToast('Simpan gaji tidak tersedia di mode demo', 'info');
+                                return;
+                              }
                               const raw = salaryDraft[w.id] ?? String(defaultAmount);
                               const amount = Number(raw.replace(/\D/g, ''));
                               if (!amount) {
@@ -864,6 +925,10 @@ export default function HrEmployees() {
             <button
               type="button"
               onClick={async () => {
+                if (demoActive) {
+                  showToast('Pengaturan akses tidak tersedia di mode demo', 'info');
+                  return;
+                }
                 const org = await loadOrgDetails(tenant!.id);
                 const before = {
                   allow_join_request: org.allow_join_request,
@@ -899,14 +964,20 @@ export default function HrEmployees() {
           </div>
         )}
 
-        {inviteOpen && tenant && user && (
+        {!demoActive && inviteOpen && tenant && user && (
           <InviteMemberModal orgId={tenant.id} actorRole={user.role} onClose={() => setInviteOpen(false)} onCreated={load} />
         )}
 
         {tab === 'karyawan' && canInvite && (
           <button
             type="button"
-            onClick={() => setInviteOpen(true)}
+            onClick={() => {
+              if (demoActive) {
+                showToast('Undang karyawan tidak tersedia di mode demo', 'info');
+                return;
+              }
+              setInviteOpen(true);
+            }}
             className="fixed bottom-24 md:bottom-8 right-6 z-40 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-emerald-700"
             aria-label="Tambah karyawan"
           >
@@ -952,18 +1023,20 @@ export default function HrEmployees() {
           </div>
         )}
 
-        <EmployeeDetailSheet
-          member={selectedMember}
-          orgId={tenant?.id || ''}
-          open={!!selectedMember}
-          canManage={canInvite}
-          compensation={selectedMember ? compByUser[selectedMember.user_id] : undefined}
-          hoursPerDay={attendanceSettings?.hours_per_day ?? 8}
-          onClose={() => setSelectedMember(null)}
-          onUpdated={load}
-        />
+        {!demoActive && (
+          <EmployeeDetailSheet
+            member={selectedMember}
+            orgId={tenant?.id || ''}
+            open={!!selectedMember}
+            canManage={canInvite}
+            compensation={selectedMember ? compByUser[selectedMember.user_id] : undefined}
+            hoursPerDay={attendanceSettings?.hours_per_day ?? 8}
+            onClose={() => setSelectedMember(null)}
+            onUpdated={load}
+          />
+        )}
 
-        {showAiHrdModal && (
+        {!demoActive && showAiHrdModal && (
           <AiHrdPayrollModal
             open={showAiHrdModal}
             onClose={() => setShowAiHrdModal(false)}

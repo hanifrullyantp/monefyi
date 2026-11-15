@@ -23,8 +23,24 @@ const priorityBadge = {
   low: 'bg-slate-100 text-slate-600',
 };
 
+export function getNotificationTypeConfig(type?: string | null) {
+  if (type && Object.prototype.hasOwnProperty.call(typeConfig, type)) {
+    return typeConfig[type as keyof typeof typeConfig];
+  }
+  return typeConfig.system;
+}
+
+export function getNotificationPriorityBadgeClass(priority?: string | null): string {
+  if (priority && Object.prototype.hasOwnProperty.call(priorityBadge, priority)) {
+    return priorityBadge[priority as keyof typeof priorityBadge];
+  }
+  return '';
+}
+
 function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const parsed = new Date(dateStr).getTime();
+  if (Number.isNaN(parsed)) return '';
+  const diff = Math.max(0, Date.now() - parsed);
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Baru saja';
   if (mins < 60) return `${mins} mnt lalu`;
@@ -34,15 +50,17 @@ function timeAgo(dateStr: string) {
 }
 
 export default function NotificationPanel({ onClose }: Props) {
-  const { notifications, markNotificationRead, markAllNotificationsRead, user } = useAppStore();
+  const { notifications, markNotificationRead, markAllNotificationsRead, user, tenant, isDemoMode } = useAppStore();
   const navigate = useNavigate();
 
   const handleRead = async (id: string, actionUrl?: string) => {
     markNotificationRead(id);
-    try {
-      await markReadDb(id);
-    } catch (e) {
-      console.error(e);
+    if (!isDemoMode && tenant?.id !== 'demo') {
+      try {
+        await markReadDb(id);
+      } catch (e) {
+        console.error(e);
+      }
     }
     if (actionUrl) {
       navigate(actionUrl.startsWith('/') ? actionUrl : `/app${actionUrl}`);
@@ -52,7 +70,7 @@ export default function NotificationPanel({ onClose }: Props) {
 
   const handleReadAll = async () => {
     markAllNotificationsRead();
-    if (user?.id) {
+    if (user?.id && !isDemoMode && tenant?.id !== 'demo') {
       try {
         await markAllReadDb(user.id);
       } catch (e) {
@@ -102,8 +120,9 @@ export default function NotificationPanel({ onClose }: Props) {
             </div>
           ) : (
             notifications.map((notif) => {
-              const config = typeConfig[notif.type];
+              const config = getNotificationTypeConfig(notif.type);
               const IconComp = config.icon;
+              const badgeClass = getNotificationPriorityBadgeClass(notif.priority);
               return (
                 <button
                   key={notif.id}
@@ -122,7 +141,7 @@ export default function NotificationPanel({ onClose }: Props) {
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className="text-xs text-slate-600">{timeAgo(notif.created_at)}</span>
                       {notif.priority && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${priorityBadge[notif.priority]}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${badgeClass}`}>
                           {notif.priority}
                         </span>
                       )}

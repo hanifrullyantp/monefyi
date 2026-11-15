@@ -89,7 +89,8 @@ function formatCompact(num: number): string {
 }
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
-  const { user, tenant, addProject, migrationFlags } = useAppStore();
+  const { user, tenant, addProject, migrationFlags, isDemoMode } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const showToast = useUiStore(s => s.showToast);
   const smartCreate = migrationFlags.create_project_smart;
   const [step, setStep] = useState(1);
@@ -99,7 +100,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
   const [volume, setVolume] = useState(3);
   const [draft, setDraft] = useState<ProjectDraft | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     name: '',
     client_name: '',
     location: '',
@@ -108,17 +109,23 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     end_date: new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10),
     description: '',
     total_budget: 0,
-  });
+    contract_value: 0,
+  }));
 
   useEffect(() => {
-    if (!smartCreate || !tenant?.id || step !== 2) return;
+    if (!smartCreate || !tenant?.id || demoActive || step !== 2 || templates.length > 0) return;
     loadRppMaster(tenant.id)
       .then(m => {
         setTemplates(m.templates);
-        if (m.templates[0]) setSelectedTemplateId(m.templates[0].id);
+        if (m.templates[0]) setSelectedTemplateId(prev => prev ?? m.templates[0].id);
       })
       .catch(() => { });
-  }, [smartCreate, tenant?.id, step]);
+  }, [smartCreate, tenant?.id, demoActive, step, templates.length]);
+
+  const rapSelections = useMemo(
+    () => (selectedTemplateId ? [{ templateId: selectedTemplateId, volume }] : []),
+    [selectedTemplateId, volume],
+  );
 
   const handleCreate = async () => {
     if (!user || !tenant) return;
@@ -130,11 +137,48 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
       setError('Tanggal selesai harus setelah tanggal mulai');
       return;
     }
+    if (form.contract_value < 0 || form.total_budget < 0) {
+      setError('Nilai kontrak dan budget tidak boleh negatif');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
+      if (demoActive) {
+        const nowIso = new Date().toISOString();
+        const budget = form.total_budget || draft?.totalCost || 0;
+        const contractVal = form.contract_value > 0 ? form.contract_value : (draft?.totalSell || budget);
+        const demoProject: Project = {
+          id: `demo-proj-${Date.now()}`,
+          code: `DEMO-${String(Date.now()).slice(-4)}`,
+          name: form.name.trim(),
+          description: form.description.trim() || undefined,
+          client_name: form.client_name.trim(),
+          location: form.location.trim() || undefined,
+          type: form.type,
+          status: 'planning',
+          start_date: form.start_date,
+          end_date: form.end_date,
+          total_budget_planned: budget,
+          contract_value: contractVal,
+          currency: tenant.currency || 'IDR',
+          spent_amount: 0,
+          total_received: 0,
+          planned_progress: 0,
+          progress_percentage: 0,
+          health_status: 'on_track',
+          tenant_id: tenant.id,
+          created_at: nowIso,
+          updated_at: nowIso,
+        };
+        addProject(demoProject);
+        showToast('Proyek demo berhasil dibuat (mode demo lokal)', 'success');
+        onClose();
+        return;
+      }
+
       if (smartCreate && draft && selectedTemplateId) {
-        const project = await createProjectWithRap({
+        let project = await createProjectWithRap({
           orgId: tenant.id,
           userId: user.id,
           currency: tenant.currency,
@@ -145,15 +189,22 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
             client: form.client_name.trim(),
             startDate: form.start_date,
             endDate: form.end_date,
-            contractValue: form.total_budget || draft.totalSell,
+            contractValue: form.contract_value > 0 ? form.contract_value : (form.total_budget || draft.totalSell),
             notes: form.description.trim(),
             type: form.type,
             location: form.location.trim(),
           },
         });
+        if (form.contract_value > 0) {
+          project = await updateProjectApi(
+            project.id,
+            { contract_value: form.contract_value },
+            tenant.currency,
+          ).catch(() => ({ ...project, contract_value: form.contract_value }));
+        }
         addProject(project);
       } else {
-        const project = await createProject(
+        let project = await createProject(
           {
             name: form.name.trim(),
             description: form.description.trim(),
@@ -170,6 +221,13 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
           tenant.currency,
           tenant.plan,
         );
+        if (form.contract_value > 0) {
+          project = await updateProjectApi(
+            project.id,
+            { contract_value: form.contract_value },
+            tenant.currency,
+          ).catch(() => ({ ...project, contract_value: form.contract_value }));
+        }
         addProject(project);
       }
       showToast('Proyek berhasil dibuat', 'success');
@@ -231,12 +289,38 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
                 placeholder="Lokasi"
                 className="w-full px-4 py-3 rounded-xl border text-sm"
               />
-              <ProjectTypeSelect
-                orgId={tenant?.id || ''}
-                value={form.type}
-                onChange={type => setForm({ ...form, type })}
-                className="w-full px-4 py-3 rounded-xl border text-sm"
-              />
+              {demoActive ? (
+                <select
+                  value={form.type}
+                  onChange={e => setForm({ ...form, type: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border text-sm bg-white"
+                >
+                  <option value="construction">Konstruksi</option>
+                  <option value="it">IT &amp; Software</option>
+                  <option value="event">Event</option>
+                  <option value="service">Jasa</option>
+                  <option value="manufacturing">Manufaktur</option>
+                  <option value="other">Lainnya</option>
+                </select>
+              ) : (
+                <ProjectTypeSelect
+                  orgId={tenant?.id || ''}
+                  value={form.type}
+                  onChange={type => setForm({ ...form, type })}
+                  className="w-full px-4 py-3 rounded-xl border text-sm"
+                />
+              )}
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Nilai Kontrak (Rp, opsional)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={form.contract_value || ''}
+                  onChange={e => setForm({ ...form, contract_value: e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)) })}
+                  placeholder="Nilai kontrak dengan klien (Rp)"
+                  className="w-full px-4 py-3 rounded-xl border text-sm"
+                />
+              </div>
             </>
           )}
           {step === 2 && smartCreate && (
@@ -328,20 +412,25 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
               </div>
             </>
           )}
-          {step === 3 && smartCreate && selectedTemplateId && tenant && (
+          {step === 3 && smartCreate && selectedTemplateId && tenant && !demoActive && (
             <CreateProjectRapDraft
               orgId={tenant.id}
-              selections={[{ templateId: selectedTemplateId, volume }]}
+              selections={rapSelections}
               onDraftChange={setDraft}
             />
           )}
-          {step === 3 && !smartCreate && (
+          {step === 3 && (!smartCreate || !selectedTemplateId || demoActive) && (
             <div className="text-center py-4 space-y-2">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
               <h4 className="font-bold text-lg">{form.name || 'Proyek baru'}</h4>
               <p className="text-sm text-slate-500">
                 {form.client_name || 'Tanpa klien'} · {tenant?.name}
               </p>
+              {form.contract_value > 0 && (
+                <p className="text-sm font-semibold text-blue-600">
+                  Nilai Kontrak: {formatRupiah(form.contract_value)}
+                </p>
+              )}
               {form.total_budget > 0 && (
                 <p className="text-sm font-semibold text-emerald-600">
                   Budget: {formatRupiah(form.total_budget)}
@@ -398,7 +487,9 @@ export default function Projects({
     tenant,
     platformRole,
     entitlementPreviewMode,
+    isDemoMode,
   } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const entitlement = useEntitlement();
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
   const viewInitRef = useRef(false);
@@ -472,6 +563,14 @@ export default function Projects({
       showToast('Konfirmasi keamanan belum lengkap', 'error');
       return;
     }
+    if (demoActive) {
+      removeProject(deleteModalProject.id);
+      showToast(`Proyek "${deleteModalProject.name}" dihapus (mode demo lokal)`, 'success');
+      setDeleteModalProject(null);
+      setDeleteConfirmText('');
+      setDeleteAcknowledged(false);
+      return;
+    }
     setDeleting(true);
     try {
       await archiveProject(deleteModalProject.id, user?.id || '');
@@ -489,7 +588,7 @@ export default function Projects({
   };
 
   const fetchArchivedList = async () => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || demoActive) return;
     setArchivedLoading(true);
     try {
       const data = await loadArchivedProjects(tenant.id);
@@ -502,12 +601,18 @@ export default function Projects({
   };
 
   useEffect(() => {
-    if (tenant?.id) {
+    if (tenant?.id && !demoActive) {
       void fetchArchivedList();
+    } else if (demoActive) {
+      setArchivedProjects([]);
     }
-  }, [tenant?.id]);
+  }, [tenant?.id, demoActive]);
 
   const handleRestoreProject = async (row: ArchivedProjectRow) => {
+    if (demoActive) {
+      showToast('Pemulihan arsip tidak tersedia pada mode Demo', 'info');
+      return;
+    }
     setRestoringId(row.id);
     try {
       await restoreArchivedProject(row.id);
@@ -573,6 +678,11 @@ export default function Projects({
   };
 
   const handleStatusChange = async (id: string, status: Project['status']) => {
+    if (demoActive) {
+      updateProject(id, { status });
+      showToast('Status proyek diperbarui (mode demo lokal)', 'success');
+      return;
+    }
     try {
       const updated = await updateProjectApi(id, { status }, tenant?.currency);
       updateProject(id, updated);
@@ -656,6 +766,12 @@ export default function Projects({
 
   const handleSaveQuickLog = async () => {
     if (!logModalProj || !logText.trim() || !user || !tenant) return;
+    if (demoActive) {
+      setLogModalProj(null);
+      setLogText('');
+      showToast('Log harian dicatat (mode demo lokal)', 'success');
+      return;
+    }
     try {
       const { createDailyLog } = await import('../services/dailyLogService');
       await createDailyLog({
@@ -1376,7 +1492,7 @@ export default function Projects({
       </AnimatePresence>
 
       {/* Transaction Modal from ListCard */}
-      {txModal.open && txModal.project && tenant?.id && user?.id && (
+      {!demoActive && txModal.open && txModal.project && tenant?.id && user?.id && (
         <ProjectTransactionModals
           open={txModal.open}
           kind={txModal.kind}
@@ -1680,6 +1796,10 @@ export default function Projects({
                 type="button"
                 onClick={e => {
                   e.stopPropagation();
+                  if (demoActive) {
+                    showToast('Pencatatan transaksi tidak tersedia pada mode Demo', 'info');
+                    return;
+                  }
                   setTxModal({ open: true, kind: 'cost', project: proj });
                 }}
                 className="flex-1 h-11 rounded-xl border border-[#E5EAE8] bg-white text-[#0F172A] font-semibold text-xs flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-transform"

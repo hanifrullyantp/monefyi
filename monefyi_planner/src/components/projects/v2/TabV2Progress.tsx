@@ -9,6 +9,7 @@ import {
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
+import { isDemoOrInvalidUuid } from '../../../lib/demo/demoMode';
 import {
   createWorkItem,
   updateWorkItem,
@@ -69,6 +70,7 @@ export default function TabV2Progress({
   normalized, project, workItems, userId, canManage = true, onRefresh,
 }: Props) {
   const updateProject = useAppStore(s => s.updateProject);
+  const isDemoMode = useAppStore(s => s.isDemoMode);
   const [view, setView] = useState<ViewMode>('list');
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -97,12 +99,13 @@ export default function TabV2Progress({
   }, [normalized.project.timeline, workItems]);
 
   const reloadLogs = useCallback(async () => {
+    if (isDemoOrInvalidUuid(project.id, isDemoMode)) return;
     try {
       setLogs(await loadDailyLogs(project.id));
     } catch {
       /* non-blocking */
     }
-  }, [project.id]);
+  }, [project.id, isDemoMode]);
 
   useEffect(() => { void reloadLogs(); }, [reloadLogs]);
 

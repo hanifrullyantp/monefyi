@@ -25,13 +25,19 @@ type ActionRow = {
 
 export default function AgentHomePanel({ orgId }: { orgId: string }) {
   const navigate = useNavigate();
-  const { user, projects, refreshData, setCommandModalOpen } = useAppStore();
+  const { user, projects, isDemoMode, refreshData, setCommandModalOpen } = useAppStore();
+  const demoActive = isDemoMode || orgId === 'demo';
   const [report, setReport] = useState<Report | null>(null);
   const [actions, setActions] = useState<ActionRow[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!orgId || demoActive) {
+      setReport(null);
+      setActions([]);
+      return;
+    }
     let cancelled = false;
     Promise.all([
       supabase.from('planner_agent_reports').select('report_date, body').eq('org_id', orgId).order('report_date', { ascending: false }).limit(1),
@@ -44,11 +50,15 @@ export default function AgentHomePanel({ orgId }: { orgId: string }) {
       if (!cancelled) setActions([]);
     });
     return () => { cancelled = true; };
-  }, [orgId]);
+  }, [orgId, demoActive]);
 
   const queue = actions.filter((item) => item.status === 'draft');
 
   async function setStatus(item: ActionRow, status: 'approved' | 'rejected') {
+    if (demoActive) {
+      showToast('Aksi agent tidak tersedia di mode demo', 'info');
+      return;
+    }
     setBusyId(item.id);
     try {
       if (status === 'approved' && user && (item.impact?.intent || item.impact?.params)) {

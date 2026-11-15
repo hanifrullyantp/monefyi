@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useRef } from 'react';
-import { Minus, Plus, Save } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Minus, Plus, Redo2, Save, Undo2 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
@@ -26,12 +26,38 @@ export default function ProjectScheduleGantt({ project, workItems, onRefresh }: 
     tasks, expandedIds, leftWidth, setLeftWidth, detailOpen, toggleDetailOpen,
     viewMode, setViewMode, zoomIn, zoomOut, editTaskId, setEditTaskId,
     todoModalTaskId, setTodoModalTaskId,
+    undo, redo, undoStack, redoStack,
     isDirty, isSaving,
   } = useGanttStore();
 
   const { commitDates, saveAll } = useProjectGanttData(project, workItems, tenant?.id, tenant?.currency);
   const scrollToTodayRef = useRef<(() => void) | null>(null);
   const scrollToTaskRef = useRef<((id: string) => void) | null>(null);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey || !(e.ctrlKey || e.metaKey)) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT'
+          || target.tagName === 'TEXTAREA'
+          || target.tagName === 'SELECT'
+          || target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [undo, redo]);
 
   const rows = useMemo(
     () => flattenTasks(tasks, expandedIds, [project.id]),
@@ -84,6 +110,28 @@ export default function ProjectScheduleGantt({ project, workItems, onRefresh }: 
         <button type="button" onClick={toggleDetailOpen} className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-lg hover:bg-slate-50">
           {detailOpen ? 'Sembunyikan Panel' : 'Tampilkan Panel'}
         </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!undoStack.length}
+            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+            title="Undo (Ctrl+Z)"
+            aria-label="Undo"
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={redo}
+            disabled={!redoStack.length}
+            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+            title="Redo (Ctrl+Y)"
+            aria-label="Redo"
+          >
+            <Redo2 className="w-4 h-4" />
+          </button>
+        </div>
         <button
           type="button"
           onClick={handleSave}

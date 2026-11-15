@@ -40,6 +40,8 @@ const VALID_SETTINGS_TABS: SettingsTab[] = [
   'profil', 'estimator', 'akun', 'koordinasi', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'diagnostik', 'tentang', 'developer',
 ];
 
+const OWNER_ONLY_TABS: SettingsTab[] = ['organisasi', 'pricelist', 'domain', 'developer'];
+
 const TIMEZONES = [
   'Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Singapore', 'UTC',
 ];
@@ -99,6 +101,7 @@ export default function Settings() {
     syncStatus, isOnline, lastSynced, isDemoMode, projects,
   } = useAppStore();
 
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const isOwner = user?.role === 'owner';
   const canEditOrg = isOwner;
   const showAdminLink = isPlatformAdmin(platformRole, user?.email);
@@ -143,15 +146,38 @@ export default function Settings() {
 
   useEffect(() => {
     const rawSt = searchParams.get('st') || searchParams.get('tab');
+    let nextTab: SettingsTab | null = null;
     if (rawSt === 'telegram' || rawSt === 'bot') {
-      setTab('koordinasi');
+      nextTab = 'koordinasi';
     } else if (rawSt && VALID_SETTINGS_TABS.includes(rawSt as SettingsTab)) {
-      setTab(rawSt as SettingsTab);
+      nextTab = rawSt as SettingsTab;
     }
-  }, [searchParams]);
+    if (nextTab) {
+      setTab(OWNER_ONLY_TABS.includes(nextTab) && !isOwner ? 'profil' : nextTab);
+    }
+  }, [searchParams, isOwner]);
+
+  useEffect(() => {
+    if (OWNER_ONLY_TABS.includes(tab) && !isOwner) {
+      setTab('profil');
+    }
+  }, [tab, isOwner]);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
+    if (demoActive) {
+      // Mode demo melewati query Supabase (tenant.id = 'demo' memicu UUID 22P02).
+      setName(user.name || '');
+      setPosition(user.position || '');
+      setDepartment(user.department || '');
+      setOrgName(tenant?.name || '');
+      setTimezone(tenant?.timezone || 'Asia/Jakarta');
+      setCurrency(tenant?.currency || 'IDR');
+      setBusinessType(tenant?.business_type || 'construction');
+      setProjectsThisMonth(projects.length);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       fetchNotificationPrefsFromSupabase(user.id).then(remotePrefs => {
@@ -188,12 +214,24 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?.name, user?.position, user?.department, tenant?.id, canEditOrg, tenant?.currency, tenant?.business_type]);
+  }, [user?.id, user?.name, user?.position, user?.department, tenant?.id, tenant?.name, tenant?.timezone, canEditOrg, tenant?.currency, tenant?.business_type, demoActive, projects.length]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleFinanceVersionChange = async (version: FinanceVersion) => {
     if (!user?.id || version === financeVersion) return;
+    if (demoActive) {
+      setFinanceVersionState(version);
+      setFinanceVersionPreference(version);
+      showToast('Preferensi keuangan diubah sementara (mode demo)', 'info');
+      if (isSandboxFinance(version)) {
+        navigate('/app/finance-v2');
+      } else {
+        navigate('/app?tab=finance');
+        setActiveTab('finance');
+      }
+      return;
+    }
     setSavingFinanceVersion(true);
     try {
       await setFinanceVersion(user.id, version);
@@ -218,6 +256,17 @@ export default function Settings() {
 
   const handleSaveProfile = async () => {
     if (!user || !name.trim()) return;
+    if (demoActive) {
+      setUser({
+        ...user,
+        name: name.trim(),
+        position: position.trim() || undefined,
+        department: department.trim() || undefined,
+      });
+      setEditingProfile(false);
+      showToast('Profil diperbarui sementara (mode demo)', 'info');
+      return;
+    }
     setSavingProfile(true);
     try {
       await updateProfileName(user.id, name.trim());
@@ -244,6 +293,10 @@ export default function Settings() {
 
   const handleSaveOrg = async () => {
     if (!tenant?.id || !canEditOrg || !user?.id) return;
+    if (demoActive) {
+      showToast('Pengaturan organisasi tidak dapat disimpan di mode demo', 'info');
+      return;
+    }
     setSavingOrg(true);
     try {
       const before = await loadOrgDetails(tenant.id);
@@ -303,6 +356,12 @@ export default function Settings() {
   };
 
   const handleSaveNotif = async () => {
+    if (demoActive) {
+      await saveNotificationPrefs(notifPrefs);
+      setNotifSaved(true);
+      showToast('Preferensi notifikasi disimpan lokal (mode demo)', 'info');
+      return;
+    }
     await saveNotificationPrefs(notifPrefs, user?.id);
     setNotifSaved(true);
     showToast('Preferensi notifikasi disimpan ke Supabase Cloud', 'success');
@@ -314,6 +373,10 @@ export default function Settings() {
   };
 
   const handleChangePassword = async () => {
+    if (demoActive) {
+      showToast('Ubah password tidak tersedia di mode demo', 'info');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       showToast('Konfirmasi password tidak cocok', 'error');
       return;
@@ -343,7 +406,9 @@ export default function Settings() {
   };
 
   const handleLogoutAll = async () => {
-    await signOutGlobal();
+    if (!demoActive) {
+      await signOutGlobal();
+    }
     await logout();
     navigate('/login');
   };
@@ -394,9 +459,15 @@ export default function Settings() {
               </Link>
             </div>
           </div>
-          <button type="button" onClick={load} className="min-h-11 min-w-11 flex items-center justify-center border border-[#E5EAE8] bg-white rounded-xl hover:bg-slate-50 self-start shadow-sm transition-colors" aria-label="Refresh">
-            <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <button type="button" onClick={handleLogout} className="min-h-11 px-3.5 py-2 flex items-center gap-1.5 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-colors">
+              <LogOut className="w-4 h-4" />
+              Keluar
+            </button>
+            <button type="button" onClick={load} className="min-h-11 min-w-11 flex items-center justify-center border border-[#E5EAE8] bg-white rounded-xl hover:bg-slate-50 shadow-sm transition-colors" aria-label="Refresh">
+              <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -540,31 +611,47 @@ export default function Settings() {
             </div>
           </div>
 
-          {tenant?.id && isSandboxFinance(financeVersion) && (
+          {!demoActive && tenant?.id && isSandboxFinance(financeVersion) && (
             <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} />
           )}
 
           <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-            <AIProviderPanel />
+            {demoActive ? (
+              <p className="text-sm text-[#5B6B7A]">Pengaturan AI Provider tidak tersedia di mode demo.</p>
+            ) : (
+              <AIProviderPanel />
+            )}
           </div>
         </div>
       )}
 
       {tab === 'estimator' && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <EstimatorSettingsPanel />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Pengaturan Estimator & PDF tidak tersedia di mode demo.</p>
+          ) : (
+            <EstimatorSettingsPanel />
+          )}
         </div>
       )}
 
       {tab === 'akun' && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <UserAccountPanel />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Pengaturan integrasi akun tidak tersedia di mode demo.</p>
+          ) : (
+            <UserAccountPanel />
+          )}
         </div>
       )}
 
       {tab === 'koordinasi' && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <FieldCoordinationPanel />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Koordinasi AI & Bot Telegram tidak tersedia di mode demo.</p>
+          ) : (
+            <FieldCoordinationPanel />
+          )}
         </div>
       )}
 
@@ -670,7 +757,11 @@ export default function Settings() {
 
       {tab === 'domain' && canEditOrg && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <CustomDomainPanel onUpgrade={() => selectTab('pricelist')} />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Custom Domain tidak tersedia di mode demo.</p>
+          ) : (
+            <CustomDomainPanel onUpgrade={() => selectTab('pricelist')} />
+          )}
         </div>
       )}
 
@@ -736,7 +827,7 @@ export default function Settings() {
             </button>
           </div>
 
-          {tenant?.id && <TelegramLinkPanel orgId={tenant.id} isOwner={isOwner} />}
+          {!demoActive && tenant?.id && <TelegramLinkPanel orgId={tenant.id} isOwner={isOwner} />}
 
           <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-2xl border border-rose-200 transition-colors">
             <LogOut className="w-4 h-4" /> Keluar dari perangkat ini
@@ -748,12 +839,22 @@ export default function Settings() {
       )}
 
       {tab === 'diagnostik' && (
-        <ErrorTraceDiagnosticsPanel />
+        demoActive ? (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm text-sm text-[#5B6B7A]">
+            Diagnostik sinkronisasi server tidak tersedia di mode demo.
+          </div>
+        ) : (
+          <ErrorTraceDiagnosticsPanel />
+        )
       )}
 
       {tab === 'developer' && isOwner && user?.id && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <MigrationDeveloperPanel userId={user.id} />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Panel developer tidak tersedia di mode demo.</p>
+          ) : (
+            <MigrationDeveloperPanel userId={user.id} />
+          )}
         </div>
       )}
 

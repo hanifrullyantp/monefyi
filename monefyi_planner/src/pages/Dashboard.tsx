@@ -9,11 +9,11 @@ import {
   Plus,
 } from 'lucide-react';
 import { useAppStore, type Project } from '../store/appStore';
+import { showToast } from '../store/uiStore';
 import { getProjectStats } from '../services/projectService';
 import { getTodayAttendanceSummary } from '../services/dashboardService';
 import { aggregateNetCashflow } from '../services/projectFinanceService';
 import DashboardInteractiveCards from '../components/dashboard/DashboardInteractiveCards';
-import AgentHomePanel from '../components/dashboard/AgentHomePanel';
 import DashboardProjectList from '../components/dashboard/DashboardProjectList';
 import { loadRecentLogs } from '../services/dailyLogService';
 import { analyzeProject, type AnalyzeResult } from '../services/analyzeService';
@@ -60,7 +60,8 @@ export default function Dashboard({
 }: {
   onOpenProject?: (id: string) => void;
 }) {
-  const { user, projects, tenant, setActiveTab, setProjectsListFilter } = useAppStore();
+  const { user, projects, tenant, isDemoMode, setActiveTab, setProjectsListFilter } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const canCreate = user?.role === 'owner' || user?.role === 'manager';
 
   const [cashflowData, setCashflowData] = useState<
@@ -90,7 +91,20 @@ export default function Dashboard({
   const firstActive = projects.find(p => p.status === 'active') || projects[0];
 
   useEffect(() => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || demoActive) {
+      if (demoActive) {
+        // Mode demo memakai data lokal tanpa query UUID ke Supabase ('demo' -> 22P02).
+        const atRisk = projects.filter(
+          p => p.status === 'active' && (p.health_status === 'at_risk' || p.health_status === 'behind'),
+        ).length;
+        const avgProgress =
+          projects.length > 0
+            ? Math.round(projects.reduce((s, p) => s + (p.progress_percentage || 0), 0) / projects.length)
+            : 0;
+        setStats({ atRisk, avgProgress });
+      }
+      return;
+    }
     getProjectStats(tenant.id)
       .then(s => setStats({ atRisk: s.atRisk, avgProgress: s.avgProgress }))
       .catch(console.error);
@@ -101,16 +115,21 @@ export default function Dashboard({
     loadRecentLogs(tenant.id)
       .then(logs => setRecentLogs(logs.map(l => ({ description: l.description, date: l.date }))))
       .catch(console.error);
-  }, [tenant?.id, projects.length]);
+  }, [tenant?.id, projects.length, demoActive]);
 
   const handleLoadAiRecommendations = async () => {
     if (!firstActive || aiLoading) return;
+    if (demoActive) {
+      showToast('Analisa AI tidak tersedia di mode demo', 'info');
+      return;
+    }
     setAiLoading(true);
     try {
       const r = await analyzeProject(firstActive.id);
       if (r?.recommendations) setRecommendations(r.recommendations.slice(0, 3));
     } catch (e) {
       console.error(e);
+      showToast(e instanceof Error ? e.message : 'Gagal memuat rekomendasi AI', 'error');
     } finally {
       setAiLoading(false);
     }
@@ -162,6 +181,16 @@ export default function Dashboard({
 
   const handleSaveQuickLog = async () => {
     if (!logModalProj || !logText.trim() || !user || !tenant) return;
+    if (demoActive) {
+      setRecentLogs(prev => [
+        { description: logText.trim(), date: new Date().toISOString().slice(0, 10) },
+        ...prev,
+      ]);
+      setLogModalProj(null);
+      setLogText('');
+      showToast('Log harian disimpan sementara (mode demo)', 'info');
+      return;
+    }
     try {
       const { createDailyLog } = await import('../services/dailyLogService');
       await createDailyLog({
@@ -387,6 +416,10 @@ export default function Dashboard({
                         type="button"
                         onClick={e => {
                           e.stopPropagation();
+                          if (demoActive) {
+                            showToast('Catat biaya tidak tersedia di mode demo', 'info');
+                            return;
+                          }
                           setTxModal({ open: true, kind: 'cost', project: proj });
                         }}
                         className="flex-1 h-11 rounded-xl border border-[#D5DDDA] bg-white text-[#0F172A] font-semibold text-xs flex items-center justify-center active:scale-95 transition-transform"
@@ -640,7 +673,7 @@ export default function Dashboard({
       </div>
 
       {/* Quick Cost Realization Modal from ListCard action */}
-      {txModal.open && txModal.project && tenant?.id && user?.id && (
+      {!demoActive && txModal.open && txModal.project && tenant?.id && user?.id && (
         <ProjectTransactionModals
           open={txModal.open}
           kind={txModal.kind}
