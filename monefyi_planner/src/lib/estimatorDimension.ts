@@ -1,6 +1,6 @@
 // monefyi_planner/src/lib/estimatorDimension.ts
-// Utilitas cerdas untuk parsing dimensi ukuran (Total m vs Segmen Sudut L: 2+2, 2.4+1.8, 2x2)
-// dan sinkronisasi otomatis Kabinet Atas & Kabinet Bawah untuk pembacaan presisi di 3D Intero
+// Ukuran: angka langsung, perkalian (2x3, 2 kali 3), atau segmen sudut L (2+2).
+// Perkalian menjadi quantity. Tanda + tetap panjang dinding untuk 3D Intero.
 
 import type { EstimationItemDraft } from '../types/estimator';
 
@@ -15,27 +15,56 @@ export interface ParsedDimension {
   isL: boolean;
 }
 
+const DIMENSION_NUMBER = String.raw`\d+(?:[.,]\d+)?`;
+const COMPLETE_NUMBER = new RegExp(`^${DIMENSION_NUMBER}$`);
+const COMPLETE_SUM = new RegExp(`^${DIMENSION_NUMBER}(?:\\+${DIMENSION_NUMBER})+$`);
+const COMPLETE_PRODUCT = new RegExp(`^${DIMENSION_NUMBER}(?:[x*]${DIMENSION_NUMBER})+$`);
+
+/** Samakan "2 kali 3", "2×3", dan "2 x 3" menjadi "2x3". */
+export function normalizeDimensionRaw(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/×/g, 'x')
+    .replace(/\s+/g, '')
+    .replace(/kali/g, 'x');
+}
+
+function parseDimensionNumbers(parts: string[]): number[] | null {
+  const nums = parts.map((part) => parseFloat(part.replace(',', '.')));
+  if (nums.some((n) => !Number.isFinite(n) || n < 0)) return null;
+  return nums;
+}
+
+function roundDimension(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 /**
- * Mem-parsing string input ukuran (bisa angka biasa "4", atau format segmen "2+2", "2.4+1.8", "2x2", "2,5+1,5")
+ * Input selesai jika berupa angka, perkalian (2x3 / 2 kali 3), atau jumlah dinding (2+2).
+ * "2x" dan "2+" belum selesai, jadi tidak boleh menimpa quantity.
+ */
+export function isCompleteDimensionInput(raw: string): boolean {
+  const clean = normalizeDimensionRaw(raw);
+  if (!clean) return false;
+  return COMPLETE_NUMBER.test(clean) || COMPLETE_SUM.test(clean) || COMPLETE_PRODUCT.test(clean);
+}
+
+/**
+ * Angka langsung jadi quantity. "2x3", "2*3", dan "2 kali 3" dikalikan.
+ * "2+2" tetap jumlah segmen dinding siku.
  */
 export function parseDimensionInput(raw: string): ParsedDimension {
   if (!raw || !raw.trim()) {
     return { total: 0, expr: '', segments: [], isL: false };
   }
 
-  const clean = raw.trim().replace(/\s+/g, '');
+  const clean = normalizeDimensionRaw(raw);
 
-  // 1. Cek format penjumlahan segmen (misal "2+2", "2.4+1.8", "2,5+1,5")
-  if (clean.includes('+')) {
-    const parts = clean.split('+').filter(Boolean);
-    const nums = parts.map((p) => {
-      const normalized = p.replace(',', '.');
-      const val = parseFloat(normalized);
-      return Number.isFinite(val) ? val : 0;
-    });
-
-    if (nums.length >= 2) {
-      const sum = Math.round(nums.reduce((acc, cur) => acc + cur, 0) * 100) / 100;
+  if (COMPLETE_SUM.test(clean)) {
+    const nums = parseDimensionNumbers(clean.split('+'));
+    if (nums && nums.length >= 2) {
+      const sum = roundDimension(nums.reduce((acc, cur) => acc + cur, 0));
       return {
         total: sum,
         expr: nums.join('+'),
@@ -45,35 +74,29 @@ export function parseDimensionInput(raw: string): ParsedDimension {
     }
   }
 
-  // 2. Cek format perkalian segmen (misal "2x2", "2*2")
-  if (/^(\d+(?:[.,]\d+)?)[x*](\d+(?:[.,]\d+)?)$/i.test(clean)) {
-    const match = clean.match(/^(\d+(?:[.,]\d+)?)[x*](\d+(?:[.,]\d+)?)$/i);
-    if (match) {
-      const a = parseFloat(match[1].replace(',', '.'));
-      const b = parseFloat(match[2].replace(',', '.'));
-      if (Number.isFinite(a) && Number.isFinite(b)) {
-        // Untuk ukuran L, format 2x2 biasanya diartikan dinding 2m + 2m
-        const sum = Math.round((a + b) * 100) / 100;
-        return {
-          total: sum,
-          expr: `${a}+${b}`,
-          segments: [a, b],
-          isL: true,
-        };
-      }
+  if (COMPLETE_PRODUCT.test(clean)) {
+    const nums = parseDimensionNumbers(clean.split(/[x*]/));
+    if (nums && nums.length >= 2) {
+      const product = roundDimension(nums.reduce((acc, cur) => acc * cur, 1));
+      return {
+        total: product,
+        expr: nums.join('x'),
+        segments: [],
+        isL: false,
+      };
     }
   }
 
-  // 3. Format angka tunggal (Total manual langsung)
-  const norm = clean.replace(',', '.');
-  const num = parseFloat(norm);
-  if (Number.isFinite(num) && num >= 0) {
-    return {
-      total: num,
-      expr: '', // Ukuran L terhapus jika diisi total langsung
-      segments: [],
-      isL: false,
-    };
+  if (COMPLETE_NUMBER.test(clean)) {
+    const num = parseFloat(clean.replace(',', '.'));
+    if (Number.isFinite(num) && num >= 0) {
+      return {
+        total: num,
+        expr: '',
+        segments: [],
+        isL: false,
+      };
+    }
   }
 
   return { total: 0, expr: '', segments: [], isL: false };

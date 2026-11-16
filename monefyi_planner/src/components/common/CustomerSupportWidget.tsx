@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -20,6 +20,41 @@ import { useEntitlement } from '../../hooks/useEntitlement';
 import { isAdminFullAccess } from '../../lib/entitlement';
 import { hasEstimatorLicenseAccess } from '../../lib/appProductBrand';
 
+const FAB_SIZE = 44;
+const FAB_POS_KEY = 'froyek_cs_fab_pos_v1';
+const DRAG_THRESHOLD = 6;
+
+type FabPos = { x: number; y: number };
+
+function defaultFabPos(): FabPos {
+  const margin = 16;
+  const bottomClearance = window.innerWidth < 1024 ? 88 : 96;
+  return {
+    x: Math.max(margin, window.innerWidth - margin - FAB_SIZE),
+    y: Math.max(margin, window.innerHeight - bottomClearance - FAB_SIZE),
+  };
+}
+
+function clampFabPos(pos: FabPos): FabPos {
+  const margin = 8;
+  return {
+    x: Math.min(Math.max(margin, pos.x), Math.max(margin, window.innerWidth - FAB_SIZE - margin)),
+    y: Math.min(Math.max(margin, pos.y), Math.max(margin, window.innerHeight - FAB_SIZE - margin)),
+  };
+}
+
+function readFabPos(): FabPos {
+  try {
+    const raw = localStorage.getItem(FAB_POS_KEY);
+    if (!raw) return defaultFabPos();
+    const parsed = JSON.parse(raw) as FabPos;
+    if (!Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) return defaultFabPos();
+    return clampFabPos(parsed);
+  } catch {
+    return defaultFabPos();
+  }
+}
+
 export default function CustomerSupportWidget() {
   const navigate = useNavigate();
   const { isDemoMode, tenant, platformRole, user, entitlementPreviewMode } = useAppStore();
@@ -32,7 +67,61 @@ export default function CustomerSupportWidget() {
   const [messages, setMessages] = useState<CSMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [fabPos, setFabPos] = useState<FabPos>(readFabPos);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fabPosRef = useRef(fabPos);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+  fabPosRef.current = fabPos;
+
+  useEffect(() => {
+    const onResize = () => setFabPos(current => clampFabPos(current));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const onFabPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    suppressClickRef.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: fabPosRef.current.x,
+      originY: fabPosRef.current.y,
+      moved: false,
+    };
+  };
+
+  const onFabPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    drag.moved = true;
+    const next = clampFabPos({ x: drag.originX + dx, y: drag.originY + dy });
+    fabPosRef.current = next;
+    setFabPos(next);
+  };
+
+  const onFabPointerUp = () => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag?.moved) return;
+    suppressClickRef.current = true;
+    try {
+      localStorage.setItem(FAB_POS_KEY, JSON.stringify(fabPosRef.current));
+    } catch {
+      /* posisi tetap untuk sesi ini */
+    }
+  };
 
   useEffect(() => {
     if (messages.length === 0 && isOpen) {
@@ -190,32 +279,32 @@ export default function CustomerSupportWidget() {
       {/* Floating Button */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.div
+          <motion.button
+            type="button"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-40 flex items-center gap-2.5"
+            style={{ left: fabPos.x, top: fabPos.y, width: FAB_SIZE, height: FAB_SIZE }}
+            onPointerDown={onFabPointerDown}
+            onPointerMove={onFabPointerMove}
+            onPointerUp={onFabPointerUp}
+            onPointerCancel={onFabPointerUp}
+            onClick={() => {
+              if (suppressClickRef.current) {
+                suppressClickRef.current = false;
+                return;
+              }
+              setIsOpen(true);
+            }}
+            className="fixed z-40 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-lg shadow-emerald-900/25 flex items-center justify-center text-white cursor-grab active:cursor-grabbing touch-none select-none"
+            aria-label="Buka chat Mbak Esti. Tahan dan geser untuk memindahkan."
+            title="Tahan dan geser untuk pindah"
           >
-            {/* Pop-up pill notification */}
-            <div
-              onClick={() => setIsOpen(true)}
-              className="hidden md:flex items-center gap-2 bg-white text-slate-800 px-3.5 py-2 rounded-2xl shadow-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all text-xs font-bold"
-            >
-              <span className="text-base">👩‍💼</span>
-              <span>Butuh bantuan / info app? Tanya Mbak Esti</span>
-            </div>
-
-            <button
-              onClick={() => setIsOpen(true)}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-xl shadow-emerald-900/30 flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all relative group"
-              aria-label="Buka Chat CS Mbak Esti"
-            >
-              <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7" />
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-400 text-slate-900 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white shadow">
-                1
-              </div>
-            </button>
-          </motion.div>
+            <MessageCircle className="w-5 h-5 pointer-events-none" />
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 text-slate-900 rounded-full flex items-center justify-center text-[9px] font-black border-2 border-white shadow pointer-events-none">
+              1
+            </span>
+          </motion.button>
         )}
       </AnimatePresence>
 
