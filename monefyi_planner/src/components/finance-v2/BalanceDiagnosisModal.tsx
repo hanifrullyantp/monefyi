@@ -48,10 +48,14 @@ export default function BalanceDiagnosisModal({ open, onClose, check, onNavigate
 
             <div className="p-5 overflow-y-auto space-y-4">
               <div className="grid grid-cols-3 gap-2">
-                {(['aktiva', 'pasiva', 'ekuitas'] as const).map(key => (
-                  <div key={key} className="bg-slate-50 rounded-xl p-3 text-center">
-                    <div className="text-[10px] uppercase text-slate-500 font-semibold">{key}</div>
-                    <div className="font-bold text-sm">{formatRupiah(check[key])}</div>
+                {([
+                  { key: 'aktiva', label: 'Penggunaan (Aktiva)' },
+                  { key: 'pasiva', label: 'Sumber (Pasiva)' },
+                  { key: 'ekuitas', label: 'Ekuitas' },
+                ] as const).map(item => (
+                  <div key={item.key} className="bg-slate-50 rounded-xl p-3 text-center">
+                    <div className="text-[10px] uppercase text-slate-500 font-semibold">{item.label}</div>
+                    <div className="font-bold text-sm">{formatRupiah(check[item.key])}</div>
                   </div>
                 ))}
               </div>

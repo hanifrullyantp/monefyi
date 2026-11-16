@@ -67,6 +67,7 @@ describe('planner-mapper', () => {
         total_budget: 29_700_000,
         total_spent: 27_200_000,
         total_received: 20_000_000,
+        settings: { contract_value: 29_700_000 },
       },
       rapItems: [],
       costs: [
@@ -214,5 +215,116 @@ describe('planner-mapper', () => {
 
     expect(mapped.budget.piutang).toBe(1_787_000);
     expect(mapped.saldo).toBe(11_413_000);
+  });
+
+  it('keeps negative estLaba unclamped when costs exceed contractValue (F-06)', () => {
+    const mapped = mapPlannerProject({
+      project: {
+        id: 'p-loss-1',
+        org_id: 'org-1',
+        name: 'Proyek Overbudget',
+        client_name: 'Klien',
+        planned_start: '2026-01-01',
+        planned_end: '2026-06-01',
+        total_budget: 10_000_000,
+        total_spent: 15_000_000,
+        total_received: 0,
+        settings: { contract_value: 0 },
+      },
+      rapItems: [
+        {
+          id: 'rap-1',
+          project_id: 'p-loss-1',
+          type: 'material',
+          name: 'Material A',
+          unit: 'ls',
+          quantity: 1,
+          unit_price: 10_000_000,
+        },
+      ],
+      costs: [],
+      incomes: [],
+      workItems: [],
+    });
+
+    expect(mapped.contractValue).toBe(0);
+    expect(mapped.rap.estLaba).toBe(-15_000_000);
+
+    const overContract = mapPlannerProject({
+      project: {
+        id: 'p-loss-2',
+        org_id: 'org-1',
+        name: 'Proyek Rugi Kontrak',
+        client_name: 'Klien',
+        planned_start: '2026-01-01',
+        planned_end: '2026-06-01',
+        total_budget: 40_000_000,
+        total_spent: 65_000_000,
+        total_received: 50_000_000,
+        settings: { contract_value: 50_000_000 },
+      },
+      rapItems: [
+        {
+          id: 'rap-2',
+          project_id: 'p-loss-2',
+          type: 'material',
+          name: 'Material B',
+          unit: 'ls',
+          quantity: 1,
+          unit_price: 40_000_000,
+        },
+      ],
+      costs: [],
+      incomes: [],
+      workItems: [],
+    });
+
+    expect(overContract.rap.estLaba).toBe(-15_000_000);
+  });
+
+  it('does not fall back contractValue to total_budget when contract_value is 0 or omitted (F-09/F-23)', () => {
+    const explicitZero = mapPlannerProject({
+      project: {
+        id: 'p-zero-contract',
+        org_id: 'org-1',
+        name: 'Proyek Internal',
+        client_name: 'Internal',
+        planned_start: '2026-01-01',
+        planned_end: '2026-06-01',
+        total_budget: 10_000_000,
+        total_spent: 0,
+        total_received: 0,
+        settings: { contract_value: 0 },
+      },
+      rapItems: [],
+      costs: [],
+      incomes: [],
+      workItems: [],
+    });
+
+    expect(explicitZero.contractValue).toBe(0);
+    expect(explicitZero.budget.piutang).toBe(0);
+
+    const omittedContract = mapPlannerProject({
+      project: {
+        id: 'p-omitted-contract',
+        org_id: 'org-1',
+        name: 'Proyek Tanpa Kontrak',
+        client_name: 'Klien',
+        planned_start: '2026-01-01',
+        planned_end: '2026-06-01',
+        total_budget: 25_000_000,
+        total_spent: 0,
+        total_received: 0,
+        settings: {},
+      },
+      rapItems: [],
+      costs: [],
+      incomes: [],
+      workItems: [],
+    });
+
+    expect(omittedContract.contractValue).toBe(0);
+    expect(omittedContract.budget.piutang).toBe(0);
   });
 });

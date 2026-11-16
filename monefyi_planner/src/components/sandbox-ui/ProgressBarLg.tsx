@@ -14,15 +14,23 @@ const VARIANT: Record<string, string> = {
 };
 
 export default function ProgressBarLg({ value, max = 100, label, variant = 'danger', className = '' }: Props) {
-  const pct = Math.min(Math.max((value / max) * 100, 0), 100);
+  const pct = max > 0 && Number.isFinite(value)
+    ? Math.min(Math.max((value / max) * 100, 0), 100)
+    : 0;
+  const hasFill = pct > 0;
+  const showLabel = hasFill && Boolean(label);
   return (
     <div className={`h-7 bg-slate-100 rounded-lg overflow-hidden relative ${className}`}>
-      <div
-        className={`h-full ${VARIANT[variant]} rounded-lg flex items-center justify-center text-white text-xs font-bold transition-all duration-500 min-w-[4rem]`}
-        style={{ width: `${Math.max(pct, label && pct > 0 ? 18 : 0)}%` }}
-      >
-        {label}
-      </div>
+      {hasFill && (
+        <div
+          className={`h-full ${VARIANT[variant]} rounded-lg flex items-center justify-center text-white text-xs font-bold transition-all duration-500 ${
+            showLabel ? 'min-w-[4rem]' : ''
+          }`}
+          style={{ width: `${Math.max(pct, showLabel ? 18 : 0)}%` }}
+        >
+          {showLabel ? label : null}
+        </div>
+      )}
     </div>
   );
 }

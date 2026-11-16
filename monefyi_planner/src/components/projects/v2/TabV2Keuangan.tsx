@@ -66,6 +66,8 @@ export default function TabV2Keuangan({
   const p = normalized.project;
   const hutang = p.budget.hutang || 0;
   const piutang = p.budget.piutang || 0;
+  const estLaba = p.rap?.estLaba || 0;
+  const isEstLabaLoss = estLaba < 0;
   const pemasukanPct = p.contractValue > 0
     ? Math.min((normalized.totalPemasukan / p.contractValue) * 100, 100)
     : 0;
@@ -73,7 +75,7 @@ export default function TabV2Keuangan({
     ? Math.min((normalized.totalRealisasi / normalized.totalPemasukan) * 100, 100)
     : 0;
   const marginPct = p.contractValue > 0
-    ? (((p.rap?.estLaba || 0) / p.contractValue) * 100).toFixed(1)
+    ? ((estLaba / p.contractValue) * 100).toFixed(1)
     : '0';
 
   const aktivaRows = [
@@ -147,7 +149,9 @@ export default function TabV2Keuangan({
           <Lock className="w-4 h-4" />
           Keuangan proyek sudah ditutup.
           {project.final_profit != null && (
-            <span className="font-bold text-emerald-700">Laba: {formatRupiah(project.final_profit)}</span>
+            <span className={`font-bold ${project.final_profit < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+              Laba: {formatRupiah(project.final_profit)}
+            </span>
           )}
         </div>
       )}
@@ -187,20 +191,21 @@ export default function TabV2Keuangan({
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
           onClick={() => setPopup('pembayaran')}
-          barPct={realisasiVsPemasukan}
-          barLabel={formatRupiah(normalized.totalRealisasi)}
+          barPct={Math.max(0, realisasiVsPemasukan)}
+          barLabel={normalized.totalRealisasi > 0 ? formatRupiah(normalized.totalRealisasi) : undefined}
           subLabel={`Sisa ${formatRupiah(normalized.totalPemasukan - normalized.totalRealisasi)}`}
         />
         <StatCard
           label="Est. Laba"
-          value={formatRupiah(p.rap?.estLaba || 0)}
+          value={formatRupiah(estLaba)}
+          valueColor={isEstLabaLoss ? 'text-rose-600' : undefined}
           icon={TrendingUp}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
+          iconBg={isEstLabaLoss ? 'bg-rose-50' : 'bg-emerald-50'}
+          iconColor={isEstLabaLoss ? 'text-rose-600' : 'text-emerald-600'}
           onClick={() => setPopup('laba')}
-          barPct={Number(marginPct)}
-          barLabel={formatRupiah(p.rap?.estLaba || 0)}
-          barVariant="success"
+          barPct={Math.max(0, Number(marginPct))}
+          barLabel={estLaba > 0 ? formatRupiah(estLaba) : undefined}
+          barVariant={isEstLabaLoss ? 'danger' : 'success'}
           subLabel={`Margin ${marginPct}%`}
         />
         <StatCard
@@ -223,10 +228,10 @@ export default function TabV2Keuangan({
 
       <NeracaGrid
         title="Neraca Project"
-        aktivaTitle="Aktiva (Penggunaan)"
-        pasivaTitle="Pasiva (Sumber)"
-        totalAktivaLabel="TOTAL AKTIVA"
-        totalPasivaLabel="TOTAL PASIVA"
+        aktivaTitle="Penggunaan Dana (Aktiva)"
+        pasivaTitle="Sumber Dana (Pasiva)"
+        totalAktivaLabel="TOTAL PENGGUNAAN (AKTIVA)"
+        totalPasivaLabel="TOTAL SUMBER (PASIVA)"
         aktivaRows={aktivaRows}
         pasivaRows={pasivaRows}
         totalAktiva={normalized.totalAktiva}
@@ -238,7 +243,7 @@ export default function TabV2Keuangan({
               <Info className="w-3.5 h-3.5" />
               Balance: Realisasi + Saldo + Piutang = Dana Masuk + Hutang
             </span>
-            <span className="font-bold text-emerald-600">
+            <span className={`font-bold ${normalized.estLaba < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
               Est. Laba: {formatRupiah(normalized.estLaba)}
             </span>
           </div>

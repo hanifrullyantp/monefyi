@@ -16,7 +16,16 @@ import { aggregateNetCashflow } from '../services/projectFinanceService';
 import DashboardInteractiveCards from '../components/dashboard/DashboardInteractiveCards';
 import DashboardProjectList from '../components/dashboard/DashboardProjectList';
 import { loadRecentLogs } from '../services/dailyLogService';
-import { analyzeProject, type AnalyzeResult } from '../services/analyzeService';
+import {
+  analyzeProject,
+  loadLatestAnalysisSnapshot,
+  type AnalyzeResult,
+} from '../services/analyzeService';
+import {
+  getAgentBriefingLead,
+  matchesDashboardHealthFilter,
+} from '../lib/dashboard/dashboardHelpers';
+import { isDemoOrInvalidUuid } from '../lib/demo/demoMode';
 import {
   XAxis,
   YAxis,
@@ -69,6 +78,7 @@ export default function Dashboard({
   >([]);
   const [recentLogs, setRecentLogs] = useState<Array<{ description: string; date: string }>>([]);
   const [recommendations, setRecommendations] = useState<AnalyzeResult['recommendations']>([]);
+  const [aiEmptyMessage, setAiEmptyMessage] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [stats, setStats] = useState({ atRisk: 0, avgProgress: 0 });
   const [attendanceSummary, setAttendanceSummary] = useState({ present: 0, total: 0 });
@@ -117,6 +127,31 @@ export default function Dashboard({
       .catch(console.error);
   }, [tenant?.id, projects.length, demoActive]);
 
+  useEffect(() => {
+    if (!firstActive?.id || isDemoOrInvalidUuid(firstActive.id, demoActive)) {
+      setRecommendations([]);
+      setAiEmptyMessage(null);
+      return;
+    }
+    let cancelled = false;
+    setAiEmptyMessage(null);
+    loadLatestAnalysisSnapshot(firstActive.id)
+      .then(snapshot => {
+        if (cancelled) return;
+        if (snapshot?.recommendations?.length) {
+          setRecommendations(snapshot.recommendations.slice(0, 3));
+        } else {
+          setRecommendations([]);
+        }
+      })
+      .catch(() => {
+        /* snapshot bersifat opsional saat mount */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [firstActive?.id, demoActive]);
+
   const handleLoadAiRecommendations = async () => {
     if (!firstActive || aiLoading) return;
     if (demoActive) {
@@ -124,9 +159,21 @@ export default function Dashboard({
       return;
     }
     setAiLoading(true);
+    setAiEmptyMessage(null);
     try {
       const r = await analyzeProject(firstActive.id);
-      if (r?.recommendations) setRecommendations(r.recommendations.slice(0, 3));
+      const recs = (r?.recommendations ?? []).slice(0, 3);
+      setRecommendations(recs);
+      if (recs.length === 0) {
+        const hasEvmInputs =
+          (r?.evm?.total_budget ?? firstActive.total_budget_planned ?? 0) > 0 ||
+          (r?.evm?.ac ?? firstActive.spent_amount ?? 0) > 0;
+        const msg = hasEvmInputs
+          ? 'Analisa selesai — belum ada temuan risiko untuk proyek ini.'
+          : 'Isi RAP & transaksi dulu untuk analisa EVM.';
+        setAiEmptyMessage(msg);
+        showToast(msg, 'info');
+      }
     } catch (e) {
       console.error(e);
       showToast(e instanceof Error ? e.message : 'Gagal memuat rekomendasi AI', 'error');
@@ -152,7 +199,7 @@ export default function Dashboard({
     return projects
       .filter(p => p.status !== 'archived')
       .filter(p => {
-        if (healthFilter !== 'all' && p.health_status !== healthFilter) return false;
+        if (!matchesDashboardHealthFilter(p.health_status, healthFilter)) return false;
         if (search.trim()) {
           const q = search.toLowerCase();
           const matchName = p.name.toLowerCase().includes(q);
@@ -168,7 +215,7 @@ export default function Dashboard({
   const remainingCount = filteredProjects.length - visibleCount;
 
   const goAtRiskProjects = () => {
-    setHealthFilter('at_risk');
+    setHealthFilter('attention');
   };
 
   const handleOpenProject = (id: string) => {
@@ -273,8 +320,8 @@ export default function Dashboard({
             value={attentionCount}
             subInfo="perlu ditindak"
             variant="orange"
-            active={healthFilter === 'at_risk' || healthFilter === 'behind'}
-            onClick={() => setHealthFilter(prev => (prev === 'at_risk' ? 'all' : 'at_risk'))}
+            active={healthFilter === 'attention'}
+            onClick={() => setHealthFilter(prev => (prev === 'attention' ? 'all' : 'attention'))}
             ariaLabel={`Perhatian: ${attentionCount} proyek perlu ditindak`}
           />
 
@@ -296,7 +343,7 @@ export default function Dashboard({
             AGEN HARI INI
           </div>
           <div className="text-[13px] font-semibold text-[#0F172A] mt-1.5 leading-snug">
-            Laporan pagi: antrean persetujuan dan proyek aktif.
+            {getAgentBriefingLead()} antrean persetujuan dan proyek aktif.
           </div>
           <div className="text-xs text-[#5B6B7A] mt-1">
             {stats.atRisk > 0
@@ -318,7 +365,13 @@ export default function Dashboard({
 
         {/* Tool Row */}
         <ToolRow
-          title={healthFilter !== 'all' ? 'Perlu perhatian' : 'Daftar Proyek'}
+          title={
+            healthFilter === 'attention' || healthFilter === 'at_risk' || healthFilter === 'behind'
+              ? 'Perlu perhatian'
+              : healthFilter === 'on_track'
+                ? 'Proyek On track'
+                : 'Daftar Proyek'
+          }
           count={filteredProjects.length}
           search={search}
           searchOpen={searchOpen}
@@ -518,8 +571,8 @@ export default function Dashboard({
             value={attentionCount}
             subInfo="perlu ditindak"
             variant="orange"
-            active={healthFilter === 'at_risk' || healthFilter === 'behind'}
-            onClick={() => setHealthFilter(prev => (prev === 'at_risk' ? 'all' : 'at_risk'))}
+            active={healthFilter === 'attention'}
+            onClick={() => setHealthFilter(prev => (prev === 'attention' ? 'all' : 'attention'))}
             ariaLabel={`Perhatian: ${attentionCount} proyek perlu ditindak`}
           />
           <GradientStatCard
@@ -539,7 +592,7 @@ export default function Dashboard({
             AGEN HARI INI
           </div>
           <div className="text-sm font-bold text-[#0F172A] mt-1.5 leading-snug">
-            Laporan pagi: antrean persetujuan dan proyek aktif.
+            {getAgentBriefingLead()} antrean persetujuan dan proyek aktif.
           </div>
           <div className="text-xs text-[#5B6B7A] mt-1">
             {stats.atRisk > 0
@@ -639,21 +692,23 @@ export default function Dashboard({
                   Rekomendasi AI ({firstActive.name})
                 </h2>
               </div>
-              {recommendations.length === 0 && (
-                <button
-                  type="button"
-                  onClick={handleLoadAiRecommendations}
-                  disabled={aiLoading}
-                  className="text-xs font-bold px-3.5 h-9 rounded-xl bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
-                >
-                  {aiLoading ? 'Menganalisa...' : 'Jalankan Analisa AI'}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleLoadAiRecommendations}
+                disabled={aiLoading}
+                className="text-xs font-bold px-3.5 h-9 rounded-xl bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
+              >
+                {aiLoading
+                  ? 'Menganalisa...'
+                  : recommendations.length > 0
+                    ? 'Analisa Ulang'
+                    : 'Jalankan Analisa AI'}
+              </button>
             </div>
             {recommendations.length === 0 ? (
               <p className="text-xs text-[#5B6B7A]">
-                Klik &ldquo;Jalankan Analisa AI&rdquo; untuk mendapatkan rekomendasi efisiensi biaya
-                & jadwal pada proyek aktif.
+                {aiEmptyMessage ||
+                  'Klik \u201cJalankan Analisa AI\u201d untuk mendapatkan rekomendasi efisiensi biaya & jadwal pada proyek aktif.'}
               </p>
             ) : (
               <div className="space-y-2">
@@ -663,7 +718,7 @@ export default function Dashboard({
                     className="p-3 bg-[#F4F7F5] rounded-xl text-xs space-y-1 border border-[#E5EAE8]"
                   >
                     <div className="font-bold text-[#0F172A]">{rec.title || rec.action}</div>
-                    <div className="text-[#5B6B7A]">{rec.message}</div>
+                    <div className="text-[#5B6B7A]">{rec.description || rec.message}</div>
                   </div>
                 ))}
               </div>

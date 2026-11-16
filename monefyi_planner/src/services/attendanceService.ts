@@ -1,5 +1,7 @@
+import { orgToday } from '../../../packages/domain/src/dates';
 import { supabase } from '../lib/supabase';
 import { assertNoDbError } from '../lib/supabaseErrors';
+import { useAppStore } from '../store/appStore';
 import type { AttendanceSettings } from '../utils/attendanceSettings';
 import { getCurrentPosition, isInsideWorkSite, type GeoPosition } from '../utils/geoUtils';
 
@@ -229,13 +231,105 @@ export async function getUserAttendance(
   return (data || []).map(row => mapRow(row as DbAttendanceRow));
 }
 
-function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10);
+const DEFAULT_ORG_TIMEZONE = 'Asia/Jakarta';
+
+function resolveOrgTimeZone(timeZone?: string | null): string {
+  if (timeZone && timeZone.trim()) return timeZone.trim();
+  try {
+    const tz = useAppStore.getState()?.tenant?.timezone;
+    if (tz && tz.trim()) return tz.trim();
+  } catch {
+    /* ignore if store is mocked without tenant */
+  }
+  return DEFAULT_ORG_TIMEZONE;
+}
+
+function safeOrgDate(date: Date, timeZone: string): string {
+  try {
+    return orgToday(timeZone, date);
+  } catch {
+    return orgToday(DEFAULT_ORG_TIMEZONE, date);
+  }
+}
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string): number {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(date);
+  } catch {
+    parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: DEFAULT_ORG_TIMEZONE,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(date);
+  }
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find(part => part.type === type)?.value || 0);
+  const hour = get('hour') === 24 ? 0 : get('hour');
+  const wallUtcMs = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    hour,
+    get('minute'),
+    get('second'),
+    0,
+  );
+  const utcSecMs = Math.floor(date.getTime() / 1000) * 1000;
+  return wallUtcMs - utcSecMs;
+}
+
+function startOfOrgDateKeyIso(dateKey: string, timeZone: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const utcMidnightMs = Date.UTC(y, m - 1, d, 0, 0, 0, 0);
+  const offset1 = getTimeZoneOffsetMs(new Date(utcMidnightMs), timeZone);
+  let candidateMs = utcMidnightMs - offset1;
+  const offset2 = getTimeZoneOffsetMs(new Date(candidateMs), timeZone);
+  if (offset2 !== offset1) {
+    candidateMs = utcMidnightMs - offset2;
+  }
+  return new Date(candidateMs).toISOString();
+}
+
+/** Konversi timestamp ISO atau Date menjadi key tanggal `YYYY-MM-DD` pada zona waktu organisasi/lokal. */
+export function toOrgDateKey(isoOrDate: string | Date, timeZone?: string): string {
+  const tz = resolveOrgTimeZone(timeZone);
+  if (typeof isoOrDate === 'string') {
+    const trimmed = isoOrDate.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  }
+  const date = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+  if (Number.isNaN(date.getTime())) {
+    return typeof isoOrDate === 'string' ? isoOrDate.slice(0, 10) : safeOrgDate(new Date(), tz);
+  }
+  return safeOrgDate(date, tz);
+}
+
+/** Awal hari (00:00:00 zona organisasi) dalam ISO UTC agar absen 00:00–06:59 WIB tidak terlewat. */
+export function startOfOrgDayIso(now: Date = new Date(), timeZone?: string): string {
+  const tz = resolveOrgTimeZone(timeZone);
+  const dateKey = toOrgDateKey(now, tz);
+  return startOfOrgDateKeyIso(dateKey, tz);
 }
 
 export async function getUserTodayStatus(
   userId: string,
   orgId: string,
+  timeZone?: string,
 ): Promise<{
   checkedIn: boolean;
   checkInTime?: string;
@@ -243,7 +337,8 @@ export async function getUserTodayStatus(
   checkInAtIso?: string;
   checkOutAtIso?: string;
 }> {
-  const start = `${todayIsoDate()}T00:00:00.000Z`;
+  const tz = resolveOrgTimeZone(timeZone);
+  const start = startOfOrgDayIso(new Date(), tz);
   const { data, error } = await supabase
     .from('planner_attendance_records')
     .select('type, recorded_at')
@@ -257,12 +352,13 @@ export async function getUserTodayStatus(
   const lastIn = [...today].reverse().find(r => r.type === 'check_in');
   const lastOut = [...today].reverse().find(r => r.type === 'check_out');
   const inAfterOut =
-    lastIn && (!lastOut || lastIn.recorded_at > lastOut.recorded_at);
+    Boolean(lastIn) &&
+    (!lastOut || new Date(lastIn!.recorded_at).getTime() > new Date(lastOut.recorded_at).getTime());
 
   return {
-    checkedIn: !!inAfterOut,
-    checkInTime: lastIn ? formatTime(lastIn.recorded_at) : undefined,
-    checkOutTime: lastOut && !inAfterOut ? formatTime(lastOut.recorded_at) : undefined,
+    checkedIn: inAfterOut,
+    checkInTime: lastIn ? formatTime(lastIn.recorded_at, tz) : undefined,
+    checkOutTime: lastOut && !inAfterOut ? formatTime(lastOut.recorded_at, tz) : undefined,
     checkInAtIso: lastIn && inAfterOut ? String(lastIn.recorded_at) : undefined,
     checkOutAtIso: lastOut && !inAfterOut ? String(lastOut.recorded_at) : undefined,
   };
@@ -273,17 +369,22 @@ export function computeDailySummaries(
   records: AttendanceRecord[],
   hoursPerDay = 8,
   referenceDate = new Date(),
+  timeZone?: string,
 ): DailyAttendanceSummary[] {
+  const tz = resolveOrgTimeZone(timeZone);
   const byDate = new Map<string, AttendanceRecord[]>();
   for (const r of records) {
-    const d = r.timestamp.slice(0, 10);
+    const d = toOrgDateKey(r.timestamp, tz);
     if (!byDate.has(d)) byDate.set(d, []);
     byDate.get(d)!.push(r);
   }
 
+  const todayKey = toOrgDateKey(referenceDate, tz);
   const summaries: DailyAttendanceSummary[] = [];
   for (const [date, dayRecords] of byDate) {
-    const sorted = [...dayRecords].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+    const sorted = [...dayRecords].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+    );
     let hoursWorked = 0;
     let checkIn: string | undefined;
     let checkOut: string | undefined;
@@ -292,18 +393,18 @@ export function computeDailySummaries(
     for (const r of sorted) {
       if (r.type === 'check_in') {
         openIn = r.timestamp;
-        if (!checkIn) checkIn = formatTime(r.timestamp);
+        if (!checkIn) checkIn = formatTime(r.timestamp, tz);
       } else if (r.type === 'check_out' && openIn) {
         const ms = new Date(r.timestamp).getTime() - new Date(openIn).getTime();
         hoursWorked += Math.max(0, ms / 3600000);
-        checkOut = formatTime(r.timestamp);
+        checkOut = formatTime(r.timestamp, tz);
         openIn = null;
       }
     }
 
-    // Still checked in — count until now if today
-    if (openIn && date === referenceDate.toISOString().slice(0, 10)) {
-      hoursWorked += Math.max(0, (Date.now() - new Date(openIn).getTime()) / 3600000);
+    // Still checked in — count until referenceDate if today
+    if (openIn && date === todayKey) {
+      hoursWorked += Math.max(0, (referenceDate.getTime() - new Date(openIn).getTime()) / 3600000);
     }
 
     const isComplete = hoursWorked >= hoursPerDay - 0.01;
@@ -324,8 +425,10 @@ export function computeDailySummaries(
 export function getPartialDays(
   records: AttendanceRecord[],
   hoursPerDay = 8,
+  referenceDate = new Date(),
+  timeZone?: string,
 ): PartialDayInfo[] {
-  return computeDailySummaries(records, hoursPerDay)
+  return computeDailySummaries(records, hoursPerDay, referenceDate, timeZone)
     .filter(d => d.isPartial)
     .map(d => ({
       date: d.date,
@@ -341,8 +444,9 @@ export function countEffectiveDays(
   records: AttendanceRecord[],
   hoursPerDay = 8,
   referenceDate = new Date(),
+  timeZone?: string,
 ): number {
-  const summaries = computeDailySummaries(records, hoursPerDay, referenceDate);
+  const summaries = computeDailySummaries(records, hoursPerDay, referenceDate, timeZone);
   let total = 0;
   for (const d of summaries) {
     if (d.hoursWorked <= 0) continue;
@@ -355,13 +459,15 @@ export async function getMonthlySummary(
   userId: string,
   orgId: string,
   hoursPerDay = 8,
+  timeZone?: string,
 ) {
+  const tz = resolveOrgTimeZone(timeZone);
   const records = await getUserAttendance(userId, orgId, 31);
   const checkInDays = new Set(
-    records.filter(r => r.type === 'check_in').map(r => r.timestamp.slice(0, 10)),
+    records.filter(r => r.type === 'check_in').map(r => toOrgDateKey(r.timestamp, tz)),
   );
-  const effectiveDays = countEffectiveDays(records, hoursPerDay);
-  const partialDays = getPartialDays(records, hoursPerDay);
+  const effectiveDays = countEffectiveDays(records, hoursPerDay, new Date(), tz);
+  const partialDays = getPartialDays(records, hoursPerDay, new Date(), tz);
   return {
     daysPresent: checkInDays.size,
     effectiveDays,
@@ -376,11 +482,19 @@ export async function countDaysPresentInMonth(
   periodMonth: Date,
   hoursPerDay = 8,
   useEffectiveDays = true,
+  timeZone?: string,
 ): Promise<number> {
-  const y = periodMonth.getFullYear();
-  const m = periodMonth.getMonth();
-  const start = new Date(Date.UTC(y, m, 1)).toISOString();
-  const end = new Date(Date.UTC(y, m + 1, 1)).toISOString();
+  const tz = resolveOrgTimeZone(timeZone);
+  const orgDateKey = toOrgDateKey(periodMonth, tz);
+  const y = Number(orgDateKey.slice(0, 4));
+  const m = Number(orgDateKey.slice(5, 7)); // 1..12
+  const monthStartKey = `${y}-${String(m).padStart(2, '0')}-01`;
+  const nextYear = m === 12 ? y + 1 : y;
+  const nextMonth = m === 12 ? 1 : m + 1;
+  const monthEndKey = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+  const start = startOfOrgDateKeyIso(monthStartKey, tz);
+  const end = startOfOrgDateKeyIso(monthEndKey, tz);
 
   const { data, error } = await supabase
     .from('planner_attendance_records')
@@ -395,9 +509,9 @@ export async function countDaysPresentInMonth(
   const records = (data || []).map(row => mapRow(row as DbAttendanceRow));
 
   if (useEffectiveDays) {
-    return countEffectiveDays(records, hoursPerDay);
+    return countEffectiveDays(records, hoursPerDay, new Date(), tz);
   }
-  return new Set(records.filter(r => r.type === 'check_in').map(r => r.timestamp.slice(0, 10))).size;
+  return new Set(records.filter(r => r.type === 'check_in').map(r => toOrgDateKey(r.timestamp, tz))).size;
 }
 
 /** Batch: days present per user_id for current month (for employee cards). */
@@ -405,17 +519,20 @@ export function summarizeMonthlyByUser(
   records: AttendanceRecord[],
   hoursPerDay = 8,
   periodMonth = new Date(),
+  timeZone?: string,
 ): Map<string, { daysPresent: number; effectiveDays: number; partialCount: number }> {
-  const y = periodMonth.getFullYear();
-  const m = periodMonth.getMonth();
-  const monthStart = `${y}-${String(m + 1).padStart(2, '0')}-01`;
-  const monthEnd = m === 11
+  const tz = resolveOrgTimeZone(timeZone);
+  const orgDateKey = toOrgDateKey(periodMonth, tz);
+  const y = Number(orgDateKey.slice(0, 4));
+  const m = Number(orgDateKey.slice(5, 7)); // 1..12
+  const monthStart = `${y}-${String(m).padStart(2, '0')}-01`;
+  const monthEnd = m === 12
     ? `${y + 1}-01-01`
-    : `${y}-${String(m + 2).padStart(2, '0')}-01`;
+    : `${y}-${String(m + 1).padStart(2, '0')}-01`;
 
   const byUser = new Map<string, AttendanceRecord[]>();
   for (const r of records) {
-    const d = r.timestamp.slice(0, 10);
+    const d = toOrgDateKey(r.timestamp, tz);
     if (d < monthStart || d >= monthEnd) continue;
     if (!byUser.has(r.user_id)) byUser.set(r.user_id, []);
     byUser.get(r.user_id)!.push(r);
@@ -424,33 +541,54 @@ export function summarizeMonthlyByUser(
   const result = new Map<string, { daysPresent: number; effectiveDays: number; partialCount: number }>();
   for (const [userId, userRecords] of byUser) {
     const checkInDays = new Set(
-      userRecords.filter(r => r.type === 'check_in').map(r => r.timestamp.slice(0, 10)),
+      userRecords.filter(r => r.type === 'check_in').map(r => toOrgDateKey(r.timestamp, tz)),
     );
-    const partialDays = getPartialDays(userRecords, hoursPerDay);
+    const partialDays = getPartialDays(userRecords, hoursPerDay, new Date(), tz);
     result.set(userId, {
       daysPresent: checkInDays.size,
-      effectiveDays: countEffectiveDays(userRecords, hoursPerDay),
+      effectiveDays: countEffectiveDays(userRecords, hoursPerDay, new Date(), tz),
       partialCount: partialDays.length,
     });
   }
   return result;
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+function formatTime(iso: string, timeZone?: string) {
+  const tz = resolveOrgTimeZone(timeZone);
+  try {
+    return new Date(iso).toLocaleTimeString('id-ID', {
+      timeZone: tz,
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  }
 }
 
-export function formatAttendanceTime(iso: string) {
-  return new Date(iso).toLocaleString('id-ID', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+export function formatAttendanceTime(iso: string, timeZone?: string) {
+  const tz = resolveOrgTimeZone(timeZone);
+  try {
+    return new Date(iso).toLocaleString('id-ID', {
+      timeZone: tz,
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return new Date(iso).toLocaleString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
 }
 
-export async function groupTodayByUser(orgId: string) {
-  const start = `${todayIsoDate()}T00:00:00.000Z`;
+export async function groupTodayByUser(orgId: string, timeZone?: string) {
+  const tz = resolveOrgTimeZone(timeZone);
+  const start = startOfOrgDayIso(new Date(), tz);
   const { data, error } = await supabase
     .from('planner_attendance_records')
     .select(`user_id, type, recorded_at, ${PROFILE_BY_USER}(name)`)
@@ -472,10 +610,10 @@ export async function groupTodayByUser(orgId: string) {
       status: 'none' as const,
     };
     if (row.type === 'check_in') {
-      cur.checkIn = formatTime(row.recorded_at);
+      cur.checkIn = formatTime(row.recorded_at, tz);
       cur.status = 'in';
     } else {
-      cur.checkOut = formatTime(row.recorded_at);
+      cur.checkOut = formatTime(row.recorded_at, tz);
       cur.status = 'out';
     }
     map.set(row.user_id, cur);

@@ -732,6 +732,7 @@ export default function Projects({
     { id: 'all', label: 'Semua', count: projects.length },
     { id: 'active', label: 'Aktif', count: activeProjects.length },
     { id: 'planning', label: 'Planning', count: planningProjects.length },
+    { id: 'at_risk', label: 'Perhatian', count: stats.atRisk },
     { id: 'other', label: 'Lainnya', count: otherProjects.length },
   ];
 
@@ -1372,19 +1373,39 @@ export default function Projects({
 
         {projectView === 'list' && (
           <div className="space-y-4">
-            {groupedByStatus.map(({ section, projects: sectionProjects }) => (
-              <section key={section.id}>
-                <div className="flex items-center gap-3 mb-4">
-                  <h2 className="text-lg font-black text-slate-900">{section.label}</h2>
-                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                    {sectionProjects.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {sectionProjects.map((p, idx) => renderProjectCard(p, idx))}
-                </div>
-              </section>
-            ))}
+            {filter === 'all' ? (
+              groupedByStatus.map(({ section, projects: sectionProjects }) => (
+                <section key={section.id}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <h2 className="text-lg font-black text-slate-900">{section.label}</h2>
+                    <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
+                      {sectionProjects.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sectionProjects.map((p, idx) => renderProjectCard(p, idx))}
+                  </div>
+                </section>
+              ))
+            ) : filtered.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filtered.map((p, idx) => renderProjectCard(p, idx))}
+              </div>
+            ) : (
+              <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center">
+                <p className="text-sm text-slate-500 mb-3">Tidak ada proyek pada filter ini.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilter('all');
+                    setProjectsListFilter('all');
+                  }}
+                  className="text-xs font-bold text-emerald-700 hover:underline"
+                >
+                  Tampilkan semua proyek
+                </button>
+              </div>
+            )}
           </div>
         )}
 
