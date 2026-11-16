@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { buildUser, setActiveOrgTimeZone } from '../lib/adapters';
 import { config } from '../lib/config';
+import { hasPasswordRecoveryIntent, markPasswordRecoveryIntent } from '../lib/passwordRecoveryIntent';
 import { onAuthStateChange } from '../services/authService';
 import { loadOrg } from '../services/orgService';
 import { loadProfile } from '../services/profileService';
@@ -225,6 +226,12 @@ export function useBootstrap() {
     const processAuth = (event: string, session: Session | null) => {
       if (useAppStore.getState().isDemoMode) {
         settleInit('demo-mode');
+        return;
+      }
+
+      if (event === 'PASSWORD_RECOVERY') markPasswordRecoveryIntent();
+      if (session?.user && hasPasswordRecoveryIntent()) {
+        settleInit('password-recovery');
         return;
       }
 

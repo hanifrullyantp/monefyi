@@ -5,6 +5,7 @@ import {
   getActiveMayarApiUrl,
 } from "@/lib/services/mayarHealthService";
 import { randomUUID } from "crypto";
+import { mapMayarTransactionStatus } from "@/lib/crm/mayarTransactionStatus";
 
 export interface CrmLeadPayload {
   sessionId: string;
@@ -177,7 +178,7 @@ export async function GET(req: NextRequest) {
     const requestedLimit = Number(req?.nextUrl?.searchParams?.get("limit"));
     const orderLimit = Number.isFinite(requestedLimit)
       ? Math.min(500, Math.max(1, Math.floor(requestedLimit)))
-      : 100;
+      : 500;
     const supabase = getSupabaseClient();
     const leadsMap: Map<string, any> = new Map();
 
@@ -330,25 +331,35 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3. Sinkronisasi Langsung dari Mayar Transactions API
-    // Memastikan seluruh transaksi yang sudah dibayar di Mayar (seperti Abe) selalu masuk ke CRM
+    // 3. Sinkronisasi Mayar: lunas dan belum lunas sama-sama masuk.
+    // Filter "Semua" di dashboard/CRM menampilkan semuanya. Filter bayar tetap hanya yang lunas.
     if (mayarApiKey) {
       try {
-        const mayarTxRes = await fetch(`${mayarApiUrl}/hl/v2/transactions?limit=50`, {
-          headers: {
-            Authorization: `Bearer ${mayarApiKey}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (mayarTxRes.ok) {
+        const txList: any[] = [];
+        const seenTxIds = new Set<string>();
+        for (let page = 1; page <= 5; page += 1) {
+          const mayarTxRes = await fetch(`${mayarApiUrl}/hl/v2/transactions?page=${page}&pageSize=100`, {
+            headers: {
+              Authorization: `Bearer ${mayarApiKey}`,
+              "Content-Type": "application/json",
+            },
+          });
+          if (!mayarTxRes.ok) break;
           const txJson = await mayarTxRes.json();
-          const txList = Array.isArray(txJson?.data) ? txJson.data : [];
+          const pageRows = Array.isArray(txJson?.data) ? txJson.data : [];
+          for (const row of pageRows) {
+            const rowId = String(row?.id || "");
+            if (rowId && seenTxIds.has(rowId)) continue;
+            if (rowId) seenTxIds.add(rowId);
+            txList.push(row);
+          }
+          const totalPage = Number(txJson?.totalPage || txJson?.pagination?.totalPage || 0);
+          if (pageRows.length < 100 || (totalPage > 0 && page >= totalPage)) break;
+        }
 
+        if (txList.length > 0) {
           for (const tx of txList) {
-            const txStatus = String(tx?.status || "").toLowerCase();
-            const isPaid = txStatus === "paid" || txStatus === "settled" || txStatus === "success";
-            if (!isPaid) continue;
+            const mapped = mapMayarTransactionStatus(tx?.status);
 
             const txCustomer = tx.customer || {};
             const txEmail = (txCustomer.email || "").trim().toLowerCase();
@@ -381,8 +392,8 @@ export async function GET(req: NextRequest) {
               }
             }
 
-            // Jika belum cocok via ID, cocokkan pesanan yang belum terbayar via email ATAU nomor WhatsApp
-            if (!matchedKey && (txEmail || txPhone)) {
+            // Cocokkan email/WA hanya untuk pelunasan, supaya invoice belum bayar tidak menimpa pesanan lain.
+            if (mapped.isPaid && !matchedKey && (txEmail || txPhone)) {
               for (const [key, existing] of leadsMap.entries()) {
                 const exEmail = (existing.email || "").trim().toLowerCase();
                 const exPhone = (existing.phone || "").replace(/[^0-9]/g, "");
@@ -400,34 +411,38 @@ export async function GET(req: NextRequest) {
 
             if (matchedKey) {
               const existing = leadsMap.get(matchedKey);
+              if (!mapped.isPaid && existing.status === "won") {
+                continue;
+              }
+              const nextStatus = mapped.isPaid ? "won" : mapped.leadStatus;
               const updatedLead = {
                 ...existing,
-                status: "won",
-                paymentId: txId,
+                status: nextStatus,
+                paymentId: txId || existing.paymentId,
                 amount: txAmount || existing.amount,
                 paymentMethod: txMethod || existing.paymentMethod,
                 name: existing.name && existing.name !== "Lead Checkout (Draft)" && existing.name !== "Anonim" ? existing.name : txName,
                 email: existing.email || txEmail,
                 phone: existing.phone && existing.phone !== "-" ? existing.phone : txPhone,
-                checkoutStep: 5,
+                checkoutStep: mapped.isPaid ? 5 : existing.checkoutStep || 4,
+                verifiedViaMayar: mapped.isPaid ? true : existing.verifiedViaMayar,
                 updatedAt: txCreatedAt,
               };
               leadsMap.set(matchedKey, updatedLead);
 
-              // Update baris di Supabase jika status order belum 'paid'
-              if (supabase && existing.id) {
+              if (supabase && existing.id && (mapped.isPaid || existing.status !== "won")) {
                 try {
                   await supabase
                     .from("orders")
                     .update({
-                      status: "paid",
+                      status: mapped.orderStatus,
                       grand_total: updatedLead.amount,
                       raw_payload: {
                         ...(existing.raw_payload || {}),
                         ...updatedLead,
-                        status: "won",
-                        verifiedViaMayar: true,
-                        paidAt: txCreatedAt,
+                        status: nextStatus,
+                        verifiedViaMayar: mapped.isPaid,
+                        ...(mapped.isPaid ? { paidAt: txCreatedAt } : {}),
                       },
                     })
                     .eq("id", existing.id);
@@ -436,7 +451,6 @@ export async function GET(req: NextRequest) {
                 }
               }
             } else {
-              // Transaksi baru yang belum ada di local/Supabase
               const newTier = txAmount >= 290000 ? "pro" : "standard";
               const newLead = {
                 id: txId,
@@ -449,17 +463,17 @@ export async function GET(req: NextRequest) {
                 paymentMethod: txMethod,
                 amount: txAmount,
                 paymentId: txId,
-                checkoutStep: 5,
-                status: "won",
+                checkoutStep: mapped.isPaid ? 5 : 4,
+                status: mapped.leadStatus,
+                verifiedViaMayar: mapped.isPaid,
                 emails: [],
                 createdAt: txCreatedAt,
                 updatedAt: txCreatedAt,
               };
 
-              leadsMap.set(txId, newLead);
+              leadsMap.set(txId || `mayar_${txEmail || txPhone || txName}_${txCreatedAt}_${txAmount}`, newLead);
 
-              // Simpan langsung ke Supabase orders agar permanen
-              if (supabase) {
+              if (supabase && txId && (mapped.isPaid || txAmount > 0)) {
                 try {
                   await supabase.from("orders").upsert(
                     [
@@ -470,7 +484,7 @@ export async function GET(req: NextRequest) {
                         phone: txPhone || "-",
                         product_title: `Monefyi Estimator ${newTier.toUpperCase()}`,
                         grand_total: txAmount,
-                        status: "paid",
+                        status: mapped.orderStatus,
                         raw_payload: newLead,
                       },
                     ],

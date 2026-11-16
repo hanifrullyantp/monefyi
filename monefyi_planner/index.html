@@ -20,6 +20,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      try {
+        var hash = new URLSearchParams(location.hash.slice(1));
+        var query = new URLSearchParams(location.search);
+        var type = hash.get('type') || query.get('type');
+        var errorCode = hash.get('error_code') || query.get('error_code');
+        var errorFlag = hash.get('error') || query.get('error');
+        if (type === 'recovery') sessionStorage.setItem('monefyi_password_recovery', '1');
+        if (errorFlag || errorCode) {
+          var message = errorCode === 'otp_expired'
+            ? 'Tautan reset sudah kedaluwarsa. Minta tautan baru.'
+            : (hash.get('error_description') || query.get('error_description') || 'Tautan reset tidak valid. Minta tautan baru.');
+          sessionStorage.setItem('monefyi_password_recovery_error', message);
+        }
+      } catch (e) {}
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
