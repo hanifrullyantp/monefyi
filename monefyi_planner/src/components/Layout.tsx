@@ -350,18 +350,15 @@ export default function Layout({ children }: LayoutProps) {
               <EstimatorLogo className="rounded-xl object-contain shadow-xs shrink-0 w-9 h-9" />
             ) : (
               <PlannerLogo
-                className={`rounded-xl object-contain shadow-xs shrink-0 ${navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'
-                  }`}
+                className={`rounded-xl object-contain shrink-0 ${navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'}`}
               />
             )}
             {!navSidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <div
-                  className="font-black text-sm leading-tight text-[#0F172A]"
-                >
-                  {showEstimatorBrand ? 'Estimator' : 'Planner'}
+                <div className={showEstimatorBrand ? 'font-black text-sm leading-tight text-[#0F172A]' : 'froyek-wordmark text-sm leading-tight'}>
+                  {showEstimatorBrand ? 'Estimator' : 'froyek'}
                 </div>
-                <div className="text-[11px] text-[#5B6B7A] font-medium truncate">Monefyi Workspace</div>
+                <div className="text-[11px] text-[#5B6B7A] font-medium truncate">{showEstimatorBrand ? 'Monefyi Workspace' : 'Agent for your Project'}</div>
               </div>
             )}
             <button
@@ -386,13 +383,13 @@ export default function Layout({ children }: LayoutProps) {
               ? 'w-11 h-11 mx-auto rounded-xl'
               : 'w-full h-11 rounded-xl gap-2'
               }`}
-            style={{ background: 'linear-gradient(135deg, #064E3B 0%, #047857 50%, #059669 100%)' }}
-            aria-label="Buka Monefyi AI"
-            title="Monefyi AI"
+            style={{ background: 'linear-gradient(135deg, #0A3A2E 0%, #047857 50%, #10B981 100%)' }}
+            aria-label="Buka Agent"
+            title="Agent"
           >
             <Sparkles className="w-5 h-5 text-white shrink-0" />
             {!navSidebarCollapsed && (
-              <span className="text-sm font-bold text-white">Monefyi AI</span>
+              <span className="text-sm font-bold text-white">Agent</span>
             )}
             {pendingSyncCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -511,7 +508,7 @@ export default function Layout({ children }: LayoutProps) {
         {!isProjectDetail && !isEstimatorDetail && (
           <div className="lg:hidden">
             <AppHeader
-              title={showEstimatorBrand ? 'Estimator' : 'Planner'}
+              title={showEstimatorBrand ? 'Estimator' : 'froyek'}
               isEstimator={showEstimatorBrand}
               onOpenMenu={() => setSidebarOpen(true)}
               onOpenNotif={() => setNotifOpen(v => !v)}

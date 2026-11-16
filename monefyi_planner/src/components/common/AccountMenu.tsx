@@ -107,7 +107,7 @@ export default function AccountMenu({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-base font-extrabold text-[#0F172A] truncate">
-                  {isEstimator ? 'Estimator' : 'Planner'}
+                  {isEstimator ? 'Estimator' : 'froyek'}
                 </div>
                 <div
                   className={`text-[11px] font-bold ${

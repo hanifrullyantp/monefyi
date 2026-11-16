@@ -14,7 +14,7 @@ type Props = {
 };
 
 export default function AppHeader({
-  title = 'Planner',
+  title = 'froyek',
   isEstimator = false,
   onOpenMenu,
   onOpenNotif,

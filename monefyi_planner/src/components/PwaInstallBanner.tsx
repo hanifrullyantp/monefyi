@@ -58,7 +58,7 @@ export default function PwaInstallBanner() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-sm">
-            {isEstimator ? 'Install Monefyi Estimator' : 'Install Monefyi Planner'}
+            {isEstimator ? 'Install Monefyi Estimator' : 'Install froyek'}
           </p>
           <p className="text-xs text-slate-500 mt-0.5">
             {isEstimator

@@ -24,7 +24,7 @@ function LegalShell({ title, children }: { title: string; children: React.ReactN
 export function PrivacyPage() {
   return (
     <LegalShell title="Kebijakan Privasi">
-      <p>Monefyi Planner mengumpulkan data akun (email, nama) dan data proyek yang Anda input untuk keperluan operasional aplikasi.</p>
+      <p>froyek mengumpulkan data akun (email, nama) dan data proyek yang Anda input untuk keperluan operasional aplikasi.</p>
       <p>Data disimpan di Supabase dengan enkripsi transit. Kami tidak menjual data pribadi kepada pihak ketiga.</p>
       <p>Hubungi tim Monefyi untuk permintaan penghapusan data akun.</p>
     </LegalShell>
@@ -34,7 +34,7 @@ export function PrivacyPage() {
 export function TermsPage() {
   return (
     <LegalShell title="Syarat & Ketentuan">
-      <p>Dengan menggunakan Monefyi Planner, Anda setuju menggunakan layanan secara legal dan bertanggung jawab atas data proyek yang dimasukkan.</p>
+      <p>Dengan menggunakan froyek, Anda setuju menggunakan layanan secara legal dan bertanggung jawab atas data proyek yang dimasukkan.</p>
       <p>Layanan disediakan &quot;sebagaimana adanya&quot;. Fitur beta dapat berubah tanpa pemberitahuan sebelumnya.</p>
       <p className="font-semibold text-slate-800">Garansi uang kembali 7 hari</p>
       <p>

@@ -113,7 +113,7 @@ export default function CustomDomainPanel({ onUpgrade }: Props) {
         <div>
           <h3 className="font-bold text-slate-900">Custom Domain</h3>
           <p className="text-sm text-slate-500">
-            Arahkan subdomain perusahaan ke Monefyi Planner. Rekomendasi: <code className="bg-slate-100 px-1 rounded">planner.domainanda.com</code>
+            Arahkan subdomain perusahaan ke froyek. Rekomendasi: <code className="bg-slate-100 px-1 rounded">planner.domainanda.com</code>
           </p>
         </div>
         <button type="button" onClick={load} className="ml-auto p-2 rounded-lg hover:bg-slate-100" aria-label="Refresh">

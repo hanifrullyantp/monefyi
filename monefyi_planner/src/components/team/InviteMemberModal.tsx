@@ -184,7 +184,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
     [
       `Halo ${row.name || 'Tim'},`,
       '',
-      'Akun Anda sudah dibuat di Monefyi Planner.',
+      'Akun Anda sudah dibuat di froyek.',
       `Link login: ${window.location.origin}/login`,
       `Email: ${row.email || '-'}`,
       `Password: ${row.password || '-'}`,

@@ -5,9 +5,9 @@
 }
 
 :root {
-  --brand-primary: #059669;
-  --brand-accent: #10B981;
-  --brand-dark: #064E3B;
+  --brand-primary: #10B981;
+  --brand-accent: #34D399;
+  --brand-dark: #0A3A2E;
   --radius-card: 20px;
   --radius-mini: 14px;
   --shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.02);
@@ -22,6 +22,13 @@
 
 .text-brand {
   color: var(--brand-primary);
+}
+
+.froyek-wordmark {
+  font-family: Poppins, Inter, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #0A3A2E;
 }
 
 /* Org brand — di-set via inline style di Layout (owner) */

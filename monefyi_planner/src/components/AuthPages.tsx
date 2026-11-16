@@ -25,6 +25,7 @@ import { setActiveOrgTimeZone } from '../lib/adapters';
 import { useAppStore } from '../store/appStore';
 import { EstimatorLogo } from './EstimatorLogo';
 import { PlannerLogo } from './MonefyiLogo';
+import { PLANNER_BRAND_NAME, PLANNER_TAGLINE } from '../lib/plannerBrand';
 import { applyEstimatorDocumentBrand, isEstimatorBrandContext } from '../lib/estimatorBrand';
 import { checkAndClearDeviceKickoutReason } from '../services/singleDeviceSessionService';
 
@@ -59,12 +60,12 @@ export function LoginPage() {
   }, []);
   const { setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing, customDomainContext } = useAppStore();
   const estimatorBrand = isEstimatorBrandContext();
-  const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Monefyi Estimator' : 'Monefyi Planner');
+  const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Monefyi Estimator' : PLANNER_BRAND_NAME);
   const loginSubtitle = customDomainContext
     ? 'Masuk ke workspace perusahaan Anda'
     : estimatorBrand
       ? 'Masuk ke dashboard Estimator'
-      : 'Masuk ke akun kamu';
+      : PLANNER_TAGLINE;
 
   useEffect(() => {
     if (!estimatorBrand) return;
@@ -174,7 +175,7 @@ export function LoginPage() {
             {estimatorBrand ? (
               <EstimatorLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
             ) : (
-              <PlannerLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
+              <PlannerLogo className="w-10 h-10 rounded-xl object-contain" />
             )}
             <div>
               <div className="font-black text-slate-900">{loginTitle}</div>
@@ -183,7 +184,7 @@ export function LoginPage() {
           </div>
           {customDomainContext && (
             <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-4">
-              Powered by Monefyi Planner
+              Powered by froyek
             </p>
           )}
 

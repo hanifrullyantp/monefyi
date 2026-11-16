@@ -762,7 +762,7 @@ export default function Settings() {
           <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-4">
             <h3 className="font-bold text-slate-800">Tentang Aplikasi</h3>
             <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <AboutRow label="Aplikasi" value="Monefyi Planner" />
+              <AboutRow label="Aplikasi" value="froyek" />
               <AboutRow label="Versi" value="0.1.0 MVP" />
               <AboutRow label="Mode" value={isDemoMode ? 'Demo' : 'Production'} />
               <AboutRow label="Paket" value={planLabel(tenant?.plan)} />
