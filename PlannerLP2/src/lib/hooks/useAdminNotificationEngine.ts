@@ -161,7 +161,7 @@ export function useAdminNotificationEngine() {
         const name = lead.fullName || lead.name || "Calon Klien";
         const phone = lead.phone || lead.cleanPhone || "-";
         const amount = Number(lead.grandTotal || lead.estimatedValue || lead.amount || 0);
-        const tier = lead.planTier || lead.productTitle || "Monefyi Estimator";
+        const tier = lead.planTier || lead.productTitle || "Froyek Estimator";
         const isClosing = lead.status === "won" || lead.status === "paid";
 
         // Deteksi Closing Masuk baru

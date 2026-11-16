@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
       const notes = String(body.admin_notes || "").slice(0, 500);
       await sendEmailSafe({
         to,
+        product: "finance",
         subject: `Monefyi — Refund ${status === "approved" ? "disetujui" : "ditolak"}`,
         html: refundProcessedHtml(status, notes),
         text: `Refund ${status}. ${notes}`,
@@ -116,6 +117,7 @@ Deno.serve(async (req) => {
       const daysLeft = Number(body.days_left || 30);
       await sendEmailSafe({
         to: email,
+        product: "finance",
         subject: "Monefyi — Permintaan hapus akun",
         html: deletionRequestedHtml(name, daysLeft),
         text: `Akun dijadwalkan hapus dalam ${daysLeft} hari. Batalkan di Settings.`,
@@ -123,6 +125,7 @@ Deno.serve(async (req) => {
     } else if (action === "deletion_cancelled") {
       await sendEmailSafe({
         to: email,
+        product: "finance",
         subject: "Monefyi — Hapus akun dibatalkan",
         html: `<p>Permintaan hapus akun kamu telah <strong>dibatalkan</strong>. Akun tetap aktif.</p>`,
         text: "Permintaan hapus akun dibatalkan.",
@@ -131,6 +134,7 @@ Deno.serve(async (req) => {
       const plan = String(body.plan_type || "unknown");
       await sendEmailSafe({
         to: email,
+        product: "finance",
         subject: "Monefyi — Permintaan refund diterima",
         html: refundSubmittedHtml(plan),
         text: `Refund request received for ${plan}.`,

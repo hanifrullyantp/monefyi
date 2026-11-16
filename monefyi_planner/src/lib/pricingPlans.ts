@@ -28,7 +28,7 @@ export const DEFAULT_PRICING_PLANS: PricingPlan[] = [
     sort_order: 0,
     is_active: true,
     is_default: true,
-    features: ['2 proyek/bulan', 'Estimator & RAP', '1 organisasi'],
+    features: ['2 proyek/bulan', 'Manajemen Proyek & RAP', '1 organisasi'],
     capabilities: { customDomain: false },
   },
   {

@@ -33,6 +33,9 @@ import EstimatorSettingsPanel from '../components/estimator/settings/EstimatorSe
 import ErrorTraceDiagnosticsPanel from '../components/settings/ErrorTraceDiagnosticsPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { isAdminFullAccess } from '../lib/entitlement';
+import { hasEstimatorLicenseAccess } from '../lib/appProductBrand';
 
 type SettingsTab = 'profil' | 'estimator' | 'akun' | 'koordinasi' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'diagnostik' | 'tentang' | 'developer';
 
@@ -41,6 +44,7 @@ const VALID_SETTINGS_TABS: SettingsTab[] = [
 ];
 
 const OWNER_ONLY_TABS: SettingsTab[] = ['organisasi', 'pricelist', 'domain', 'developer'];
+const ADMIN_ONLY_TABS: SettingsTab[] = ['diagnostik', 'developer'];
 
 const TIMEZONES = [
   'Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Singapore', 'UTC',
@@ -98,13 +102,16 @@ export default function Settings() {
   const [searchParams] = useSearchParams();
   const {
     user, tenant, logout, setUser, setTenant, setActiveTab, setFinanceVersionPreference, platformRole,
-    syncStatus, isOnline, lastSynced, isDemoMode, projects,
+    entitlementPreviewMode, syncStatus, isOnline, lastSynced, isDemoMode, projects,
   } = useAppStore();
 
   const demoActive = isDemoMode || tenant?.id === 'demo';
   const isOwner = user?.role === 'owner';
   const canEditOrg = isOwner;
   const showAdminLink = isPlatformAdmin(platformRole, user?.email);
+  const entitlement = useEntitlement();
+  const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+  const hasEstimatorAccess = hasEstimatorLicenseAccess(entitlement, adminFullAccess);
 
   const [tab, setTab] = useState<SettingsTab>('profil');
   const [loading, setLoading] = useState(true);
@@ -144,6 +151,13 @@ export default function Settings() {
     navigate(`/app?tab=settings&st=${id}`, { replace: true });
   };
 
+  const isTabRestricted = useCallback((candidate: SettingsTab) => {
+    if (OWNER_ONLY_TABS.includes(candidate) && !isOwner) return true;
+    if (ADMIN_ONLY_TABS.includes(candidate) && !showAdminLink) return true;
+    if (candidate === 'estimator' && !entitlement.isLoading && !hasEstimatorAccess) return true;
+    return false;
+  }, [isOwner, showAdminLink, entitlement.isLoading, hasEstimatorAccess]);
+
   useEffect(() => {
     const rawSt = searchParams.get('st') || searchParams.get('tab');
     let nextTab: SettingsTab | null = null;
@@ -153,15 +167,15 @@ export default function Settings() {
       nextTab = rawSt as SettingsTab;
     }
     if (nextTab) {
-      setTab(OWNER_ONLY_TABS.includes(nextTab) && !isOwner ? 'profil' : nextTab);
+      setTab(isTabRestricted(nextTab) ? 'profil' : nextTab);
     }
-  }, [searchParams, isOwner]);
+  }, [searchParams, isTabRestricted]);
 
   useEffect(() => {
-    if (OWNER_ONLY_TABS.includes(tab) && !isOwner) {
+    if (isTabRestricted(tab)) {
       setTab('profil');
     }
-  }, [tab, isOwner]);
+  }, [tab, isTabRestricted]);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -420,7 +434,7 @@ export default function Settings() {
 
   const tabs: { id: SettingsTab; label: string; icon: typeof User; show: boolean }[] = [
     { id: 'profil', label: 'Profil', icon: User, show: true },
-    { id: 'estimator', label: 'Estimator & PDF', icon: FileSpreadsheet, show: true },
+    { id: 'estimator', label: 'Estimator', icon: FileSpreadsheet, show: hasEstimatorAccess },
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
     { id: 'koordinasi', label: 'Koordinasi AI & Bot Telegram', icon: Bot, show: true },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
@@ -428,8 +442,8 @@ export default function Settings() {
     { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
-    { id: 'diagnostik', label: 'Trace & Error', icon: Bug, show: true },
-    { id: 'developer', label: 'Developer', icon: FlaskConical, show: isOwner },
+    { id: 'diagnostik', label: 'Trace & Error', icon: Bug, show: showAdminLink },
+    { id: 'developer', label: 'Developer', icon: FlaskConical, show: showAdminLink },
     { id: 'tentang', label: 'Tentang', icon: Info, show: true },
   ];
 
@@ -448,16 +462,16 @@ export default function Settings() {
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-[#0F172A]">Pengaturan</h1>
             <p className="text-xs sm:text-sm text-[#5B6B7A]">Kelola profil, organisasi, dan preferensi akun.</p>
-            <div className="flex items-center gap-3 mt-1.5">
-              {showAdminLink && (
+            {showAdminLink && (
+              <div className="flex items-center gap-3 mt-1.5">
                 <Link to="/admin" className="text-xs font-bold text-[#059669] hover:underline">
                   Buka Super Admin →
                 </Link>
-              )}
-              <Link to="/app/uji-agen" className="text-xs font-bold text-[#059669] hover:underline">
-                Uji agen →
-              </Link>
-            </div>
+                <Link to="/app/uji-agen" className="text-xs font-bold text-[#059669] hover:underline">
+                  Uji agen →
+                </Link>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 self-start">
             <button type="button" onClick={handleLogout} className="min-h-11 px-3.5 py-2 flex items-center gap-1.5 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-colors">
@@ -619,13 +633,22 @@ export default function Settings() {
             {demoActive ? (
               <p className="text-sm text-[#5B6B7A]">Pengaturan AI Provider tidak tersedia di mode demo.</p>
             ) : (
-              <AIProviderPanel />
+              <details className="group">
+                <summary className="cursor-pointer text-sm font-bold text-slate-800 flex items-center justify-between list-none">
+                  <span>Pengaturan Lanjutan AI (BYOK Provider)</span>
+                  <span className="text-xs font-semibold text-emerald-700 group-open:hidden">Buka ▾</span>
+                  <span className="text-xs font-semibold text-slate-500 hidden group-open:inline">Tutup ▴</span>
+                </summary>
+                <div className="mt-4">
+                  <AIProviderPanel />
+                </div>
+              </details>
             )}
           </div>
         </div>
       )}
 
-      {tab === 'estimator' && (
+      {tab === 'estimator' && hasEstimatorAccess && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
           {demoActive ? (
             <p className="text-sm text-[#5B6B7A]">Pengaturan Estimator & PDF tidak tersedia di mode demo.</p>
@@ -660,7 +683,7 @@ export default function Settings() {
           <div>
             <h3 className="font-bold text-slate-800">Profil Organisasi</h3>
             <p className="text-sm text-slate-500">
-              Identitas perusahaan Anda. Warna brand diterapkan ke PDF customer, menu aktif, dan portal karyawan — tanpa mengubah logo Monefyi.
+              Identitas perusahaan Anda. Warna brand diterapkan ke PDF customer, menu aktif, dan portal karyawan — tanpa mengubah logo Froyek.
             </p>
           </div>
 
@@ -838,7 +861,7 @@ export default function Settings() {
         </div>
       )}
 
-      {tab === 'diagnostik' && (
+      {tab === 'diagnostik' && showAdminLink && (
         demoActive ? (
           <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm text-sm text-[#5B6B7A]">
             Diagnostik sinkronisasi server tidak tersedia di mode demo.
@@ -848,7 +871,7 @@ export default function Settings() {
         )
       )}
 
-      {tab === 'developer' && isOwner && user?.id && (
+      {tab === 'developer' && showAdminLink && user?.id && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
           {demoActive ? (
             <p className="text-sm text-[#5B6B7A]">Panel developer tidak tersedia di mode demo.</p>
@@ -863,7 +886,7 @@ export default function Settings() {
           <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-4">
             <h3 className="font-bold text-slate-800">Tentang Aplikasi</h3>
             <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <AboutRow label="Aplikasi" value="Monefyi Planner" />
+              <AboutRow label="Aplikasi" value="Froyek" />
               <AboutRow label="Versi" value="0.1.0 MVP" />
               <AboutRow label="Mode" value={isDemoMode ? 'Demo' : 'Production'} />
               <AboutRow label="Paket" value={planLabel(tenant?.plan)} />
@@ -885,7 +908,10 @@ export default function Settings() {
 
           <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800">
             <p className="font-semibold mb-1">Butuh bantuan?</p>
-            <p className="text-emerald-700">Hubungi admin organisasi atau kunjungi dokumentasi onboarding di repo proyek.</p>
+            <p className="text-emerald-700">
+              Hubungi admin organisasi Anda atau email ke{' '}
+              <a href="mailto:support@froyek.com" className="font-semibold underline">support@froyek.com</a>.
+            </p>
           </div>
         </div>
       )}

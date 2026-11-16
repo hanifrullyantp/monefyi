@@ -64,7 +64,7 @@ export default function Intero3DLaunchModal({ open, onClose, draft, items }: Pro
 
   const handleDownloadFile = () => {
     const launch = buildInteroWizardLaunch(draft, proposal);
-    downloadInteroFile(launch, draft.title || 'Proyek_Kitchen_Monefyi');
+    downloadInteroFile(launch, draft.title || 'Proyek_Kitchen_Froyek');
   };
 
   return (
@@ -107,7 +107,7 @@ export default function Intero3DLaunchModal({ open, onClose, draft, items }: Pro
                 Data RAB Terdeteksi: Kabinet Bawah {proposal.totalBaseM.toFixed(1)}m · Kabinet Atas {proposal.totalWallM.toFixed(1)}m
               </p>
               <p className="text-emerald-800 text-[11px] leading-relaxed">
-                Di Monefyi dihitung per meter lari kabinet atas &amp; bawah. Di Intero, kabinet dialokasikan ke dinding sudut.
+                Di Froyek dihitung per meter lari kabinet atas &amp; bawah. Di Intero, kabinet dialokasikan ke dinding sudut.
                 Anda dapat menyesuaikan pembagian panjang dinding di bawah ini sebelum membuka 3D:
               </p>
             </div>

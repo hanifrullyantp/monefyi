@@ -100,7 +100,7 @@ export async function getAuthUser(): Promise<SupabaseUser | null> {
 
 export async function resetPasswordForEmail(email: string) {
   return supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: authRedirectUrl('/login'),
+    redirectTo: authRedirectUrl('/reset-password'),
   });
 }
 

@@ -33,7 +33,7 @@ export function VideoAdAuditor() {
   const [currentIssue, setCurrentIssue] = useState("CTR rendah (< 1%) & jempol orang cepat scroll");
   const [videoUrl, setVideoUrl] = useState("");
   const [scriptText, setScriptText] = useState(
-    "Detik 0-3: Halo teman-teman, hari ini saya mau sharing cara saya bikin RAB kitchen set.\nDetik 4-15: Biasanya saya buka laptop, buka file Excel rumus lama, lalu ketik satu per satu bahan multiplek dan HPL.\nDetik 16-25: Kadang makan waktu lama dan sering salah hitung harga bahan yang naik.\nDetik 26-30: Makanya sekarang saya pakai Monefyi Estimator biar lebih gampang. Yuk download sekarang."
+    "Detik 0-3: Halo teman-teman, hari ini saya mau sharing cara saya bikin RAB kitchen set.\nDetik 4-15: Biasanya saya buka laptop, buka file Excel rumus lama, lalu ketik satu per satu bahan multiplek dan HPL.\nDetik 16-25: Kadang makan waktu lama dan sering salah hitung harga bahan yang naik.\nDetik 26-30: Makanya sekarang saya pakai Froyek Estimator biar lebih gampang. Yuk download sekarang."
   );
 
   const [isAuditing, setIsAuditing] = useState(false);

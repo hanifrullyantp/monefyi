@@ -154,7 +154,7 @@ export function LoginModal() {
       }
       return;
     }
-    setInfo("Cek email untuk verifikasi akun. Setelah verifikasi, login untuk masuk ke Estimator.");
+    setInfo("Cek email untuk verifikasi akun. Setelah verifikasi, login untuk masuk ke Froyek.");
     setMode("login");
   };
 
@@ -186,7 +186,7 @@ export function LoginModal() {
 
   const checkoutHint = pendingCheckoutProduct
     ? `Login untuk akses ${lynkProductLabel(pendingCheckoutProduct)}.`
-    : "Login untuk akses Estimator.";
+    : "Login untuk akses Froyek.";
 
   return (
     <AnimatePresence>
@@ -223,7 +223,7 @@ export function LoginModal() {
                 )}
               </div>
               <h2 className="text-2xl font-extrabold text-slate-900">
-                {loginSuccess ? "Login berhasil!" : "Masuk ke Monefyi"}
+                {loginSuccess ? "Login berhasil!" : "Masuk ke Froyek"}
               </h2>
               <p className="text-slate-500 mt-2 text-sm">
                 {loginSuccess

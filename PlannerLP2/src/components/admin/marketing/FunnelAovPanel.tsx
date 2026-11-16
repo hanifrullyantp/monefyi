@@ -42,7 +42,7 @@ export function FunnelAovPanel() {
     if (clean.startsWith("0")) clean = "62" + clean.slice(1);
 
     const text = encodeURIComponent(
-      `Halo ${name}, saya dari tim Monefyi Estimator. Kami melihat Anda sempat membuka penawaran paket ${product} tapi proses checkoutnya belum selesai.\n\nApakah ada kendala pembayaran atau ada pertanyaan seputar fitur yang ingin didiskusikan? Lisensi promo khusus Anda masih kami amankan hari ini.`
+      `Halo ${name}, saya dari tim Froyek Estimator. Kami melihat Anda sempat membuka penawaran paket ${product} tapi proses checkoutnya belum selesai.\n\nApakah ada kendala pembayaran atau ada pertanyaan seputar fitur yang ingin didiskusikan? Lisensi promo khusus Anda masih kami amankan hari ini.`
     );
 
     window.open(`https://wa.me/${clean}?text=${text}`, "_blank");

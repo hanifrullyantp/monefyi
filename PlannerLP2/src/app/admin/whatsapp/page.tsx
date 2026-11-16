@@ -39,7 +39,7 @@ export default function WhatsAppBotAdminPage() {
 
   // Test send state
   const [testPhone, setTestPhone] = useState("");
-  const [testMessage, setTestMessage] = useState("Halo! Ini pesan tes integrasi Bot WhatsApp Monefyi. Koneksi berhasil aktif!");
+  const [testMessage, setTestMessage] = useState("Halo! Ini pesan tes integrasi Bot WhatsApp Froyek. Koneksi berhasil aktif!");
   const [testingSend, setTestingSend] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -52,7 +52,7 @@ export default function WhatsAppBotAdminPage() {
     {
       id: "1",
       sender: "bot",
-      text: "Halo! Bot WhatsApp Monefyi aktif siap melayani pertanyaan customer maupun koordinasi karyawan.",
+      text: "Halo! Bot WhatsApp Froyek aktif siap melayani pertanyaan customer maupun koordinasi karyawan.",
       time: "09:00",
     },
   ]);
@@ -328,7 +328,7 @@ export default function WhatsAppBotAdminPage() {
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1.5">
-                  Salin URL ini dan tempelkan pada kolom <strong>Webhook URL</strong> di dashboard Fonnte / Wablas agar setiap ada chat masuk otomatis dijawab oleh Monefyi AI.
+                  Salin URL ini dan tempelkan pada kolom <strong>Webhook URL</strong> di dashboard Fonnte / Wablas agar setiap ada chat masuk otomatis dijawab oleh Froyek AI.
                 </p>
               </div>
             </div>

@@ -110,7 +110,7 @@ export function OwnerOnboardingWizard() {
             <ul className="text-sm text-slate-600 text-left space-y-2">
               <li>• Dashboard — ringkasan proyek & AI insights</li>
               <li>• Projects — RAP, timeline, biaya</li>
-              <li>• Monefyi Button — perintah suara/teks</li>
+              <li>• Froyek AI Button — perintah suara/teks</li>
             </ul>
           </div>
         )}

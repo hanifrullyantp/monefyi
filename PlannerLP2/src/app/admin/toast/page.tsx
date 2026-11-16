@@ -21,7 +21,7 @@ export default function ToastAdminPage() {
     const newNotif: ToastNotification = {
       name: "Nama Pengguna",
       action: "baru saja beli",
-      product: "Monefyi Estimator",
+      product: "Froyek Estimator",
       location: "Jakarta",
       timeAgo: "5 menit lalu",
       source: "live_purchase" as const,

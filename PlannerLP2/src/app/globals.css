@@ -27,7 +27,7 @@
     --accent-warm: #f59e0b;
     --danger-soft: #fef2f2;
 
-    /* Public landing layout (estimator.monefyi.com) */
+    /* Public landing layout (estimator.froyek.com) */
     --bg: #ffffff;
     --container: 960px;
     --container-padding: 20px;
@@ -74,6 +74,29 @@
   html.lp-public,
   html.lp-public body {
     overflow-x: clip;
+  }
+
+  .froyek-site {
+    --brand-400: #10b981;
+    --brand-600: #059669;
+    --brand-700: #047857;
+    --ink: #0f172a;
+    --muted: #475569;
+    --bg: #ffffff;
+    --surface-soft: #f8fafc;
+    --radius-froyek: 16px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .froyek-site *,
+    .froyek-site *::before,
+    .froyek-site *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   ::-webkit-scrollbar {

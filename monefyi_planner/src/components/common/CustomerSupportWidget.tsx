@@ -16,10 +16,18 @@ import {
 } from '../../services/customerSupportService';
 import { escalateQuestionToOwnerTelegram } from '../../services/telegramService';
 import { useAppStore } from '../../store/appStore';
+import { useEntitlement } from '../../hooks/useEntitlement';
+import { isAdminFullAccess } from '../../lib/entitlement';
+import { hasEstimatorLicenseAccess } from '../../lib/appProductBrand';
 
 export default function CustomerSupportWidget() {
   const navigate = useNavigate();
-  const { isDemoMode, tenant } = useAppStore();
+  const { isDemoMode, tenant, platformRole, user, entitlementPreviewMode } = useAppStore();
+  const entitlement = useEntitlement();
+  const hasEstimatorAccess = hasEstimatorLicenseAccess(
+    entitlement,
+    isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode),
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<CSMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -36,11 +44,21 @@ export default function CustomerSupportWidget() {
             text: CS_AGENT_PROFILE.greeting,
             timestamp: new Date(),
             suggestedActions: [
-              {
-                label: '📄 Cara bikin PDF penawaran di HP?',
-                action: 'ask',
-                payload: 'Cara bikin PDF penawaran di HP',
-              },
+              ...(hasEstimatorAccess
+                ? [
+                    {
+                      label: '📄 Cara bikin PDF penawaran di HP?',
+                      action: 'ask' as const,
+                      payload: 'Cara bikin PDF penawaran di HP',
+                    },
+                  ]
+                : [
+                    {
+                      label: '📁 Cara kelola proyek & RAP?',
+                      action: 'ask' as const,
+                      payload: 'Cara kelola proyek dan RAP di Froyek',
+                    },
+                  ]),
               {
                 label: '🚀 Apa keuntungan paket Pro?',
                 action: 'ask',
@@ -55,14 +73,14 @@ export default function CustomerSupportWidget() {
                 label: '📲 Tanya Langsung via WhatsApp',
                 action: 'link_whatsapp',
                 payload:
-                  'https://wa.me/6281234567890?text=Halo%20Mbak%20Nisa,%20mau%20tanya%20seputar%20Monefyi',
+                  'https://wa.me/6281234567890?text=Halo%20Mbak%20Esti,%20mau%20tanya%20seputar%20Froyek',
               },
             ],
           },
         ]);
       }, 300);
     }
-  }, [isOpen, messages.length]);
+  }, [isOpen, messages.length, hasEstimatorAccess]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -84,7 +102,7 @@ export default function CustomerSupportWidget() {
     setIsTyping(true);
 
     setTimeout(() => {
-      const replyData = getCustomerSupportReply(text);
+      const replyData = getCustomerSupportReply(text, { allowEstimatorInfo: hasEstimatorAccess });
       const isComplexQuery = /diskon|kurang|spesial|khusus|custom|kerjasama|tender besar|komplain|nego|partnership|kantor kami/i.test(text);
 
       const actions = [...(replyData.suggestedActions || [])];
@@ -100,7 +118,7 @@ export default function CustomerSupportWidget() {
         id: `cs_${Date.now()}`,
         sender: 'cs',
         text: isComplexQuery
-          ? `${replyData.text}\n\n💡 *Catatan:* Karena ini menyangkut penawaran atau keputusan khusus, Mas/Mbak bisa klik tombol **"🚨 Teruskan Pertanyaan ke Telegram Owner"** di bawah agar Nisa langsung kirim pesan ke Telegram pribadi Owner kami ya!`
+          ? `${replyData.text}\n\n💡 *Catatan:* Karena ini menyangkut penawaran atau keputusan khusus, Mas/Mbak bisa klik tombol **"🚨 Teruskan Pertanyaan ke Telegram Owner"** di bawah agar Esti langsung kirim pesan ke Telegram pribadi Owner kami ya!`
           : replyData.text,
         timestamp: new Date(),
         suggestedActions: actions,
@@ -143,7 +161,7 @@ export default function CustomerSupportWidget() {
         return;
       }
       setIsTyping(true);
-      const res = await escalateQuestionToOwnerTelegram(action.payload, 'User Aplikasi Monefyi Planner');
+      const res = await escalateQuestionToOwnerTelegram(action.payload, 'User Aplikasi Froyek');
       setIsTyping(false);
 
       setMessages((prev) => [
@@ -152,14 +170,14 @@ export default function CustomerSupportWidget() {
           id: `cs_${Date.now()}`,
           sender: 'cs',
           text: res.ok
-            ? `✅ *Sudah Nisa teruskan ke Telegram Owner!* 🚀\n\nPesan Anda sudah masuk ke Telegram pribadi Owner Monefyi lengkap dengan detail pertanyaan. Beliau akan segera mengecek dan memberikan keputusan terbaik ya Mas/Mbak.`
+            ? `✅ *Sudah Esti teruskan ke Telegram Owner!* 🚀\n\nPesan Anda sudah masuk ke Telegram pribadi Owner Froyek lengkap dengan detail pertanyaan. Beliau akan segera mengecek dan memberikan keputusan terbaik ya Mas/Mbak.`
             : `⚠️ Bot Telegram belum tersambung ke Chat ID Owner (${res.error}).\n\nUntuk respon cepat sekarang, Mas/Mbak bisa langsung klik tombol WhatsApp Support di bawah ya!`,
           timestamp: new Date(),
           suggestedActions: [
             {
               label: '💬 Chat WhatsApp Owner Sekarang',
               action: 'link_whatsapp',
-              payload: `https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Owner Monefyi, saya mau follow up pertanyaan: "${action.payload}"`)}`,
+              payload: `https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Owner Froyek, saya mau follow up pertanyaan: "${action.payload}"`)}`,
             },
           ],
         },
@@ -304,7 +322,7 @@ export default function CustomerSupportWidget() {
 
             {/* Quick Questions Carousel */}
             <div className="p-2.5 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto scrollbar-none">
-              {POPULAR_CS_QUESTIONS.map((q, idx) => (
+              {POPULAR_CS_QUESTIONS.filter(q => hasEstimatorAccess || !/pdf penawaran/i.test(q)).map((q, idx) => (
                 <button
                   key={idx}
                   type="button"
@@ -328,7 +346,7 @@ export default function CustomerSupportWidget() {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Tanya Mbak Esti seputar Monefyi..."
+                placeholder="Tanya Mbak Esti seputar Froyek..."
                 className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-emerald-500"
               />
               <button

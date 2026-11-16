@@ -107,7 +107,7 @@ async function handleApply(req: NextRequest, preBody?: any) {
 
       if (body.sendNotification) {
         await dispatchEngineNotification(
-          `[MONEFYI WINNING ENGINE - EKSEKUSI OFFER]\n${summary}`,
+          `[FROYEK WINNING ENGINE - EKSEKUSI OFFER]\n${summary}`,
           config.notifications
         );
       }
@@ -134,7 +134,7 @@ async function handleApply(req: NextRequest, preBody?: any) {
 
       if (updatedDb && body.sendNotification) {
         await dispatchEngineNotification(
-          `[MONEFYI WINNING ENGINE - COPYWRITING LP]\n${summary}`,
+          `[FROYEK WINNING ENGINE - COPYWRITING LP]\n${summary}`,
           config.notifications
         );
       }
@@ -232,7 +232,7 @@ async function handleApply(req: NextRequest, preBody?: any) {
       const summary = `Pilar 4 (Meta Ads): Kampanye boncos "${payload.campaignName}" berhasil di-PAUSE langsung di Meta Ads Manager.`;
       if (body.sendNotification) {
         await dispatchEngineNotification(
-          `[MONEFYI WINNING ENGINE - CUT LOSER]\n${summary}`,
+          `[FROYEK WINNING ENGINE - CUT LOSER]\n${summary}`,
           config.notifications
         );
       }
@@ -313,7 +313,7 @@ async function handleApply(req: NextRequest, preBody?: any) {
       )} menjadi Rp ${finalBudget.toLocaleString("id-ID")} (${liveGate.reason})`;
 
       if (body.sendNotification) {
-        await dispatchEngineNotification(`[MONEFYI WINNING ENGINE - SCALE BUDGET]\n${summary}`, config.notifications);
+        await dispatchEngineNotification(`[FROYEK WINNING ENGINE - SCALE BUDGET]\n${summary}`, config.notifications);
       }
 
       return NextResponse.json({
@@ -374,7 +374,7 @@ async function handleApply(req: NextRequest, preBody?: any) {
       const summary = `Pilar 4 (Rapid Testing): Kampanye "${payload.name}" (ID: ${createJson.id}) berhasil dibuat di Meta Ads Manager dalam status PAUSED (Aman).`;
       if (body.sendNotification) {
         await dispatchEngineNotification(
-          `[MONEFYI WINNING ENGINE - RAPID TESTING]\n${summary}`,
+          `[FROYEK WINNING ENGINE - RAPID TESTING]\n${summary}`,
           config.notifications
         );
       }
@@ -431,7 +431,7 @@ async function handleApply(req: NextRequest, preBody?: any) {
       }
       const summary = `Pilar 4 (Varian Iklan Baru): Iklan "${headline}" berhasil dibuat di Ad Set ${adsetId} dalam status PAUSED (ID: ${created.adId}).`;
       if (body.sendNotification) {
-        await dispatchEngineNotification(`[MONEFYI WINNING ENGINE - IKLAN BARU PAUSED]\n${summary}`, config.notifications);
+        await dispatchEngineNotification(`[FROYEK WINNING ENGINE - IKLAN BARU PAUSED]\n${summary}`, config.notifications);
       }
       return NextResponse.json({
         ok: true,

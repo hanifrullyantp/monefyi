@@ -1,7 +1,7 @@
 export interface SendEmailOptions {
   to: string;
   name?: string;
-  type: "payment_confirmation" | "account_access" | "password_reset" | "followup";
+  type: "payment_confirmation" | "account_access" | "password_reset" | "followup" | "froyek_help" | "froyek_access";
   subject?: string;
   planTier?: "free" | "standard" | "pro";
   amount?: number;
@@ -52,23 +52,23 @@ function getPaymentConfirmationTemplate(opts: SendEmailOptions) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Konfirmasi Pembayaran Monefyi Estimator</title>
+  <title>Konfirmasi Pembayaran Froyek</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
   <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
     
     <!-- Header -->
     <div style="background-color: #065f46; padding: 32px 28px; text-align: center;">
-      <div style="display: inline-block; width: 44px; height: 44px; background-color: #ffffff; border-radius: 12px; line-height: 44px; color: #065f46; font-size: 24px; font-weight: 900; margin-bottom: 12px;">E</div>
+      <div style="display: inline-block; width: 44px; height: 44px; background-color: #ffffff; border-radius: 12px; line-height: 44px; color: #065f46; font-size: 24px; font-weight: 900; margin-bottom: 12px;">F</div>
       <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800;">Pembayaran Berhasil!</h1>
-      <p style="color: #a7f3d0; margin: 6px 0 0; font-size: 14px;">Terima kasih, akun Monefyi Estimator Anda telah aktif.</p>
+      <p style="color: #a7f3d0; margin: 6px 0 0; font-size: 14px;">Terima kasih, akun Froyek Anda telah aktif.</p>
     </div>
 
     <!-- Body Content -->
     <div style="padding: 32px 28px;">
       <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-top: 0;">
         Halo <strong>${name}</strong>,<br><br>
-        Pesanan lisensi Monefyi Estimator Anda telah berhasil kami terima dan diverifikasi. Berikut rincian transaksi Anda:
+        Pesanan lisensi Froyek Anda telah berhasil kami terima dan diverifikasi. Berikut rincian transaksi Anda:
       </p>
 
       <!-- Invoice Box -->
@@ -107,7 +107,7 @@ function getPaymentConfirmationTemplate(opts: SendEmailOptions) {
 
     <!-- Footer -->
     <div style="background-color: #f8fafc; padding: 20px 28px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
-      &copy; ${new Date().getFullYear()} Monefyi Indonesia. Hak Cipta Dilindungi.
+      &copy; ${new Date().getFullYear()} Froyek. Hak Cipta Dilindungi.
     </div>
   </div>
 </body>
@@ -117,7 +117,7 @@ function getPaymentConfirmationTemplate(opts: SendEmailOptions) {
 
 // 2. Template: Password & Akses Akun
 function getAccountAccessTemplate(opts: SendEmailOptions) {
-  const name = escapeHtml(opts.name || "Pelanggan Monefyi");
+  const name = escapeHtml(opts.name || "Pelanggan Froyek");
   const email = escapeHtml(opts.to);
   const password = escapeHtml(opts.password || "Estimator2026!");
   const loginUrl = escapeHtml(opts.appUrl || "https://estimator.froyek.com/app/estimator");
@@ -127,7 +127,7 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Akses Akun & Password Monefyi Estimator</title>
+  <title>Akses Akun & Password Froyek</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
   <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -143,7 +143,7 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
     <div style="padding: 32px 28px;">
       <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-top: 0;">
         Halo <strong>${name}</strong>,<br><br>
-        Akun Monefyi Estimator Anda telah dibuat. Anda dapat langsung login ke aplikasi menggunakan detail berikut:
+        Akun Froyek Anda telah dibuat. Anda dapat langsung login ke aplikasi menggunakan detail berikut:
       </p>
 
       <!-- Credentials Box -->
@@ -180,7 +180,7 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
 
     <!-- Footer -->
     <div style="background-color: #f8fafc; padding: 20px 28px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
-      &copy; ${new Date().getFullYear()} Monefyi Indonesia.
+      &copy; ${new Date().getFullYear()} Froyek.
     </div>
   </div>
 </body>
@@ -190,8 +190,8 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
 
 // 3. Template: Reset / Ubah Password
 function getPasswordResetTemplate(opts: SendEmailOptions) {
-  const name = escapeHtml(opts.name || "Pengguna Monefyi");
-  const password = escapeHtml(opts.password || "MonefyiBaru2026!");
+  const name = escapeHtml(opts.name || "Pengguna Froyek");
+  const password = escapeHtml(opts.password || "FroyekBaru2026!");
   const loginUrl = escapeHtml(opts.resetLink || opts.appUrl || "https://estimator.froyek.com/app/estimator");
 
   return `
@@ -199,7 +199,7 @@ function getPasswordResetTemplate(opts: SendEmailOptions) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Reset Password Monefyi Estimator</title>
+  <title>Reset Password Froyek</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
   <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -214,7 +214,7 @@ function getPasswordResetTemplate(opts: SendEmailOptions) {
     <div style="padding: 32px 28px;">
       <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-top: 0;">
         Halo <strong>${name}</strong>,<br><br>
-        Kami menerima permintaan untuk mereset password akun Monefyi Estimator Anda. Gunakan password sementara berikut untuk masuk:
+        Kami menerima permintaan untuk mereset password akun Froyek Anda. Gunakan password sementara berikut untuk masuk:
       </p>
 
       <div style="background-color: #fefce8; border-radius: 14px; padding: 20px; margin: 24px 0; border: 2px dashed #fde047; text-align: center;">
@@ -234,7 +234,7 @@ function getPasswordResetTemplate(opts: SendEmailOptions) {
     </div>
 
     <div style="background-color: #f8fafc; padding: 20px 28px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px; color: #94a3b8;">
-      &copy; ${new Date().getFullYear()} Monefyi Indonesia.
+      &copy; ${new Date().getFullYear()} Froyek.
     </div>
   </div>
 </body>
@@ -252,7 +252,7 @@ function getFollowupTemplate(opts: SendEmailOptions) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Lanjutkan Pendaftaran Monefyi Estimator</title>
+  <title>Lanjutkan Pendaftaran Froyek</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
   <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0;">
@@ -261,7 +261,7 @@ function getFollowupTemplate(opts: SendEmailOptions) {
     </div>
     <div style="padding: 28px; font-size: 15px; color: #334155; line-height: 1.6;">
       <p>Halo <strong>${name}</strong>,</p>
-      <p>Kami melihat Anda sempat mengisi formulir Monefyi Estimator namun proses pendaftaran belum selesai.</p>
+      <p>Kami melihat Anda sempat mengisi formulir Froyek namun proses pendaftaran belum selesai.</p>
       <p>Jika ada pertanyaan seputar fitur, lisensi seumur hidup, atau metode pembayaran, tim kami siap membantu Anda.</p>
       <div style="text-align: center; margin: 28px 0;">
         <a href="${checkoutUrl}" style="display: inline-block; background-color: #065f46; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-weight: 800;">
@@ -275,23 +275,31 @@ function getFollowupTemplate(opts: SendEmailOptions) {
   `.trim();
 }
 
+function froyekHelpHtml(name: string, continueUrl: string): string {
+  return `<p>Halo ${escapeHtml(name)},</p><p>Kamu sempat mengisi pemilihan paket froyek dan meminta satu pengingat. Tidak ada diskon di pesan ini.</p><p><a href="${escapeHtml(continueUrl)}">Lanjutkan pemilihan</a></p>`;
+}
+
+function froyekAccessHtml(name: string, setupUrl: string): string {
+  return `<p>Halo ${escapeHtml(name)},</p><p>Pembayaran froyek sudah tercatat. Atur kata sandi lewat tautan berikut, lalu selesaikan akun di aplikasi.</p><p><a href="${escapeHtml(setupUrl)}">Atur kata sandi</a></p>`;
+}
+
 // Kirim Email via Resend REST API
 export async function sendResendEmail(opts: SendEmailOptions): Promise<SendEmailResult> {
   const now = new Date().toISOString();
   const apiKey = (process.env.RESEND_API_KEY || "").trim();
   const fromEmail =
-    (process.env.RESEND_FROM_EMAIL || "").trim() || "Monefyi Estimator <onboarding@resend.dev>";
+    (process.env.RESEND_FROM_EMAIL || "").trim() || "Froyek <noreply@support.monefyi.com>";
 
   let subject = opts.subject;
   let html = "";
 
   switch (opts.type) {
     case "payment_confirmation":
-      subject = subject || `[Konfirmasi] Pembayaran Monefyi Estimator Berhasil - ${opts.name || ""}`;
+      subject = subject || `[Konfirmasi] Pembayaran Froyek Berhasil - ${opts.name || ""}`;
       html = getPaymentConfirmationTemplate(opts);
       break;
     case "account_access":
-      subject = subject || `[Akses Akun] Detail Login & Password Monefyi Estimator`;
+      subject = subject || `[Akses Akun] Detail Login & Password Froyek`;
       html = getAccountAccessTemplate(opts);
       break;
     case "password_reset":
@@ -301,6 +309,14 @@ export async function sendResendEmail(opts: SendEmailOptions): Promise<SendEmail
     case "followup":
       subject = subject || `Ada yang bisa kami bantu untuk pendaftaran Estimator Anda?`;
       html = getFollowupTemplate(opts);
+      break;
+    case "froyek_help":
+      subject = subject || "Perlu bantuan menyelesaikan pemilihan paket froyek?";
+      html = froyekHelpHtml(opts.name || "Pengunjung", opts.resetLink || "https://froyek.com/pilih");
+      break;
+    case "froyek_access":
+      subject = subject || "Atur kata sandi untuk masuk ke froyek";
+      html = froyekAccessHtml(opts.name || "Pengunjung", opts.resetLink || "https://froyek.com/login");
       break;
   }
 

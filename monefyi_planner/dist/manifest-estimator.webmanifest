@@ -1,5 +1,5 @@
 {
-  "name": "Monefyi Estimator",
+  "name": "Froyek Estimator",
   "short_name": "Estimator",
   "description": "Kirim penawaran PDF sebelum kamu pulang survei.",
   "start_url": "/app/estimator?utm_source=pwa",

@@ -1,4 +1,4 @@
-import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Layout from './Layout';

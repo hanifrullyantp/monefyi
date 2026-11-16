@@ -17,9 +17,12 @@ export default function EstimatorListHeader({
     <div className="px-4 pt-4 pb-2">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 flex flex-wrap items-center gap-2">
             <Calculator className="text-emerald-600 shrink-0" size={22} aria-hidden />
-            Estimator
+            <span>Froyek Estimator</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Modul Estimator · Froyek
+            </span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             {totalCount} estimasi · {activeOffers} penawaran aktif

@@ -6,6 +6,7 @@ import {
   PLANNER_HOST,
   PLANNER_ORIGIN,
   isEstimatorHost,
+  isFroyekMarketingHost,
   legacyHostRedirects,
 } from "./publicHosts.ts";
 
@@ -14,6 +15,12 @@ test("canonical hosts are froyek", () => {
   assert.equal(ESTIMATOR_HOST, "estimator.froyek.com");
   assert.equal(PLANNER_ORIGIN, "https://froyek.com");
   assert.equal(ESTIMATOR_ORIGIN, "https://estimator.froyek.com");
+});
+
+test("froyek.com is the marketing host and estimator is not", () => {
+  assert.equal(isFroyekMarketingHost("froyek.com"), true);
+  assert.equal(isFroyekMarketingHost("estimator.froyek.com"), false);
+  assert.equal(isFroyekMarketingHost("localhost:3000"), true);
 });
 
 test("estimator host includes the new subdomain and the legacy host", () => {

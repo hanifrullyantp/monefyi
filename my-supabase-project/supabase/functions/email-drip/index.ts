@@ -114,6 +114,7 @@ serve(async (req) => {
       };
       await sendEmail({
         to: email,
+        product: "finance",
         subject: tpl.subject,
         html: `<div style="font-family:system-ui,sans-serif;color:#0f172a">${tpl.html(ctx)}</div>`,
       });

@@ -16,6 +16,9 @@ import { formatRupiah } from '../utils/projectUi';
 import MaterialAutosuggest from '../components/migration/MaterialAutosuggest';
 import { useShellStore } from '../store/shellStore';
 import GenerateRapFromTemplateModal from '../components/migration/GenerateRapFromTemplateModal';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { isAdminFullAccess } from '../lib/entitlement';
+import { hasEstimatorLicenseAccess } from '../lib/appProductBrand';
 
 type Tab = 'bahan' | 'tenaga' | 'alat' | 'vendor' | 'klien' | 'template';
 
@@ -29,7 +32,12 @@ const TABS: { id: Tab; label: string; icon: typeof Package }[] = [
 ];
 
 export default function DatabaseMaster() {
-  const { tenant, isDemoMode } = useAppStore();
+  const { tenant, isDemoMode, platformRole, user, entitlementPreviewMode } = useAppStore();
+  const entitlement = useEntitlement();
+  const hasEstimatorAccess = hasEstimatorLicenseAccess(
+    entitlement,
+    isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode),
+  );
   const { setShellMeta, clearShellMeta } = useShellStore();
   const orgId = tenant?.id || '';
   const demoActive = isDemoMode || orgId === 'demo';
@@ -282,15 +290,17 @@ export default function DatabaseMaster() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={syncWithEstimatorPricelist}
-              disabled={syncingPricelist}
-              className="min-h-11 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[#059669] text-xs font-bold hover:bg-emerald-100 disabled:opacity-50 transition-colors"
-            >
-              {syncingPricelist ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {syncingPricelist ? 'Menyinkronkan...' : 'Sinkron Pricelist Estimator'}
-            </button>
+            {hasEstimatorAccess && (
+              <button
+                type="button"
+                onClick={syncWithEstimatorPricelist}
+                disabled={syncingPricelist}
+                className="min-h-11 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[#059669] text-xs font-bold hover:bg-emerald-100 disabled:opacity-50 transition-colors"
+              >
+                {syncingPricelist ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {syncingPricelist ? 'Menyinkronkan...' : 'Sinkron Pricelist Estimator'}
+              </button>
+            )}
             <div className="relative flex-1 sm:w-56">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input

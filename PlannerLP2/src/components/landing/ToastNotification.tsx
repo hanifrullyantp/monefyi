@@ -23,7 +23,7 @@ const FALLBACK_NOTIFICATIONS: ToastItem[] = [
   {
     name: "Rian Pratama",
     action: "baru saja mulai menggunakan",
-    product: "Monefyi Estimator",
+    product: "Froyek Estimator",
     location: "Semarang",
     timeAgo: "4 menit lalu",
     source: "live_purchase",
@@ -39,7 +39,7 @@ const FALLBACK_NOTIFICATIONS: ToastItem[] = [
   {
     name: "Agus Setiawan",
     action: "baru saja membuat estimasi pertama di",
-    product: "Monefyi Estimator",
+    product: "Froyek Estimator",
     location: "Bekasi",
     timeAgo: "9 menit lalu",
     source: "live_purchase",
@@ -71,7 +71,7 @@ const FALLBACK_NOTIFICATIONS: ToastItem[] = [
   {
     name: "Deni Kurniawan",
     action: "baru saja bergabung ke",
-    product: "Monefyi Estimator",
+    product: "Froyek Estimator",
     location: "Depok",
     timeAgo: "21 menit lalu",
     source: "live_purchase",
@@ -103,7 +103,7 @@ const FALLBACK_NOTIFICATIONS: ToastItem[] = [
   {
     name: "Kevin Sanjaya",
     action: "baru saja mengaktifkan akses",
-    product: "Monefyi Estimator",
+    product: "Froyek Estimator",
     location: "Jakarta Utara",
     timeAgo: "39 menit lalu",
     source: "live_purchase",
@@ -135,7 +135,7 @@ const FALLBACK_NOTIFICATIONS: ToastItem[] = [
   {
     name: "Rizky Maulana",
     action: "baru saja mulai menggunakan",
-    product: "Monefyi Estimator",
+    product: "Froyek Estimator",
     location: "Bogor",
     timeAgo: "56 menit lalu",
     source: "live_purchase",
@@ -151,7 +151,7 @@ const FALLBACK_NOTIFICATIONS: ToastItem[] = [
   {
     name: "Arif Wicaksono",
     action: "baru saja mengaktifkan workspace",
-    product: "Monefyi Estimator",
+    product: "Froyek Estimator",
     location: "Solo",
     timeAgo: "1 jam lalu",
     source: "live_purchase",
@@ -167,7 +167,7 @@ const FALLBACK_NOTIFICATIONS: ToastItem[] = [
   {
     name: "Bayu Nugroho",
     action: "baru saja mulai menghitung RAB di",
-    product: "Monefyi Estimator",
+    product: "Froyek Estimator",
     location: "Yogyakarta",
     timeAgo: "1 jam lalu",
     source: "live_purchase",

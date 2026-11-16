@@ -7,8 +7,15 @@ import {
   welcomeOwnerHtml,
 } from "./email-templates.ts";
 
-/** Verified domain on Resend — keep in sync with Dashboard SMTP sender. */
-export const RESEND_DEFAULT_FROM = "Monefyi <noreply@support.monefyi.com>";
+/**
+ * support.monefyi.com is the domain already verified in Resend.
+ * Froyek uses that mailbox with a Froyek display name until froyek.com
+ * SPF/DKIM is verified. Then set RESEND_FROM_EMAIL to
+ * `Froyek <noreply@froyek.com>` and this helper will pick it up.
+ */
+export const FROYEK_FROM = "Froyek <noreply@support.monefyi.com>";
+export const MONEFYI_FROM = "Monefyi <noreply@support.monefyi.com>";
+export const RESEND_DEFAULT_FROM = MONEFYI_FROM;
 
 export type SendEmailResult = {
   ok: boolean;
@@ -17,7 +24,15 @@ export type SendEmailResult = {
   resendId?: string;
 };
 
-export function getResendFrom(): string {
+export function getResendFrom(product?: "finance" | "froyek"): string {
+  if (product === "froyek") {
+    const configured = Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "";
+    if (configured && !/@[^>\s]*monefyi\./i.test(configured)) return configured;
+    return FROYEK_FROM;
+  }
+  if (product === "finance") {
+    return Deno.env.get("RESEND_FROM_EMAIL_FINANCE")?.trim() || MONEFYI_FROM;
+  }
   return Deno.env.get("RESEND_FROM_EMAIL")?.trim() || RESEND_DEFAULT_FROM;
 }
 
@@ -34,9 +49,11 @@ export async function sendEmail(params: {
   subject: string;
   html: string;
   text?: string;
+  product?: "finance" | "froyek";
+  from?: string;
 }): Promise<SendEmailResult> {
   const apiKey = Deno.env.get("RESEND_API_KEY")?.trim();
-  const from = getResendFrom();
+  const from = params.from?.trim() || getResendFrom(params.product);
 
   if (!apiKey) {
     console.warn("RESEND_API_KEY not set, skipping email to", params.to);
@@ -155,6 +172,7 @@ export async function sendInvitationEmail(params: {
 }): Promise<SendEmailResult> {
   const result = await sendEmail({
     to: params.to,
+    product: "froyek",
     subject: `Undangan bergabung — ${params.orgName}`,
     html: invitationEmailHtml(params),
     text: invitationEmailText(params),
@@ -181,6 +199,7 @@ export async function sendWelcomeOwnerEmail(
   const appUrl = getAppUrl();
   return sendEmailSafe({
     to,
+    product: "froyek",
     subject: `Selamat datang — ${orgName}`,
     html: welcomeOwnerHtml(orgName, appUrl),
     text: `Organisasi ${orgName} siap digunakan. Buka ${appUrl}/onboarding/owner`,
@@ -200,6 +219,7 @@ export async function sendWelcomeMemberEmail(
   const appUrl = getAppUrl();
   return sendEmailSafe({
     to,
+    product: "froyek",
     subject: `Selamat datang di ${orgName}`,
     html: welcomeMemberHtml(orgName, appUrl),
     text: `Anda bergabung dengan ${orgName}. Login: ${appUrl}/login`,
@@ -228,7 +248,7 @@ export async function notifyJoinRequestAdmins(params: {
 
   const results: SendEmailResult[] = [];
   for (const to of leaders) {
-    results.push(await sendEmailSafe({ to, subject, html, text }));
+    results.push(await sendEmailSafe({ to, subject, html, text, product: "froyek" }));
   }
   return results;
 }

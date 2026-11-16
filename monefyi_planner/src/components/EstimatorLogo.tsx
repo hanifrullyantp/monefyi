@@ -8,7 +8,7 @@ interface EstimatorLogoProps {
 
 export function EstimatorLogo({
   className = 'w-9 h-9 rounded-xl object-contain shrink-0',
-  alt = 'Monefyi Estimator',
+  alt = 'Froyek Estimator',
 }: EstimatorLogoProps) {
   return (
     <img

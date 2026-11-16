@@ -158,7 +158,16 @@ export default function UserAccountPanel() {
         Simpan Profil Akun
       </button>
 
-      <AIProviderPanel />
+      <details className="group border-t pt-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-700 flex items-center justify-between list-none">
+          <span>Pengaturan Lanjutan AI (BYOK Provider)</span>
+          <span className="text-xs font-semibold text-emerald-700 group-open:hidden">Buka ▾</span>
+          <span className="text-xs font-semibold text-slate-500 hidden group-open:inline">Tutup ▴</span>
+        </summary>
+        <div className="mt-2">
+          <AIProviderPanel />
+        </div>
+      </details>
 
       <div className="border-t pt-6 space-y-3">
         <h4 className="font-semibold text-slate-800">Ubah Password</h4>

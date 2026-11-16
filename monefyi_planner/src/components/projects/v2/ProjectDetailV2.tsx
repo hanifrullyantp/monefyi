@@ -66,7 +66,7 @@ type TabId = 'overview' | 'keuangan' | 'deviden' | 'progress' | 'rap' | 'analisa
 const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutGrid },
   { id: 'keuangan', label: 'Keuangan', icon: Wallet },
-  { id: 'deviden', label: 'Deviden', icon: Coins },
+  { id: 'deviden', label: 'Dividen', icon: Coins },
   { id: 'progress', label: 'Progress', icon: BarChart3 },
   { id: 'rap', label: 'RAP', icon: FileSpreadsheet },
   { id: 'analisa', label: 'Analisa', icon: Brain },

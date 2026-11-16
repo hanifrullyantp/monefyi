@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import {
   isStandalonePwa,
   listenForInstallPrompt,
@@ -8,6 +8,7 @@ import {
 import { isDemoEmbedActive } from '../lib/demo/demoMode';
 import { isEstimatorBrandContext } from '../lib/estimatorBrand';
 import { EstimatorLogo } from './EstimatorLogo';
+import { PlannerLogo } from './MonefyiLogo';
 
 const DISMISS_KEY_PLANNER = 'monefyi_planner_pwa_install_dismissed';
 const DISMISS_KEY_ESTIMATOR = 'monefyi_estimator_pwa_install_dismissed';
@@ -53,12 +54,12 @@ export default function PwaInstallBanner() {
           {isEstimator ? (
             <EstimatorLogo className="w-9 h-9 object-contain" />
           ) : (
-            <Download className="w-5 h-5" />
+            <PlannerLogo className="w-8 h-8 object-contain" />
           )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-sm">
-            {isEstimator ? 'Install Monefyi Estimator' : 'Install Monefyi Planner'}
+            {isEstimator ? 'Install Froyek Estimator' : 'Install Froyek'}
           </p>
           <p className="text-xs text-slate-500 mt-0.5">
             {isEstimator

@@ -1,8 +1,8 @@
 {
   "id": "/admin",
-  "name": "Monefyi Admin CRM",
+  "name": "Froyek Admin CRM",
   "short_name": "Admin CRM",
-  "description": "Panel Admin & CRM Monefyi untuk kelola leads, transaksi Mayar, notifikasi iklan, dan closing langsung dari HP.",
+  "description": "Panel Admin & CRM Froyek untuk kelola leads, transaksi Mayar, notifikasi iklan, dan closing langsung dari HP.",
   "start_url": "/admin",
   "scope": "/admin/",
   "display": "standalone",

@@ -87,7 +87,7 @@ serve(async (req) => {
       userId: user.id,
       orgId: org.id,
       type: "welcome",
-      title: "Selamat datang di Monefyi Planner",
+      title: "Selamat datang di Froyek",
       message: `Organisasi ${orgName} berhasil dibuat. Lengkapi onboarding untuk memulai.`,
       actionUrl: "/onboarding/owner",
     });

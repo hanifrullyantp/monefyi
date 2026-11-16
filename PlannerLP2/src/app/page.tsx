@@ -11,8 +11,17 @@ import { TrackingScripts } from "@/components/landing/TrackingScripts";
 import { MetaPixelNoscript } from "@/components/landing/MetaPixelNoscript";
 import { JsonLd } from "@/components/landing/JsonLd";
 import { PublicLandingRoot } from "@/components/landing/PublicLandingRoot";
+import { headers } from "next/headers";
+import { isFroyekMarketingHost } from "@/lib/config/publicHosts";
+import { FroyekHome } from "@/components/froyek/FroyekHome";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
+  if (isFroyekMarketingHost(host)) {
+    return <FroyekHome />;
+  }
+
   return (
     <PublicLandingRoot>
       <EstimatorPwaLaunchRedirect />

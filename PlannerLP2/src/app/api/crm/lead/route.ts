@@ -105,10 +105,10 @@ export async function POST(req: NextRequest) {
           .limit(1);
 
         const productTitle = isFree
-          ? "Monefyi Estimator Free"
+          ? "Froyek Estimator Free"
           : planTier === "pro"
-          ? "Monefyi Estimator PRO"
-          : "Monefyi Estimator Standard";
+          ? "Froyek Estimator PRO"
+          : "Froyek Estimator Standard";
 
         const orderStatus = isFree
           ? "free_active"
@@ -468,7 +468,7 @@ export async function GET(req: NextRequest) {
                         email: txEmail || `mayar_${txId.slice(0, 8)}@monefyi.temp`,
                         full_name: txName,
                         phone: txPhone || "-",
-                        product_title: `Monefyi Estimator ${newTier.toUpperCase()}`,
+                        product_title: `Froyek Estimator ${newTier.toUpperCase()}`,
                         grand_total: txAmount,
                         status: "paid",
                         raw_payload: newLead,

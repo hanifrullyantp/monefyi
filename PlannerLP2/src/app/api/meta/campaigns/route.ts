@@ -873,6 +873,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    let billingExtra: any = null;
+    try {
+      const billingUrl = buildGraphUrl(
+        `https://graph.facebook.com/v20.0/${selectedAcc.id}?fields=account_status,disable_reason,balance,amount_spent,spend_cap,currency,funding_source_details,is_prepay_account,adspaymentcycle`,
+        workingToken,
+        appSecret
+      );
+      const billingRes = await fetch(billingUrl, { cache: "no-store" });
+      const billingJson = await billingRes.json().catch(() => ({}));
+      if (billingRes.ok && billingJson && !billingJson.error) billingExtra = billingJson;
+    } catch {
+      billingExtra = null;
+    }
+
+    const currency = String(billingExtra?.currency || selectedAcc.currency || "IDR").toUpperCase();
+    const zeroDecimal = new Set(["IDR", "JPY", "KRW", "VND", "CLP", "ISK"]);
+    const toMajor = (raw: unknown) => {
+      const n = Number(raw || 0);
+      if (!Number.isFinite(n)) return 0;
+      return zeroDecimal.has(currency) ? n : Math.round(n) / 100;
+    };
+    const cycleRow = billingExtra?.adspaymentcycle?.data?.[0] || null;
+    const accountStatus = Number(billingExtra?.account_status ?? selectedAcc.account_status ?? 0);
+    const disableReason = Number(billingExtra?.disable_reason ?? 0);
+    const paymentFailed =
+      accountStatus === 3 || accountStatus === 9 || (accountStatus === 2 && disableReason === 3);
+
     return NextResponse.json({
       ok: true,
       isLive: true,
@@ -880,14 +907,19 @@ export async function POST(req: NextRequest) {
       account: {
         id: selectedAcc.id,
         name: selectedAcc.name,
-        currency: selectedAcc.currency || "IDR",
-        status: selectedAcc.account_status === 1 ? "Active" : "Disabled",
-        balance: Number(selectedAcc.balance || 0),
-        amountSpent: Number(selectedAcc.amount_spent || 0),
-        spendCap: Number(selectedAcc.spend_cap || 0),
+        currency,
+        status: accountStatus === 1 ? "Active" : paymentFailed ? "Payment failed" : "Disabled",
+        accountStatus,
+        disableReason,
+        paymentFailed,
+        balance: toMajor(billingExtra?.balance ?? selectedAcc.balance),
+        amountSpent: toMajor(billingExtra?.amount_spent ?? selectedAcc.amount_spent),
+        spendCap: toMajor(billingExtra?.spend_cap ?? selectedAcc.spend_cap),
+        thresholdAmount: toMajor(cycleRow?.threshold_amount),
         fundingSource:
+          billingExtra?.funding_source_details?.display_string ||
           selectedAcc.funding_source_details?.display_string ||
-          "VISA *1385",
+          "",
       },
       discoveredAccounts,
       count: fetchResult.campaigns.length,

@@ -15,6 +15,14 @@ export function isEstimatorHost(hostname: string): boolean {
   return ESTIMATOR_HOSTS.has(host) || host.startsWith("estimator.");
 }
 
+/** Landing narasi Froyek. Host Estimator dan deploy standalone tetap landing Estimator. */
+export function isFroyekMarketingHost(hostname: string): boolean {
+  if (process.env.NEXT_PUBLIC_ESTIMATOR_STANDALONE === "true") return false;
+  const host = hostname.split(":")[0].trim().toLowerCase();
+  if (!host) return true;
+  return !isEstimatorHost(host);
+}
+
 /** 308 rules. `/api/*` is omitted so webhooks on the old host keep their POST. */
 export function legacyHostRedirects(): {
   source: string;

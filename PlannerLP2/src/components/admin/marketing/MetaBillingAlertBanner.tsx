@@ -3,17 +3,20 @@
 import { useState, useEffect, useMemo } from "react";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { sendAdminNotification } from "@/lib/services/notificationService";
+import { authedFetch } from "@/lib/auth/authedFetch";
+import {
+  classifyMetaBilling,
+  daysUntilDate,
+  nextMonthlyBillDate,
+  type MetaBillKind,
+} from "@/lib/marketing/metaBillingAlert";
 import {
   CreditCard,
-  AlertTriangle,
   Clock,
   Settings2,
   ExternalLink,
   ShieldCheck,
-  CheckCircle2,
   Bell,
-  Sparkles,
-  ChevronDown,
   X,
 } from "lucide-react";
 
@@ -22,7 +25,7 @@ interface MetaBillingAlertBannerProps {
 }
 
 export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlertBannerProps) {
-  const { accountBilling, isLiveMeta, metaAccountName } = useMarketingStore();
+  const { accountBilling, metaAccountName } = useMarketingStore();
 
   // Pengaturan Banner Dismissed per Sesi (SessionStorage)
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
@@ -49,19 +52,40 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
     return 6;
   });
 
+  const [billDay, setBillDay] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = Number(localStorage.getItem("monefyi_billing_day") || 0);
+      return saved >= 1 && saved <= 28 ? saved : 0;
+    }
+    return 0;
+  });
+  const [leadDays, setLeadDays] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = Number(localStorage.getItem("monefyi_billing_lead_days") || 2);
+      return saved >= 0 ? saved : 2;
+    }
+    return 2;
+  });
+  const [alertEmail, setAlertEmail] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("monefyi_billing_alert_email") || "";
+    return "";
+  });
+  const [channelNote, setChannelNote] = useState("");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tempThreshold, setTempThreshold] = useState(billingThreshold);
   const [tempAlertHours, setTempAlertHours] = useState(alertHours);
+  const [tempBillDay, setTempBillDay] = useState(billDay);
+  const [tempLeadDays, setTempLeadDays] = useState(leadDays);
+  const [tempEmail, setTempEmail] = useState(alertEmail);
 
-  // Ambil saldo tagihan riil dari Meta API (atau estimasi spend)
-  const currentBill = useMemo(() => {
-    if (accountBilling && typeof accountBilling.balance === "number" && accountBilling.balance > 0) {
-      return accountBilling.balance;
-    }
-    return 115974; // Live balance dari spaceco ad account Meta API
-  }, [accountBilling]);
-
-  const cardName = accountBilling?.fundingSource || "VISA *1385";
+  const currentBill = accountBilling?.balance && accountBilling.balance > 0 ? accountBilling.balance : 0;
+  const metaThreshold = accountBilling?.thresholdAmount && accountBilling.thresholdAmount > 0
+    ? accountBilling.thresholdAmount
+    : 0;
+  const activeThreshold = metaThreshold || billingThreshold;
+  const cardName = accountBilling?.fundingSource || "kartu belum terbaca";
+  const paymentFailed = Boolean(accountBilling?.paymentFailed);
 
   // Hitung burn rate per jam
   const hourlyBurnRate = useMemo(() => {
@@ -71,51 +95,111 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
     if (totalSpendToday > 0) {
       return Math.round(totalSpendToday / activeHours);
     }
-    return 20000; // Estimasi standar Rp 20.000 / jam
+    return 0;
   }, [totalSpendToday]);
 
   // Sisa nominal menuju batas penagihan
-  const remainingToThreshold = Math.max(0, billingThreshold - currentBill);
+  const remainingToThreshold = Math.max(0, activeThreshold - currentBill);
 
-  // Estimasi sisa jam penarikan
   const estimatedHoursLeft = useMemo(() => {
-    if (remainingToThreshold <= 0) return 0;
+    if (totalSpendToday <= 0 || remainingToThreshold <= 0 || hourlyBurnRate <= 0) return null;
     const hrs = remainingToThreshold / hourlyBurnRate;
     return Math.max(0.1, Math.round(hrs * 10) / 10);
-  }, [remainingToThreshold, hourlyBurnRate]);
+  }, [remainingToThreshold, hourlyBurnRate, totalSpendToday]);
 
-  const progressPercent = Math.min(100, Math.round((currentBill / billingThreshold) * 100));
+  const progressPercent = activeThreshold > 0
+    ? Math.min(100, Math.round((currentBill / activeThreshold) * 100))
+    : 0;
 
-  // Apakah kondisi ALERT aktif (waktu penarikan <= alertHours atau progress >= 85%)
-  const isUrgent = estimatedHoursLeft <= alertHours || progressPercent >= 85;
+  const nextBill = useMemo(() => nextMonthlyBillDate(billDay), [billDay]);
+  const daysLeft = nextBill ? daysUntilDate(nextBill) : null;
+  const kind: MetaBillKind = classifyMetaBilling({
+    balance: currentBill,
+    threshold: activeThreshold,
+    daysUntilBill: daysLeft,
+    leadDays,
+    paymentFailed,
+  });
+  const isUrgent = kind !== "ok";
 
-  // Trigger notifikasi native ke HP & Laptop jika masuk kondisi urgent
-  useEffect(() => {
-    if (!isUrgent) return;
-    if (typeof window === "undefined") return;
-
-    const LAST_ALERT_KEY = "monefyi_last_billing_alert_ts";
-    const lastAlert = Number(localStorage.getItem(LAST_ALERT_KEY) || 0);
-    const now = Date.now();
-
-    // Beri jeda 2 jam antar notifikasi sistem agar tidak spam
-    if (now - lastAlert > 2 * 60 * 60 * 1000) {
-      localStorage.setItem(LAST_ALERT_KEY, String(now));
-      sendAdminNotification({
-        type: "api_alert",
-        title: `PERINGATAN PEMBAYARAN META ADS (Sisa ~${estimatedHoursLeft} Jam)!`,
-        body: `Total tagihan saat ini Rp ${currentBill.toLocaleString("id-ID")} dari batas Rp ${billingThreshold.toLocaleString("id-ID")}. Pastikan kartu debit ${cardName} terisi sebelum penarikan otomatis agar iklan tidak mati!`,
-        url: "/admin/marketing",
-      });
+  const alertCopy = useMemo(() => {
+    const bill = `Rp ${currentBill.toLocaleString("id-ID")}`;
+    const limit = `Rp ${activeThreshold.toLocaleString("id-ID")}`;
+    const when = nextBill
+      ? nextBill.toLocaleDateString("id-ID", { day: "numeric", month: "long" })
+      : "tanggal penagihan";
+    if (kind === "payment_failed") {
+      return {
+        title: "Pembayaran Meta gagal",
+        body: `Tagihan berjalan ${bill}. Ini bukan karena ambang ${limit} belum tercapai. Meta menarik pada tanggal penagihan dan kartu ${cardName} ditolak. Isi saldo sebelum Meta menagih ulang, supaya iklan tidak dimatikan.`,
+      };
     }
-  }, [isUrgent, estimatedHoursLeft, currentBill, billingThreshold, cardName]);
+    if (kind === "date_soon") {
+      return {
+        title: daysLeft === 0 ? "Meta menagih hari ini" : `Tanggal penagihan Meta H-${daysLeft}`,
+        body: `Pada ${when} Meta menarik tagihan berjalan ${bill} meski masih di bawah ambang ${limit}. Siapkan saldo di ${cardName}.`,
+      };
+    }
+    if (kind === "threshold_soon") {
+      return {
+        title: "Tagihan Meta mendekati ambang",
+        body: `Tagihan ${bill} sudah melewati 85% ambang ${limit}. Meta bisa menarik dana sebelum tanggal ${when}. Siapkan saldo di ${cardName}.`,
+      };
+    }
+    return {
+      title: "Pembayaran Meta aman",
+      body: `Tagihan ${bill} dari ambang ${limit}. Penarikan mengikuti ambang atau tanggal ${when}, mana yang lebih dulu.`,
+    };
+  }, [kind, currentBill, activeThreshold, nextBill, daysLeft, cardName]);
+
+  useEffect(() => {
+    if (kind === "ok" || typeof window === "undefined") return;
+    const dayKey = new Date().toISOString().slice(0, 10);
+    const stampKey = `monefyi_billing_notify_${kind}_${dayKey}`;
+    if (localStorage.getItem(stampKey) === "1") return;
+    localStorage.setItem(stampKey, "1");
+
+    sendAdminNotification({
+      type: "api_alert",
+      title: alertCopy.title,
+      body: alertCopy.body,
+      url: "/admin/marketing",
+    });
+
+    authedFetch("/api/admin/meta-billing-alert", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind,
+        title: alertCopy.title,
+        message: alertCopy.body,
+        email: alertEmail,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const parts = [
+          data?.telegram?.sent ? "Telegram terkirim" : data?.telegram?.message,
+          data?.whatsapp?.sent ? "WhatsApp terkirim" : data?.whatsapp?.message,
+          data?.email?.sent ? "Email terkirim" : data?.email?.message,
+        ].filter(Boolean);
+        setChannelNote(parts.join(" · "));
+      })
+      .catch(() => setChannelNote("Notifikasi browser terkirim. Saluran email/WA/Telegram gagal dihubungi."));
+  }, [kind, alertCopy.title, alertCopy.body, alertEmail]);
 
   const handleSaveSettings = () => {
     setBillingThreshold(tempThreshold);
     setAlertHours(tempAlertHours);
+    setBillDay(tempBillDay);
+    setLeadDays(tempLeadDays);
+    setAlertEmail(tempEmail.trim());
     if (typeof window !== "undefined") {
       localStorage.setItem("monefyi_billing_threshold", String(tempThreshold));
       localStorage.setItem("monefyi_billing_alert_hours", String(tempAlertHours));
+      localStorage.setItem("monefyi_billing_day", String(tempBillDay));
+      localStorage.setItem("monefyi_billing_lead_days", String(tempLeadDays));
+      localStorage.setItem("monefyi_billing_alert_email", tempEmail.trim());
     }
     setIsModalOpen(false);
   };
@@ -123,8 +207,8 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
   const handleManualTestAlert = () => {
     sendAdminNotification({
       type: "api_alert",
-      title: `[SIMULASI] Penarikan Meta Ads dalam ${alertHours} Jam!`,
-      body: `Total tagihan Rp ${currentBill.toLocaleString("id-ID")} mendekati batas Rp ${billingThreshold.toLocaleString("id-ID")}. Segera isi saldo kartu debit ${cardName}!`,
+      title: "[SIMULASI] Tanggal penagihan Meta sudah dekat",
+      body: alertCopy.body,
       url: "/admin/marketing",
     });
   };
@@ -165,18 +249,26 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-xs sm:text-sm tracking-tight">
-                  Status Pembayaran Meta Ads:{" "}
+                  Status Pembayaran {metaAccountName || "Meta Ads"}:{" "}
                   <span className="text-emerald-600 dark:text-emerald-400 font-black">
                     {cardName}
                   </span>
                 </span>
-                {isUrgent ? (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse">
-                    ALERT PENARIKAN (&le; {alertHours} JAM)
+                {kind === "payment_failed" ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    GAGAL BAYAR
+                  </span>
+                ) : kind === "date_soon" ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    TANGGAL PENAGIHAN DEKAT
+                  </span>
+                ) : kind === "threshold_soon" ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                    MENDEKATI AMBANG
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    Aman Terkendali
+                    Aman
                   </span>
                 )}
               </div>
@@ -190,9 +282,17 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                 </span>
                 <span>•</span>
                 <span>
-                  Batas Penagihan:{" "}
+                  Ambang:{" "}
                   <strong className="text-slate-900 dark:text-white font-black">
-                    Rp {billingThreshold.toLocaleString("id-ID")}
+                    Rp {activeThreshold.toLocaleString("id-ID")}
+                  </strong>
+                  {metaThreshold > 0 ? " (dari Meta)" : ""}
+                  {" · "}
+                  Tanggal:{" "}
+                  <strong className="text-slate-900 dark:text-white font-black">
+                    {nextBill
+                      ? `${nextBill.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} (H-${daysLeft})`
+                      : "belum diatur"}
                   </strong>
                 </span>
               </div>
@@ -205,13 +305,19 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
               <div className="flex items-center justify-end gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                 <Clock className="w-3.5 h-3.5 text-amber-500" />
                 <span>
-                  {estimatedHoursLeft <= 1
-                    ? "Ditarik Segera (< 1 Jam)"
-                    : `Estimasi ~${estimatedHoursLeft} Jam Lagi`}
+                  {kind === "payment_failed"
+                    ? "Kartu ditolak"
+                    : kind === "date_soon"
+                    ? daysLeft === 0
+                      ? "Ditarik hari ini"
+                      : `Ditarik ${daysLeft} hari lagi`
+                    : estimatedHoursLeft == null
+                    ? "Menunggu tanggal atau ambang"
+                    : `Ambang ~${estimatedHoursLeft} jam lagi`}
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400">
-                Laju: ~Rp {hourlyBurnRate.toLocaleString("id-ID")}/jam
+              <div className="text-[10px] text-slate-400 max-w-[220px]">
+                {alertCopy.body}
               </div>
             </div>
 
@@ -221,6 +327,9 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
               onClick={() => {
                 setTempThreshold(billingThreshold);
                 setTempAlertHours(alertHours);
+                setTempBillDay(billDay);
+                setTempLeadDays(leadDays);
+                setTempEmail(alertEmail);
                 setIsModalOpen(true);
               }}
               className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
@@ -280,11 +389,10 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
           </div>
           <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400 mt-1">
             <span>
-              {progressPercent}% dari batas penagihan (Sisa Rp{" "}
-              {remainingToThreshold.toLocaleString("id-ID")})
+              {progressPercent}% menuju ambang (sisa Rp {remainingToThreshold.toLocaleString("id-ID")})
             </span>
             <span>
-              Peringatan aktif jika sisa &le; <strong>{alertHours} Jam</strong>
+              {channelNote || `Pengingat tanggal: H-${leadDays}. Ambang hanya jika terisi 85%.`}
             </span>
           </div>
         </div>
@@ -348,7 +456,63 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-200 mb-1">
-                  Waktu Peringatan Sebelum Penarikan
+                  Tanggal penagihan bulanan Meta
+                </label>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                  Meta menarik dana pada tanggal ini walaupun tagihan belum menyentuh ambang. Isi tanggal yang sama dengan Billing di Ads Manager.
+                </p>
+                <input
+                  type="number"
+                  min={1}
+                  max={28}
+                  value={tempBillDay || ""}
+                  onChange={(e) => setTempBillDay(Number(e.target.value))}
+                  placeholder="Mis. 15"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-200 mb-1">
+                  Ingatkan sebelum tanggal penagihan
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 5].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setTempLeadDays(d)}
+                      className={`py-2 rounded-xl font-bold text-xs border text-center ${
+                        tempLeadDays === d
+                          ? "bg-emerald-500 text-slate-950 border-emerald-500"
+                          : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                      }`}
+                    >
+                      H-{d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-200 mb-1">
+                  Email pengingat
+                </label>
+                <input
+                  type="email"
+                  value={tempEmail}
+                  onChange={(e) => setTempEmail(e.target.value)}
+                  placeholder="nama@email.com"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Notifikasi browser, Telegram, dan WhatsApp ikut terkirim bila tokennya sudah terpasang di Winning Engine.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 dark:text-slate-200 mb-1">
+                  Perkiraan jam menuju ambang (opsional)
                 </label>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
                   Notifikasi ke HP & Laptop akan berbunyi ketika estimasi waktu penarikan mencapai batas ini untuk memastikan saldo kartu debit sudah terisi.
@@ -377,7 +541,7 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                   <span>Mencegah Akun Iklan Terblokir</span>
                 </div>
                 <p className="text-[11px] leading-relaxed">
-                  Jika penarikan Meta gagal karena saldo rekening kurang, Meta akan langsung mematikan penayangan iklan. Peringatan dini {tempAlertHours} jam memastikan Anda punya cukup waktu untuk transfer atau top up rekening.
+                  Meta menagih pada ambang nominal atau pada tanggal bulanan, mana yang lebih dulu. Peringatan gagal bayar hanya muncul jika Meta benar-benar menolak kartu. Tanggal dekat memberi tahu H-{tempLeadDays} supaya saldo kartu siap.
                 </p>
               </div>
             </div>

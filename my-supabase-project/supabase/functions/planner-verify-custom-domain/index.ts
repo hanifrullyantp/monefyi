@@ -49,10 +49,14 @@ serve(async (req) => {
     }
 
     const host = String(domain.hostname).toLowerCase();
-    const verifyName = `_monefyi-verify.${host}`;
     const expected = String(domain.verification_token);
-    const records = await lookupTxt(verifyName);
-    const ok = records.some(r => r.includes(expected));
+    // Support both _froyek-verify and legacy _monefyi-verify TXT records so existing tenants keep working.
+    const verifyNames = [`_froyek-verify.${host}`, `_monefyi-verify.${host}`];
+    const recordSets = await Promise.all(verifyNames.map((name) => lookupTxt(name)));
+    const matchedRecord = expected
+      ? verifyNames.find((_, idx) => recordSets[idx].some((r) => r.includes(expected))) ?? null
+      : null;
+    const ok = matchedRecord !== null;
 
     const patch = ok
       ? { status: "verified", verified_at: new Date().toISOString(), ssl_status: "pending", updated_at: new Date().toISOString() }
@@ -66,7 +70,15 @@ serve(async (req) => {
       .single();
 
     if (upErr) return jsonResponse({ error: upErr.message }, 500);
-    return jsonResponse({ domain: updated, verified: ok });
+    return jsonResponse({
+      domain: updated,
+      verified: ok,
+      checked_records: verifyNames,
+      matched_record: matchedRecord,
+      message: ok
+        ? `Domain ${host} berhasil diverifikasi.`
+        : `TXT record verifikasi belum ditemukan pada _froyek-verify.${host} atau _monefyi-verify.${host}.`,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     if (msg === "UNAUTHORIZED") return jsonResponse({ error: "Unauthorized" }, 401);

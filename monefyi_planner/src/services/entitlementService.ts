@@ -97,10 +97,12 @@ export async function assertCanCreateProjectByEntitlement(
     const entitlement = buildPreviewEntitlement(preview, activeProjectCount, memberCount);
     if (!entitlement.canCreateProject) {
       if (entitlement.tier === 'free') {
-        throw new Error('Beli Estimator untuk membuat proyek pertama Anda.');
+        throw new Error(
+          'Paket Froyek Anda saat ini belum mencakup pembuatan proyek baru. Upgrade ke Froyek Pro untuk membuat proyek.',
+        );
       }
       throw new Error(
-        `Kuota proyek aktif tercapai (${entitlement.currentActiveProjects}/${entitlement.maxActiveProjects}). Upgrade ke Planner Pro untuk lebih banyak proyek.`,
+        `Kuota proyek aktif tercapai (${entitlement.currentActiveProjects}/${entitlement.maxActiveProjects}). Upgrade ke Froyek Pro untuk lebih banyak proyek.`,
       );
     }
     return entitlement;
@@ -108,10 +110,12 @@ export async function assertCanCreateProjectByEntitlement(
   const entitlement = await loadEntitlementSnapshot(orgId, orgPlan);
   if (!entitlement.canCreateProject) {
     if (entitlement.tier === 'free') {
-      throw new Error('Beli Estimator untuk membuat proyek pertama Anda.');
+      throw new Error(
+        'Paket Froyek Anda saat ini belum mencakup pembuatan proyek baru. Upgrade ke Froyek Pro untuk membuat proyek.',
+      );
     }
     throw new Error(
-      `Kuota proyek aktif tercapai (${entitlement.currentActiveProjects}/${entitlement.maxActiveProjects}). Upgrade ke Planner Pro untuk lebih banyak proyek.`,
+      `Kuota proyek aktif tercapai (${entitlement.currentActiveProjects}/${entitlement.maxActiveProjects}). Upgrade ke Froyek Pro untuk lebih banyak proyek.`,
     );
   }
   return entitlement;

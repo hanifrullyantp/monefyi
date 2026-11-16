@@ -180,7 +180,7 @@ export function EstimatorPwaInstallPrompt() {
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-slate-900">Pasang di Layar Utama HP</h3>
-                  <p className="text-xs text-slate-500">Monefyi Estimator</p>
+                  <p className="text-xs text-slate-500">Froyek Estimator</p>
                 </div>
               </div>
               <button

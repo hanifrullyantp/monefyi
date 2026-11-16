@@ -45,7 +45,7 @@ export default function PostPurchaseBanner({ product, onDismiss }: Props) {
         <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
         <div>
           <p className="font-bold text-emerald-900">
-            {isEstimator ? 'Estimator aktif!' : 'Planner Pro aktif!'}
+            {isEstimator ? 'Froyek Estimator aktif!' : 'Froyek Pro aktif!'}
           </p>
           <p className="text-xs text-emerald-800 mt-0.5">
             {isEstimator

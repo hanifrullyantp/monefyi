@@ -1,4 +1,4 @@
-/** Brand assets — Monefyi Estimator (mark E hijau). */
+/** Brand assets — Froyek Estimator (mark E hijau). */
 import { resolveSpaAssetUrl } from './spaAssets';
 import { applyPlannerDocumentBrand } from './plannerBrand';
 
@@ -11,15 +11,15 @@ export const ESTIMATOR_FAVICON_SRC = `/icons/estimator/favicon.png?v=${V}`;
 export const ESTIMATOR_APPLE_ICON_SRC = `/icons/estimator/icon-180.png?v=${V}`;
 export const ESTIMATOR_ICON_192_SRC = `/icons/estimator/icon-192.png?v=${V}`;
 
-export const ESTIMATOR_BRAND_NAME = 'Monefyi Estimator';
+export const ESTIMATOR_BRAND_NAME = 'Froyek Estimator';
 /** CTA / theme — brand-600 (AA on white) */
 export const ESTIMATOR_THEME_COLOR = '#157F5F';
 
-/** Host / PWA Estimator — bukan rute SPA (Planner user tetap Planner di /app/estimator). */
+/** Host / PWA Estimator — bukan rute SPA (user Froyek tetap Froyek di /app/estimator). */
 export function isEstimatorBrandContext(): boolean {
   if (typeof window === 'undefined') return false;
   const { hostname } = window.location;
-  return hostname === 'estimator.monefyi.com' || hostname.startsWith('estimator.');
+  return hostname === 'estimator.froyek.com' || hostname === 'estimator.monefyi.com' || hostname.startsWith('estimator.');
 }
 
 export function applyEstimatorDocumentBrand(active: boolean): void {

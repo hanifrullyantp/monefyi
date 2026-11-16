@@ -56,7 +56,7 @@ export default function MilestoneUpsellModal({ open, totalAmount, onClose }: Pro
             <span className="font-bold tabular-nums">Rp {totalAmount.toLocaleString('id-ID')}</span>
           </p>
           <p className="text-slate-600">
-            Berapa yang benar-benar profit setelah proyek dikerjakan? Track biaya aktual vs penawaran dengan Planner Pro.
+            Berapa yang benar-benar profit setelah proyek dikerjakan? Track biaya aktual vs penawaran dengan Froyek Pro.
           </p>
           <p className="font-bold text-slate-900">
             Rp {PRO_PRICE_MONTHLY_IDR.toLocaleString('id-ID')}/bulan

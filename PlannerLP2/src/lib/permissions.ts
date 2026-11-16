@@ -60,7 +60,7 @@ export function ownsFinance(user: User | null): boolean {
   return Boolean(user?.ownedProducts.includes("finance"));
 }
 
-/** Bonus apps included with a paid Estimator, Planner, or Monefyi Lifetime purchase (or admin). */
+/** Bonus apps included with a paid Estimator, Planner, or Froyek Lifetime purchase (or admin). */
 export function canClaimBonusApps(user: User | null): boolean {
   return ownsEstimator(user) || ownsPlanner(user) || ownsFinance(user) || Boolean(user?.isAdmin);
 }
@@ -122,18 +122,18 @@ export function getUpsellReason(
   feature?: PlannerLockedFeature,
 ): string {
   if (context === "trial_limit") {
-    return `Trial Planner hanya untuk ${PLANNER_TRIAL_MAX_PROJECTS} proyek aktif. Upgrade untuk proyek tanpa batas.`;
+    return `Trial Froyek hanya untuk ${PLANNER_TRIAL_MAX_PROJECTS} proyek aktif. Upgrade untuk proyek tanpa batas.`;
   }
   const label = feature ? PLANNER_LOCKED_LABELS[feature] : "fitur ini";
-  return `${label} tersedia penuh di Monefyi Planner Lifetime.`;
+  return `${label} tersedia penuh di Froyek Lifetime.`;
 }
 
 export function productLabel(id: ProductId): string {
   const map: Record<ProductId, string> = {
-    estimator: "Monefyi Estimator",
-    planner: "Monefyi Planner",
-    stay: "Monefyi Stay",
-    finance: "Monefyi Finance",
+    estimator: "Froyek Estimator",
+    planner: "Froyek",
+    stay: "Froyek Stay",
+    finance: "Froyek Finance",
   };
   return map[id];
 }

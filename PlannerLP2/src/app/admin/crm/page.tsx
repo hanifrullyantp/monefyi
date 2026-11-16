@@ -388,7 +388,7 @@ function ResendEmailModal({
               </label>
               <button
                 type="button"
-                onClick={() => setCustomPassword(`Monefyi${Math.floor(1000 + Math.random() * 9000)}!`)}
+                onClick={() => setCustomPassword(`Froyek${Math.floor(1000 + Math.random() * 9000)}!`)}
                 className="text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer"
               >
                 Acak Otomatis
@@ -511,7 +511,7 @@ function SendAccountWaModal({
   const loginUrl = "https://estimator.froyek.com/app/estimator";
 
   const messageText = `Halo Kak ${recipientName.trim()}! 🙌
-Terima kasih telah memesan ${lead.projectType || "Monefyi Estimator"}.
+Terima kasih telah memesan ${lead.projectType || "Froyek Estimator"}.
 
 Berikut adalah data akses login akun Estimator Kakak:
 👤 *Nama*: ${recipientName.trim()}
@@ -635,7 +635,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
                 </label>
                 <button
                   type="button"
-                  onClick={() => setPassword(`Monefyi${Math.floor(1000 + Math.random() * 9000)}!`)}
+                  onClick={() => setPassword(`Froyek${Math.floor(1000 + Math.random() * 9000)}!`)}
                   className="text-[10px] font-bold text-emerald-700 hover:underline cursor-pointer"
                 >
                   Acak Otomatis 🎲
@@ -1139,7 +1139,7 @@ export default function CRMPage() {
       ? `62${cleanPhone.slice(1)}`
       : `62${cleanPhone}`;
 
-    let msg = `Halo Kak ${lead.name}, salam dari tim Monefyi Estimator! 🙌\n\n`;
+    let msg = `Halo Kak ${lead.name}, salam dari tim Froyek Estimator! 🙌\n\n`;
 
     if (lead.status === "abandoned_checkout") {
       msg += `Kami perhatikan Kakak sempat mengisi form pemesanan Estimator tapi belum menyelesaikan aktivasi. Apakah ada pertanyaan atau kendala yang bisa kami bantu jelaskan?`;
@@ -1150,7 +1150,7 @@ export default function CRMPage() {
     } else if (lead.status === "won") {
       msg += `Terima kasih! Akun Estimator Kakak sudah aktif. Apakah ada panduan atau template estimasi yang ingin kami bantu siapkan?`;
     } else {
-      msg += `Terima kasih sudah tertarik dengan Monefyi Estimator. Kami siap membantu jika Kakak butuh konsultasi kebutuhan estimasi proyek Anda.`;
+      msg += `Terima kasih sudah tertarik dengan Froyek Estimator. Kami siap membantu jika Kakak butuh konsultasi kebutuhan estimasi proyek Anda.`;
     }
 
     return `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
@@ -1830,7 +1830,7 @@ export default function CRMPage() {
                             {hasWa && (
                               <a
                                 href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                                  `Halo ${lead.name}, terima kasih telah memesan ${lead.projectType || "Monefyi Estimator"}!`
+                                  `Halo ${lead.name}, terima kasih telah memesan ${lead.projectType || "Froyek Estimator"}!`
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"

@@ -620,7 +620,7 @@ export function WinningEngineCommandCenter({
                 Belum Ada Analisa 5 Pilar Aktif
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Monefyi Winning Engine siap menganalisa data riil kampanye Meta Ads untuk <strong>Monefyi Estimator (estimator.froyek.com)</strong>. Klik tombol di bawah untuk meminta AI Strategist ({winningEngineConfig.llmRouting.strategist.provider.toUpperCase()} {winningEngineConfig.llmRouting.strategist.model}) membuat evaluasi dan rencana winning.
+                Froyek Winning Engine siap menganalisa data riil kampanye Meta Ads untuk <strong>Froyek Estimator (estimator.froyek.com)</strong>. Klik tombol di bawah untuk meminta AI Strategist ({winningEngineConfig.llmRouting.strategist.provider.toUpperCase()} {winningEngineConfig.llmRouting.strategist.model}) membuat evaluasi dan rencana winning.
               </p>
             </div>
             <div className="pt-2">
@@ -963,7 +963,7 @@ export function WinningEngineCommandCenter({
                     {plan.status === "pending" && plan.actionType === "update_offer_pricing" && (
                       <div className="p-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/50 space-y-2 text-xs">
                         <p className="font-extrabold text-amber-900 dark:text-amber-300">
-                          Rekomendasi Penyesuaian Harga &amp; Value Stack Monefyi Estimator:
+                          Rekomendasi Penyesuaian Harga &amp; Value Stack Froyek Estimator:
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>

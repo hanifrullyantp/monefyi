@@ -19,7 +19,7 @@ export default function PaymentSuccessModal({
 }: Props) {
   if (!open) return null;
 
-  const title = product === 'pro' ? 'Planner Pro Aktif!' : 'Estimator Aktif!';
+  const title = product === 'pro' ? 'Froyek Pro Aktif!' : 'Froyek Estimator Aktif!';
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/40">
@@ -32,7 +32,7 @@ export default function PaymentSuccessModal({
         <p className="text-sm text-slate-600 mt-2">
           {product === 'pro'
             ? 'Keuangan bisnis dan kuota proyek lebih besar sudah aktif.'
-            : 'Anda sekarang bisa membuat penawaran profesional dan 1 proyek gratis di Planner.'}
+            : 'Anda sekarang bisa membuat penawaran profesional dan 1 proyek gratis di Froyek.'}
         </p>
         <p className="text-xs text-slate-500 mt-4">Yuk mulai dari mana?</p>
         <div className="mt-4 space-y-2">
@@ -47,7 +47,7 @@ export default function PaymentSuccessModal({
             </>
           )}
           <button type="button" onClick={onGoDashboard} className="w-full py-2.5 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
-            Ke Dashboard Estimator →
+            {product === 'estimator' ? 'Ke Dashboard Estimator →' : 'Ke Dashboard Froyek →'}
           </button>
         </div>
       </div>

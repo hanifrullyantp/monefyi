@@ -58,6 +58,7 @@ serve(async (req) => {
     if (target?.user?.email) {
       await sendEmailSafe({
         to: target.user.email,
+        product: "froyek",
         subject: "Akses dihapus",
         html: memberRemovedHtml(org?.name || ""),
         text: `Anda dihapus dari ${org?.name}.`,

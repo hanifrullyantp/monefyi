@@ -237,9 +237,9 @@ export function MetaAdsCommanderTable({
   // 5. Pengaturan Kata Kunci Campaign (Hanya kampanye berkatakunci jika filter aktif)
   const [campaignKeywords, setCampaignKeywords] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("monefyi_campaign_keywords") || "monefyi, estimator, rab";
+      return localStorage.getItem("monefyi_campaign_keywords") || "froyek, estimator, rab";
     }
-    return "monefyi, estimator, rab";
+    return "froyek, estimator, rab";
   });
   // Default tidak aktif agar seluruh kampanye pengguna dari Meta Ads langsung terlihat
   const [isKeywordFilterActive, setIsKeywordFilterActive] = useState<boolean>(false);
@@ -1982,7 +1982,7 @@ export function MetaAdsCommanderTable({
               <textarea
                 value={tempKeywords}
                 onChange={(e) => setTempKeywords(e.target.value)}
-                placeholder="monefyi, estimator, rab"
+                placeholder="froyek, estimator, rab"
                 rows={3}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-medium text-slate-900 dark:text-white focus:border-purple-500 outline-none"
               />

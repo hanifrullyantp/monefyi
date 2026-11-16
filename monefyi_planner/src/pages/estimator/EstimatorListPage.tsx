@@ -861,7 +861,7 @@ export default function EstimatorListPage() {
           </div>
           <div className="min-w-0">
             <div className="text-xs font-black text-slate-900 truncate">
-              Panduan Aplikasi Estimator Resmi
+              Panduan Aplikasi Froyek Estimator Resmi
             </div>
             <p className="text-[11px] text-slate-500 truncate">
               Kalkulator margin, rumus waste 8%, kop surat kustom, &amp; kirim WA
