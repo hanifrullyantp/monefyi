@@ -143,30 +143,56 @@ export default function WorkerDashboard() {
 
   const refreshStatus = useCallback(async () => {
     if (!user?.id || !tenant?.id || isDemo || tenant.id === 'demo') return;
+    const timeZone = tenant.timezone || 'Asia/Jakarta';
     setAttendanceLoading(true);
     try {
-      const [todayStatus, records, pay, bons, orgDetails] = await Promise.all([
-        getUserTodayStatus(user.id, tenant.id),
-        getUserAttendance(user.id, tenant.id, 31),
-        getUserPayrollForMonth(tenant.id, user.id),
-        listBonRequests(tenant.id),
-        loadOrgDetails(tenant.id).catch(() => null),
-      ]);
+      const [todayStatusRes, recordsRes, payRes, bonsRes, orgDetailsRes] =
+        await Promise.allSettled([
+          getUserTodayStatus(user.id, tenant.id, timeZone),
+          getUserAttendance(user.id, tenant.id, 31),
+          getUserPayrollForMonth(tenant.id, user.id),
+          listBonRequests(tenant.id),
+          loadOrgDetails(tenant.id),
+        ]);
+
+      const orgDetails = orgDetailsRes.status === 'fulfilled' ? orgDetailsRes.value : null;
       const attSettings = parseAttendanceSettings(orgDetails?.settings as Record<string, unknown>);
       setAttendanceSettings(attSettings);
-      setPartialDays(getPartialDays(records, attSettings.hours_per_day));
-      const summary = await getMonthlySummary(user.id, tenant.id, attSettings.hours_per_day);
-      setMonthDaysPresent(summary.daysPresent);
-      setStatus(todayStatus);
-      setHistory(records);
-      setPayroll(pay);
-      setBonRequests(bons.filter(b => b.user_id === user.id));
+
+      if (todayStatusRes.status === 'fulfilled') {
+        setStatus(todayStatusRes.value);
+      }
+
+      if (recordsRes.status === 'fulfilled') {
+        const records = recordsRes.value;
+        setHistory(records);
+        setPartialDays(getPartialDays(records, attSettings.hours_per_day, new Date(), timeZone));
+      }
+
+      try {
+        const summary = await getMonthlySummary(user.id, tenant.id, attSettings.hours_per_day, timeZone);
+        setMonthDaysPresent(summary.daysPresent);
+      } catch (summaryErr) {
+        console.warn('Gagal memuat ringkasan absensi bulanan:', summaryErr);
+      }
+
+      if (payRes.status === 'fulfilled') {
+        setPayroll(payRes.value);
+      }
+      if (bonsRes.status === 'fulfilled') {
+        setBonRequests(bonsRes.value.filter(b => b.user_id === user.id));
+      }
+
+      if (todayStatusRes.status === 'rejected' && recordsRes.status === 'rejected') {
+        const reason = todayStatusRes.reason ?? recordsRes.reason;
+        showToast(reason instanceof Error ? reason.message : 'Gagal memuat absensi', 'error');
+      }
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat absensi', 'error');
     } finally {
       setAttendanceLoading(false);
     }
-  }, [user?.id, tenant?.id, isDemo, showToast]);
+  }, [user?.id, tenant?.id, tenant?.timezone, isDemo, showToast]);
 
   const loadTasks = useCallback(async () => {
     if (!tenant?.id) return;
@@ -243,7 +269,7 @@ export default function WorkerDashboard() {
       } else if (loc.message && !loc.isOffsite) {
         showToast(loc.message, 'info');
       }
-      await recordAttendance({
+      const created = await recordAttendance({
         user_id: user.id,
         user_name: user.name || 'Karyawan',
         org_id: tenant.id,
@@ -256,6 +282,18 @@ export default function WorkerDashboard() {
         is_offsite: loc.isOffsite,
         source: loc.isOffsite ? 'manual' : (settings.geofence_enabled ? 'geofence' : 'manual'),
       });
+      setStatus({
+        checkedIn: true,
+        checkInTime: new Date(created.timestamp).toLocaleTimeString('id-ID', {
+          timeZone: tenant.timezone || 'Asia/Jakarta',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        checkOutTime: undefined,
+        checkInAtIso: created.timestamp,
+        checkOutAtIso: undefined,
+      });
+      setHistory(prev => [created, ...prev.filter(item => item.id !== created.id)]);
       await refreshStatus();
       showToast(loc.isOffsite ? 'Check-in tercatat (luar lokasi)' : 'Check-in tercatat', loc.isOffsite ? 'info' : 'success');
     } catch (e) {
@@ -299,7 +337,7 @@ export default function WorkerDashboard() {
       if (loc.isOffsite && settings.warn_offsite) {
         showToast('Check-out di luar lokasi kerja.', 'info');
       }
-      await recordAttendance({
+      const created = await recordAttendance({
         user_id: user.id,
         user_name: user.name || 'Karyawan',
         org_id: tenant.id,
@@ -311,6 +349,17 @@ export default function WorkerDashboard() {
         location_accuracy: loc.position?.accuracy,
         is_offsite: loc.isOffsite,
       });
+      setStatus(prev => ({
+        ...prev,
+        checkedIn: false,
+        checkOutTime: new Date(created.timestamp).toLocaleTimeString('id-ID', {
+          timeZone: tenant.timezone || 'Asia/Jakarta',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        checkOutAtIso: created.timestamp,
+      }));
+      setHistory(prev => [created, ...prev.filter(item => item.id !== created.id)]);
       await refreshStatus();
       showToast('Check-out tercatat', 'success');
     } catch (e) {

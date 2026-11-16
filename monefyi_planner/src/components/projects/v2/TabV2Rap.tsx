@@ -573,7 +573,10 @@ export default function TabV2Rap({
         <StatCard label="Realisasi" value={formatRupiah(p.rap.realisasi)} icon={Wallet}
           iconBg="bg-rose-50" iconColor="text-rose-600" />
         <StatCard label="Est. Laba" value={formatRupiah(p.rap.estLaba)} icon={TrendingUp}
-          iconBg="bg-emerald-50" iconColor="text-emerald-600" barVariant="success" />
+          valueColor={p.rap.estLaba < 0 ? 'text-rose-600' : undefined}
+          iconBg={p.rap.estLaba < 0 ? 'bg-rose-50' : 'bg-emerald-50'}
+          iconColor={p.rap.estLaba < 0 ? 'text-rose-600' : 'text-emerald-600'}
+          barVariant={p.rap.estLaba < 0 ? 'danger' : 'success'} />
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

@@ -1,6 +1,6 @@
 import { DESIGN_TOKENS } from '../../lib/designTokens';
 
-export type HealthFilterType = 'all' | 'on_track' | 'at_risk' | 'behind';
+export type HealthFilterType = 'all' | 'on_track' | 'at_risk' | 'behind' | 'attention';
 
 type Props = {
   counts: {
@@ -51,36 +51,54 @@ export default function HealthChips({ counts, activeFilter, onSelectFilter }: Pr
     },
   ];
 
+  const attentionCount = counts.atRisk + counts.behind;
+
   return (
-    <div className="flex gap-2 w-full">
-      {chips.map(chip => {
-        const isSelected = activeFilter === chip.id;
-        return (
-          <button
-            key={chip.id}
-            type="button"
-            onClick={() => onSelectFilter(isSelected ? 'all' : chip.id)}
-            aria-pressed={isSelected}
-            aria-label={`Filter status kesehatan ${chip.label}, ${chip.count} proyek`}
-            className={`flex-1 h-11 rounded-xl border-2 flex items-center justify-center gap-1.5 text-xs sm:text-[13px] font-bold transition-all active:scale-95 ${
-              isSelected ? 'ring-2 ring-[#0F172A] shadow-xs' : ''
-            }`}
-            style={{
-              backgroundColor: chip.bg,
-              borderColor: isSelected ? chip.dot : chip.border,
-              color: chip.text,
-            }}
-          >
-            <span
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: chip.dot }}
-              aria-hidden="true"
-            />
-            <span className="truncate">{chip.label}</span>
-            <span className="font-extrabold tabular-nums">{chip.count}</span>
-          </button>
-        );
-      })}
+    <div className="space-y-2 w-full">
+      <div className="flex gap-2 w-full">
+        {chips.map(chip => {
+          const isSelected = activeFilter === chip.id;
+          return (
+            <button
+              key={chip.id}
+              type="button"
+              onClick={() => onSelectFilter(isSelected ? 'all' : chip.id)}
+              aria-pressed={isSelected}
+              aria-label={`Filter status kesehatan ${chip.label}, ${chip.count} proyek`}
+              className={`flex-1 h-11 rounded-xl border-2 flex items-center justify-center gap-1.5 text-xs sm:text-[13px] font-bold transition-all active:scale-95 ${
+                isSelected ? 'ring-2 ring-[#0F172A] shadow-xs' : ''
+              }`}
+              style={{
+                backgroundColor: chip.bg,
+                borderColor: isSelected ? chip.dot : chip.border,
+                color: chip.text,
+              }}
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: chip.dot }}
+                aria-hidden="true"
+              />
+              <span className="truncate">{chip.label}</span>
+              <span className="font-extrabold tabular-nums">{chip.count}</span>
+            </button>
+          );
+        })}
+      </div>
+      {activeFilter === 'attention' && (
+        <button
+          type="button"
+          onClick={() => onSelectFilter('all')}
+          aria-pressed="true"
+          aria-label={`Filter Perhatian (At risk dan Behind), ${attentionCount} proyek. Klik untuk tampilkan semua`}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-[#EA580C] bg-[#FFF7ED] text-[#9A3412] text-xs font-bold ring-2 ring-[#0F172A] shadow-xs transition-all active:scale-95"
+        >
+          <span className="w-2 h-2 rounded-full bg-[#EA580C] shrink-0" aria-hidden="true" />
+          <span>Perhatian (At risk &amp; Behind)</span>
+          <span className="font-extrabold tabular-nums">{attentionCount}</span>
+          <span aria-hidden="true" className="ml-0.5 text-[#C2410C]">×</span>
+        </button>
+      )}
     </div>
   );
 }

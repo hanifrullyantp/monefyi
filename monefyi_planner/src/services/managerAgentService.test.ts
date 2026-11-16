@@ -15,9 +15,11 @@ import {
   DIVISIONS,
   auditAndSyncProjectStatuses,
   extractMultiClauseActions,
+  localBriefing,
   localSmartManagerTurn,
   type ContextPack,
 } from './managerAgentService';
+import { formatCurrency } from '../lib/adapters';
 import type { Project } from '../store/appStore';
 import type { BonRequest } from './payrollService';
 
@@ -255,5 +257,100 @@ describe('General Manager & 5 Kepala Divisi (managerAgentService)', () => {
     const turnHigh = localSmartManagerTurn(ctx, 'Catat bayar besi beton 12jt', autoCfg);
     expect(turnHigh.actions[0].params.total).toBe(12_000_000);
     expect(turnHigh.actions[0].needsApproval).toBe(true);
+  });
+
+  it('localBriefing mempertahankan contract_value: 0 dan menandai margin negatif / over-RAP tanpa label Sehat (F-22/F-23/F-27)', () => {
+    const ctx = createMockContextPack();
+    ctx.projects.clear();
+    ctx.projects.set('P1', {
+      id: 'uuid-loss-proj',
+      tenant_id: 'org-1',
+      name: 'test-no-return',
+      code: 'PRJ-LOSS',
+      client_name: 'Internal',
+      type: 'custom',
+      status: 'active',
+      start_date: '2026-10-01',
+      end_date: '2026-12-31',
+      total_budget_planned: 10_000_000,
+      contract_value: 0,
+      currency: 'IDR',
+      progress_percentage: 40,
+      health_status: 'on_track',
+      planned_progress: 40,
+      spent_amount: 15_000_000,
+      total_received: 20_000_000,
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-01T00:00:00Z',
+    });
+
+    const briefing = localBriefing(ctx);
+    expect(briefing).toContain(`Total Kontrak ${formatCurrency(0)}`);
+    expect(briefing).toContain(`Est. Sisa Margin ${formatCurrency(-15_000_000)}`);
+    expect(briefing).toContain('Over-RAP');
+    expect(briefing).toContain('Rugi / margin negatif');
+    expect(briefing).not.toContain('✅ Sehat');
+
+    const cfg = loadAIConfig();
+    const sim = localSmartManagerTurn(ctx, 'Simulasi kenaikan harga 10%', cfg);
+    expect(sim.reply).toContain(formatCurrency(-15_000_000));
+  });
+
+  it('localBriefing tidak melabeli proyek behind/at_risk atau keuangan kosong sebagai Sehat (F-22/F-27)', () => {
+    const ctx = createMockContextPack();
+    ctx.projects.clear();
+    ctx.projects.set('P1', {
+      id: 'uuid-behind',
+      tenant_id: 'org-1',
+      name: 'Proyek Telat',
+      code: 'PRJ-BHD',
+      client_name: 'Klien A',
+      type: 'custom',
+      status: 'active',
+      start_date: '2026-10-01',
+      end_date: '2026-12-31',
+      total_budget_planned: 50_000_000,
+      contract_value: 80_000_000,
+      currency: 'IDR',
+      progress_percentage: 15,
+      health_status: 'behind',
+      planned_progress: 60,
+      spent_amount: 10_000_000,
+      total_received: 20_000_000,
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-01T00:00:00Z',
+    });
+    ctx.projects.set('P2', {
+      id: 'uuid-empty',
+      tenant_id: 'org-1',
+      name: 'Proyek Kosong',
+      code: 'PRJ-EMP',
+      client_name: 'Klien B',
+      type: 'custom',
+      status: 'planning',
+      start_date: '2026-11-01',
+      end_date: '2026-12-31',
+      total_budget_planned: 0,
+      contract_value: 0,
+      currency: 'IDR',
+      progress_percentage: 0,
+      health_status: 'on_track',
+      planned_progress: 0,
+      spent_amount: 0,
+      total_received: 0,
+      created_at: '2026-11-01T00:00:00Z',
+      updated_at: '2026-11-01T00:00:00Z',
+    });
+
+    const briefing = localBriefing(ctx);
+    expect(briefing).toContain('Terlambat (Behind)');
+    expect(briefing).toContain('Belum ada data keuangan/RAP');
+    expect(briefing).not.toContain('✅ Sehat');
+  });
+
+  it('localBriefing menampilkan ✅ Sehat hanya bila proyek benar-benar sehat secara keuangan dan jadwal', () => {
+    const ctx = createMockContextPack();
+    const briefing = localBriefing(ctx);
+    expect(briefing).toContain('✅ Sehat');
   });
 });

@@ -4,6 +4,7 @@ import Sparkline from './Sparkline';
 type Props = {
   label: string;
   value: string;
+  valueColor?: string;
   icon: LucideIcon;
   iconBg?: string;
   iconColor?: string;
@@ -17,10 +18,16 @@ type Props = {
 };
 
 export default function StatCard({
-  label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor = 'text-slate-600',
+  label, value, valueColor, icon: Icon, iconBg = 'bg-slate-50', iconColor = 'text-slate-600',
   onClick, sparkData, barPct, barLabel, barVariant = 'danger', subLabel, badge,
 }: Props) {
   const Wrapper = onClick ? 'button' : 'div';
+  const clampedBarPct =
+    barPct != null && Number.isFinite(barPct)
+      ? Math.min(Math.max(barPct, 0), 100)
+      : null;
+  const hasBarFill = clampedBarPct != null && clampedBarPct > 0;
+  const showBarLabel = hasBarFill && Boolean(barLabel);
   return (
     <Wrapper
       type={onClick ? 'button' : undefined}
@@ -38,20 +45,24 @@ export default function StatCard({
         </div>
         {badge}
       </div>
-      <div className="text-lg font-black text-slate-900 mb-2">{value}</div>
+      <div className={`text-lg font-black mb-2 ${valueColor || 'text-slate-900'}`}>{value}</div>
       {sparkData && sparkData.length >= 2 && (
         <div className="mb-2"><Sparkline data={sparkData} color="primary" /></div>
       )}
-      {barPct != null && (
+      {clampedBarPct != null && (
         <div className="h-5 bg-slate-100 rounded-md overflow-hidden mb-1.5">
-          <div
-            className={`h-full rounded-md flex items-center justify-center text-white text-[10px] font-bold min-w-[4rem] ${
-              barVariant === 'success' ? 'bg-emerald-500' : barVariant === 'primary' ? 'bg-blue-500' : 'bg-rose-500'
-            }`}
-            style={{ width: `${Math.max(barPct, barLabel ? 20 : 0)}%` }}
-          >
-            {barLabel}
-          </div>
+          {hasBarFill && (
+            <div
+              className={`h-full rounded-md flex items-center justify-center text-white text-[10px] font-bold ${
+                showBarLabel ? 'min-w-[4rem]' : ''
+              } ${
+                barVariant === 'success' ? 'bg-emerald-500' : barVariant === 'primary' ? 'bg-blue-500' : 'bg-rose-500'
+              }`}
+              style={{ width: `${Math.max(clampedBarPct, showBarLabel ? 20 : 0)}%` }}
+            >
+              {showBarLabel ? barLabel : null}
+            </div>
+          )}
         </div>
       )}
       {subLabel && <p className="text-xs text-slate-500">{subLabel}</p>}

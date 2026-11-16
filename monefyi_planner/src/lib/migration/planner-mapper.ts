@@ -269,7 +269,7 @@ export function mapPlannerProject(input: {
 }): MappedProjectView {
   const p = input.project;
   const settings = (p.settings || {}) as Record<string, string | number>;
-  const contractValue = num(settings.contract_value) || num(p.total_budget);
+  const contractValue = Math.max(0, num(settings.contract_value));
   const budget = num(p.total_budget);
   const spent = num(p.total_spent);
   const received = num(p.total_received);
@@ -340,7 +340,7 @@ export function mapPlannerProject(input: {
   const progressDeviation = actualProgress - planProgress;
   const effectiveProjectedCost =
     totalRap > 0 && totalRap < contractValue ? Math.max(totalRap, spent) : spent;
-  const estLaba = Math.max(0, contractValue - effectiveProjectedCost);
+  const estLaba = contractValue - effectiveProjectedCost;
   const useLedgerHutang = Array.isArray(input.payables);
   const useLedgerPiutang = Array.isArray(input.receivables);
   const piutang = useLedgerPiutang

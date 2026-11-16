@@ -205,7 +205,15 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
   const progress = Number(row.progress_pct) || 0;
   const spent = Number(row.total_spent) || 0;
   const budget = Number(row.total_budget) || 0;
-  const contractValue = Number(settings.contract_value) || 0;
+  const rawContractValue = settings.contract_value;
+  const parsedContractValue =
+    rawContractValue !== undefined && rawContractValue !== null && String(rawContractValue).trim() !== ''
+      ? Number(rawContractValue)
+      : NaN;
+  const contractValue =
+    Number.isFinite(parsedContractValue) && parsedContractValue >= 0
+      ? parsedContractValue
+      : undefined;
   const plannedProgress = schedulePlanProgress(row.planned_start, row.planned_end);
 
   return {
@@ -224,7 +232,7 @@ export function toProject(row: DbProject, currency = 'IDR'): Project {
     start_date: row.planned_start,
     end_date: row.planned_end,
     total_budget_planned: budget,
-    contract_value: contractValue > 0 ? contractValue : undefined,
+    contract_value: contractValue,
     source_estimation_id: row.source_estimation_id || undefined,
     currency,
     manager_id: settings.manager_id != null ? String(settings.manager_id) : undefined,

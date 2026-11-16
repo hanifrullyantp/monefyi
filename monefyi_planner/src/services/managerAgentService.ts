@@ -201,7 +201,7 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     projects.set(code, p);
     const isActive = env.currentProject?.id === p.id;
     if (isActive) activeProjectCode = code;
-    const contract = p.contract_value || p.total_budget_planned || 0;
+    const contract = p.contract_value ?? p.total_budget_planned ?? 0;
     const cashBalance = (p.total_received || 0) - (p.spent_amount || 0);
     lines.push(
       `[${code}]${isActive ? ' (PROYEK SEDANG DIBUKA)' : ''} ${p.name} | klien: ${p.client_name || '-'} | status: ${p.status} | kontrak: ${rp(contract)} | RAP: ${rp(p.total_budget_planned)} | realisasi biaya: ${rp(p.spent_amount)} | dana masuk: ${rp(p.total_received)} | saldo kas proyek: ${rp(cashBalance)} | progres fisik: ${Math.round(p.progress_percentage)}% (target ${Math.round(p.planned_progress || 0)}%) | kondisi: ${p.health_status}`,
@@ -426,7 +426,7 @@ export function localBriefing(context: ContextPack): string {
   if (!ps.length) {
     return 'Saat ini belum ada proyek aktif di portofolio kita. Anda bisa meminta saya membuat proyek baru (misal: *"Buat proyek Renovasi Rumah Pak Budi"*) atau menyiapkan estimasi RAB terlebih dahulu.';
   }
-  const totalContract = ps.reduce((s, [, p]) => s + (p.contract_value || p.total_budget_planned || 0), 0);
+  const totalContract = ps.reduce((s, [, p]) => s + (p.contract_value ?? p.total_budget_planned ?? 0), 0);
   const totalSpent = ps.reduce((s, [, p]) => s + (p.spent_amount || 0), 0);
   const totalReceived = ps.reduce((s, [, p]) => s + (p.total_received || 0), 0);
 
@@ -434,17 +434,44 @@ export function localBriefing(context: ContextPack): string {
     `Laporan eksekutif portofolio (${ps.length} proyek aktif — Total Kontrak ${rp(totalContract)}, Dana Masuk ${rp(totalReceived)}, Realisasi Biaya ${rp(totalSpent)}):`,
   );
   for (const [code, p] of ps.slice(0, 8)) {
-    const contract = p.contract_value || p.total_budget_planned || 0;
-    const margin = contract - p.spent_amount;
-    const cash = (p.total_received || 0) - (p.spent_amount || 0);
-    const flag =
-      p.spent_amount > p.total_budget_planned && p.total_budget_planned > 0
-        ? ' ⚠️ Over-RAP'
-        : cash < 0
-          ? ' 💡 Kas defisit (butuh termin)'
-          : ' ✅ Sehat';
+    const contract = p.contract_value ?? p.total_budget_planned ?? 0;
+    const spent = p.spent_amount || 0;
+    const budget = p.total_budget_planned || 0;
+    const received = p.total_received || 0;
+    const margin = contract - spent;
+    const cash = received - spent;
+
+    const flags: string[] = [];
+    if (spent > budget && budget > 0) {
+      flags.push('⚠️ Over-RAP');
+    }
+    if (margin < 0) {
+      flags.push('🔴 Rugi / margin negatif');
+    }
+    if (cash < 0) {
+      flags.push('💡 Kas defisit (butuh termin)');
+    }
+    if (p.health_status === 'behind') {
+      flags.push('⏰ Terlambat (Behind)');
+    } else if (p.health_status === 'at_risk') {
+      flags.push('⚠️ Berisiko (At Risk)');
+    }
+
+    if (flags.length === 0) {
+      const hasFinancialActivity = spent > 0 || received > 0;
+      const hasBudgetOrContract = budget > 0 || contract > 0;
+      if (!hasBudgetOrContract && !hasFinancialActivity) {
+        flags.push('📝 Belum ada data keuangan/RAP');
+      } else if (!hasFinancialActivity) {
+        flags.push('📝 Belum ada realisasi/dana masuk');
+      } else {
+        flags.push('✅ Sehat');
+      }
+    }
+
+    const flag = ` ${flags.join(' · ')}`;
     parts.push(
-      `• [${code}] ${p.name}: Fisik ${Math.round(p.progress_percentage)}% | Biaya ${rp(p.spent_amount)} dari RAP ${rp(p.total_budget_planned)} | Kas Proyek ${rp(cash)} | Est. Sisa Margin ${rp(margin)}${flag}`,
+      `• [${code}] ${p.name}: Fisik ${Math.round(p.progress_percentage)}% | Biaya ${rp(spent)} dari RAP ${rp(budget)} | Kas Proyek ${rp(cash)} | Est. Sisa Margin ${rp(margin)}${flag}`,
     );
   }
   if (context.bons.size) {
@@ -921,7 +948,7 @@ export function localSmartManagerTurn(
       `Saya sudah meminta **Pak Dimas (Estimator & QS)** dan **Bu Sinta (Keuangan)** menghitung simulasi kenaikan biaya sebesar **${pct}%** terhadap sisa anggaran RAP yang belum terealisasi:`,
     ];
     for (const [code, p] of context.projects.entries()) {
-      const contract = p.contract_value || p.total_budget_planned || 0;
+      const contract = p.contract_value ?? p.total_budget_planned ?? 0;
       const remainingRap = Math.max(0, p.total_budget_planned - p.spent_amount);
       const extraCost = Math.round(remainingRap * (pct / 100));
       const newMargin = contract - (p.spent_amount + remainingRap + extraCost);
