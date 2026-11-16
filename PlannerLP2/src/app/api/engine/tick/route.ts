@@ -7,6 +7,7 @@ import { policyAllowsAuto } from "@/lib/engine/autonomyPolicy";
 import { startRun, setPhase, finishRun, BLOCKER } from "@/lib/engine/expertRuns";
 import { sendAdminPush } from "@/lib/engine/pushNotify";
 import { filterTracked } from "@/lib/engine/trackedCampaigns";
+import { executeDueMidnightOn } from "@/lib/marketing/midnightOnStore";
 import type { Blocker } from "@/lib/engine/expertStatus";
 
 /** Konteks satu siklus: diisi handleTick, dibaca POST untuk heartbeat dan notifikasi. */
@@ -492,6 +493,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireEngineAuth(req, { allowCron: true });
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+
+  try {
+    await executeDueMidnightOn();
+  } catch (err) {
+    console.error("[midnight-on] gagal menjalankan jadwal:", err);
+  }
 
   // Lock: dua analisa tidak boleh berjalan bersamaan (pg_cron dan klik manual bisa bertabrakan)
   const locked = await acquireRunLock("tick");

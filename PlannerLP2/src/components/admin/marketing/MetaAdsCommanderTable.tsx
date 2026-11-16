@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, Fragment } from "react";
+import { authedFetch } from "@/lib/auth/authedFetch";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { MetaCampaign, MetaAdSet, MetaAd, AdHealthStatus } from "@/lib/types/marketing";
 import {
@@ -353,6 +354,94 @@ export function MetaAdsCommanderTable({
   };
 
   const [updatingAdId, setUpdatingAdId] = useState<string | null>(null);
+  const [midnightSchedule, setMidnightSchedule] = useState<{
+    runAt: string;
+    campaignIds: string[];
+    label?: string;
+  } | null>(null);
+  const [midnightBusy, setMidnightBusy] = useState(false);
+
+  const loadMidnightSchedule = async () => {
+    try {
+      const res = await authedFetch("/api/marketing/midnight-on");
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok && data.schedule?.status !== "done") {
+        setMidnightSchedule({
+          runAt: data.schedule.runAt,
+          campaignIds: data.schedule.campaignIds || [],
+          label: data.label,
+        });
+      } else if (res.ok) {
+        setMidnightSchedule(null);
+      }
+    } catch {
+      /* jadwal tetap tampil dari state terakhir */
+    }
+  };
+
+  useEffect(() => {
+    loadMidnightSchedule();
+    const timer = window.setInterval(loadMidnightSchedule, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const handleScheduleMidnightOn = async () => {
+    if (midnightSchedule) {
+      if (!window.confirm("Batalkan jadwal nyalakan iklan jam 12 malam?")) return;
+      setMidnightBusy(true);
+      try {
+        const res = await authedFetch("/api/marketing/midnight-on", { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          setActionNotice(data.error || "Jadwal gagal dibatalkan.");
+        } else {
+          setMidnightSchedule(null);
+          setActionNotice("Jadwal nyalakan iklan jam 12 malam dibatalkan.");
+        }
+      } finally {
+        setMidnightBusy(false);
+        setTimeout(() => setActionNotice(null), 4000);
+      }
+      return;
+    }
+
+    const paused = campaigns.filter((campaign) => campaign.status === "PAUSED");
+    if (paused.length === 0) {
+      setActionNotice("Tidak ada kampanye yang sedang off. Yang sudah aktif tidak perlu dijadwalkan.");
+      setTimeout(() => setActionNotice(null), 4000);
+      return;
+    }
+    const preview = paused.slice(0, 4).map((campaign) => campaign.name).join(", ");
+    const more = paused.length > 4 ? ` dan ${paused.length - 4} lainnya` : "";
+    const ok = window.confirm(
+      `Nyalakan ${paused.length} kampanye yang sedang off pada jam 12 malam (00:00 WIB)?\n\n${preview}${more}`
+    );
+    if (!ok) return;
+    setMidnightBusy(true);
+    try {
+      const res = await authedFetch("/api/marketing/midnight-on", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaigns: paused.map((campaign) => ({ id: campaign.id, name: campaign.name })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        setActionNotice(data.error || "Jadwal gagal disimpan.");
+      } else {
+        setMidnightSchedule({
+          runAt: data.schedule.runAt,
+          campaignIds: data.schedule.campaignIds || [],
+          label: data.label,
+        });
+        setActionNotice(`${paused.length} kampanye dijadwalkan ON pada ${data.label || "jam 12 malam"}.`);
+      }
+    } finally {
+      setMidnightBusy(false);
+      setTimeout(() => setActionNotice(null), 5000);
+    }
+  };
 
   const handleToggleAdStatus = async (adId: string, campaignId: string, currentStatus: string, adName?: string) => {
     setUpdatingAdId(adId);
@@ -667,6 +756,30 @@ export function MetaAdsCommanderTable({
         >
           <Settings className="w-3.5 h-3.5 text-slate-500" />
           <span>Konfigurasi &amp; Rules</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleScheduleMidnightOn}
+          disabled={midnightBusy}
+          className={cn(
+            "flex items-center justify-center gap-2 p-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer border disabled:opacity-60",
+            midnightSchedule
+              ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-800"
+              : "bg-slate-900 hover:bg-slate-800 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600"
+          )}
+          title={
+            midnightSchedule
+              ? `Dijadwalkan nyala ${midnightSchedule.label || "jam 12 malam"}. Klik untuk membatalkan.`
+              : "Jadwalkan kampanye yang sedang off supaya menyala jam 12 malam WIB"
+          }
+        >
+          {midnightBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+          <span>
+            {midnightSchedule
+              ? `ON ${midnightSchedule.label || "00:00"} · ${midnightSchedule.campaignIds.length}`
+              : "Jadwalkan ON jam 12 malam"}
+          </span>
         </button>
       </div>
 
