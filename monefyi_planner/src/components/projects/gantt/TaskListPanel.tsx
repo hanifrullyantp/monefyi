@@ -1,12 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ChevronDown, ChevronRight, Eye, EyeOff, GripVertical, MoreHorizontal,
-  CheckCircle2, Circle, Plus, Pencil, FolderOpen, ListTree,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Circle,
+  Copy,
+  Eye,
+  EyeOff,
+  FolderOpen,
+  GripVertical,
+  ListTree,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { useGanttStore } from '../../../store/ganttStore';
-import { formatShortPeriod } from '../../../lib/gantt/utils';
-import type { FlatGanttRow } from '../../../lib/gantt/types';
-import { GANTT_COLORS, ROW_HEIGHT } from '../../../lib/gantt/constants';
+import { formatShortPeriod, isTaskOverProjectDeadline } from '../../../lib/gantt/utils';
+import { computeCriticalPath } from '../../../lib/gantt/criticalPath';
+import type { FlatGanttRow, GanttTask } from '../../../lib/gantt/types';
+import { GANTT_COLORS, PRIORITY_BADGE_COLOR, ROW_HEIGHT } from '../../../lib/gantt/constants';
 import { useVirtualRows } from '../../../hooks/useVirtualRows';
 import GanttContextMenu, { type GanttContextMenuItem } from './GanttContextMenu';
 
@@ -15,6 +29,9 @@ interface TaskListPanelProps {
   onReorder: (order: string[]) => void;
   onEditTask?: (taskId: string) => void;
   onOpenProjectDetail?: (projectId: string) => void;
+  onAddSubTask?: (task: GanttTask) => void;
+  onDuplicateTask?: (taskId: string) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
 interface ContextState {
@@ -30,6 +47,9 @@ function TaskListRow({
   isDragOver,
   isDragging,
   isHidden,
+  isCritical,
+  isOverDeadline,
+  projectEndDate,
   onSelect,
   onToggle,
   onContextMenu,
@@ -40,6 +60,9 @@ function TaskListRow({
   isDragOver: boolean;
   isDragging: boolean;
   isHidden?: boolean;
+  isCritical?: boolean;
+  isOverDeadline?: boolean;
+  projectEndDate?: string;
   onSelect: (id: string, multi: boolean) => void;
   onToggle: (id: string) => void;
   onContextMenu: (e: React.MouseEvent, taskId: string) => void;
@@ -47,6 +70,7 @@ function TaskListRow({
   const { task, depth, hasChildren, isExpanded } = row;
   const isDone = task.status === 'completed' || task.status === 'archived';
   const isActive = task.status === 'active' || task.status === 'in_progress';
+  const prioMeta = PRIORITY_BADGE_COLOR[task.priority] ?? PRIORITY_BADGE_COLOR.medium;
 
   return (
     <div
@@ -55,7 +79,9 @@ function TaskListRow({
       className={`gantt-task-row flex items-center gap-1 px-2 border-b border-slate-100 cursor-pointer transition-colors ${
         isSelected
           ? 'bg-blue-50 border-l-[3px] border-l-blue-500'
-          : 'border-l-[3px] border-l-transparent hover:bg-slate-50'
+          : isCritical
+            ? 'border-l-[3px] border-l-red-500 hover:bg-red-50/40'
+            : 'border-l-[3px] border-l-transparent hover:bg-slate-50'
       } ${isDragOver ? 'bg-emerald-50' : ''} ${isDragging ? 'opacity-50' : ''} ${isHidden ? 'opacity-40' : ''}`}
       style={{ height: ROW_HEIGHT, paddingLeft: 8 + depth * 16 }}
     >
@@ -70,19 +96,53 @@ function TaskListRow({
       {hasChildren ? (
         <button
           type="button"
-          onClick={e => { e.stopPropagation(); onToggle(task.id); }}
+          onClick={e => {
+            e.stopPropagation();
+            onToggle(task.id);
+          }}
           className="p-0.5 rounded hover:bg-slate-200 text-slate-400"
         >
-          {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          {isExpanded ? (
+            <ChevronDown className="w-3.5 h-3.5" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5" />
+          )}
         </button>
       ) : (
         <span className="w-4" />
       )}
 
       <div className="flex-1 min-w-0">
-        <div className="text-xs font-semibold text-slate-800 truncate">{task.name}</div>
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="text-xs font-semibold text-slate-800 truncate">{task.name}</span>
+          {task.type !== 'project' && (
+            <span
+              className={`shrink-0 text-[8px] font-bold px-1 py-0.2 rounded border ${prioMeta.badgeClass}`}
+              title={`Prioritas: ${prioMeta.label}`}
+            >
+              {prioMeta.label}
+            </span>
+          )}
+          {isCritical && (
+            <span
+              className="shrink-0 text-[8px] font-black px-1 py-0.2 rounded bg-red-600 text-white"
+              title="Tugas berada di Jalur Kritis (Float: 0 hari)"
+            >
+              CPM
+            </span>
+          )}
+          {isOverDeadline && (
+            <span
+              className="shrink-0 inline-flex items-center text-amber-600"
+              title={`Melewati deadline proyek (${projectEndDate})`}
+            >
+              <AlertTriangle className="w-3 h-3" />
+            </span>
+          )}
+        </div>
         <div className="text-[10px] text-slate-400 truncate">
           {formatShortPeriod(task.startDate, task.endDate)}
+          {task.assigneeName ? ` · ${task.assigneeName}` : ''}
         </div>
       </div>
 
@@ -109,8 +169,12 @@ function TaskListRow({
           )}
           <button
             type="button"
-            onClick={e => { e.stopPropagation(); onContextMenu(e, task.id); }}
+            onClick={e => {
+              e.stopPropagation();
+              onContextMenu(e, task.id);
+            }}
             className="p-0.5 rounded hover:bg-slate-200 text-slate-400"
+            aria-label={`Aksi untuk ${task.name}`}
           >
             <MoreHorizontal className="w-3 h-3" />
           </button>
@@ -125,11 +189,25 @@ export default function TaskListPanel({
   onReorder,
   onEditTask,
   onOpenProjectDetail,
+  onAddSubTask,
+  onDuplicateTask,
+  onDeleteTask,
 }: TaskListPanelProps) {
   const {
-    selectedIds, selectTask, toggleExpand, projectOrder, hiddenProjectIds,
-    toggleHideProject, setAddWorkItemProjectId, setEditProjectId, setEditTaskId,
-    setTodoModalTaskId, expandedIds,
+    tasks,
+    dependencies,
+    showCriticalPath,
+    selectedIds,
+    selectTask,
+    toggleExpand,
+    projectOrder,
+    hiddenProjectIds,
+    toggleHideProject,
+    setAddWorkItemProjectId,
+    setEditProjectId,
+    setEditTaskId,
+    setTodoModalTaskId,
+    expandedIds,
   } = useGanttStore();
   const [dragId, setDragId] = useState<string | null>(null);
   const dragOverRef = useRef<string | null>(null);
@@ -139,6 +217,17 @@ export default function TaskListPanel({
   const [contextMenu, setContextMenu] = useState<ContextState | null>(null);
   const rootRows = rows.filter(r => r.task.parentId === null);
   const virtual = useVirtualRows(scrollTop, rows.length, viewportH);
+
+  const cpm = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
+  const projectEndDateMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of tasks) {
+      if (t.type === 'project') {
+        map.set(t.id, t.endDate);
+      }
+    }
+    return map;
+  }, [tasks]);
 
   useEffect(() => {
     const el = listRef.current;
@@ -190,8 +279,9 @@ export default function TaskListPanel({
   };
 
   const buildMenuItems = (taskId: string): GanttContextMenuItem[] => {
-    const task = rows.find(r => r.task.id === taskId)?.task
-      ?? useGanttStore.getState().tasks.find(t => t.id === taskId);
+    const task =
+      rows.find(r => r.task.id === taskId)?.task ??
+      useGanttStore.getState().tasks.find(t => t.id === taskId);
     if (!task) return [];
 
     if (task.type === 'project') {
@@ -215,7 +305,7 @@ export default function TaskListPanel({
           id: 'add-work',
           label: 'Tambah pekerjaan',
           icon: <Plus className="w-4 h-4" />,
-          onClick: () => setAddWorkItemProjectId(task.id),
+          onClick: () => (onAddSubTask ? onAddSubTask(task) : setAddWorkItemProjectId(task.id)),
         },
         {
           id: 'toggle-children',
@@ -246,6 +336,26 @@ export default function TaskListPanel({
         icon: <Pencil className="w-4 h-4" />,
         onClick: () => onEditTask?.(task.id),
       },
+      ...(onAddSubTask
+        ? [
+            {
+              id: 'add-subtask',
+              label: '+ Sub Tugas',
+              icon: <Plus className="w-4 h-4" />,
+              onClick: () => onAddSubTask(task),
+            },
+          ]
+        : []),
+      ...(onDuplicateTask
+        ? [
+            {
+              id: 'duplicate',
+              label: 'Duplikasi',
+              icon: <Copy className="w-4 h-4" />,
+              onClick: () => onDuplicateTask(task.id),
+            },
+          ]
+        : []),
       {
         id: 'todo',
         label: 'Todo list',
@@ -258,12 +368,34 @@ export default function TaskListPanel({
         icon: <Pencil className="w-4 h-4" />,
         onClick: () => setEditTaskId(task.id),
       },
+      ...(onDeleteTask
+        ? [
+            { id: 'sep-del', label: '', separator: true },
+            {
+              id: 'delete',
+              label: 'Hapus',
+              icon: <Trash2 className="w-4 h-4" />,
+              danger: true,
+              onClick: () => {
+                if (
+                  typeof window === 'undefined' ||
+                  window.confirm(`Hapus pekerjaan "${task.name}"?`)
+                ) {
+                  onDeleteTask(task.id);
+                }
+              },
+            },
+          ]
+        : []),
     ];
   };
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-slate-100 shrink-0">
-      <div className="flex items-center justify-between px-3 border-b border-slate-100 bg-slate-50/80" style={{ height: 56 }}>
+      <div
+        className="flex items-center justify-between px-3 border-b border-slate-100 bg-slate-50/80"
+        style={{ height: 56 }}
+      >
         <span className="text-xs font-bold text-slate-700">Semua Proyek ({rootRows.length})</span>
         {hiddenProjectIds.size > 0 && (
           <button
@@ -278,7 +410,11 @@ export default function TaskListPanel({
         )}
       </div>
 
-      <div ref={listRef} className="flex-1 overflow-y-auto gantt-scroll gantt-sync-scroll" data-gantt-scroll="list">
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto gantt-scroll gantt-sync-scroll"
+        data-gantt-scroll="list"
+      >
         <div style={{ height: virtual.totalHeight, position: 'relative' }}>
           <div style={{ transform: `translateY(${virtual.offsetY}px)` }}>
             {virtual.visibleRows.map(i => {
@@ -286,6 +422,14 @@ export default function TaskListPanel({
               if (!row) return null;
               const { task } = row;
               const isRoot = task.parentId === null;
+              const projectEndDate = projectEndDateMap.get(task.projectId);
+              const isCritical =
+                showCriticalPath &&
+                task.type !== 'project' &&
+                (cpm.metrics[task.id]?.isCritical ?? task.isCritical ?? false);
+              const isOverDeadline =
+                task.type !== 'project' &&
+                isTaskOverProjectDeadline(task.endDate, projectEndDate);
 
               return (
                 <div
@@ -294,7 +438,10 @@ export default function TaskListPanel({
                   onDragStart={() => isRoot && handleDragStart(task.id)}
                   onDragOver={e => isRoot && handleDragOver(e, task.id)}
                   onDrop={() => isRoot && handleDrop(task.id)}
-                  onDragEnd={() => { setDragId(null); dragOverRef.current = null; }}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    dragOverRef.current = null;
+                  }}
                   onDoubleClick={() => {
                     if (task.type === 'project') onOpenProjectDetail?.(task.id);
                     else onEditTask?.(task.id);
@@ -307,6 +454,9 @@ export default function TaskListPanel({
                     isDragOver={dragOverRef.current === task.id && dragId !== task.id}
                     isDragging={dragId === task.id}
                     isHidden={isRoot && hiddenProjectIds.has(task.id)}
+                    isCritical={isCritical}
+                    isOverDeadline={isOverDeadline}
+                    projectEndDate={projectEndDate}
                     onSelect={selectTask}
                     onToggle={toggleExpand}
                     onContextMenu={openContextMenu}

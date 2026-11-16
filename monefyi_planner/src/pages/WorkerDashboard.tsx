@@ -1,13 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   MapPin, Clock, CheckCircle, Circle, Wallet, TrendingUp,
-  Calendar, RefreshCw, Loader2, LogOut,
+  Calendar, RefreshCw, Loader2, LogOut, ClipboardList, AlertTriangle, Check,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
 import { supabase } from '../lib/supabase';
+import { isDemoOrInvalidUuid } from '../lib/demo/demoMode';
+import { PRIORITY_BADGE_COLOR } from '../lib/gantt/constants';
+import { formatDateId } from '../utils/projectUi';
 import { loadWorkItemsForOrg, updateWorkItem } from '../services/workItemService';
 import type { WorkItem } from '../services/workItemService';
 import {
@@ -59,9 +62,39 @@ export function parseAndValidateBonAmount(
   return { ok: true, amount };
 }
 
+const DEMO_WORKER_MEMBERS: OrgMember[] = [
+  {
+    id: 'demo-m-1',
+    org_id: 'demo',
+    user_id: 'demo-u-1',
+    role: 'owner',
+    status: 'active',
+    profile: { name: 'Budi Santoso' },
+  },
+  {
+    id: 'demo-m-2',
+    org_id: 'demo',
+    user_id: 'demo-u-2',
+    role: 'manager',
+    status: 'active',
+    profile: { name: 'Sari Dewi' },
+  },
+  {
+    id: 'demo-m-3',
+    org_id: 'demo',
+    user_id: 'demo-u-3',
+    role: 'worker',
+    status: 'active',
+    profile: { name: 'Ahmad Rizky' },
+  },
+];
+
 function buildDemoWorkItems(projects: Array<{ id: string; name: string }>): WorkItem[] {
   const primaryProjectId = projects[0]?.id || 'demo-proj-1';
+  const secondaryProjectId = projects[1]?.id || primaryProjectId;
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
+  const threeDaysLater = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
   const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
   return [
     {
@@ -69,20 +102,36 @@ function buildDemoWorkItems(projects: Array<{ id: string; name: string }>): Work
       project_id: primaryProjectId,
       name: 'Pekerjaan Pondasi & Sloof',
       planned_start: today,
-      planned_end: nextWeek,
+      planned_end: threeDaysLater,
       progress_pct: 45,
       status: 'in_progress',
+      priority: 'high',
+      assigned_member_id: 'demo-m-3',
       sort_order: 1,
     },
     {
       id: 'demo-wi-2',
       project_id: primaryProjectId,
+      name: 'Pengecoran Kolom Utama',
+      planned_start: yesterday,
+      planned_end: yesterday,
+      progress_pct: 50,
+      status: 'in_progress',
+      priority: 'critical',
+      assigned_member_id: 'demo-m-3',
+      sort_order: 2,
+    },
+    {
+      id: 'demo-wi-3',
+      project_id: secondaryProjectId,
       name: 'Pemasangan Dinding Bata',
       planned_start: today,
       planned_end: nextWeek,
       progress_pct: 20,
       status: 'in_progress',
-      sort_order: 2,
+      priority: 'medium',
+      assigned_member_id: 'demo-m-2',
+      sort_order: 3,
     },
   ];
 }
@@ -214,7 +263,9 @@ export default function WorkerDashboard() {
   useEffect(() => {
     refreshStatus();
     loadTasks();
-    if (!isDemo && tenant?.id && tenant.id !== 'demo') {
+    if (isDemo || tenant?.id === 'demo') {
+      setMembers(DEMO_WORKER_MEMBERS);
+    } else if (tenant?.id) {
       void listMembers(tenant.id).then(setMembers).catch(() => setMembers([]));
     }
   }, [refreshStatus, loadTasks, isDemo, tenant?.id]);
@@ -228,6 +279,39 @@ export default function WorkerDashboard() {
   const scopedWorkItems = chosenProjectId
     ? workItems.filter(wi => wi.project_id === chosenProjectId)
     : workItems;
+
+  const myMemberIds = useMemo(() => {
+    const ids = new Set<string>();
+    const userEmail = user?.email?.trim().toLowerCase();
+    for (const m of members) {
+      if (user?.id && m.user_id === user.id) ids.add(m.id);
+      if (userEmail && m.email?.trim().toLowerCase() === userEmail) ids.add(m.id);
+    }
+    return ids;
+  }, [members, user?.id, user?.email]);
+
+  const myAssignedTasks = useMemo(() => {
+    if (myMemberIds.size === 0) return [];
+    return scopedWorkItems
+      .filter(wi => Boolean(wi.assigned_member_id && myMemberIds.has(wi.assigned_member_id)))
+      .sort((a, b) => {
+        const aDone = (Number(a.progress_pct) || 0) >= 100 ? 1 : 0;
+        const bDone = (Number(b.progress_pct) || 0) >= 100 ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
+        return (a.planned_end || '').localeCompare(b.planned_end || '');
+      });
+  }, [scopedWorkItems, myMemberIds]);
+
+  const todayIso = useMemo(() => {
+    try {
+      return new Date().toLocaleDateString('en-CA', {
+        timeZone: tenant?.timezone || 'Asia/Jakarta',
+      });
+    } catch {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }, [tenant?.timezone]);
+
   const activeTasks = scopedWorkItems.filter(wi => (Number(wi.progress_pct) || 0) < 100);
   const doneTasks = scopedWorkItems.filter(wi => (Number(wi.progress_pct) || 0) >= 100);
 
@@ -382,13 +466,26 @@ export default function WorkerDashboard() {
     onNotify: (message, type) => showToast(message, type),
   });
 
-  const handleProgressChange = async (wi: WorkItem, pct: number) => {
+  const handleProgressChange = async (wi: WorkItem, rawPct: number) => {
+    const pct = Math.min(100, Math.max(0, Math.round(rawPct)));
+    const nextStatus = pct >= 100 ? 'completed' : pct > 0 ? 'in_progress' : 'pending';
     setUpdatingId(wi.id);
     try {
-      if (!isDemo && tenant?.id !== 'demo') {
-        await updateWorkItem(wi.id, { progress_pct: pct });
+      let nextUpdatedAt = wi.updated_at;
+      if (!isDemo && tenant?.id !== 'demo' && !isDemoOrInvalidUuid(wi.id)) {
+        const updated = await updateWorkItem(wi.id, {
+          progress_pct: pct,
+          status: nextStatus,
+        });
+        if (updated?.updated_at) nextUpdatedAt = updated.updated_at;
       }
-      setWorkItems(prev => prev.map(w => (w.id === wi.id ? { ...w, progress_pct: pct } : w)));
+      setWorkItems(prev =>
+        prev.map(w =>
+          w.id === wi.id
+            ? { ...w, progress_pct: pct, status: nextStatus, updated_at: nextUpdatedAt }
+            : w,
+        ),
+      );
       showToast(`Progress ${wi.name}: ${pct}%`, 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal update', 'error');
@@ -583,8 +680,141 @@ export default function WorkerDashboard() {
               <p className="text-[11px] text-[#5B6B7A] text-center font-medium">Auto absensi WiFi kantor aktif</p>
             )}
 
-            <div>
-              <h2 className="font-bold text-[#0F172A] mb-3 text-base">Pekerjaan Aktif</h2>
+            <section aria-labelledby="worker-my-tasks-heading" className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ClipboardList className="w-5 h-5 text-[#059669] shrink-0" />
+                  <h2 id="worker-my-tasks-heading" className="font-bold text-[#0F172A] text-base">
+                    Tugas Saya
+                  </h2>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                  {myAssignedTasks.length}
+                </span>
+              </div>
+
+              {loading && myAssignedTasks.length === 0 ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#059669]" />
+                </div>
+              ) : myAssignedTasks.length === 0 ? (
+                <p className="text-sm text-[#5B6B7A] bg-white border border-[#E5EAE8] rounded-2xl p-4 text-center shadow-sm">
+                  Belum ada tugas khusus yang ditugaskan ke Anda saat ini.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {myAssignedTasks.map(wi => {
+                    const pct = Math.min(100, Math.max(0, Math.round(Number(wi.progress_pct) || 0)));
+                    const isDone = pct >= 100 || wi.status === 'completed';
+                    const prioMeta = PRIORITY_BADGE_COLOR[wi.priority || 'medium'] ?? PRIORITY_BADGE_COLOR.medium;
+                    const endIso = (wi.planned_end || '').slice(0, 10);
+                    const isOverdue = Boolean(!isDone && endIso && endIso < todayIso);
+                    const isBusy = updatingId === wi.id;
+
+                    return (
+                      <div
+                        key={wi.id}
+                        className={`bg-white border rounded-2xl p-4 shadow-sm space-y-3 ${
+                          isOverdue
+                            ? 'border-rose-300'
+                            : isDone
+                              ? 'border-emerald-200 bg-emerald-50/30'
+                              : 'border-[#E5EAE8]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-sm text-[#0F172A] break-words [overflow-wrap:anywhere]">
+                              {wi.name}
+                            </div>
+                            <div className="text-xs text-[#5B6B7A] mt-0.5 truncate">
+                              {projectName(wi.project_id)}
+                            </div>
+                          </div>
+                          <span className="font-black text-base text-[#059669] shrink-0 tabular-nums">
+                            {pct}%
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full border ${prioMeta.badgeClass}`}
+                          >
+                            {prioMeta.label}
+                          </span>
+                          {endIso && (
+                            <span
+                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                                isOverdue
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : isDone
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              {isOverdue ? (
+                                <AlertTriangle className="w-3 h-3 shrink-0" />
+                              ) : (
+                                <Calendar className="w-3 h-3 shrink-0" />
+                              )}
+                              <span>
+                                Tenggat: {formatDateId(endIso)}
+                                {isOverdue ? ' · Terlambat' : ''}
+                              </span>
+                            </span>
+                          )}
+                          {isDone && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                              <Check className="w-3 h-3" />
+                              Selesai
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              isDone ? 'bg-emerald-500' : isOverdue ? 'bg-rose-500' : 'bg-[#059669]'
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={isBusy || pct >= 100}
+                            onClick={() => void handleProgressChange(wi, Math.min(100, pct + 25))}
+                            className="min-h-11 py-2 px-3 rounded-xl border border-[#D5DDDA] bg-white hover:bg-slate-50 text-[#0F172A] text-xs font-bold disabled:opacity-50 transition-colors"
+                          >
+                            +25%
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isBusy || pct >= 100}
+                            onClick={() => void handleProgressChange(wi, 100)}
+                            className="min-h-11 py-2 px-3 rounded-xl bg-[#059669] hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Selesai 100%</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section aria-labelledby="worker-all-tasks-heading" className="pt-2 border-t border-[#E5EAE8]">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h2 id="worker-all-tasks-heading" className="font-bold text-[#0F172A] text-base">
+                  Semua Pekerjaan Proyek
+                </h2>
+                <span className="text-xs font-semibold text-[#5B6B7A]">
+                  {activeTasks.length} aktif
+                </span>
+              </div>
               {loading && activeTasks.length === 0 ? (
                 <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#059669]" /></div>
               ) : activeTasks.length === 0 ? (
@@ -595,11 +825,11 @@ export default function WorkerDashboard() {
                 activeTasks.slice(0, 5).map(wi => (
                   <div key={wi.id} className="bg-white border border-[#E5EAE8] rounded-2xl p-4 mb-3 shadow-sm">
                     <div className="flex justify-between mb-2">
-                      <div>
-                        <div className="font-semibold text-sm text-[#0F172A]">{wi.name}</div>
+                      <div className="min-w-0 pr-2">
+                        <div className="font-semibold text-sm text-[#0F172A] break-words [overflow-wrap:anywhere]">{wi.name}</div>
                         <div className="text-xs text-[#5B6B7A]">{projectName(wi.project_id)}</div>
                       </div>
-                      <span className="font-black text-[#059669]">{Number(wi.progress_pct) || 0}%</span>
+                      <span className="font-black text-[#059669] shrink-0">{Number(wi.progress_pct) || 0}%</span>
                     </div>
                     <input
                       type="range"
@@ -625,7 +855,7 @@ export default function WorkerDashboard() {
                   </div>
                 ))
               )}
-            </div>
+            </section>
           </div>
         )}
 

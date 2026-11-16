@@ -5,12 +5,37 @@ import type {
   GanttDragState,
   GanttTask,
   GanttViewMode,
+  WorkItemAttachment,
+  WorkItemNote,
 } from '../lib/gantt/types';
 import { DEFAULT_ADVANCED_FILTERS as DEFAULT_FILTERS } from '../lib/gantt/types';
 import { cloneSnapshot, pickSnapshot, snapshotsEqual, type GanttSnapshot } from '../lib/gantt/snapshot';
 import { ZOOM_SCALE_MAX, ZOOM_SCALE_MIN, ZOOM_SCALE_STEP } from '../lib/gantt/constants';
 
 const MAX_HISTORY = 50;
+
+export interface GanttConflictInfo {
+  workItemId: string;
+  taskName: string;
+  localUpdatedAt?: string | null;
+  serverUpdatedAt?: string | null;
+  message: string;
+}
+
+function collectDescendantTaskIds(rootId: string, tasks: GanttTask[]): Set<string> {
+  const removed = new Set<string>([rootId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const t of tasks) {
+      if (t.parentId && removed.has(t.parentId) && !removed.has(t.id)) {
+        removed.add(t.id);
+        changed = true;
+      }
+    }
+  }
+  return removed;
+}
 
 function computeDirty(current: GanttSnapshot | null, baseline: GanttSnapshot | null): boolean {
   return !snapshotsEqual(current, baseline);
@@ -49,10 +74,12 @@ interface GanttState {
   editProjectId: string | null;
   addWorkItemProjectId: string | null;
   todoModalTaskId: string | null;
+  showCriticalPath: boolean;
+  conflictPrompt: GanttConflictInfo | null;
 
   init: (orgId: string) => void;
   setTasks: (tasks: GanttTask[]) => void;
-  setDependencies: (deps: GanttDependency[]) => void;
+  setDependencies: (deps: GanttDependency[], recordHistory?: boolean) => void;
   setBarColors: (colors: Record<string, string>) => void;
   commitBaseline: () => void;
   restoreSnapshot: (snap: GanttSnapshot) => void;
@@ -60,6 +87,33 @@ interface GanttState {
   undo: () => void;
   redo: () => void;
   updateTask: (id: string, patch: Partial<GanttTask>, recordHistory?: boolean) => void;
+  updateMultipleTasks: (
+    updates: Array<{ id: string; patch: Partial<GanttTask> }>,
+    recordHistory?: boolean,
+  ) => void;
+  addTask: (
+    task: GanttTask,
+    options?:
+      | boolean
+      | {
+          recordHistory?: boolean;
+          syncBaseline?: boolean;
+          expandParent?: boolean;
+          dependencies?: GanttDependency[];
+        },
+  ) => void;
+  removeTask: (
+    id: string,
+    options?: boolean | { recordHistory?: boolean; syncBaseline?: boolean },
+  ) => void;
+  updateTaskExtendedMetaLocal: (
+    taskId: string,
+    patch: {
+      notes?: WorkItemNote[];
+      attachments?: WorkItemAttachment[];
+      updatedAt?: string;
+    },
+  ) => void;
   setProjectOrder: (order: string[]) => void;
   toggleExpand: (id: string) => void;
   selectTask: (id: string, multi?: boolean) => void;
@@ -99,6 +153,9 @@ interface GanttState {
   setEditProjectId: (id: string | null) => void;
   setAddWorkItemProjectId: (id: string | null) => void;
   setTodoModalTaskId: (id: string | null) => void;
+  setShowCriticalPath: (v: boolean) => void;
+  toggleCriticalPath: () => void;
+  setConflictPrompt: (conflict: GanttConflictInfo | null) => void;
 }
 
 export const useGanttStore = create<GanttState>((set, get) => ({
@@ -134,6 +191,8 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   editProjectId: null,
   addWorkItemProjectId: null,
   todoModalTaskId: null,
+  showCriticalPath: true,
+  conflictPrompt: null,
 
   init: orgId => {
     set({
@@ -144,6 +203,7 @@ export const useGanttStore = create<GanttState>((set, get) => ({
       undoStack: [],
       redoStack: [],
       isDirty: false,
+      conflictPrompt: null,
     });
   },
 
@@ -220,7 +280,13 @@ export const useGanttStore = create<GanttState>((set, get) => ({
     set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
   },
 
-  setDependencies: deps => set({ dependencies: deps }),
+  setDependencies: (deps, recordHistory = false) => {
+    if (recordHistory) get().pushHistory();
+    set({ dependencies: deps });
+    if (recordHistory || get().baseline) {
+      set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+    }
+  },
 
   setBarColors: colors =>
     set(s => ({
@@ -237,6 +303,159 @@ export const useGanttStore = create<GanttState>((set, get) => ({
       tasks: s.tasks.map(t => (t.id === id ? { ...t, ...patch } : t)),
       isDirty: true,
     }));
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+  },
+
+  updateMultipleTasks: (updates, recordHistory = true) => {
+    if (!updates.length) return;
+    if (recordHistory) get().pushHistory();
+    const byId = new Map(updates.map(u => [u.id, u.patch]));
+    set(s => ({
+      tasks: s.tasks.map(t => {
+        const patch = byId.get(t.id);
+        return patch ? { ...t, ...patch } : t;
+      }),
+    }));
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+  },
+
+  addTask: (task, options = false) => {
+    const recordHistory = typeof options === 'boolean' ? options : (options?.recordHistory ?? false);
+    const syncBaseline = typeof options === 'boolean' ? false : Boolean(options?.syncBaseline);
+    const expandParent = typeof options === 'boolean' ? true : (options?.expandParent ?? true);
+    const extraDeps = typeof options === 'boolean' ? [] : (options?.dependencies ?? []);
+
+    if (recordHistory) get().pushHistory();
+
+    set(s => {
+      const exists = s.tasks.some(t => t.id === task.id);
+      const nextTasks = exists
+        ? s.tasks.map(t => (t.id === task.id ? task : t))
+        : [...s.tasks, task];
+
+      const existingDepIds = new Set(s.dependencies.map(d => d.id));
+      const newDeps = extraDeps.filter(d => !existingDepIds.has(d.id));
+      const nextDeps = newDeps.length ? [...s.dependencies, ...newDeps] : s.dependencies;
+
+      const nextExpanded = expandParent
+        ? new Set([
+            ...s.expandedIds,
+            ...(task.projectId ? [task.projectId] : []),
+            ...(task.parentId ? [task.parentId] : []),
+          ])
+        : s.expandedIds;
+
+      let nextBaseline = s.baseline;
+      if (syncBaseline && s.baseline) {
+        const baseCloned = cloneSnapshot(s.baseline);
+        const taskClone = JSON.parse(JSON.stringify(task)) as GanttTask;
+        const baseExists = baseCloned.tasks.some(t => t.id === task.id);
+        baseCloned.tasks = baseExists
+          ? baseCloned.tasks.map(t => (t.id === task.id ? taskClone : t))
+          : [...baseCloned.tasks, taskClone];
+        if (newDeps.length) {
+          const baseDepIds = new Set(baseCloned.dependencies.map(d => d.id));
+          for (const d of newDeps) {
+            if (!baseDepIds.has(d.id)) {
+              baseCloned.dependencies.push({ ...d });
+            }
+          }
+        }
+        nextBaseline = baseCloned;
+      }
+
+      return {
+        tasks: nextTasks,
+        dependencies: nextDeps,
+        expandedIds: nextExpanded,
+        baseline: nextBaseline,
+      };
+    });
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+  },
+
+  removeTask: (id, options = true) => {
+    const recordHistory = typeof options === 'boolean' ? options : (options?.recordHistory ?? false);
+    const syncBaseline = typeof options === 'boolean' ? false : Boolean(options?.syncBaseline);
+    const currentTasks = get().tasks;
+    if (!currentTasks.some(t => t.id === id)) return;
+
+    if (recordHistory) get().pushHistory();
+
+    const removedIds = collectDescendantTaskIds(id, currentTasks);
+
+    set(s => {
+      const nextTasks = s.tasks.filter(t => !removedIds.has(t.id));
+      const nextDeps = s.dependencies.filter(
+        d => !removedIds.has(d.fromTaskId) && !removedIds.has(d.toTaskId),
+      );
+      const nextBarColors = { ...s.barColors };
+      for (const rid of removedIds) {
+        delete nextBarColors[rid];
+      }
+      const nextSelected = new Set([...s.selectedIds].filter(sid => !removedIds.has(sid)));
+
+      let nextBaseline = s.baseline;
+      if (syncBaseline && s.baseline) {
+        const baseCloned = cloneSnapshot(s.baseline);
+        baseCloned.tasks = baseCloned.tasks.filter(t => !removedIds.has(t.id));
+        baseCloned.dependencies = baseCloned.dependencies.filter(
+          d => !removedIds.has(d.fromTaskId) && !removedIds.has(d.toTaskId),
+        );
+        for (const rid of removedIds) {
+          delete baseCloned.barColors[rid];
+        }
+        nextBaseline = baseCloned;
+      }
+
+      return {
+        tasks: nextTasks,
+        dependencies: nextDeps,
+        barColors: nextBarColors,
+        selectedIds: nextSelected,
+        editTaskId: s.editTaskId && removedIds.has(s.editTaskId) ? null : s.editTaskId,
+        todoModalTaskId: s.todoModalTaskId && removedIds.has(s.todoModalTaskId) ? null : s.todoModalTaskId,
+        baseline: nextBaseline,
+      };
+    });
+    set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
+  },
+
+  updateTaskExtendedMetaLocal: (taskId, patch) => {
+    const applyPatch = (t: GanttTask): GanttTask => {
+      if (t.id !== taskId) return t;
+      const notes = patch.notes !== undefined ? patch.notes : t.notes;
+      const attachments = patch.attachments !== undefined ? patch.attachments : t.attachments;
+      return {
+        ...t,
+        ...(patch.notes !== undefined ? { notes, notesCount: notes?.length ?? 0 } : {}),
+        ...(patch.attachments !== undefined
+          ? { attachments, attachmentsCount: attachments?.length ?? 0 }
+          : {}),
+        ...(patch.updatedAt !== undefined ? { updatedAt: patch.updatedAt } : {}),
+      };
+    };
+
+    set(s => {
+      const nextTasks = s.tasks.map(applyPatch);
+      const nextBaseline = s.baseline
+        ? { ...cloneSnapshot(s.baseline), tasks: s.baseline.tasks.map(applyPatch) }
+        : null;
+      const nextUndo = s.undoStack.map(snap => ({
+        ...snap,
+        tasks: snap.tasks.map(applyPatch),
+      }));
+      const nextRedo = s.redoStack.map(snap => ({
+        ...snap,
+        tasks: snap.tasks.map(applyPatch),
+      }));
+      return {
+        tasks: nextTasks,
+        baseline: nextBaseline,
+        undoStack: nextUndo,
+        redoStack: nextRedo,
+      };
+    });
     set({ isDirty: computeDirty(get().getSnapshot(), get().baseline) });
   },
 
@@ -392,4 +611,10 @@ export const useGanttStore = create<GanttState>((set, get) => ({
   setAddWorkItemProjectId: id => set({ addWorkItemProjectId: id }),
 
   setTodoModalTaskId: id => set({ todoModalTaskId: id }),
+
+  setShowCriticalPath: v => set({ showCriticalPath: v }),
+
+  toggleCriticalPath: () => set(s => ({ showCriticalPath: !s.showCriticalPath })),
+
+  setConflictPrompt: conflict => set({ conflictPrompt: conflict }),
 }));

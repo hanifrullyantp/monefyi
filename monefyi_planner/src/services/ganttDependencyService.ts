@@ -2,7 +2,14 @@ import type { WorkItem } from './workItemService';
 import { updateWorkItem } from './workItemService';
 import { mergeOrgSettingsJson } from './orgService';
 import { supabase } from '../lib/supabase';
-import type { GanttDependency, GanttTask } from '../lib/gantt/types';
+import { isDemoOrInvalidUuid } from '../lib/demo/demoMode';
+import {
+  dependencyTypeDbToGantt,
+  dependencyTypeGanttToDb,
+  wouldCreateDependencyCycle,
+  type DbDependencyType,
+} from '../lib/gantt/criticalPath';
+import type { DependencyType, GanttDependency, GanttTask } from '../lib/gantt/types';
 
 const GANTT_DEPS_KEY = 'gantt_dependencies';
 const LEGACY_DEPS_KEY = 'monefyi_gantt_deps';
@@ -20,12 +27,25 @@ function depId(from: string, to: string) {
 
 export { depId };
 
+function normalizeDependencyType(rawType?: string | null): DependencyType {
+  if (rawType === 'pending') return 'pending';
+  if (
+    rawType === 'finish_to_start' ||
+    rawType === 'start_to_start' ||
+    rawType === 'finish_to_finish' ||
+    rawType === 'start_to_finish'
+  ) {
+    return rawType;
+  }
+  return dependencyTypeDbToGantt(rawType);
+}
+
 function toGanttDep(raw: StoredGanttDep): GanttDependency {
   return {
     id: raw.id || depId(raw.from_task_id, raw.to_task_id),
     fromTaskId: raw.from_task_id,
     toTaskId: raw.to_task_id,
-    type: raw.type === 'pending' ? 'pending' : 'finish_to_start',
+    type: normalizeDependencyType(raw.type),
   };
 }
 
@@ -35,12 +55,13 @@ function toGanttDep(raw: StoredGanttDep): GanttDependency {
 export function depsFromWorkItems(items: WorkItem[]): GanttDependency[] {
   const edges: GanttDependency[] = [];
   for (const wi of items) {
+    const depType = dependencyTypeDbToGantt(wi.dependency_type);
     for (const predId of wi.dependencies || []) {
       edges.push({
         id: depId(predId, wi.id),
         fromTaskId: predId,
         toTaskId: wi.id,
-        type: 'finish_to_start',
+        type: depType,
       });
     }
   }
@@ -51,6 +72,8 @@ export function depsFromWorkItems(items: WorkItem[]): GanttDependency[] {
  * Load org-level dependencies (project ↔ project, cross-type) from org settings.
  */
 export async function loadOrgGanttDependencies(orgId: string): Promise<GanttDependency[]> {
+  if (isDemoOrInvalidUuid(orgId)) return [];
+
   const { data, error } = await supabase
     .from('planner_organizations')
     .select('settings')
@@ -100,6 +123,7 @@ function usesWorkItemStorage(tasks: GanttTask[], fromId: string, toId: string): 
 }
 
 async function saveOrgGanttDependencies(orgId: string, deps: GanttDependency[]) {
+  if (isDemoOrInvalidUuid(orgId)) return;
   const payload: StoredGanttDep[] = deps.map(d => ({
     id: d.id,
     from_task_id: d.fromTaskId,
@@ -121,10 +145,14 @@ export async function persistGanttDependency(
   if (usesWorkItemStorage(tasks, dep.fromTaskId, dep.toTaskId)) {
     const wi = workItems.find(w => w.id === dep.toTaskId);
     const existing = wi?.dependencies || [];
-    if (!existing.includes(dep.fromTaskId)) {
+    const dbDepType = dependencyTypeGanttToDb(dep.type);
+    if (!existing.includes(dep.fromTaskId) || wi?.dependency_type !== dbDepType) {
       await updateWorkItem(dep.toTaskId, {
-        dependencies: [...existing, dep.fromTaskId],
-        dependency_type: 'FS',
+        project_id: wi?.project_id,
+        dependencies: existing.includes(dep.fromTaskId)
+          ? existing
+          : [...existing, dep.fromTaskId],
+        dependency_type: dbDepType,
       });
     }
     return;
@@ -147,6 +175,7 @@ export async function removeGanttDependency(
   const wi = workItems.find(w => w.id === dep.toTaskId);
   if (wi?.dependencies?.includes(dep.fromTaskId)) {
     await updateWorkItem(dep.toTaskId, {
+      project_id: wi.project_id,
       dependencies: (wi.dependencies || []).filter(id => id !== dep.fromTaskId),
     });
     return;
@@ -157,4 +186,43 @@ export async function removeGanttDependency(
   if (filtered.length !== orgDeps.length) {
     await saveOrgGanttDependencies(orgId, filtered);
   }
+}
+
+/**
+ * Replace all predecessor IDs for `workItemId` after verifying DAG acyclicity
+ * via `wouldCreateDependencyCycle`.
+ */
+export async function setWorkItemPredecessors(
+  workItemId: string,
+  predecessorIds: string[],
+  allWorkItems: WorkItem[],
+  depType: DependencyType | DbDependencyType = 'finish_to_start',
+): Promise<WorkItem> {
+  const uniquePreds = [...new Set(predecessorIds.filter(Boolean))];
+  const ganttType = normalizeDependencyType(depType);
+  const dbDepType = dependencyTypeGanttToDb(depType);
+
+  // Build graph of all other items' dependencies (replacing incoming edges of workItemId)
+  const workingDeps = depsFromWorkItems(allWorkItems).filter(
+    d => d.toTaskId !== workItemId,
+  );
+
+  for (const predId of uniquePreds) {
+    if (predId === workItemId || wouldCreateDependencyCycle(predId, workItemId, workingDeps)) {
+      throw new Error('Dependensi melingkar (circular dependency) tidak diizinkan');
+    }
+    workingDeps.push({
+      id: depId(predId, workItemId),
+      fromTaskId: predId,
+      toTaskId: workItemId,
+      type: ganttType,
+    });
+  }
+
+  const targetItem = allWorkItems.find(w => w.id === workItemId);
+  return updateWorkItem(workItemId, {
+    ...(targetItem?.project_id ? { project_id: targetItem.project_id } : {}),
+    dependencies: uniquePreds,
+    dependency_type: dbDepType,
+  });
 }

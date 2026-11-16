@@ -10,9 +10,9 @@ Dokumen ini mencatat item ambigu, blokir infrastruktur remote, serta implikasi b
   - `.env.local` pada root workspace, `monefyi_planner/.env.local` (`VITE_SUPABASE_URL`), dan `PlannerLP2/.env.local` (`NEXT_PUBLIC_SUPABASE_URL`) seluruhnya menunjuk ke project Supabase yang sama: **`https://zzwqfmdyncxbolestkqp.supabase.co`**.
   - Tidak ditemukan environment/URL Supabase staging terpisah di file konfigurasi mana pun.
 - **Status & Dampak Fase 3:**
-  - Sesuai aturan proyek untuk **tidak melakukan push/deploy ke Supabase remote produksi**, perubahan skema DB Fase 3 (`assigned_member_id` dan `priority` pada tabel `planner_work_items`) **hanya ditulis sebagai file migrasi SQL lokal** di `my-supabase-project/supabase/migrations/20261115120000_work_item_assignee_priority.sql`.
+  - Sesuai aturan proyek untuk **tidak melakukan push/deploy ke Supabase remote produksi**, perubahan skema DB Fase 3 (`assigned_member_id`, `priority`, `notes`, `attachments`, index, dan trigger `updated_at` pada tabel `planner_work_items`) **hanya ditulis sebagai file migrasi SQL lokal** di `my-supabase-project/supabase/migrations/20261116120000_work_item_cpm_assignee_priority.sql`.
   - **Status Eksekusi Remote:** `BLOCKED` (menunggu approval operator/DBA atau penyediaan instance staging).
-  - **Mitigasi Kode Client:** Seluruh query/mutasi `workItemService.ts` dan `ganttSaveService.ts` tetap harus aman apabila kolom baru tersebut belum diaplikasikan ke database remote.
+  - **Mitigasi Kode Client:** Seluruh query/mutasi `workItemService.ts` dan `ganttSaveService.ts` sudah memakai fallback PostgREST `42703`/`PGRST204` (`planner_projects.settings.work_item_meta` + `localStorage`) serta `loadDemoWorkItems`/`saveDemoWorkItems` sehingga fitur berjalan aman sebelum migrasi remote dijalankan.
 
 ---
 
