@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity, AlertTriangle, BarChart3, Calendar, Check, CheckCircle2,
-  Clock, GanttChart, List, Loader2, Plus, Save, TrendingDown, TrendingUp,
+  Clock, Copy, GanttChart, List, Loader2, Plus, Route, Save, Trash2, TrendingDown, TrendingUp, User,
 } from 'lucide-react';
 import {
   Area, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -12,16 +12,34 @@ import { useAppStore } from '../../../store/appStore';
 import { isDemoOrInvalidUuid } from '../../../lib/demo/demoMode';
 import {
   createWorkItem,
+  deleteWorkItem,
+  duplicateWorkItem,
+  isWorkItemConflictError,
+  loadDemoWorkItems,
+  saveDemoWorkItems,
   updateWorkItem,
+  updateWorkItemExtendedMeta,
   updateProjectProgressFromWorkItems,
   type WorkItem,
+  type WorkItemExtendedMeta,
 } from '../../../services/workItemService';
 import { updateProject as updateProjectApi } from '../../../services/projectService';
 import { createDailyLog, loadDailyLogs, type DailyLog } from '../../../services/dailyLogService';
+import { listMembers } from '../../../services/memberService';
+import type { OrgMember } from '../../../types/onboarding';
+import { PRIORITY_BADGE_COLOR, PRIORITY_LABEL } from '../../../lib/gantt/constants';
+import { computeWorkItemsCriticalPath } from '../../../lib/gantt/criticalPath';
+import type { GanttPriority } from '../../../lib/gantt/types';
+import {
+  getDeadlineOverrunDays,
+  isTaskOverProjectDeadline,
+  workItemToGanttTask,
+} from '../../../lib/gantt/utils';
 import {
   buildSCurveFromWorkItems,
   computeProgressSummary,
   schedulePlanProgress,
+  weightedActualProgress,
   workItemStatusLabel,
 } from '../../../lib/progressMetrics';
 import { buildUpcomingDeadlines } from '../../../lib/projectCommandUtils';
@@ -29,9 +47,54 @@ import { formatDateId, daysUntil } from '../../../utils/projectUi';
 import { showToast } from '../../../store/uiStore';
 import BottomActionBar from '../../sandbox-ui/BottomActionBar';
 import ProjectScheduleGantt from './ProjectScheduleGantt';
-import GanttAddWorkItemModal from '../gantt/GanttAddWorkItemModal';
+import GanttAddWorkItemModal, { type GanttAddWorkItemPayload } from '../gantt/GanttAddWorkItemModal';
 
 type ViewMode = 'list' | 'gantt';
+
+type ProgressRow = {
+  key: string;
+  workItem?: WorkItem;
+  name: string;
+  weight: number;
+  progress: number;
+  planProgress: number;
+  status: 'done' | 'active' | 'pending';
+  start: string;
+  end: string;
+};
+
+const PRIORITY_OPTIONS: GanttPriority[] = ['low', 'medium', 'high', 'critical'];
+
+const DEMO_PROGRESS_MEMBERS: OrgMember[] = [
+  {
+    id: 'demo-m-1',
+    org_id: 'demo',
+    user_id: 'demo-u-1',
+    role: 'owner',
+    status: 'active',
+    profile: { name: 'Budi Santoso' },
+  },
+  {
+    id: 'demo-m-2',
+    org_id: 'demo',
+    user_id: 'demo-u-2',
+    role: 'manager',
+    status: 'active',
+    profile: { name: 'Sari Dewi' },
+  },
+  {
+    id: 'demo-m-3',
+    org_id: 'demo',
+    user_id: 'demo-u-3',
+    role: 'worker',
+    status: 'active',
+    profile: { name: 'Ahmad Rizky' },
+  },
+];
+
+function memberDisplayName(m: OrgMember): string {
+  return m.profile?.name || m.employee_id || m.position || 'Anggota';
+}
 
 type Props = {
   normalized: NormalizedProjectView;
@@ -71,10 +134,21 @@ export default function TabV2Progress({
 }: Props) {
   const updateProject = useAppStore(s => s.updateProject);
   const isDemoMode = useAppStore(s => s.isDemoMode);
+  const tenant = useAppStore(s => s.tenant);
+  const isDemoProject = isDemoOrInvalidUuid(
+    project.id,
+    Boolean(isDemoMode || tenant?.id === 'demo'),
+  );
+  const isDemoOrg = !tenant?.id || isDemoOrInvalidUuid(tenant.id, isDemoMode);
+
   const [view, setView] = useState<ViewMode>('list');
   const [logs, setLogs] = useState<DailyLog[]>([]);
+  const [members, setMembers] = useState<OrgMember[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [extendingDeadline, setExtendingDeadline] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [logForm, setLogForm] = useState({ workItemId: '', description: '', progress: '' });
@@ -83,63 +157,166 @@ export default function TabV2Progress({
   const summary = useMemo(() => computeProgressSummary(project, workItems), [project, workItems]);
   const sCurve = useMemo(() => buildSCurveFromWorkItems(project, workItems), [project, workItems]);
   const deadlines = useMemo(() => buildUpcomingDeadlines(project, workItems), [project, workItems]);
-  const timelineRows = useMemo(() => {
-    if (normalized.project.timeline.length) return normalized.project.timeline;
-    return workItems.map((w, i) => ({
-      id: i,
-      name: w.name,
-      weight: Number(w.weight) || 10,
-      progress: Number(w.progress_pct) || 0,
-      planProgress: schedulePlanProgress(w.planned_start, w.planned_end),
-      status: workItemStatusLabel(w) === 'done' ? 'done' : workItemStatusLabel(w) === 'active' ? 'active' : 'pending',
-      start: w.planned_start,
-      end: w.planned_end,
-      workItemId: w.id,
+
+  const workItemsById = useMemo(
+    () => new Map<string, WorkItem>(workItems.map(w => [w.id, w])),
+    [workItems],
+  );
+
+  const memberNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of members) {
+      map.set(m.id, memberDisplayName(m));
+    }
+    return map;
+  }, [members]);
+
+  const cpm = useMemo(
+    () => computeWorkItemsCriticalPath(project.id, workItems),
+    [project.id, workItems],
+  );
+
+  const ganttTasks = useMemo(
+    () => workItems.map(wi => workItemToGanttTask(wi, project, memberNameMap)),
+    [workItems, project, memberNameMap],
+  );
+
+  const overDeadlineItems = useMemo(
+    () => workItems.filter(w => isTaskOverProjectDeadline(w.planned_end, project.end_date)),
+    [workItems, project.end_date],
+  );
+
+  const maxOverrunEndDate = useMemo(() => {
+    if (overDeadlineItems.length === 0) return '';
+    return overDeadlineItems.reduce((max, w) => {
+      const end = (w.planned_end || '').slice(0, 10);
+      return end > max ? end : max;
+    }, (project.end_date || '').slice(0, 10));
+  }, [overDeadlineItems, project.end_date]);
+
+  const timelineRows = useMemo<ProgressRow[]>(() => {
+    if (workItems.length > 0) {
+      return workItems.map(w => {
+        const wi = workItemsById.get(w.id) ?? w;
+        const statusLabel = workItemStatusLabel(wi);
+        return {
+          key: wi.id,
+          workItem: wi,
+          name: wi.name,
+          weight: Number(wi.weight) || 10,
+          progress: Number(wi.progress_pct) || 0,
+          planProgress: schedulePlanProgress(wi.planned_start, wi.planned_end),
+          status: statusLabel === 'done' ? 'done' : statusLabel === 'active' ? 'active' : 'pending',
+          start: wi.planned_start,
+          end: wi.planned_end,
+        };
+      });
+    }
+    return normalized.project.timeline.map(t => ({
+      key: `timeline-${t.id}`,
+      workItem: undefined,
+      name: t.name,
+      weight: t.weight,
+      progress: t.progress,
+      planProgress: t.planProgress,
+      status: t.status === 'done' ? 'done' : t.status === 'active' ? 'active' : 'pending',
+      start: t.start,
+      end: t.end,
     }));
-  }, [normalized.project.timeline, workItems]);
+  }, [workItems, workItemsById, normalized.project.timeline]);
+
+  useEffect(() => {
+    if (isDemoOrg) {
+      setMembers(DEMO_PROGRESS_MEMBERS);
+      return;
+    }
+    if (!tenant?.id) {
+      setMembers([]);
+      return;
+    }
+    let cancelled = false;
+    listMembers(tenant.id)
+      .then(list => {
+        if (!cancelled) setMembers(list);
+      })
+      .catch(() => {
+        if (!cancelled) setMembers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isDemoOrg, tenant?.id]);
 
   const reloadLogs = useCallback(async () => {
-    if (isDemoOrInvalidUuid(project.id, isDemoMode)) return;
+    if (isDemoProject) return;
     try {
       setLogs(await loadDailyLogs(project.id));
     } catch {
       /* non-blocking */
     }
-  }, [project.id, isDemoMode]);
+  }, [project.id, isDemoProject]);
 
   useEffect(() => { void reloadLogs(); }, [reloadLogs]);
 
   const syncProjectProgress = useCallback(async () => {
-    const avg = await updateProjectProgressFromWorkItems(project.id);
-    if (avg != null) {
-      updateProject(project.id, { progress_percentage: avg, planned_progress: summary.plan });
+    if (isDemoProject) {
+      const demoItems = loadDemoWorkItems(project.id);
+      if (demoItems.length > 0) {
+        updateProject(project.id, {
+          progress_percentage: weightedActualProgress(demoItems),
+          planned_progress: summary.plan,
+        });
+      }
+    } else {
+      const avg = await updateProjectProgressFromWorkItems(project.id);
+      if (avg != null) {
+        updateProject(project.id, { progress_percentage: avg, planned_progress: summary.plan });
+      }
     }
     await onRefresh();
-  }, [project.id, summary.plan, updateProject, onRefresh]);
+  }, [isDemoProject, project.id, summary.plan, updateProject, onRefresh]);
 
   const handleSaveProgress = async (wiId: string, rawPct: number) => {
     const pct = clampPct(rawPct);
+    const targetWi = workItemsById.get(wiId);
     setSavingId(wiId);
     try {
-      await updateWorkItem(wiId, {
-        progress_pct: pct,
-        status: pct >= 100 ? 'completed' : pct > 0 ? 'in_progress' : 'pending',
+      await updateWorkItem(
+        wiId,
+        {
+          progress_pct: pct,
+          status: pct >= 100 ? 'completed' : pct > 0 ? 'in_progress' : 'pending',
+        },
+        { expectedUpdatedAt: targetWi?.updated_at },
+      );
+      setDrafts(d => {
+        const next = { ...d };
+        delete next[wiId];
+        return next;
       });
       await syncProjectProgress();
       showToast(`Progress diperbarui → ${pct}%`, 'success');
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal update progress', 'error');
+      if (isWorkItemConflictError(e)) {
+        setDrafts(d => {
+          const next = { ...d };
+          delete next[wiId];
+          return next;
+        });
+        showToast(
+          'Konflik perubahan: progress pekerjaan telah diperbarui pengguna lain. Memuat ulang data terbaru...',
+          'error',
+        );
+        await onRefresh();
+      } else {
+        showToast(e instanceof Error ? e.message : 'Gagal update progress', 'error');
+      }
     } finally {
       setSavingId(null);
     }
   };
 
-  const handleAddWorkItem = async (data: {
-    name: string;
-    planned_start: string;
-    planned_end: string;
-    progress_pct: number;
-  }) => {
+  const handleAddWorkItem = async (data: GanttAddWorkItemPayload) => {
     try {
       await createWorkItem({
         project_id: project.id,
@@ -147,8 +324,18 @@ export default function TabV2Progress({
         planned_start: data.planned_start,
         planned_end: data.planned_end,
         progress_pct: data.progress_pct,
+        priority: data.priority ?? 'medium',
+        assigned_member_id: data.assigned_member_id ?? null,
+        dependencies: data.dependencies ?? [],
+        dependency_type: 'FS',
+        parent_id: data.parent_id ?? null,
         weight: 10,
-        status: data.progress_pct > 0 ? 'in_progress' : 'pending',
+        status:
+          data.progress_pct >= 100
+            ? 'completed'
+            : data.progress_pct > 0
+              ? 'in_progress'
+              : 'pending',
         sort_order: workItems.length,
       });
       await syncProjectProgress();
@@ -160,6 +347,95 @@ export default function TabV2Progress({
     }
   };
 
+  const handleDuplicateWorkItem = async (wi: WorkItem) => {
+    setActionBusyId(wi.id);
+    try {
+      const duplicated = await duplicateWorkItem(wi);
+      if (isDemoProject || isDemoOrInvalidUuid(wi.id, isDemoMode)) {
+        const stored = loadDemoWorkItems(project.id);
+        if (!stored.some(item => item.id === duplicated.id)) {
+          saveDemoWorkItems(project.id, [...workItems, duplicated]);
+        }
+      }
+      await syncProjectProgress();
+      showToast('Pekerjaan diduplikasi', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menduplikasi pekerjaan', 'error');
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  const handleDeleteWorkItem = async (wi: WorkItem) => {
+    setActionBusyId(wi.id);
+    try {
+      await deleteWorkItem(wi.id);
+      if (isDemoProject || isDemoOrInvalidUuid(wi.id, isDemoMode)) {
+        const nextDemo = workItems
+          .filter(w => w.id !== wi.id && w.parent_id !== wi.id)
+          .map(w =>
+            w.dependencies?.includes(wi.id)
+              ? { ...w, dependencies: w.dependencies.filter(id => id !== wi.id) }
+              : w,
+          );
+        saveDemoWorkItems(project.id, nextDemo);
+      }
+      setConfirmDeleteId(null);
+      await syncProjectProgress();
+      showToast('Pekerjaan dihapus', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal menghapus pekerjaan', 'error');
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  const handleQuickMetaChange = async (wi: WorkItem, patch: WorkItemExtendedMeta) => {
+    setActionBusyId(wi.id);
+    try {
+      const res = await updateWorkItemExtendedMeta(project.id, wi.id, patch);
+      if (isDemoProject || isDemoOrInvalidUuid(wi.id, isDemoMode)) {
+        const nextTimestamp = res.updated_at || new Date().toISOString();
+        const stored = loadDemoWorkItems(project.id);
+        const baseList = stored.length > 0 ? stored : workItems;
+        saveDemoWorkItems(
+          project.id,
+          baseList.map(w =>
+            w.id === wi.id ? { ...w, ...patch, updated_at: nextTimestamp } : w,
+          ),
+        );
+      }
+      await onRefresh();
+      showToast('Detail pekerjaan diperbarui', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memperbarui pekerjaan', 'error');
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  const handleExtendProjectEndDate = useCallback(
+    async (newEndDate: string): Promise<boolean> => {
+      if (!newEndDate) return false;
+      setExtendingDeadline(true);
+      try {
+        if (!isDemoProject) {
+          await updateProjectApi(project.id, { end_date: newEndDate }, tenant?.currency);
+        }
+        updateProject(project.id, { end_date: newEndDate });
+        await onRefresh();
+        showToast(`Target proyek diperpanjang ke ${formatDateId(newEndDate)}`, 'success');
+        return true;
+      } catch (e) {
+        showToast(e instanceof Error ? e.message : 'Gagal memperpanjang target proyek', 'error');
+        return false;
+      } finally {
+        setExtendingDeadline(false);
+      }
+    },
+    [isDemoProject, project.id, tenant?.currency, updateProject, onRefresh],
+  );
+
   const handleLogProgress = async () => {
     if (!logForm.description.trim()) {
       showToast('Deskripsi laporan wajib diisi', 'error');
@@ -169,31 +445,56 @@ export default function TabV2Progress({
     setLogSaving(true);
     try {
       const targetWi = logForm.workItemId
-        ? workItems.find(w => w.id === logForm.workItemId)
+        ? workItemsById.get(logForm.workItemId)
         : undefined;
       const logDesc = targetWi
         ? `[${targetWi.name}] ${logForm.description.trim()}`
         : logForm.description.trim();
 
-      await createDailyLog({
-        project_id: project.id,
-        date: new Date().toISOString().slice(0, 10),
-        description: logDesc,
-        progress_increment: increment,
-        recorded_by: userId,
-      });
+      if (increment > 0 && targetWi) {
+        const nextPct = clampPct((Number(targetWi.progress_pct) || 0) + increment);
+        await updateWorkItem(
+          targetWi.id,
+          {
+            progress_pct: nextPct,
+            status: nextPct >= 100 ? 'completed' : nextPct > 0 ? 'in_progress' : 'pending',
+          },
+          { expectedUpdatedAt: targetWi.updated_at },
+        );
+      }
+
+      if (isDemoProject) {
+        const now = new Date().toISOString();
+        setLogs(prev => [
+          {
+            id: `demo-log-${Date.now()}`,
+            project_id: project.id,
+            date: now.slice(0, 10),
+            description: logDesc,
+            progress_increment: increment,
+            recorded_by: userId,
+            created_at: now,
+          },
+          ...prev,
+        ]);
+      } else {
+        await createDailyLog({
+          project_id: project.id,
+          date: new Date().toISOString().slice(0, 10),
+          description: logDesc,
+          progress_increment: increment,
+          recorded_by: userId,
+        });
+      }
 
       if (increment > 0) {
         if (targetWi) {
-          const nextPct = clampPct((Number(targetWi.progress_pct) || 0) + increment);
-          await updateWorkItem(targetWi.id, {
-            progress_pct: nextPct,
-            status: nextPct >= 100 ? 'completed' : nextPct > 0 ? 'in_progress' : 'pending',
-          });
           await syncProjectProgress();
         } else if (workItems.length === 0) {
           const nextPct = clampPct((Number(project.progress_percentage) || 0) + increment);
-          await updateProjectApi(project.id, { progress_percentage: nextPct });
+          if (!isDemoProject) {
+            await updateProjectApi(project.id, { progress_percentage: nextPct });
+          }
           updateProject(project.id, { progress_percentage: nextPct });
           await onRefresh();
         }
@@ -207,7 +508,15 @@ export default function TabV2Progress({
         'success',
       );
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal menyimpan laporan', 'error');
+      if (isWorkItemConflictError(e)) {
+        showToast(
+          'Konflik perubahan: item pekerjaan ini telah diubah di tempat lain. Memuat ulang data terbaru...',
+          'error',
+        );
+        await onRefresh();
+      } else {
+        showToast(e instanceof Error ? e.message : 'Gagal menyimpan laporan', 'error');
+      }
     } finally {
       setLogSaving(false);
     }
@@ -217,6 +526,35 @@ export default function TabV2Progress({
 
   return (
     <div className="space-y-5 pb-4">
+      {overDeadlineItems.length > 0 && view === 'list' && (
+        <div
+          role="alert"
+          className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+        >
+          <div className="flex items-start gap-2.5 min-w-0">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-bold text-amber-950">
+                {overDeadlineItems.length} item jadwal melewati batas akhir proyek ({formatDateId(project.end_date)})
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Jadwal terjauh berakhir pada {formatDateId(maxOverrunEndDate)}.
+              </p>
+            </div>
+          </div>
+          {canManage && maxOverrunEndDate && (
+            <button
+              type="button"
+              disabled={extendingDeadline}
+              onClick={() => void handleExtendProjectEndDate(maxOverrunEndDate)}
+              className="px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 disabled:opacity-60 shrink-0"
+            >
+              {extendingDeadline ? 'Memperpanjang...' : 'Perpanjang Target Proyek'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Hero */}
       <div className="rounded-2xl p-6 bg-emerald-800 text-white shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -347,15 +685,36 @@ export default function TabV2Progress({
                 Belum ada pekerjaan. Tambah dari tombol di atas atau buka tab Gantt untuk jadwal visual.
               </p>
             ) : timelineRows.map(item => {
-              const wi = workItems.find(w => w.id === (item as { workItemId?: string }).workItemId || w.name === item.name);
+              const wi = item.workItem;
               const wiId = wi?.id;
               const draftVal = wiId ? (drafts[wiId] ?? String(item.progress)) : String(item.progress);
               const planPct = item.planProgress;
               const behind = item.progress < planPct - 5;
+              const priority: GanttPriority = wi?.priority ?? 'medium';
+              const priorityMeta = PRIORITY_BADGE_COLOR[priority] ?? PRIORITY_BADGE_COLOR.medium;
+              const assigneeName = wi?.assigned_member_id
+                ? memberNameMap.get(wi.assigned_member_id) || 'Anggota'
+                : undefined;
+              const cpmMetric = wi ? cpm.tasksById.get(wi.id) : undefined;
+              const isOverDeadline = wi
+                ? isTaskOverProjectDeadline(wi.planned_end, project.end_date)
+                : false;
+              const overrunDays = wi
+                ? getDeadlineOverrunDays(wi.planned_end, project.end_date)
+                : 0;
+              const parentWi = wi?.parent_id ? workItemsById.get(wi.parent_id) : undefined;
+              const rowBusy = Boolean(wi && (savingId === wi.id || actionBusyId === wi.id));
 
               return (
-                <div key={wiId || item.id} className="p-4 hover:bg-slate-50/50">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div
+                  key={item.key}
+                  className={`p-4 transition-colors ${
+                    isOverDeadline
+                      ? 'bg-amber-50/70 border-l-4 border-l-amber-500 hover:bg-amber-50'
+                      : 'hover:bg-slate-50/50'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                     <div className={`w-9 h-9 rounded-full shrink-0 flex items-center justify-center ${item.status === 'done' ? 'bg-emerald-500' : behind ? 'bg-rose-500' : item.status === 'active' ? 'bg-blue-500' : 'bg-slate-200'
                       }`}>
                       {item.status === 'done' ? <Check className="w-4 h-4 text-white" /> : (
@@ -363,12 +722,48 @@ export default function TabV2Progress({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-bold text-sm text-slate-800">{item.name}</span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                           Bobot {item.weight}%
                         </span>
                         {wi && <StatusBadge status={workItemStatusLabel(wi)} />}
+                        {wi && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${priorityMeta.badgeClass}`}>
+                            {PRIORITY_LABEL[priority] ?? priorityMeta.label}
+                          </span>
+                        )}
+                        {cpmMetric?.isCritical ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 inline-flex items-center gap-0.5">
+                            <Route className="w-3 h-3" /> Jalur Kritis
+                          </span>
+                        ) : cpmMetric && cpmMetric.totalFloatDays > 0 ? (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                            Float {cpmMetric.totalFloatDays}h
+                          </span>
+                        ) : null}
+                        {wi && (
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
+                              assigneeName
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-slate-50 text-slate-500 border-slate-200'
+                            }`}
+                          >
+                            <User className="w-3 h-3" />
+                            {assigneeName || 'Belum ditugaskan'}
+                          </span>
+                        )}
+                        {parentWi && (
+                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                            Sub dari {parentWi.name}
+                          </span>
+                        )}
+                        {isOverDeadline && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-0.5">
+                            <AlertTriangle className="w-3 h-3" /> Lewat Deadline (+{overrunDays}h)
+                          </span>
+                        )}
                         {behind && (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 flex items-center gap-0.5">
                             <AlertTriangle className="w-3 h-3" />-{planPct - item.progress}%
@@ -384,6 +779,84 @@ export default function TabV2Progress({
                         <div className={`h-full rounded-full relative ${item.status === 'done' ? 'bg-emerald-500' : 'bg-blue-500'}`}
                           style={{ width: `${item.progress}%` }} />
                       </div>
+
+                      {canManage && wi && (
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                          <select
+                            aria-label={`Penanggung jawab ${wi.name}`}
+                            value={wi.assigned_member_id || ''}
+                            disabled={rowBusy}
+                            onChange={e =>
+                              void handleQuickMetaChange(wi, {
+                                assigned_member_id: e.target.value || null,
+                              })
+                            }
+                            className="text-xs px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 disabled:opacity-50"
+                          >
+                            <option value="">Belum ditugaskan</option>
+                            {members.map(m => (
+                              <option key={m.id} value={m.id}>
+                                {memberDisplayName(m)}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label={`Prioritas ${wi.name}`}
+                            value={priority}
+                            disabled={rowBusy}
+                            onChange={e =>
+                              void handleQuickMetaChange(wi, {
+                                priority: e.target.value as GanttPriority,
+                              })
+                            }
+                            className="text-xs px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 disabled:opacity-50"
+                          >
+                            {PRIORITY_OPTIONS.map(opt => (
+                              <option key={opt} value={opt}>
+                                {PRIORITY_LABEL[opt] || opt}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            disabled={rowBusy}
+                            onClick={() => void handleDuplicateWorkItem(wi)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                          >
+                            <Copy className="w-3.5 h-3.5" /> Duplikasi
+                          </button>
+                          {confirmDeleteId === wi.id ? (
+                            <div className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 rounded-lg px-2 py-1">
+                              <span className="text-[11px] font-semibold text-rose-700">Yakin hapus?</span>
+                              <button
+                                type="button"
+                                disabled={rowBusy}
+                                onClick={() => void handleDeleteWorkItem(wi)}
+                                className="px-2 py-0.5 rounded bg-rose-600 text-white text-[11px] font-bold hover:bg-rose-700 disabled:opacity-50"
+                              >
+                                Ya, Hapus
+                              </button>
+                              <button
+                                type="button"
+                                disabled={rowBusy}
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="px-2 py-0.5 rounded border border-slate-200 bg-white text-slate-600 text-[11px] font-semibold hover:bg-slate-50"
+                              >
+                                Batal
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={rowBusy}
+                              onClick={() => setConfirmDeleteId(wi.id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-rose-200 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Hapus
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {canManage && wiId && (
                       <div className="flex items-center gap-2 shrink-0">
@@ -392,7 +865,7 @@ export default function TabV2Progress({
                           min={0}
                           max={100}
                           value={Number(draftVal) || 0}
-                          disabled={savingId === wiId}
+                          disabled={rowBusy}
                           onChange={e => setDrafts(d => ({ ...d, [wiId]: e.target.value }))}
                           className="w-28 accent-emerald-600"
                         />
@@ -401,7 +874,7 @@ export default function TabV2Progress({
                           min={0}
                           max={100}
                           value={draftVal}
-                          disabled={savingId === wiId}
+                          disabled={rowBusy}
                           onChange={e => setDrafts(d => ({ ...d, [wiId]: e.target.value }))}
                           onKeyDown={e => {
                             if (e.key === 'Enter') void handleSaveProgress(wiId, Number(draftVal));
@@ -410,7 +883,7 @@ export default function TabV2Progress({
                         />
                         <button
                           type="button"
-                          disabled={savingId === wiId}
+                          disabled={rowBusy}
                           onClick={() => void handleSaveProgress(wiId, Number(draftVal))}
                           className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold disabled:opacity-50"
                         >
@@ -460,8 +933,8 @@ export default function TabV2Progress({
                   <div className="text-xs text-slate-500">{formatDateId(d.date)}</div>
                 </div>
                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${d.severity === 'overdue' ? 'bg-rose-100 text-rose-700'
-                    : d.severity === 'urgent' ? 'bg-amber-100 text-amber-700'
-                      : 'bg-slate-100 text-slate-600'
+                  : d.severity === 'urgent' ? 'bg-amber-100 text-amber-700'
+                    : 'bg-slate-100 text-slate-600'
                   }`}>
                   {d.daysLeft < 0 ? `${Math.abs(d.daysLeft)}h telat` : `${d.daysLeft}h`}
                 </span>
@@ -503,6 +976,10 @@ export default function TabV2Progress({
       {addOpen && (
         <GanttAddWorkItemModal
           project={project}
+          orgId={tenant?.id}
+          existingTasks={ganttTasks}
+          members={members}
+          onExtendProjectEndDate={canManage ? handleExtendProjectEndDate : undefined}
           onClose={() => setAddOpen(false)}
           onSubmit={handleAddWorkItem}
         />

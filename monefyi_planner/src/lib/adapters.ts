@@ -3,6 +3,7 @@ import { orgToday } from '../../../packages/domain/src/money';
 import { computeFinanceReportMonth, monthPickerToReportDate } from './financeReportMonth';
 import { parseWorkHours } from '../utils/workHours';
 import { schedulePlanProgress } from './progressMetrics';
+import type { WorkItemAttachment, WorkItemNote, WorkItemPriority } from './gantt/types';
 
 export interface DbOrganization {
   id: string;
@@ -95,6 +96,10 @@ export interface DbWorkItem {
   sort_order?: number | null;
   dependencies?: string[] | null;
   dependency_type?: string | null;
+  assigned_member_id?: string | null;
+  priority?: WorkItemPriority | null;
+  notes?: WorkItemNote[] | null;
+  attachments?: WorkItemAttachment[] | null;
   created_at?: string;
   updated_at?: string;
 }

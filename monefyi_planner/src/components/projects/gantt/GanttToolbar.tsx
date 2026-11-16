@@ -1,11 +1,13 @@
+import { useMemo } from 'react';
 import {
   Search, Filter, Minus, Plus, List, Settings2, SlidersHorizontal,
   Undo2, Redo2, Save, PanelRightClose, PanelRightOpen,
-  Columns3, GanttChart, Calendar, LayoutList, Maximize2, Minimize2,
+  Columns3, GanttChart, Calendar, LayoutList, Maximize2, Minimize2, Route,
 } from 'lucide-react';
 import { useGanttStore } from '../../../store/ganttStore';
 import type { GanttViewMode } from '../../../lib/gantt/types';
 import { countActiveAdvancedFilters } from '../../../lib/gantt/utils';
+import { computeCriticalPath } from '../../../lib/gantt/criticalPath';
 
 type ProjectView = 'list' | 'kanban' | 'timeline' | 'calendar';
 
@@ -39,15 +41,18 @@ export default function GanttToolbar({
   onSave,
 }: GanttToolbarProps) {
   const {
+    tasks, dependencies,
     searchQuery, setSearchQuery, filterStatus, setFilterStatus,
     viewMode, setViewMode, zoomIn, zoomOut, zoomScale,
     detailOpen, toggleDetailOpen,
     undo, redo, undoStack, redoStack,
     isDirty, isSaving, advancedFilters, setShowAdvancedFilters,
     hasDraft, expandedView, toggleExpandedView,
+    showCriticalPath, toggleCriticalPath,
   } = useGanttStore();
 
   const advCount = countActiveAdvancedFilters(advancedFilters);
+  const cpm = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-3">
@@ -128,6 +133,30 @@ export default function GanttToolbar({
             className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-rose-600 hover:bg-rose-50"
           >
             Hari Ini
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleCriticalPath}
+            aria-pressed={showCriticalPath}
+            title="Sorot Jalur Kritis (Critical Path Method)"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-colors ${
+              showCriticalPath
+                ? 'border-red-300 bg-red-50 text-red-700'
+                : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Route className="w-3.5 h-3.5 shrink-0" />
+            <span>Jalur Kritis (CPM)</span>
+            {cpm.criticalTaskIds.size > 0 && (
+              <span
+                className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                  showCriticalPath ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {cpm.criticalTaskIds.size} · {cpm.projectDurationDays}h
+              </span>
+            )}
           </button>
 
           <div className="w-px h-8 bg-slate-200 hidden sm:block" />

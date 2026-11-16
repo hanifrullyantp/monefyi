@@ -37,6 +37,12 @@ import {
 import ProjectDetailV2 from '../components/projects/v2/ProjectDetailV2';
 import CreateProjectRapDraft from '../components/projects/CreateProjectRapDraft';
 import { createProjectWithRap } from '../lib/migration/create-project';
+import {
+  getStarterTemplateById,
+  getStarterTemplatesForProjectType,
+  isConstructionProjectType,
+  starterTemplateToProjectDraft,
+} from '../lib/migration/starter-templates';
 import { loadRppMaster } from '../services/rpp/masterLoader';
 import type { ProjectDraft } from '../lib/migration/suggestion-engine';
 import type { JobTemplate } from '../types/rpp';
@@ -97,7 +103,9 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [templates, setTemplates] = useState<JobTemplate[]>([]);
+  const [templateMode, setTemplateMode] = useState<'template' | 'blank'>('template');
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [selectedStarterId, setSelectedStarterId] = useState<string | null>(null);
   const [volume, setVolume] = useState(3);
   const [draft, setDraft] = useState<ProjectDraft | null>(null);
   const [form, setForm] = useState(() => ({
@@ -112,20 +120,45 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     contract_value: 0,
   }));
 
+  const isConstruction = isConstructionProjectType(form.type);
+  const starterOptions = useMemo(
+    () => getStarterTemplatesForProjectType(form.type),
+    [form.type],
+  );
+
+  // Sinkronkan pilihan starter template saat kategori proyek berubah tanpa mereset field form (tanggal/nama/kontrak).
   useEffect(() => {
-    if (!smartCreate || !tenant?.id || demoActive || step !== 2 || templates.length > 0) return;
+    if (isConstruction) return;
+    setSelectedStarterId(prev => {
+      if (prev && starterOptions.some(t => t.id === prev)) return prev;
+      return starterOptions[0]?.id ?? null;
+    });
+  }, [isConstruction, starterOptions]);
+
+  useEffect(() => {
+    if (!isConstruction || !smartCreate || !tenant?.id || demoActive || step !== 2 || templates.length > 0) return;
     loadRppMaster(tenant.id)
       .then(m => {
         setTemplates(m.templates);
         if (m.templates[0]) setSelectedTemplateId(prev => prev ?? m.templates[0].id);
       })
       .catch(() => { });
-  }, [smartCreate, tenant?.id, demoActive, step, templates.length]);
+  }, [isConstruction, smartCreate, tenant?.id, demoActive, step, templates.length]);
 
   const rapSelections = useMemo(
-    () => (selectedTemplateId ? [{ templateId: selectedTemplateId, volume }] : []),
-    [selectedTemplateId, volume],
+    () => (isConstruction && templateMode === 'template' && selectedTemplateId ? [{ templateId: selectedTemplateId, volume }] : []),
+    [isConstruction, templateMode, selectedTemplateId, volume],
   );
+
+  const selectedStarter = useMemo(
+    () => (!isConstruction && templateMode === 'template' ? getStarterTemplateById(selectedStarterId) : undefined),
+    [isConstruction, templateMode, selectedStarterId],
+  );
+
+  const useConstructionTemplate = Boolean(
+    isConstruction && smartCreate && !demoActive && templateMode === 'template' && selectedTemplateId,
+  );
+  const useNonConstructionStarter = Boolean(!isConstruction && templateMode === 'template' && selectedStarter);
 
   const handleCreate = async () => {
     if (!user || !tenant) return;
@@ -144,10 +177,15 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setError('');
     try {
+      const effectiveDraft =
+        templateMode === 'blank'
+          ? null
+          : draft ?? (selectedStarter ? starterTemplateToProjectDraft(selectedStarter) : null);
+
       if (demoActive) {
         const nowIso = new Date().toISOString();
-        const budget = form.total_budget || draft?.totalCost || 0;
-        const contractVal = form.contract_value > 0 ? form.contract_value : (draft?.totalSell || budget);
+        const budget = form.total_budget || effectiveDraft?.totalCost || 0;
+        const contractVal = form.contract_value > 0 ? form.contract_value : (effectiveDraft?.totalSell || budget);
         const demoProject: Project = {
           id: `demo-proj-${Date.now()}`,
           code: `DEMO-${String(Date.now()).slice(-4)}`,
@@ -177,19 +215,19 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         return;
       }
 
-      if (smartCreate && draft && selectedTemplateId) {
+      if ((useConstructionTemplate || useNonConstructionStarter) && effectiveDraft) {
         let project = await createProjectWithRap({
           orgId: tenant.id,
           userId: user.id,
           currency: tenant.currency,
           plan: tenant.plan,
-          draft,
+          draft: effectiveDraft,
           meta: {
             name: form.name.trim(),
             client: form.client_name.trim(),
             startDate: form.start_date,
             endDate: form.end_date,
-            contractValue: form.contract_value > 0 ? form.contract_value : (form.total_budget || draft.totalSell),
+            contractValue: form.contract_value > 0 ? form.contract_value : (form.total_budget || effectiveDraft.totalSell),
             notes: form.description.trim(),
             type: form.type,
             location: form.location.trim(),
@@ -239,6 +277,15 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const handleNextStep = () => {
+    setError('');
+    if (step === 1 && new Date(form.end_date) < new Date(form.start_date)) {
+      setError('Tanggal selesai harus setelah tanggal mulai');
+      return;
+    }
+    setStep(step + 1);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -252,9 +299,9 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
       <motion.div
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
-        className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl"
+        className="bg-white rounded-3xl w-full max-w-lg max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl"
       >
-        <div className="p-6 border-b flex items-center justify-between">
+        <div className="p-6 border-b flex items-center justify-between shrink-0">
           <div>
             <h3 className="font-black text-slate-900">Buat Proyek Baru</h3>
             <p className="text-xs text-slate-600">Langkah {step} dari 3</p>
@@ -268,31 +315,31 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
           {step === 1 && (
             <>
               <input
                 value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
+                onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Nama proyek *"
                 className="w-full px-4 py-3 rounded-xl border text-sm"
               />
               <input
                 value={form.client_name}
-                onChange={e => setForm({ ...form, client_name: e.target.value })}
+                onChange={e => setForm(prev => ({ ...prev, client_name: e.target.value }))}
                 placeholder="Nama klien"
                 className="w-full px-4 py-3 rounded-xl border text-sm"
               />
               <input
                 value={form.location}
-                onChange={e => setForm({ ...form, location: e.target.value })}
+                onChange={e => setForm(prev => ({ ...prev, location: e.target.value }))}
                 placeholder="Lokasi"
                 className="w-full px-4 py-3 rounded-xl border text-sm"
               />
               {demoActive ? (
                 <select
                   value={form.type}
-                  onChange={e => setForm({ ...form, type: e.target.value })}
+                  onChange={e => setForm(prev => ({ ...prev, type: e.target.value }))}
                   className="w-full px-4 py-3 rounded-xl border text-sm bg-white"
                 >
                   <option value="construction">Konstruksi</option>
@@ -306,125 +353,222 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
                 <ProjectTypeSelect
                   orgId={tenant?.id || ''}
                   value={form.type}
-                  onChange={type => setForm({ ...form, type })}
+                  onChange={type => setForm(prev => ({ ...prev, type }))}
                   className="w-full px-4 py-3 rounded-xl border text-sm"
                 />
               )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Tanggal Mulai</label>
+                  <input
+                    type="date"
+                    value={form.start_date}
+                    onChange={e => setForm(prev => ({ ...prev, start_date: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Tanggal Selesai</label>
+                  <input
+                    type="date"
+                    value={form.end_date}
+                    onChange={e => setForm(prev => ({ ...prev, end_date: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl border text-sm"
+                  />
+                </div>
+              </div>
               <div>
                 <label className="text-xs text-slate-500 mb-1 block">Nilai Kontrak (Rp, opsional)</label>
                 <input
                   type="number"
                   min={0}
                   value={form.contract_value || ''}
-                  onChange={e => setForm({ ...form, contract_value: e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)) })}
+                  onChange={e => setForm(prev => ({ ...prev, contract_value: e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)) }))}
                   placeholder="Nilai kontrak dengan klien (Rp)"
                   className="w-full px-4 py-3 rounded-xl border text-sm"
                 />
               </div>
             </>
           )}
-          {step === 2 && smartCreate && (
+
+          {step === 2 && (
             <>
-              <label className="text-xs text-slate-500 mb-1 block">Template Job</label>
-              <select
-                value={selectedTemplateId ?? ''}
-                onChange={e => setSelectedTemplateId(Number(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl border text-sm mb-3"
-              >
-                {templates.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.baseUnit})
-                  </option>
-                ))}
-              </select>
-              <label className="text-xs text-slate-500 mb-1 block">
-                Volume ({templates.find(t => t.id === selectedTemplateId)?.baseUnit || 'unit'})
-              </label>
-              <input
-                type="number"
-                min={0.1}
-                step={0.1}
-                value={volume}
-                onChange={e => setVolume(Number(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl border text-sm mb-3"
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Mulai</label>
-                  <input
-                    type="date"
-                    value={form.start_date}
-                    onChange={e => setForm({ ...form, start_date: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Selesai</label>
-                  <input
-                    type="date"
-                    value={form.end_date}
-                    onChange={e => setForm({ ...form, end_date: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border text-sm"
-                  />
-                </div>
+              <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                <span>Jadwal Proyek</span>
+                <span className="font-semibold text-slate-700">{form.start_date} – {form.end_date}</span>
               </div>
+
+              {isConstruction ? (
+                smartCreate && !demoActive ? (
+                  <>
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">Template Pekerjaan (Konstruksi)</label>
+                      <select
+                        value={templateMode === 'blank' ? '' : (selectedTemplateId ?? '')}
+                        onChange={e => {
+                          if (!e.target.value) {
+                            setTemplateMode('blank');
+                            setSelectedTemplateId(null);
+                            setDraft(null);
+                          } else {
+                            setTemplateMode('template');
+                            setSelectedTemplateId(Number(e.target.value));
+                          }
+                        }}
+                        className="w-full px-4 py-3 rounded-xl border text-sm bg-white"
+                      >
+                        <option value="">Tanpa Template (Mulai Kosong)</option>
+                        {templates.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} ({t.baseUnit})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {templateMode === 'template' && selectedTemplateId ? (
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">
+                          Volume ({templates.find(t => t.id === selectedTemplateId)?.baseUnit || 'unit'})
+                        </label>
+                        <input
+                          type="number"
+                          min={0.1}
+                          step={0.1}
+                          value={volume}
+                          onChange={e => setVolume(Number(e.target.value))}
+                          className="w-full px-4 py-3 rounded-xl border text-sm"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          type="number"
+                          min={0}
+                          value={form.total_budget || ''}
+                          onChange={e => setForm(prev => ({ ...prev, total_budget: Math.max(0, Number(e.target.value) || 0) }))}
+                          placeholder="Estimasi budget (Rp)"
+                          className="w-full px-4 py-3 rounded-xl border text-sm"
+                        />
+                        <textarea
+                          value={form.description}
+                          onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Deskripsi singkat (opsional)"
+                          rows={2}
+                          className="w-full px-4 py-3 rounded-xl border text-sm"
+                        />
+                        <div className="p-3 bg-emerald-50 rounded-xl text-xs text-emerald-700 flex gap-2">
+                          <Info className="w-4 h-4 shrink-0" /> Proyek akan dibuat kosong tanpa template RAP. Budget menjadi acuan EVM &amp; analisa AI.
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.total_budget || ''}
+                      onChange={e => setForm(prev => ({ ...prev, total_budget: Math.max(0, Number(e.target.value) || 0) }))}
+                      placeholder="Estimasi budget (Rp)"
+                      className="w-full px-4 py-3 rounded-xl border text-sm"
+                    />
+                    <textarea
+                      value={form.description}
+                      onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Deskripsi singkat (opsional)"
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl border text-sm"
+                    />
+                    <div className="p-3 bg-emerald-50 rounded-xl text-xs text-emerald-700 flex gap-2">
+                      <Info className="w-4 h-4 shrink-0" /> Budget menjadi acuan EVM &amp; analisa AI.
+                    </div>
+                  </>
+                )
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">Starter Template Kategori</label>
+                    <select
+                      value={templateMode === 'blank' ? '' : (selectedStarterId ?? '')}
+                      onChange={e => {
+                        if (!e.target.value) {
+                          setTemplateMode('blank');
+                          setDraft(null);
+                        } else {
+                          setTemplateMode('template');
+                          setSelectedStarterId(e.target.value);
+                        }
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border text-sm bg-white"
+                    >
+                      <option value="">Tanpa Template (Mulai Kosong)</option>
+                      {starterOptions.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.categoryLabel} — {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {templateMode === 'template' && selectedStarter ? (
+                    <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-1.5 text-xs text-emerald-900">
+                      <div className="font-bold flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>{selectedStarter.name}</span>
+                      </div>
+                      <p className="text-emerald-800">{selectedStarter.description}</p>
+                      <p className="font-semibold text-emerald-700">
+                        Termasuk {selectedStarter.workItems.length} tahapan WBS &amp; {selectedStarter.budgetItems.length} pos anggaran (dapat disesuaikan di langkah berikutnya).
+                      </p>
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.total_budget || ''}
+                      onChange={e => setForm(prev => ({ ...prev, total_budget: Math.max(0, Number(e.target.value) || 0) }))}
+                      placeholder="Estimasi budget (Rp)"
+                      className="w-full px-4 py-3 rounded-xl border text-sm"
+                    />
+                  )}
+
+                  <textarea
+                    value={form.description}
+                    onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Deskripsi singkat proyek (opsional)"
+                    rows={2}
+                    className="w-full px-4 py-3 rounded-xl border text-sm"
+                  />
+                </>
+              )}
             </>
           )}
-          {step === 2 && !smartCreate && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Mulai</label>
-                  <input
-                    type="date"
-                    value={form.start_date}
-                    onChange={e => setForm({ ...form, start_date: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Selesai</label>
-                  <input
-                    type="date"
-                    value={form.end_date}
-                    onChange={e => setForm({ ...form, end_date: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border text-sm"
-                  />
-                </div>
-              </div>
-              <input
-                type="number"
-                min={0}
-                value={form.total_budget || ''}
-                onChange={e => setForm({ ...form, total_budget: Number(e.target.value) })}
-                placeholder="Estimasi budget (Rp)"
-                className="w-full px-4 py-3 rounded-xl border text-sm"
-              />
-              <textarea
-                value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
-                placeholder="Deskripsi singkat (opsional)"
-                rows={2}
-                className="w-full px-4 py-3 rounded-xl border text-sm"
-              />
-              <div className="p-3 bg-emerald-50 rounded-xl text-xs text-emerald-700 flex gap-2">
-                <Info className="w-4 h-4 shrink-0" /> Budget menjadi acuan EVM & analisa AI.
-              </div>
-            </>
-          )}
-          {step === 3 && smartCreate && selectedTemplateId && tenant && !demoActive && (
+
+          {step === 3 && useConstructionTemplate && tenant && (
             <CreateProjectRapDraft
               orgId={tenant.id}
               selections={rapSelections}
               onDraftChange={setDraft}
             />
           )}
-          {step === 3 && (!smartCreate || !selectedTemplateId || demoActive) && (
+          {step === 3 && useNonConstructionStarter && selectedStarter && (
+            <CreateProjectRapDraft
+              orgId={tenant?.id || 'demo'}
+              selections={[]}
+              starterTemplate={selectedStarter}
+              onDraftChange={setDraft}
+            />
+          )}
+          {step === 3 && !useConstructionTemplate && !useNonConstructionStarter && (
             <div className="text-center py-4 space-y-2">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
               <h4 className="font-bold text-lg">{form.name || 'Proyek baru'}</h4>
               <p className="text-sm text-slate-500">
                 {form.client_name || 'Tanpa klien'} · {tenant?.name}
+              </p>
+              <p className="text-xs text-slate-500">
+                Jadwal: {form.start_date} – {form.end_date}
+                {templateMode === 'blank' ? ' · Tanpa Template (Mulai Kosong)' : ''}
               </p>
               {form.contract_value > 0 && (
                 <p className="text-sm font-semibold text-blue-600">
@@ -440,11 +584,14 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
           )}
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </div>
-        <div className="p-6 border-t border-[#E5EAE8] flex gap-3">
+        <div className="p-6 border-t border-[#E5EAE8] flex gap-3 shrink-0">
           {step > 1 && (
             <button
               type="button"
-              onClick={() => setStep(step - 1)}
+              onClick={() => {
+                setError('');
+                setStep(step - 1);
+              }}
               className="px-6 min-h-11 border border-[#E5EAE8] rounded-xl text-sm font-bold text-[#5B6B7A] hover:bg-[#F4F7F5]"
             >
               Kembali
@@ -452,7 +599,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
           )}
           <button
             type="button"
-            onClick={() => (step < 3 ? setStep(step + 1) : handleCreate())}
+            onClick={() => (step < 3 ? handleNextStep() : handleCreate())}
             disabled={loading}
             className="flex-1 min-h-11 bg-[#059669] text-white rounded-xl text-sm font-bold disabled:opacity-60 hover:bg-[#047857]"
           >

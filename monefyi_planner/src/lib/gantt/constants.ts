@@ -1,4 +1,4 @@
-import type { GanttViewMode } from './types';
+import type { GanttPriority, GanttViewMode } from './types';
 
 export const GANTT_COLORS = {
   primary: '#10B981',
@@ -11,6 +11,7 @@ export const GANTT_COLORS = {
   weekend: '#F8FAFC',
   grid: '#E2E8F0',
   today: '#EF4444',
+  criticalPath: '#DC2626',
 } as const;
 
 export const ROW_HEIGHT = 44;
@@ -38,6 +39,33 @@ export const PRIORITY_LABEL: Record<string, string> = {
   low: 'Rendah',
   medium: 'Sedang',
   high: 'Tinggi',
+  critical: 'Kritis',
+};
+
+export const PRIORITY_BADGE_COLOR: Record<
+  GanttPriority,
+  { label: string; color: string; badgeClass: string }
+> = {
+  low: {
+    label: 'Rendah',
+    color: '#64748B',
+    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
+  medium: {
+    label: 'Sedang',
+    color: '#D97706',
+    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  high: {
+    label: 'Tinggi',
+    color: '#E11D48',
+    badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
+  },
+  critical: {
+    label: 'Kritis',
+    color: '#DC2626',
+    badgeClass: 'bg-red-100 text-red-700 border-red-300',
+  },
 };
 
 export const WORK_ITEM_STATUS_LABEL: Record<string, string> = {

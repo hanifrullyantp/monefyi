@@ -268,30 +268,66 @@ Seluruh identifier di bawah ini **TIDAK BOLEH diubah** agar tidak mematahkan bac
   - `monefyi_planner/src/services/attendanceService.test.ts` *(file baru — unit test F-21 `startOfOrgDayIso` batas 00:00–07:00 WIB & `computeDailySummaries`)*
 
 ### Fase 3: Manajemen Tugas, Dependensi, Jalur Kritis (CPM) & Kolaborasi Realtime
-*(Track 3A dikerjakan terlebih dahulu atau kontrak TS disepakati sebelum 3B/3C.)*
-- **Track 3A (DB Migration Lokal, Adapters, Services, CPM Engine & Realtime Hook):**
-  - `my-supabase-project/supabase/migrations/20261115120000_work_item_assignee_priority.sql` *(file baru — hanya file migrasi lokal, JANGAN push ke remote)*
-  - `monefyi_planner/src/lib/adapters.ts` *(tambah opsional `assigned_member_id`, `priority` di `DbWorkItem`)*
-  - `monefyi_planner/src/lib/gantt/types.ts` *(field `dependencyType?`, `isCritical?`, `totalFloatDays?`, `priority`)*
-  - `monefyi_planner/src/lib/gantt/criticalPath.ts` & `criticalPath.test.ts` *(file baru — algoritma CPM Forward/Backward pass + circular guard + unit tests)*
-  - `monefyi_planner/src/services/workItemService.ts` *(duplicate helper + optimistic concurrency `expectedUpdatedAt`)*
-  - `monefyi_planner/src/services/ganttSaveService.ts` *(persist `assigneeId`, `priority`, `dependencyType`, dan propagasi konflik `updated_at`)*
-  - *(Catatan: `src/hooks/useGanttRealtime.ts` sudah dibuat di Fase 1 Track 1C; Track 3A/3B menambahkan optimistic concurrency `updated_at` & dialog resolusi konflik untuk `F-19`)*
-- **Track 3B (Gantt Store, Critical Path UI & Gantt Components — lanjutan setelah F-29 & Realtime di Fase 1C):**
-  - `monefyi_planner/src/store/ganttStore.ts`
-  - `monefyi_planner/src/lib/gantt/utils.ts` *(map `assigneeId`, `priority` di `workItemToGanttTask`; style highlight critical path)*
-  - `monefyi_planner/src/components/projects/gantt/GanttTaskBar.tsx` *(F-13 menu konteks hapus/duplikat; F-14 badge/border kritis)*
-  - `monefyi_planner/src/components/projects/gantt/GanttTimeline.tsx` *(visualisasi CPM critical edges)*
-  - `monefyi_planner/src/components/projects/gantt/DependencyOverlay.tsx` *(warna khusus jalur kritis)*
-  - `monefyi_planner/src/components/projects/gantt/GanttEditModal.tsx` *(F-13 hapus/duplikat; F-14 Predecessor, Assignee, Priority; F-28 warning > `project.end_date`)*
-  - `monefyi_planner/src/components/projects/gantt/GanttAddWorkItemModal.tsx` *(F-14 Predecessor, Assignee, Priority)*
-  - `monefyi_planner/src/components/projects/gantt/GanttDetailPanel.tsx` *(F-12 wiring `+ Tambah Sub Tugas`, catatan komentar sederhana, tampilan CPM/Predecessor/Assignee)*
-  - `monefyi_planner/src/components/projects/gantt/TaskListPanel.tsx` *(F-13 menu baris + indikator kritis)*
-  - `monefyi_planner/src/components/projects/gantt/GanttToolbar.tsx` *(toggle `Jalur Kritis (CPM)` — layout mobile dirapikan di 5C)*
-  - `monefyi_planner/src/components/projects/gantt/GanttPlannerView.tsx`, `ProjectScheduleGantt.tsx`, `useGanttData.ts`, `useProjectGanttData.ts` *(F-12, F-19 conflict dialog saat save `updated_at` bentrok)*
-- **Track 3C (Progress List & Todo Modal):**
-  - `monefyi_planner/src/components/projects/v2/TabV2Progress.tsx` *(F-13 tombol hapus & duplikat `work_item`, tampilkan badge CPM/Assignee)*
-  - `monefyi_planner/src/components/projects/gantt/GanttTodoModal.tsx` *(F-28 field `priority`, `due_date`, edit judul/tag, label pending vs selesai; F-32 `break-words` & cek duplikat)*
+> **3 Track Paralel — 0 Irisan File** *(10 + 16 + 8 = 34 file eksklusif; Track 3A dikerjakan lebih dulu atau kontrak TS di bawah dipatuhi ketat agar Track 3B & 3C lolos `tsc --noEmit` baik terpisah maupun digabung. Migrasi DB ditulis sebagai file SQL lokal saja — **JANGAN** jalankan `supabase db push` ke remote).*
+
+- **Status Verifikasi Kode Aktual Sebelum Eksekusi Fase 3:**
+  - `F-12` (`CONFIRMED`): `GanttDetailPanel.tsx:258-260` tombol `+ Tambah Sub Tugas` tanpa `onClick`; `L295-297` tab `Dokumen` & `Catatan` hanya placeholder `"segera hadir"`; `ProjectScheduleGantt.tsx:110-112` tombol `Tampilkan Panel` memang toggle `detailOpen`, namun karena `selectedIds` kosong saat awal load, `GanttDetailPanel.tsx:49-63` hanya menampilkan layar kosong tanpa pilihan task.
+  - `F-13` (`CONFIRMED`): `workItemService.ts:30-33` sudah punya `deleteWorkItem`, belum ada `duplicateWorkItem`; UI hapus & duplikasi `work_item` belum ada di `GanttEditModal`, `GanttTaskBar`, `TaskListPanel`, `GanttDetailPanel`, maupun `TabV2Progress`.
+  - `F-14` (`CONFIRMED`): `planner_work_items` (`20260523120000_planner_core_schema.sql:76-97`) sudah memiliki `parent_id`, `description`, `dependencies UUID[]`, `dependency_type TEXT`, `updated_at`, tetapi **belum** memiliki `assigned_member_id`, `priority`, `notes`, `attachments`, maupun trigger `BEFORE UPDATE` untuk `updated_at` (sehingga optimistic concurrency wajib memperbarui `updated_at` dari client & menyertakan trigger di migrasi lokal). `GanttPriority` baru `'low'|'medium'|'high'` (kurang `'critical'`), belum ada `criticalPath.ts`, cascade FS otomatis, maupun filter `"Tugas Saya"` di `WorkerDashboard.tsx`.
+  - `F-19` Part 2 (`CONFIRMED`): Realtime `useGanttRealtime.ts` sudah selesai di Fase 1 Track 1C; `workItemService.updateWorkItem` dan `ganttSaveService.saveGanttChanges` belum mengecek `expectedUpdatedAt` dan belum ada dialog konflik (`Muat Ulang Data Terbaru` / `Timpa Tetap Simpan`).
+  - `F-28` (`CONFIRMED`): Belum ada peringatan `planned_end > project.end_date` di Gantt/Modal/`ProjectDetailV2`/`TabV2Progress`; `GanttTodoModal.tsx:24-26` baru punya `title`, `assigned_member_id`, `tags` (padahal `planner_todos` di DB sudah mendukung `priority`, `due_date`, `description`).
+  - `Wizard Proyek` (`Projects.tsx`): `Step 1` **sudah** memiliki field `contract_value` dari Fase 1 Track 1B (`Projects.tsx:314-323` — jangan diduplikasi!); namun `Step 2` (`L115-123,326-372`) masih memaksa template konstruksi (`Kitchen Set` dkk.) bahkan saat kategori `IT`/`Jasa`/`Event`/`Lainnya` dipilih, dan `start_date`/`end_date` belum berada di Step 1 agar kustomisasi tanggal tetap persisten penuh antar langkah saat klik `Kembali`.
+
+- **Kontrak Skema, Graceful Fallback Remote DB, & Kontrak TypeScript Antar-Track:**
+  1. **Fallback Kolom Baru (`zzwqfmdyncxbolestkqp` belum dimigrasi):** `workItemService.ts` mendeteksi error PostgREST `42703` / `PGRST204` (`column ... does not exist` / `schema cache`), menyimpan flag sesi `extendedColumnsSupported = false`, membuang field baru (`assigned_member_id`, `priority`, `notes`, `attachments`) dari payload `.insert()`/`.update()`, tetap mengirim `updated_at: new Date().toISOString()` pada `.update()` (agar `F-19` concurrency & `useGanttRealtime` tetap aktif), serta menyimpan/menghidrasi metadata ekstensi secara aman ke `planner_projects.settings.work_item_meta` *(best-effort untuk Owner/Manager, tangkap error RLS dengan aman bagi Worker)* + `localStorage` (`monefyi_work_item_meta_v1:<projectId>`). `loadWorkItems` & `loadWorkItemsForOrg` otomatis menggabungkan metadata tersebut ke tiap `WorkItem` sehingga `WorkerDashboard` `"Tugas Saya"` & tab `Catatan`/`Dokumen` langsung berfungsi sebelum migrasi remote dijalankan.
+  2. **Kontrak `Track 3A` untuk `Track 3B` & `Track 3C`:**
+     - `lib/gantt/types.ts`: `GanttPriority = 'low' | 'medium' | 'high' | 'critical'`, `WorkItemPriority = GanttPriority`, `WorkItemNote`, `WorkItemAttachment`, `DependencyType = 'finish_to_start' | 'start_to_start' | 'finish_to_finish' | 'start_to_finish' | 'pending'`, plus field opsional di `GanttTask` (`updatedAt?`, `isCritical?`, `totalFloatDays?`, `notesCount?`, `attachmentsCount?`).
+     - `lib/gantt/constants.ts`: `PRIORITY_LABEL` menambah `critical: 'Kritis'`; `GANTT_COLORS` menambah `criticalPath: '#DC2626'`.
+     - `lib/adapters.ts`: `DbWorkItem` menambah opsional `assigned_member_id?`, `priority?`, `notes?`, `attachments?`.
+     - `lib/gantt/criticalPath.ts`: export `computeCriticalPath`, `computeWorkItemsCriticalPath`, `wouldCreateDependencyCycle`, `cascadeFinishToStartShift`, `dependencyTypeDbToGantt`, `dependencyTypeGanttToDb`.
+     - `services/workItemService.ts`: export `WorkItemConflictError`, `isWorkItemConflictError`, `duplicateWorkItem`, `updateWorkItemExtendedMeta` (serta `updateWorkItem(id, item, options?: { expectedUpdatedAt?: string | null })` — argumen ke-3 opsional agar pemanggil lama tidak putus).
+     - `services/ganttSaveService.ts`: `saveGanttChanges(..., options?: { forceOverwrite?: boolean })` — argumen ke-6 opsional.
+     - **Kompatibilitas 3B ↔ 3C:** `ProjectScheduleGantt` menjaga props `{ project, workItems, onRefresh }` tetap kompatibel; `GanttAddWorkItemModal` menjaga `{ project, onClose, onSubmit }` wajib dan semua prop baru (`orgId?`, `existingTasks?`, `parentWorkItemId?`, `members?`) serta field tambahan pada argumen `onSubmit` (`priority?`, `assigned_member_id?`, `dependencies?`, `parent_id?`) bersifat **opsional**.
+
+- **Track 3A (DB Migration Lokal, Adapters, Types, Services & CPM Engine — 10 file):**
+  - `my-supabase-project/supabase/migrations/20261116120000_work_item_cpm_assignee_priority.sql` *(file baru — HANYA file lokal, JANGAN push ke remote: tambah `assigned_member_id`, `priority IN ('low','medium','high','critical')`, `notes JSONB`, `attachments JSONB`, index `idx_work_items_assigned_member`, & trigger `BEFORE UPDATE` `updated_at`)*
+  - `monefyi_planner/src/lib/adapters.ts` *(tambah opsional `assigned_member_id`, `priority`, `notes`, `attachments` pada `DbWorkItem`)*
+  - `monefyi_planner/src/lib/gantt/types.ts` *(perluas `GanttPriority` dengan `'critical'`, `WorkItemNote`, `WorkItemAttachment`, `DependencyType`, serta field opsional `GanttTask`)*
+  - `monefyi_planner/src/lib/gantt/constants.ts` *(tambah `critical: 'Kritis'` di `PRIORITY_LABEL` & `criticalPath: '#DC2626'` di `GANTT_COLORS`)*
+  - `monefyi_planner/src/lib/gantt/criticalPath.ts` *(file baru — CPM Forward/Backward pass terisolasi per `projectId`, deteksi siklus DAG `wouldCreateDependencyCycle`, dan `cascadeFinishToStartShift` saat predecessor digeser lebih lambat)*
+  - `monefyi_planner/src/lib/gantt/criticalPath.test.ts` *(file baru — unit test linear, diamond/float, multi-project isolation, cycle guard, & FS cascade shift)*
+  - `monefyi_planner/src/services/workItemService.ts` *(graceful fallback `42703`/`PGRST204` via `planner_projects.settings.work_item_meta` + `localStorage`; selalu perbarui `updated_at` + optimistic concurrency `expectedUpdatedAt` & `WorkItemConflictError`; `duplicateWorkItem` & `updateWorkItemExtendedMeta`)*
+  - `monefyi_planner/src/services/workItemService.test.ts` *(file baru — unit test fallback `PGRST204`/`42703`, optimistic concurrency conflict error, & `duplicateWorkItem`)*
+  - `monefyi_planner/src/services/ganttDependencyService.ts` *(petakan `FS`/`SS`/`FF`/`SF`, tambah `setWorkItemPredecessors` dengan validasi cycle sebelum simpan)*
+  - `monefyi_planner/src/services/ganttSaveService.ts` *(persist `assigneeId`, `priority`, pass `expectedUpdatedAt`, dukungan `forceOverwrite`, & refresh `updated_at` setelah simpan)*
+
+- **Track 3B (Gantt Store, Utils, Critical Path UI, Modals, Detail Panel & Conflict Dialog — 16 file):**
+  - `monefyi_planner/src/store/ganttStore.ts` *(tambah `showCriticalPath`, `toggleCriticalPath`, helper `removeTask` & `addTask` sambil menjaga perilaku Undo/Redo F-29 tetap utuh)*
+  - `monefyi_planner/src/lib/gantt/utils.ts` *(map `parent_id`, `priority`, `assigned_member_id`, `assigneeName`, `updatedAt`, `notesCount`, `attachmentsCount` di `workItemToGanttTask`)*
+  - `monefyi_planner/src/components/projects/gantt/GanttConflictDialog.tsx` *(file baru — dialog resolusi konflik `F-19` dengan tombol `Muat Ulang Data Terbaru` & `Timpa Tetap Simpan`)*
+  - `monefyi_planner/src/components/projects/gantt/useGanttData.ts` *(F-14 FS cascade di `commitDates` + muat daftar anggota org untuk `assigneeName`; F-13 `deleteTaskItem` & `duplicateTaskItem`; F-19 tangkap `WorkItemConflictError` + `forceOverwrite`; dukungan `parent_id`/`priority`/`assigned_member_id`/`dependencies` di `addWorkItem`)*
+  - `monefyi_planner/src/components/projects/gantt/useProjectGanttData.ts` *(F-14 FS cascade & perluas `workItemsKey`; F-13 `deleteTaskItem` & `duplicateTaskItem`; F-19 conflict state + `forceOverwrite`; `addWorkItem` untuk modal detail proyek)*
+  - `monefyi_planner/src/components/projects/gantt/GanttToolbar.tsx` *(F-14 tombol toggle `Jalur Kritis (CPM)` dengan badge jumlah tugas kritis & durasi)*
+  - `monefyi_planner/src/components/projects/gantt/GanttTaskBar.tsx` *(F-13 menu konteks `Duplikasi` & `Hapus` dengan konfirmasi; F-14 highlight border `#DC2626` + lencana `Kritis`; F-28 lencana peringatan deadline `> project.end_date`)*
+  - `monefyi_planner/src/components/projects/gantt/GanttTimeline.tsx` *(F-14 oper hasil CPM ke bar & overlay; validasi cycle via `wouldCreateDependencyCycle`)*
+  - `monefyi_planner/src/components/projects/gantt/DependencyOverlay.tsx` *(F-14 warna panah kritis `#DC2626`, `strokeWidth: 2`, & marker khusus)*
+  - `monefyi_planner/src/components/projects/gantt/TaskListPanel.tsx` *(F-13 menu konteks `Duplikasi` & `Hapus`; F-14 badge kritis & assignee; F-28 indikator melewati deadline proyek)*
+  - `monefyi_planner/src/components/projects/gantt/GanttAddWorkItemModal.tsx` *(F-14 opsional Predecessor, Assignee, Priority `low/medium/high/critical`; F-28 peringatan `planned_end > project.end_date` + opsi perpanjang tanggal selesai proyek)*
+  - `monefyi_planner/src/components/projects/gantt/GanttEditModal.tsx` *(F-13 tombol `Duplikasi` & `Hapus` dengan konfirmasi; F-14 Predecessor multi-select dengan guard anti-siklus, Assignee, Priority `low/medium/high/critical`, FS cascade shift jika `end_date` dimundurkan; F-28 peringatan deadline `> project.end_date` + aksi cepat perpanjang proyek)*
+  - `monefyi_planner/src/components/projects/gantt/GanttDetailPanel.tsx` *(F-12 wire `+ Tambah Sub Tugas`, tab `Catatan` fungsional dengan komentar ber-timestamp, tab `Dokumen` fungsional dengan metadata link/lampiran, & pemilih tugas cepat saat `!task`; F-13 `Duplikasi`/`Hapus`; F-14 Predecessor, Successor, Total Float/Kritis, Assignee, Priority `critical`; F-28 warning deadline)*
+  - `monefyi_planner/src/components/projects/gantt/GanttPlannerView.tsx` *(wire `GanttConflictDialog`, `deleteTaskItem`, `duplicateTaskItem`, `onAddSubTask`, `orgMembers`, & `projectEndDates`)*
+  - `monefyi_planner/src/components/projects/v2/ProjectScheduleGantt.tsx` *(F-12 perbaiki `Tampilkan Panel` agar otomatis memilih task pertama jika belum ada pilihan + pasang `<GanttAddWorkItemModal>`; F-14 tombol toggle `Jalur Kritis (CPM)`; F-19 `GanttConflictDialog`; F-13 hapus/duplikasi)*
+  - `monefyi_planner/src/lib/gantt/ganttPhase3.test.ts` *(file baru — unit test `workItemToGanttTask`, `showCriticalPath`, & perilaku store/cascade Track 3B)*
+
+- **Track 3C (Progress List, ProjectDetailV2 Badge, Todo Modal, Worker Tugas Saya & Project Wizard — 8 file):**
+  - `monefyi_planner/src/components/projects/v2/TabV2Progress.tsx` *(F-13 tombol `Duplikasi` & `Hapus` dengan konfirmasi; F-14 badge Assignee, Priority, & Kritis CPM via `computeWorkItemsCriticalPath`; F-19 tangani `WorkItemConflictError`; F-28 badge peringatan `planned_end > project.end_date` + banner aksi cepat `Perpanjang Deadline Proyek`)*
+  - `monefyi_planner/src/components/projects/v2/ProjectDetailV2.tsx` *(F-28 tampilkan badge peringatan pada header/tab Progress jika ada `work_item` dengan `planned_end > project.end_date`)*
+  - `monefyi_planner/src/components/projects/gantt/GanttTodoModal.tsx` *(F-28 lengkapi field `priority`, `due_date`, `description`/catatan, metadata lampiran link, & mode edit judul/tag/detail; F-32 `break-words [overflow-wrap:anywhere]` & peringatan nama todo duplikat + rapikan tampilan kosong vs selesai)*
+  - `monefyi_planner/src/pages/WorkerDashboard.tsx` *(F-14 tampilkan bagian **"Tugas Saya"** berdasar `assigned_member_id` yang cocok dengan member/user login lengkap dengan badge prioritas & tenggat, terpisah rapi dari tugas proyek umum; dukung item demo ter-assign)*
+  - `monefyi_planner/src/lib/migration/starter-templates.ts` *(file baru — template awal non-konstruksi untuk `IT / Software`, `Jasa / Agensi`, `Event`, `Umum` + helper `getStarterTemplatesForType` tanpa merusak `DEFAULT_JOB_TEMPLATES` konstruksi)*
+  - `monefyi_planner/src/lib/migration/starter-templates.test.ts` *(file baru — unit test template starter non-konstruksi & pemetaan kategori)*
+  - `monefyi_planner/src/components/projects/CreateProjectRapDraft.tsx` *(terima prop opsional `extraTemplates?: JobTemplate[]` agar draf Step 3 mendukung template starter non-konstruksi secara lokal & di mode demo)*
+  - `monefyi_planner/src/pages/Projects.tsx` *(pertahankan `contract_value` Step 1 yang sudah ada dari Track 1B tanpa duplikasi; sediakan input `start_date`/`end_date` di Step 1 & jaga nilainya tetap persisten saat klik `Kembali` antar-langkah maupun saat ubah tipe proyek; Step 2 dukung kategori non-konstruksi `IT / Software`, `Jasa / Agensi`, `Event`, `Umum` + opsi `Tanpa Template (Mulai Kosong)` agar user non-konstruksi tidak dipaksa template konstruksi)*
 
 ### Fase 4: Migrasi Brand ke Froyek (`froyek.com`), Estimator Gating, Entitlement Copy, Dividen & Isolasi Dev Tabs
 - **Track 4A (SPA `monefyi_planner/`):**
