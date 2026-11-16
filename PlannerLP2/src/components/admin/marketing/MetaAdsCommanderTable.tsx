@@ -359,7 +359,7 @@ export function MetaAdsCommanderTable({
     campaignIds: string[];
     label?: string;
   } | null>(null);
-  const [midnightBusy, setMidnightBusy] = useState(false);
+  const [midnightBusyId, setMidnightBusyId] = useState<string | null>(null);
 
   const loadMidnightSchedule = async () => {
     try {
@@ -385,62 +385,98 @@ export function MetaAdsCommanderTable({
     return () => window.clearInterval(timer);
   }, []);
 
-  const handleScheduleMidnightOn = async () => {
-    if (midnightSchedule) {
-      if (!window.confirm("Batalkan jadwal nyalakan iklan jam 12 malam?")) return;
-      setMidnightBusy(true);
+  const applyMidnightSchedule = (data: {
+    schedule?: { runAt?: string; campaignIds?: string[]; status?: string } | null;
+    label?: string;
+  }) => {
+    if (data.schedule && data.schedule.status !== "done" && data.schedule.runAt) {
+      setMidnightSchedule({
+        runAt: data.schedule.runAt,
+        campaignIds: data.schedule.campaignIds || [],
+        label: data.label,
+      });
+      return;
+    }
+    setMidnightSchedule(null);
+  };
+
+  const handleScheduleCampaignMidnight = async (camp: MetaCampaign) => {
+    const scheduled = midnightSchedule?.campaignIds.includes(camp.id) ?? false;
+    if (scheduled) {
+      if (!window.confirm(`Batalkan jadwal nyalakan "${camp.name}" jam 12 malam?`)) return;
+      setMidnightBusyId(camp.id);
       try {
-        const res = await authedFetch("/api/marketing/midnight-on", { method: "DELETE" });
+        const res = await authedFetch("/api/marketing/midnight-on", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ campaignId: camp.id }),
+        });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.ok) {
           setActionNotice(data.error || "Jadwal gagal dibatalkan.");
         } else {
-          setMidnightSchedule(null);
-          setActionNotice("Jadwal nyalakan iklan jam 12 malam dibatalkan.");
+          applyMidnightSchedule(data);
+          setActionNotice(`Jadwal "${camp.name}" dibatalkan.`);
         }
       } finally {
-        setMidnightBusy(false);
+        setMidnightBusyId(null);
         setTimeout(() => setActionNotice(null), 4000);
       }
       return;
     }
 
-    const paused = campaigns.filter((campaign) => campaign.status === "PAUSED");
-    if (paused.length === 0) {
-      setActionNotice("Tidak ada kampanye yang sedang off. Yang sudah aktif tidak perlu dijadwalkan.");
+    if (camp.status !== "PAUSED") {
+      setActionNotice("Kampanye ini sudah menyala.");
       setTimeout(() => setActionNotice(null), 4000);
       return;
     }
-    const preview = paused.slice(0, 4).map((campaign) => campaign.name).join(", ");
-    const more = paused.length > 4 ? ` dan ${paused.length - 4} lainnya` : "";
-    const ok = window.confirm(
-      `Nyalakan ${paused.length} kampanye yang sedang off pada jam 12 malam (00:00 WIB)?\n\n${preview}${more}`
-    );
+
+    const ok = window.confirm(`Nyalakan hanya "${camp.name}" pada jam 12 malam (00:00 WIB)?`);
     if (!ok) return;
-    setMidnightBusy(true);
+    setMidnightBusyId(camp.id);
     try {
       const res = await authedFetch("/api/marketing/midnight-on", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          campaigns: paused.map((campaign) => ({ id: campaign.id, name: campaign.name })),
-        }),
+        body: JSON.stringify({ campaigns: [{ id: camp.id, name: camp.name }] }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
         setActionNotice(data.error || "Jadwal gagal disimpan.");
       } else {
-        setMidnightSchedule({
-          runAt: data.schedule.runAt,
-          campaignIds: data.schedule.campaignIds || [],
-          label: data.label,
-        });
-        setActionNotice(`${paused.length} kampanye dijadwalkan ON pada ${data.label || "jam 12 malam"}.`);
+        applyMidnightSchedule(data);
+        setActionNotice(`"${camp.name}" dijadwalkan ON pada ${data.label || "jam 12 malam"}.`);
       }
     } finally {
-      setMidnightBusy(false);
+      setMidnightBusyId(null);
       setTimeout(() => setActionNotice(null), 5000);
     }
+  };
+
+  const renderMidnightButton = (camp: MetaCampaign) => {
+    const scheduled = midnightSchedule?.campaignIds.includes(camp.id) ?? false;
+    if (!scheduled && camp.status !== "PAUSED") return null;
+    const busy = midnightBusyId === camp.id;
+    return (
+      <button
+        type="button"
+        onClick={() => handleScheduleCampaignMidnight(camp)}
+        disabled={busy}
+        className={cn(
+          "p-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer disabled:opacity-60",
+          scheduled
+            ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-200 border-amber-300 dark:border-amber-800"
+            : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+        )}
+        title={
+          scheduled
+            ? `Dijadwalkan nyala ${midnightSchedule?.label || "jam 12 malam"}. Klik untuk membatalkan kampanye ini.`
+            : "Jadwalkan hanya kampanye ini supaya menyala jam 12 malam WIB"
+        }
+      >
+        {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
+      </button>
+    );
   };
 
   const handleToggleAdStatus = async (adId: string, campaignId: string, currentStatus: string, adName?: string) => {
@@ -757,30 +793,6 @@ export function MetaAdsCommanderTable({
           <Settings className="w-3.5 h-3.5 text-slate-500" />
           <span>Konfigurasi &amp; Rules</span>
         </button>
-
-        <button
-          type="button"
-          onClick={handleScheduleMidnightOn}
-          disabled={midnightBusy}
-          className={cn(
-            "flex items-center justify-center gap-2 p-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer border disabled:opacity-60",
-            midnightSchedule
-              ? "bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-950/60 text-amber-800 dark:text-amber-200 border-amber-300 dark:border-amber-800"
-              : "bg-slate-900 hover:bg-slate-800 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600"
-          )}
-          title={
-            midnightSchedule
-              ? `Dijadwalkan nyala ${midnightSchedule.label || "jam 12 malam"}. Klik untuk membatalkan.`
-              : "Jadwalkan kampanye yang sedang off supaya menyala jam 12 malam WIB"
-          }
-        >
-          {midnightBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5" />}
-          <span>
-            {midnightSchedule
-              ? `ON ${midnightSchedule.label || "00:00"} · ${midnightSchedule.campaignIds.length}`
-              : "Jadwalkan ON jam 12 malam"}
-          </span>
-        </button>
       </div>
 
       {/* Action Notification Toast */}
@@ -1000,6 +1012,7 @@ export function MetaAdsCommanderTable({
                   >
                     {isOff ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                   </button>
+                  {renderMidnightButton(camp)}
                 </div>
               </div>
 
@@ -1764,6 +1777,7 @@ export function MetaAdsCommanderTable({
                             >
                               {isOff ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                             </button>
+                            {renderMidnightButton(camp)}
                             <button
                               type="button"
                               onClick={() => handleQuickScaleRow(camp)}

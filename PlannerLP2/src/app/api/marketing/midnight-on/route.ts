@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireEngineAuth } from "@/lib/auth/adminGuard";
 import { formatMidnightWib } from "@/lib/marketing/midnightOn";
-import { cancelMidnightOn, loadMidnightOn, saveMidnightOn } from "@/lib/marketing/midnightOnStore";
+import { cancelMidnightOn, loadMidnightOn, removeMidnightOn, saveMidnightOn } from "@/lib/marketing/midnightOnStore";
 
 export async function GET(req: NextRequest) {
   const auth = await requireEngineAuth(req);
@@ -45,9 +45,16 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const auth = await requireEngineAuth(req);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+  const body = await req.json().catch(() => ({}));
+  const campaignId = String(body?.campaignId || req.nextUrl.searchParams.get("campaignId") || "").trim();
   try {
-    await cancelMidnightOn();
-    return NextResponse.json({ ok: true, schedule: null });
+    if (!campaignId) await cancelMidnightOn();
+    const schedule = campaignId ? await removeMidnightOn(campaignId) : null;
+    return NextResponse.json({
+      ok: true,
+      schedule,
+      label: schedule ? formatMidnightWib(schedule.runAt) : null,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Jadwal gagal dibatalkan.";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });

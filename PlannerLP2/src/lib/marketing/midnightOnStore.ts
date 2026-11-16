@@ -36,24 +36,33 @@ export async function loadMidnightOn(): Promise<MidnightOnSchedule | null> {
 }
 
 export async function saveMidnightOn(campaigns: { id: string; name: string }[]): Promise<MidnightOnSchedule> {
+  const params = await readParams();
+  const existing = parseMidnightOn(params[PARAM_KEY]);
+  const keepExisting = Boolean(
+    existing && existing.status === "pending" && Date.parse(existing.runAt) > Date.now() - 60_000,
+  );
   const unique = new Map<string, string>();
+  if (keepExisting && existing) {
+    for (const id of existing.campaignIds) unique.set(id, existing.names[id] || id);
+  }
   for (const campaign of campaigns) {
     const id = String(campaign.id || "").trim();
     if (!id) continue;
     unique.set(id, String(campaign.name || id).slice(0, 180));
-    if (unique.size >= 50) break;
   }
   if (unique.size === 0) {
     throw new Error("Tidak ada kampanye yang bisa dijadwalkan.");
   }
+  if (unique.size > 50) {
+    throw new Error("Maksimal 50 kampanye dalam satu jadwal jam 12 malam.");
+  }
   const schedule: MidnightOnSchedule = {
-    runAt: nextMidnightWib().toISOString(),
+    runAt: keepExisting && existing ? existing.runAt : nextMidnightWib().toISOString(),
     campaignIds: [...unique.keys()],
     names: Object.fromEntries(unique),
-    createdAt: new Date().toISOString(),
+    createdAt: keepExisting && existing ? existing.createdAt : new Date().toISOString(),
     status: "pending",
   };
-  const params = await readParams();
   params[PARAM_KEY] = schedule;
   await writeParams(params);
   return schedule;
@@ -63,6 +72,27 @@ export async function cancelMidnightOn(): Promise<void> {
   const params = await readParams();
   delete params[PARAM_KEY];
   await writeParams(params);
+}
+
+/** Mengeluarkan satu kampanye. Jadwal dihapus kalau tidak ada yang tersisa. */
+export async function removeMidnightOn(campaignId: string): Promise<MidnightOnSchedule | null> {
+  const id = String(campaignId || "").trim();
+  if (!id) throw new Error("Kampanye tidak dikenali.");
+  const params = await readParams();
+  const schedule = parseMidnightOn(params[PARAM_KEY]);
+  if (!schedule || schedule.status !== "pending") return null;
+  const campaignIds = schedule.campaignIds.filter((item) => item !== id);
+  if (campaignIds.length === 0) {
+    delete params[PARAM_KEY];
+    await writeParams(params);
+    return null;
+  }
+  const names = { ...schedule.names };
+  delete names[id];
+  const next: MidnightOnSchedule = { ...schedule, campaignIds, names };
+  params[PARAM_KEY] = next;
+  await writeParams(params);
+  return next;
 }
 
 async function activateCampaign(id: string, token: string, appSecret?: string): Promise<string | null> {
