@@ -4,6 +4,7 @@ import type { Project } from '../store/appStore';
 import { assertCanCreateProjectByEntitlement } from './entitlementService';
 import { assertCanCreateProject } from './pricingPlanService';
 import { computeFinanceReportMonth } from '../lib/financeReportMonth';
+import { logAudit, rememberProjectOrg } from './auditService';
 
 export async function loadProjects(orgId: string, currency = 'IDR'): Promise<Project[]> {
   const { data, error } = await supabase
@@ -14,7 +15,9 @@ export async function loadProjects(orgId: string, currency = 'IDR'): Promise<Pro
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return ((data || []) as DbProject[]).map(row => toProject(row, currency));
+  const rows = (data || []) as DbProject[];
+  for (const row of rows) rememberProjectOrg(row.id, row.org_id);
+  return rows.map(row => toProject(row, currency));
 }
 
 export interface ArchivedProjectRow {
@@ -31,7 +34,7 @@ export interface ArchivedProjectRow {
 export async function archiveProject(projectId: string, userId: string): Promise<void> {
   const { data: row, error: fetchErr } = await supabase
     .from('planner_projects')
-    .select('settings, status, finance_status')
+    .select('org_id, name, settings, status, finance_status')
     .eq('id', projectId)
     .is('deleted_at', null)
     .maybeSingle();
@@ -68,6 +71,18 @@ export async function archiveProject(projectId: string, userId: string): Promise
     .is('deleted_at', null);
 
   if (error) throw new Error(error.message);
+
+  if (row.org_id) {
+    rememberProjectOrg(projectId, row.org_id as string);
+    void logAudit({
+      orgId: row.org_id as string,
+      actorId: userId,
+      action: 'project.archived',
+      targetType: 'project',
+      targetId: projectId,
+      metadata: { name: row.name, previous_status: row.status },
+    });
+  }
 
   // Jika proyek ini di-convert dari estimasi, lepaskan kaitan estimasi atau reset statusnya
   // agar estimasi tidak terkunci mati di status converted saat proyeknya diarsipkan/dihapus
@@ -138,7 +153,7 @@ export async function loadArchivedProjects(orgId?: string): Promise<ArchivedProj
 export async function restoreArchivedProject(projectId: string): Promise<void> {
   const { data: row, error: fetchErr } = await supabase
     .from('planner_projects')
-    .select('settings')
+    .select('org_id, name, settings')
     .eq('id', projectId)
     .not('deleted_at', 'is', null)
     .maybeSingle();
@@ -163,6 +178,17 @@ export async function restoreArchivedProject(projectId: string): Promise<void> {
     .not('deleted_at', 'is', null);
 
   if (error) throw new Error(error.message);
+
+  if (row.org_id) {
+    rememberProjectOrg(projectId, row.org_id as string);
+    void logAudit({
+      orgId: row.org_id as string,
+      action: 'project.restored',
+      targetType: 'project',
+      targetId: projectId,
+      metadata: { name: row.name, restored_status: prevStatus },
+    });
+  }
 
   // Jika proyek ini memiliki kaitan dengan estimasi, sambungkan kembali
   try {
@@ -197,6 +223,7 @@ export async function getProject(projectId: string, currency = 'IDR'): Promise<P
     .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (data) rememberProjectOrg((data as DbProject).id, (data as DbProject).org_id);
   return data ? toProject(data as DbProject, currency) : null;
 }
 
@@ -215,7 +242,17 @@ export async function createProject(
     .single();
 
   if (error) throw new Error(error.message);
-  return toProject(data as DbProject, currency);
+  const created = data as DbProject;
+  rememberProjectOrg(created.id, created.org_id);
+  void logAudit({
+    orgId: created.org_id || input.org_id,
+    actorId: created.created_by ?? input.created_by ?? null,
+    action: 'project.created',
+    targetType: 'project',
+    targetId: created.id,
+    metadata: { name: created.name, status: created.status },
+  });
+  return toProject(created, currency);
 }
 
 export async function updateProject(projectId: string, data: Partial<Project>, currency = 'IDR') {
@@ -252,7 +289,20 @@ export async function updateProject(projectId: string, data: Partial<Project>, c
     .single();
 
   if (error) throw new Error(error.message);
-  return toProject(row as DbProject, currency);
+  const updated = row as DbProject;
+  rememberProjectOrg(updated.id, updated.org_id);
+  void logAudit({
+    orgId: updated.org_id,
+    action: 'project.updated',
+    targetType: 'project',
+    targetId: projectId,
+    metadata: {
+      name: updated.name,
+      fields: Object.keys(data),
+      ...(data.status !== undefined ? { status: data.status } : {}),
+    },
+  });
+  return toProject(updated, currency);
 }
 
 /** @deprecated Gunakan archiveProject */
@@ -261,8 +311,28 @@ export async function deleteProject(projectId: string, userId?: string) {
     await archiveProject(projectId, userId);
     return;
   }
+  let existing: { org_id?: string | null; name?: string | null } | null = null;
+  try {
+    const res = await supabase
+      .from('planner_projects')
+      .select('org_id, name')
+      .eq('id', projectId)
+      .maybeSingle();
+    existing = (res.data as { org_id?: string | null; name?: string | null } | null) ?? null;
+  } catch {
+    existing = null;
+  }
   const { error } = await supabase.from('planner_projects').delete().eq('id', projectId);
   if (error) throw new Error(error.message);
+  if (existing?.org_id) {
+    void logAudit({
+      orgId: existing.org_id,
+      action: 'project.deleted',
+      targetType: 'project',
+      targetId: projectId,
+      metadata: { name: existing.name },
+    });
+  }
 }
 
 export async function getProjectStats(orgId: string) {

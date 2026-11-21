@@ -9,10 +9,10 @@ export function SignupHubPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
-        <Link to="/" className="text-slate-400 hover:text-white text-sm mb-8 inline-block">← Beranda</Link>
+        <Link to="/" className="text-slate-200 hover:text-white text-sm mb-8 inline-block transition-colors">← Beranda</Link>
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
           <h1 className="text-2xl font-black text-slate-900 mb-2">Daftar Gratis</h1>
-          <p className="text-sm text-slate-500 mb-6">Pilih cara bergabung dengan Froyek</p>
+          <p className="text-sm text-slate-600 mb-6">Pilih cara bergabung dengan Froyek</p>
 
           <div className="flex gap-2 mb-6">
             {(['owner', 'join'] as const).map(t => (
@@ -75,8 +75,8 @@ export function SignupHubPage() {
             </div>
           )}
 
-          <p className="text-center text-sm text-slate-500 mt-6">
-            Sudah punya akun? <Link to="/login" className="text-emerald-600 font-semibold">Masuk</Link>
+          <p className="text-center text-sm text-slate-600 mt-6">
+            Sudah punya akun? <Link to="/login" className="text-emerald-700 font-semibold hover:underline">Masuk</Link>
           </p>
         </div>
       </div>

@@ -80,13 +80,18 @@ export function JoinByCodePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl">
-        <Link to="/signup" className="text-sm text-slate-500 mb-4 inline-block">← Kembali</Link>
+        <Link to="/signup" className="text-sm text-slate-600 hover:text-slate-900 mb-4 inline-block">← Kembali</Link>
 
         {step === 'code' ? (
           <>
-            <h1 className="font-black text-xl mb-2">Masukkan kode undangan</h1>
-            <p className="text-sm text-slate-500 mb-4">Format: XXX-NNN</p>
+            <h1 className="font-black text-xl mb-2 text-slate-900">Masukkan kode undangan</h1>
+            <p className="text-sm text-slate-600 mb-4">Format: XXX-NNN</p>
+            <label htmlFor="join-invite-code" className="block text-sm font-medium text-slate-700 mb-1.5">Kode undangan</label>
             <input
+              id="join-invite-code"
+              name="inviteCode"
+              autoComplete="off"
+              spellCheck={false}
               value={code}
               onChange={e => setCode(formatInviteCode(e.target.value))}
               placeholder="MNF-749"
@@ -102,17 +107,49 @@ export function JoinByCodePage() {
           <>
             <div className="text-center mb-6">
               <Building2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
-              <h2 className="font-bold">{preview?.org_name}</h2>
-              <p className="text-sm text-slate-500 capitalize">Role: {preview?.role}</p>
+              <h2 className="font-bold text-slate-900">{preview?.org_name}</h2>
+              <p className="text-sm text-slate-600 capitalize">Role: {preview?.role}</p>
             </div>
             <form onSubmit={handleJoin} className="space-y-3">
-              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nama lengkap" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <PasswordField
-                value={form.password}
-                onChange={password => setForm({ ...form, password })}
-                placeholder="Password (min 8, huruf besar, angka, simbol)"
-              />
+              <div>
+                <label htmlFor="join-code-name" className="block text-sm font-medium text-slate-700 mb-1">Nama lengkap</label>
+                <input
+                  id="join-code-name"
+                  name="name"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder="Nama lengkap"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="join-code-email" className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <input
+                  id="join-code-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  placeholder="Email"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="join-code-password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <PasswordField
+                  id="join-code-password"
+                  name="password"
+                  autoComplete="new-password"
+                  required
+                  value={form.password}
+                  onChange={password => setForm({ ...form, password })}
+                  placeholder="Password (min 8, huruf besar, angka, simbol)"
+                />
+              </div>
               {error && <p className="text-sm text-rose-600">{error}</p>}
               <button type="submit" disabled={loading || !form.name.trim() || !form.email.trim() || !isPasswordReady(form.password)} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed">Bergabung</button>
             </form>

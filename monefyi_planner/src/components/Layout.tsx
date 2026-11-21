@@ -23,7 +23,7 @@ import { ESTIMATOR_THEME_COLOR } from '../lib/estimatorBrand';
 import ToastHost from './ToastHost';
 import EstimatorLaunchPromoAdminModal from './admin/EstimatorLaunchPromoAdminModal';
 import UndoToast from './ui/UndoToast';
-import { loadFinanceVersion } from '../lib/financeVersion';
+import { loadFinanceVersion, isSandboxFinance } from '../lib/financeVersion';
 import { loadMigrationFlags } from '../lib/migrationFlags';
 import { DEFAULT_MIGRATION_FLAGS } from '../types/rpp';
 import { useOrgBrand } from '../hooks/useOrgBrand';
@@ -46,7 +46,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const {
-    user, tenant, activeTab, setActiveTab, setFinanceVersionPreference,
+    user, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
     migrationFlags, setMigrationFlags,
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
@@ -144,7 +144,9 @@ export default function Layout({ children }: LayoutProps) {
       return activeTab === 'home'
         && !location.pathname.startsWith('/app/estimator')
         && !location.pathname.startsWith('/app/finance-v2')
-        && !location.pathname.startsWith('/app/database');
+        && !location.pathname.startsWith('/app/database')
+        && !location.pathname.startsWith('/app/settings')
+        && !location.pathname.startsWith('/app/uji-agen');
     }
     return activeTab === tabId;
   };
@@ -230,10 +232,10 @@ export default function Layout({ children }: LayoutProps) {
       navigate('/app/database');
     } else if (tabId === 'finance') {
       setActiveTab('finance');
-      navigate('/app/finance-v2');
+      navigate(isSandboxFinance(financeVersion) ? '/app/finance-v2' : '/app?tab=finance');
     } else {
-      navigate('/app');
       setActiveTab(tabId);
+      navigate(`/app?tab=${tabId}`);
     }
     setSidebarOpen(false);
   };

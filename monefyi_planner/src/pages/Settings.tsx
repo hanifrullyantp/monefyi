@@ -16,7 +16,6 @@ import {
   loadNotificationPrefs, saveNotificationPrefs, fetchNotificationPrefsFromSupabase, type NotificationPrefs,
 } from '../services/settingsPrefsService';
 import UserAccountPanel from '../components/account/UserAccountPanel';
-import AIProviderPanel from '../components/account/AIProviderPanel';
 import BrandIdentityPanel from '../components/branding/BrandIdentityPanel';
 import { syncPdfBrandFromOrg } from '../services/pdfSettingsService';
 import { isPlatformAdmin } from '../services/adminService';
@@ -552,9 +551,16 @@ export default function Settings() {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Nama Lengkap" icon={User}>
+            <Field label="Nama Lengkap" icon={User} htmlFor={editingProfile ? 'settings-profile-name' : undefined}>
               {editingProfile ? (
-                <input value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+                <input
+                  id="settings-profile-name"
+                  name="name"
+                  autoComplete="name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                />
               ) : (
                 <span className="text-sm font-medium text-slate-800">{name || '—'}</span>
               )}
@@ -563,23 +569,48 @@ export default function Settings() {
               <span className="text-sm font-medium text-slate-800">{user?.email || '—'}</span>
               <p className="text-xs text-slate-600 mt-0.5">Email tidak dapat diubah di sini.</p>
             </Field>
-            <Field label="Jabatan / Posisi">
+            <Field label="Jabatan / Posisi" htmlFor={editingProfile ? 'settings-profile-position' : undefined}>
               {editingProfile ? (
-                <input value={position} onChange={e => setPosition(e.target.value)} placeholder="Site Manager" className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+                <input
+                  id="settings-profile-position"
+                  name="position"
+                  autoComplete="organization-title"
+                  value={position}
+                  onChange={e => setPosition(e.target.value)}
+                  placeholder="Site Manager"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                />
               ) : (
                 <span className="text-sm font-medium text-slate-800">{position || '—'}</span>
               )}
             </Field>
-            <Field label="Departemen">
+            <Field label="Departemen" htmlFor={editingProfile ? 'settings-profile-department' : undefined}>
               {editingProfile ? (
-                <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Operasional" className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+                <input
+                  id="settings-profile-department"
+                  name="department"
+                  autoComplete="off"
+                  value={department}
+                  onChange={e => setDepartment(e.target.value)}
+                  placeholder="Operasional"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                />
               ) : (
                 <span className="text-sm font-medium text-slate-800">{department || '—'}</span>
               )}
             </Field>
-            <Field label="Telepon">
+            <Field label="Telepon" htmlFor={editingProfile ? 'settings-profile-phone' : undefined}>
               {editingProfile ? (
-                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+62..." className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+                <input
+                  id="settings-profile-phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="+62..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                />
               ) : (
                 <span className="text-sm font-medium text-slate-800">{phone || '—'}</span>
               )}
@@ -628,23 +659,6 @@ export default function Settings() {
           {!demoActive && tenant?.id && isSandboxFinance(financeVersion) && (
             <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} />
           )}
-
-          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-            {demoActive ? (
-              <p className="text-sm text-[#5B6B7A]">Pengaturan AI Provider tidak tersedia di mode demo.</p>
-            ) : (
-              <details className="group">
-                <summary className="cursor-pointer text-sm font-bold text-slate-800 flex items-center justify-between list-none">
-                  <span>Pengaturan Lanjutan AI (BYOK Provider)</span>
-                  <span className="text-xs font-semibold text-emerald-700 group-open:hidden">Buka ▾</span>
-                  <span className="text-xs font-semibold text-slate-500 hidden group-open:inline">Tutup ▴</span>
-                </summary>
-                <div className="mt-4">
-                  <AIProviderPanel />
-                </div>
-              </details>
-            )}
-          </div>
         </div>
       )}
 
@@ -689,39 +703,39 @@ export default function Settings() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Nama Perusahaan</label>
-              <input value={orgName} onChange={e => setOrgName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              <label htmlFor="settings-org-name" className="text-xs font-semibold text-slate-600 mb-1 block">Nama Perusahaan</label>
+              <input id="settings-org-name" name="orgName" autoComplete="organization" value={orgName} onChange={e => setOrgName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Industri</label>
-              <select value={industry} onChange={e => setIndustry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+              <label htmlFor="settings-org-industry" className="text-xs font-semibold text-slate-600 mb-1 block">Industri</label>
+              <select id="settings-org-industry" name="industry" value={industry} onChange={e => setIndustry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 <option value="">Pilih industri</option>
                 {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Tipe Bisnis</label>
-              <select value={businessType} onChange={e => setBusinessType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+              <label htmlFor="settings-org-business-type" className="text-xs font-semibold text-slate-600 mb-1 block">Tipe Bisnis</label>
+              <select id="settings-org-business-type" name="businessType" value={businessType} onChange={e => setBusinessType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Zona Waktu</label>
-              <select value={timezone} onChange={e => setTimezone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+              <label htmlFor="settings-org-timezone" className="text-xs font-semibold text-slate-600 mb-1 block">Zona Waktu</label>
+              <select id="settings-org-timezone" name="timezone" value={timezone} onChange={e => setTimezone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Mata Uang Default</label>
-              <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+              <label htmlFor="settings-org-currency" className="text-xs font-semibold text-slate-600 mb-1 block">Mata Uang Default</label>
+              <select id="settings-org-currency" name="currency" value={currency} onChange={e => setCurrency(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Warna Brand Organisasi</label>
+              <label htmlFor="settings-org-brand-color-hex" className="text-xs font-semibold text-slate-600 mb-1 block">Warna Brand Organisasi</label>
               <div className="flex items-center gap-3">
-                <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer" />
-                <input value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono" />
+                <input id="settings-org-brand-color-picker" name="brandColorPicker" aria-label="Pilih warna brand organisasi" type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer" />
+                <input id="settings-org-brand-color-hex" name="brandColor" autoComplete="off" spellCheck={false} value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono" />
               </div>
             </div>
           </div>
@@ -835,12 +849,12 @@ export default function Settings() {
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1 block">Password Baru</label>
-                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 karakter" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+                <label htmlFor="settings-new-password" className="text-xs font-semibold text-slate-600 mb-1 block">Password Baru</label>
+                <input id="settings-new-password" name="newPassword" autoComplete="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 karakter" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1 block">Konfirmasi Password</label>
-                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+                <label htmlFor="settings-confirm-password" className="text-xs font-semibold text-slate-600 mb-1 block">Konfirmasi Password</label>
+                <input id="settings-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
               </div>
             </div>
             <p className="text-xs text-slate-600">Minimal 8 karakter, huruf besar, angka, dan simbol.</p>
@@ -920,12 +934,16 @@ export default function Settings() {
   );
 }
 
-function Field({ label, icon: Icon, children }: { label: string; icon?: typeof User; children: React.ReactNode }) {
+function Field({ label, icon: Icon, htmlFor, children }: { label: string; icon?: typeof User; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div className="py-3 border-b border-slate-50 last:border-0">
       <div className="flex items-center gap-2 mb-1">
         {Icon && <Icon className="w-3.5 h-3.5 text-slate-600" />}
-        <div className="text-xs font-semibold text-slate-500">{label}</div>
+        {htmlFor ? (
+          <label htmlFor={htmlFor} className="text-xs font-semibold text-slate-600">{label}</label>
+        ) : (
+          <div className="text-xs font-semibold text-slate-600">{label}</div>
+        )}
       </div>
       {children}
     </div>

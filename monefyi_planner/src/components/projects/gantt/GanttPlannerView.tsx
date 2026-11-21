@@ -1,10 +1,33 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import {
+  AlertTriangle,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  FolderOpen,
+  GanttChart,
+  LayoutList,
+  ListChecks,
+  PanelRightOpen,
+  Pencil,
+  Plus,
+  Trash2,
+  User,
+} from 'lucide-react';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
 import { useGanttStore } from '../../../store/ganttStore';
-import { flattenTasks, matchesAdvancedFilters } from '../../../lib/gantt/utils';
-import type { GanttTask } from '../../../lib/gantt/types';
+import {
+  flattenTasks,
+  isTaskOverProjectDeadline,
+  matchesAdvancedFilters,
+} from '../../../lib/gantt/utils';
+import { computeCriticalPath, type CriticalPathResult } from '../../../lib/gantt/criticalPath';
+import { PRIORITY_BADGE_COLOR, WORK_ITEM_STATUS_LABEL } from '../../../lib/gantt/constants';
+import { STATUS_LABEL } from '../../../utils/projectUi';
+import type { FlatGanttRow, GanttTask } from '../../../lib/gantt/types';
 import { saveGanttDraft, clearGanttDraft, loadGanttDraft } from '../../../services/ganttDraftService';
 import {
   saveDemoWorkItems,
@@ -52,12 +75,17 @@ export default function GanttPlannerView({
   const showToast = useUiStore(s => s.showToast);
   const {
     tasks,
+    dependencies,
     expandedIds,
+    toggleExpand,
+    selectTask,
     projectOrder,
     setProjectOrder,
     leftWidth,
     setLeftWidth,
     detailOpen,
+    setDetailOpen,
+    showCriticalPath,
     searchQuery,
     filterStatus,
     advancedFilters,
@@ -102,6 +130,7 @@ export default function GanttPlannerView({
   const [unsavedOpen, setUnsavedOpen] = useState(false);
   const [conflictBusy, setConflictBusy] = useState(false);
   const [addParentWorkItemId, setAddParentWorkItemId] = useState<string | null>(null);
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'timeline'>('list');
   const pendingViewRef = useRef<ProjectView | null>(null);
   const pendingActionRef = useRef<(() => void) | null>(null);
   const leaveResolveRef = useRef<((v: boolean) => void) | null>(null);
@@ -155,6 +184,15 @@ export default function GanttPlannerView({
     () => flattenTasks(visibleTasks, expandedIds, projectOrder),
     [visibleTasks, expandedIds, projectOrder],
   );
+
+  const cpm = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
+  const projectEndDateMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of tasks) {
+      if (t.type === 'project') map.set(t.id, t.endDate);
+    }
+    return map;
+  }, [tasks]);
 
   const editTask = editTaskId ? tasks.find(t => t.id === editTaskId) : null;
   const todoTask = todoModalTaskId ? tasks.find(t => t.id === todoModalTaskId) : null;
@@ -482,63 +520,108 @@ export default function GanttPlannerView({
         onSave={saveAll}
       />
 
+      <GanttMobileModeSwitch
+        label={`Jadwal (${rows.length} item)`}
+        mode={mobileViewMode}
+        onChange={setMobileViewMode}
+      />
+
+      {mobileViewMode === 'list' && (
+        <GanttMobileTaskList
+          rows={rows}
+          cpmMetrics={cpm.metrics}
+          projectEndDateById={projectEndDateMap}
+          showCriticalPath={showCriticalPath}
+          emptyText="Tidak ada proyek atau pekerjaan yang sesuai filter."
+          onToggleExpand={toggleExpand}
+          onEditTask={setEditTaskId}
+          onOpenDetail={id => {
+            selectTask(id);
+            setDetailOpen(true);
+          }}
+          onAddSubTask={handleOpenAddSubTask}
+          onOpenTodo={setTodoModalTaskId}
+          onDuplicateTask={duplicateTaskItem}
+          onDeleteTask={deleteTaskItem}
+          onOpenProjectDetail={handleOpenProjectDetail}
+        />
+      )}
+
+      {/* Desktop split-pane Gantt (>=768px) or optional mobile horizontal-scroll timeline */}
       <div
-        className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner flex-1 min-h-0 min-w-0"
+        className={`${
+          mobileViewMode === 'timeline' ? 'flex max-md:overflow-x-auto' : 'hidden md:flex'
+        } relative bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner flex-1 min-h-0 min-w-0`}
         style={{
           height: expandedView ? undefined : 'calc(100vh - 300px)',
           minHeight: expandedView ? 0 : 480,
         }}
       >
-        <div
-          style={{ width: leftWidth, minWidth: 160, maxWidth: '45vw' }}
-          className="shrink-0 h-full overflow-hidden"
-        >
-          <TaskListPanel
+        <div className="flex flex-1 min-h-0 min-w-[680px] md:min-w-0">
+          <div
+            style={{ width: leftWidth, minWidth: 160, maxWidth: '45vw' }}
+            className="shrink-0 h-full overflow-hidden"
+          >
+            <TaskListPanel
+              rows={rows}
+              onReorder={handleReorder}
+              onEditTask={setEditTaskId}
+              onOpenProjectDetail={handleOpenProjectDetail}
+              onAddSubTask={handleOpenAddSubTask}
+              onDuplicateTask={duplicateTaskItem}
+              onDeleteTask={deleteTaskItem}
+            />
+          </div>
+
+          <div
+            className="w-1.5 shrink-0 cursor-col-resize hover:bg-emerald-200/60 active:bg-emerald-300 transition-colors z-10"
+            onMouseDown={startResizeLeft}
+            role="separator"
+            aria-orientation="vertical"
+          />
+
+          <GanttTimeline
             rows={rows}
-            onReorder={handleReorder}
+            onCommitDates={commitDates}
+            scrollToTodayRef={scrollToTodayRef}
+            scrollToTaskRef={scrollToTaskRef}
             onEditTask={setEditTaskId}
             onOpenProjectDetail={handleOpenProjectDetail}
             onAddSubTask={handleOpenAddSubTask}
             onDuplicateTask={duplicateTaskItem}
             onDeleteTask={deleteTaskItem}
           />
+
+          {detailOpen && (
+            <>
+              <div className="w-1.5 shrink-0 bg-slate-100 hidden md:block" />
+              <div className="hidden md:block w-72 xl:w-80 shrink-0 h-full overflow-hidden border-l border-slate-100">
+                <GanttDetailPanel
+                  onEditTask={setEditTaskId}
+                  onAddSubTask={handleOpenAddSubTask}
+                  onDuplicateTask={duplicateTaskItem}
+                  onDeleteTask={deleteTaskItem}
+                  onUpdateMeta={handleUpdateMeta}
+                  members={orgMembers}
+                />
+              </div>
+            </>
+          )}
         </div>
-
-        <div
-          className="w-1.5 shrink-0 cursor-col-resize hover:bg-emerald-200/60 active:bg-emerald-300 transition-colors z-10"
-          onMouseDown={startResizeLeft}
-          role="separator"
-          aria-orientation="vertical"
-        />
-
-        <GanttTimeline
-          rows={rows}
-          onCommitDates={commitDates}
-          scrollToTodayRef={scrollToTodayRef}
-          scrollToTaskRef={scrollToTaskRef}
-          onEditTask={setEditTaskId}
-          onOpenProjectDetail={handleOpenProjectDetail}
-          onAddSubTask={handleOpenAddSubTask}
-          onDuplicateTask={duplicateTaskItem}
-          onDeleteTask={deleteTaskItem}
-        />
-
-        {detailOpen && (
-          <>
-            <div className="w-1.5 shrink-0 bg-slate-100 hidden md:block" />
-            <div className="w-full md:w-72 xl:w-80 shrink-0 h-full overflow-hidden border-l border-slate-100 max-md:absolute max-md:right-0 max-md:top-0 max-md:bottom-0 max-md:z-20 max-md:shadow-xl max-md:bg-white">
-              <GanttDetailPanel
-                onEditTask={setEditTaskId}
-                onAddSubTask={handleOpenAddSubTask}
-                onDuplicateTask={duplicateTaskItem}
-                onDeleteTask={deleteTaskItem}
-                onUpdateMeta={handleUpdateMeta}
-                members={orgMembers}
-              />
-            </div>
-          </>
-        )}
       </div>
+
+      {detailOpen && (
+        <GanttMobileDetailDrawer onClose={() => setDetailOpen(false)}>
+          <GanttDetailPanel
+            onEditTask={setEditTaskId}
+            onAddSubTask={handleOpenAddSubTask}
+            onDuplicateTask={duplicateTaskItem}
+            onDeleteTask={deleteTaskItem}
+            onUpdateMeta={handleUpdateMeta}
+            members={orgMembers}
+          />
+        </GanttMobileDetailDrawer>
+      )}
 
       {orgId && useGanttStore.getState().hasDraft && isDirty && (
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-sm">
@@ -671,6 +754,305 @@ export default function GanttPlannerView({
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Mobile (<768px) toggle between List-First view and horizontal-scroll Timeline view. */
+export function GanttMobileModeSwitch({
+  label,
+  mode,
+  onChange,
+}: {
+  label: string;
+  mode: 'list' | 'timeline';
+  onChange: (next: 'list' | 'timeline') => void;
+}) {
+  return (
+    <div className="md:hidden flex items-center justify-between gap-2 bg-white rounded-xl border border-slate-200 px-3 py-2">
+      <span className="text-xs font-bold text-slate-600">{label}</span>
+      <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => onChange('list')}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors ${
+            mode === 'list' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500'
+          }`}
+        >
+          <LayoutList className="w-3.5 h-3.5" />
+          <span>Daftar</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange('timeline')}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors ${
+            mode === 'timeline' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500'
+          }`}
+        >
+          <GanttChart className="w-3.5 h-3.5" />
+          <span>Timeline</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Mobile (<768px) card/list-first Gantt view with full wrapping titles and direct tap actions. */
+export function GanttMobileTaskList({
+  rows,
+  cpmMetrics,
+  projectEndDateById,
+  showCriticalPath,
+  emptyText,
+  onToggleExpand,
+  onEditTask,
+  onOpenDetail,
+  onAddSubTask,
+  onOpenTodo,
+  onDuplicateTask,
+  onDeleteTask,
+  onOpenProjectDetail,
+}: {
+  rows: FlatGanttRow[];
+  cpmMetrics: CriticalPathResult['metrics'];
+  projectEndDateById: Map<string, string>;
+  showCriticalPath: boolean;
+  emptyText: string;
+  onToggleExpand: (id: string) => void;
+  onEditTask: (id: string) => void;
+  onOpenDetail: (id: string) => void;
+  onAddSubTask: (task: GanttTask) => void;
+  onOpenTodo: (id: string) => void;
+  onDuplicateTask: (id: string) => void | Promise<unknown>;
+  onDeleteTask: (id: string) => void | Promise<unknown>;
+  onOpenProjectDetail?: (projectId: string) => void;
+}) {
+  return (
+    <div className="md:hidden space-y-2.5">
+      {rows.length === 0 ? (
+        <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-200 text-xs text-slate-500 px-4">
+          {emptyText}
+        </div>
+      ) : (
+        rows.map(row => {
+          const { task, depth, hasChildren, isExpanded } = row;
+          const isProject = task.type === 'project';
+          const projectEndDate = projectEndDateById.get(task.projectId);
+          const isCritical =
+            !isProject && (cpmMetrics[task.id]?.isCritical ?? task.isCritical ?? false);
+          const isOverDeadline =
+            !isProject && isTaskOverProjectDeadline(task.endDate, projectEndDate);
+          const prioMeta = PRIORITY_BADGE_COLOR[task.priority] ?? PRIORITY_BADGE_COLOR.medium;
+          const progressPct = Math.min(100, Math.max(0, Math.round(task.progress)));
+          const statusLabel = isProject
+            ? STATUS_LABEL[task.status as keyof typeof STATUS_LABEL] || task.status
+            : WORK_ITEM_STATUS_LABEL[task.status] || task.status;
+          const statusBadgeClass =
+            task.status === 'completed' || task.status === 'archived'
+              ? 'bg-emerald-100 text-emerald-700'
+              : task.status === 'active' || task.status === 'in_progress'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-slate-100 text-slate-600';
+
+          return (
+            <div
+              key={task.id}
+              className={`rounded-2xl border p-3.5 space-y-2.5 shadow-xs ${
+                isProject
+                  ? 'bg-emerald-50/40 border-emerald-200'
+                  : 'bg-white border-slate-200'
+              } ${depth >= 2 ? 'ml-3 border-l-4 border-l-emerald-300' : ''} ${
+                showCriticalPath && isCritical ? 'border-l-4 border-l-red-500 bg-red-50/20' : ''
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                  {hasChildren && (
+                    <button
+                      type="button"
+                      onClick={() => onToggleExpand(task.id)}
+                      aria-label={isExpanded ? 'Tutup sub pekerjaan' : 'Buka sub pekerjaan'}
+                      className="p-1 -ml-1 rounded-lg hover:bg-slate-200/70 text-slate-500 shrink-0 mt-0.5"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    {isProject && task.code && (
+                      <span className="inline-block text-[10px] font-mono font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded mb-1">
+                        {task.code}
+                      </span>
+                    )}
+                    <h4 className="text-sm font-bold text-slate-900 break-words [overflow-wrap:anywhere] leading-snug">
+                      {task.name}
+                    </h4>
+                    {isProject && task.clientName && (
+                      <p className="text-xs text-slate-500 break-words mt-0.5">
+                        Klien: {task.clientName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${statusBadgeClass}`}
+                >
+                  {statusLabel}
+                </span>
+              </div>
+
+              {!isProject && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${prioMeta.badgeClass}`}
+                  >
+                    {prioMeta.label}
+                  </span>
+                  {showCriticalPath && isCritical && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-600 text-white">
+                      CPM · Kritis
+                    </span>
+                  )}
+                  {isOverDeadline && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                      <AlertTriangle className="w-3 h-3 shrink-0" />
+                      Melewati Deadline
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                  <span className="tabular-nums">
+                    {task.startDate.slice(0, 10)} → {task.endDate.slice(0, 10)}
+                  </span>
+                </span>
+                {task.assigneeName && (
+                  <span className="inline-flex items-center gap-1 text-slate-700 font-medium break-words">
+                    <User className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                    <span>{task.assigneeName}</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      task.status === 'completed' || task.status === 'archived'
+                        ? 'bg-emerald-500'
+                        : 'bg-blue-500'
+                    }`}
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-slate-700 tabular-nums shrink-0">
+                  {progressPct}%
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => onEditTask(task.id)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenDetail(task.id)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <PanelRightOpen className="w-3.5 h-3.5" />
+                  Detail
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAddSubTask(task)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {isProject ? 'Tambah' : 'Sub Tugas'}
+                </button>
+                {isProject && onOpenProjectDetail ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenProjectDetail(task.id)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold ml-auto"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5" />
+                    Buka Proyek
+                  </button>
+                ) : !isProject ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onOpenTodo(task.id)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                    >
+                      <ListChecks className="w-3.5 h-3.5" />
+                      Todo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onDuplicateTask(task.id)}
+                      aria-label={`Duplikasi ${task.name}`}
+                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          typeof window === 'undefined' ||
+                          window.confirm(`Hapus pekerjaan "${task.name}"?`)
+                        ) {
+                          void onDeleteTask(task.id);
+                        }
+                      }}
+                      aria-label={`Hapus ${task.name}`}
+                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-xs font-semibold text-rose-600 hover:bg-rose-100 ml-auto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+/** Mobile (<768px) slide-over container for GanttDetailPanel. */
+export function GanttMobileDetailDrawer({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="md:hidden fixed inset-0 z-50 bg-black/40 flex justify-end"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md h-full bg-white shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {children}
+      </div>
     </div>
   );
 }

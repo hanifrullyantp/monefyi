@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import {
   AI_PROVIDERS,
   cleanRawAssistantReply,
@@ -14,11 +14,19 @@ import {
 import {
   DIVISIONS,
   auditAndSyncProjectStatuses,
+  executeAgentAction,
   extractMultiClauseActions,
   localBriefing,
   localSmartManagerTurn,
   type ContextPack,
+  type ManagerEnv,
 } from './managerAgentService';
+import { createProject, updateProject } from './projectService';
+
+vi.mock('./projectService', () => ({
+  createProject: vi.fn(),
+  updateProject: vi.fn(),
+}));
 import { formatCurrency } from '../lib/adapters';
 import type { Project } from '../store/appStore';
 import type { BonRequest } from './payrollService';
@@ -352,5 +360,191 @@ describe('General Manager & 5 Kepala Divisi (managerAgentService)', () => {
     const ctx = createMockContextPack();
     const briefing = localBriefing(ctx);
     expect(briefing).toContain('✅ Sehat');
+  });
+
+  it('tidak salah mengarahkan prompt perencanaan proyek bertipe "tim 4 orang" ke HRD Bu Nadia dan menyiapkan draft add_project editable (F-15)', () => {
+    const ctx = createMockContextPack();
+    const cfg: AIConfig = { ...loadAIConfig(), executionMode: 'auto', autoLimit: 5_000_000 };
+    const turn = localSmartManagerTurn(
+      ctx,
+      'Peluncuran website toko online dalam 6 minggu, tim 4 orang',
+      cfg,
+    );
+
+    expect(turn.delegations.some(d => d.division === 'hr')).toBe(false);
+    expect(turn.actions).toHaveLength(1);
+    const act = turn.actions[0];
+    expect(act.type).toBe('add_project');
+    expect(act.needsApproval).toBe(true);
+    expect(act.params.name).toBe('Peluncuran website toko online');
+    expect(act.params.duration_days).toBe(42);
+    expect(typeof act.params.start_date).toBe('string');
+    expect(typeof act.params.end_date).toBe('string');
+
+    const startMs = Date.parse(`${String(act.params.start_date)}T00:00:00Z`);
+    const endMs = Date.parse(`${String(act.params.end_date)}T00:00:00Z`);
+    expect(Math.round((endMs - startMs) / 86_400_000)).toBe(42);
+    expect(turn.reply).toMatch(/Mode Mesin Lokal|Mode lokal/i);
+    expect(turn.reply).toMatch(/WBS|API Key LLM/i);
+  });
+
+  it('addProjMatch mengekstrak nama proyek, klien, nilai kontrak (jt/miliar/ribu), dan durasi secara bersih (F-15)', () => {
+    const ctx = createMockContextPack();
+
+    const r1 = extractMultiClauseActions(
+      ctx,
+      'Buat proyek Renovasi Ruko Kemang klien Pak Hendro nilai kontrak 250 juta dalam 6 minggu',
+    );
+    expect(r1.rawActions).toHaveLength(1);
+    expect(r1.rawActions[0].type).toBe('add_project');
+    expect(r1.rawActions[0].params.name).toBe('Renovasi Ruko Kemang');
+    expect(r1.rawActions[0].params.client).toBe('Pak Hendro');
+    expect(r1.rawActions[0].params.contract_value).toBe(250_000_000);
+    expect(r1.rawActions[0].params.duration_days).toBe(42);
+
+    const r2 = extractMultiClauseActions(
+      ctx,
+      'Buat proyek Villa Ubud, nilai kontrak 1,5 miliar, klien Bu Sari, 2 bulan',
+    );
+    expect(r2.rawActions[0].params.name).toBe('Villa Ubud');
+    expect(r2.rawActions[0].params.client).toBe('Bu Sari');
+    expect(r2.rawActions[0].params.contract_value).toBe(1_500_000_000);
+    expect(r2.rawActions[0].params.duration_days).toBe(60);
+
+    const r3 = extractMultiClauseActions(
+      ctx,
+      'Tambah proyek Kanopi Minimalis nilai kontrak 750 ribu selama 14 hari',
+    );
+    expect(r3.rawActions[0].params.name).toBe('Kanopi Minimalis');
+    expect(r3.rawActions[0].params.contract_value).toBe(750_000);
+    expect(r3.rawActions[0].params.duration_days).toBe(14);
+  });
+
+  it('executeAgentAction add_project meneruskan start_date, end_date hasil durasi, dan contract_value ke projectService (F-15)', async () => {
+    const ctx = createMockContextPack();
+    const fakeCreated = {
+      ...ctx.projects.get('P1')!,
+      id: 'uuid-new-proj',
+      name: 'Renovasi Ruko Kemang',
+      client_name: 'Pak Hendro',
+      start_date: '2026-11-21',
+      end_date: '2027-01-02',
+    };
+    vi.mocked(createProject).mockResolvedValueOnce(fakeCreated);
+    vi.mocked(updateProject).mockResolvedValueOnce({ ...fakeCreated, contract_value: 250_000_000 });
+
+    const env: ManagerEnv = {
+      userId: 'user-1',
+      orgId: 'org-1',
+      userName: 'Owner',
+      projects: [...ctx.projects.values()],
+      currentProject: ctx.projects.get('P1')!,
+      onNavigate: vi.fn(),
+      onRefreshProjects: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const res = await executeAgentAction(
+      {
+        id: 'act-add-1',
+        type: 'add_project',
+        division: 'project',
+        params: {
+          name: 'Renovasi Ruko Kemang',
+          client: 'Pak Hendro',
+          contract_value: 250_000_000,
+          start_date: '2026-11-21',
+          end_date: '2027-01-02',
+          duration_days: 42,
+        },
+        summary: 'Buat proyek baru',
+        needsApproval: true,
+        status: 'pending',
+      },
+      ctx,
+      env,
+    );
+
+    expect(res.ok).toBe(true);
+    expect(createProject).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Renovasi Ruko Kemang',
+        client_name: 'Pak Hendro',
+        start_date: '2026-11-21',
+        end_date: '2027-01-02',
+      }),
+    );
+    expect(updateProject).toHaveBeenCalledWith('uuid-new-proj', { contract_value: 250_000_000 });
+    expect(env.onRefreshProjects).toHaveBeenCalled();
+
+    const negRes = await executeAgentAction(
+      {
+        id: 'act-add-proj-neg',
+        type: 'add_project',
+        division: 'project',
+        params: {
+          name: 'Proyek Negatif',
+          contract_value: '-5000',
+          start_date: '2026-11-21',
+          end_date: '2026-12-01',
+        },
+        summary: 'Negatif',
+        needsApproval: true,
+        status: 'pending',
+      },
+      ctx,
+      env,
+    );
+    expect(negRes.ok).toBe(false);
+    expect(negRes.message).toContain('negatif');
+
+    const dateRes = await executeAgentAction(
+      {
+        id: 'act-add-proj-date',
+        type: 'add_project',
+        division: 'project',
+        params: {
+          name: 'Proyek Tanggal Terbalik',
+          start_date: '2026-12-10',
+          end_date: '2026-12-01',
+        },
+        summary: 'Tanggal terbalik',
+        needsApproval: true,
+        status: 'pending',
+      },
+      ctx,
+      env,
+    );
+    expect(dateRes.ok).toBe(false);
+    expect(dateRes.message).toContain('lebih awal');
+  });
+
+  it('localSmartManagerTurn merespons jujur untuk input off-topic dan permintaan reschedule tanpa membuang briefing "✅ Sehat" (F-15)', () => {
+    const ctx = createMockContextPack();
+    const cfg = loadAIConfig();
+
+    const offTopic = localSmartManagerTurn(ctx, 'resep nasi goreng spesial', cfg);
+    expect(offTopic.actions).toHaveLength(0);
+    expect(offTopic.reply).not.toContain('✅ Sehat');
+    expect(offTopic.reply).not.toContain('Laporan eksekutif portofolio');
+    expect(offTopic.reply).toMatch(/di luar cakupan|Froyek/i);
+
+    const resched = localSmartManagerTurn(
+      ctx,
+      'jadwalkan ulang semua tugas setelah pondasi mundur 2 minggu',
+      cfg,
+    );
+    expect(resched.actions).toHaveLength(0);
+    expect(resched.reply).not.toContain('✅ Sehat');
+    expect(resched.reply).toContain('Progress > Gantt');
+    expect(resched.reply).toContain('Edit Sub Tugas');
+    expect(resched.reply).toMatch(/FS/);
+  });
+
+  it('localSmartManagerTurn tetap menampilkan briefing saat diminta secara eksplisit', () => {
+    const ctx = createMockContextPack();
+    const cfg = loadAIConfig();
+    const turn = localSmartManagerTurn(ctx, 'Briefing kondisi semua proyek hari ini', cfg);
+    expect(turn.reply).toContain('Laporan eksekutif portofolio');
+    expect(turn.reply).toContain('✅ Sehat');
   });
 });

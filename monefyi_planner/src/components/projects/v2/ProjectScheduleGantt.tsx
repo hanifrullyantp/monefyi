@@ -9,6 +9,11 @@ import { computeCriticalPath } from '../../../lib/gantt/criticalPath';
 import type { GanttTask } from '../../../lib/gantt/types';
 import { useProjectGanttData, type AddProjectWorkItemInput } from '../gantt/useProjectGanttData';
 import type { WorkItem, WorkItemExtendedMeta } from '../../../services/workItemService';
+import {
+  GanttMobileDetailDrawer,
+  GanttMobileModeSwitch,
+  GanttMobileTaskList,
+} from '../gantt/GanttPlannerView';
 import TaskListPanel from '../gantt/TaskListPanel';
 import GanttTimeline from '../gantt/GanttTimeline';
 import GanttDetailPanel from '../gantt/GanttDetailPanel';
@@ -34,11 +39,13 @@ export default function ProjectScheduleGantt({
     tasks,
     dependencies,
     expandedIds,
+    toggleExpand,
     selectedIds,
     selectTask,
     leftWidth,
     setLeftWidth,
     detailOpen,
+    setDetailOpen,
     toggleDetailOpen,
     viewMode,
     setViewMode,
@@ -81,6 +88,7 @@ export default function ProjectScheduleGantt({
   const [addParentWorkItemId, setAddParentWorkItemId] = useState<string | null>(null);
   const [conflictBusy, setConflictBusy] = useState(false);
   const [extendingBanner, setExtendingBanner] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'list' | 'timeline'>('list');
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -116,6 +124,10 @@ export default function ProjectScheduleGantt({
 
   const projectTask = tasks.find(t => t.type === 'project' && t.id === project.id);
   const effectiveProjectEndDate = projectTask?.endDate ?? project.end_date;
+  const projectEndDateById = useMemo(
+    () => new Map([[project.id, effectiveProjectEndDate]]),
+    [project.id, effectiveProjectEndDate],
+  );
 
   const overDeadlineTasks = useMemo(
     () =>
@@ -261,7 +273,11 @@ export default function ProjectScheduleGantt({
       )}
 
       <div className="flex flex-wrap items-center gap-2 bg-white rounded-xl border border-slate-200 p-2">
-        <div className="flex bg-slate-100 p-0.5 rounded-lg text-xs font-bold">
+        <div
+          className={`${
+            mobileViewMode === 'timeline' ? 'flex' : 'hidden md:flex'
+          } bg-slate-100 p-0.5 rounded-lg text-xs font-bold`}
+        >
           {(['day', 'week', 'month'] as const).map(v => (
             <button
               key={v}
@@ -276,7 +292,11 @@ export default function ProjectScheduleGantt({
           ))}
         </div>
 
-        <div className="flex items-center gap-1 border border-slate-200 rounded-lg px-1">
+        <div
+          className={`${
+            mobileViewMode === 'timeline' ? 'flex' : 'hidden md:flex'
+          } items-center gap-1 border border-slate-200 rounded-lg px-1`}
+        >
           <button
             type="button"
             onClick={zoomOut}
@@ -298,7 +318,9 @@ export default function ProjectScheduleGantt({
         <button
           type="button"
           onClick={() => scrollToTodayRef.current?.()}
-          className="px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50"
+          className={`${
+            mobileViewMode === 'timeline' ? 'inline-flex' : 'hidden md:inline-flex'
+          } px-3 py-1.5 text-xs font-bold text-rose-600 border border-rose-200 rounded-lg hover:bg-rose-50`}
         >
           Hari Ini
         </button>
@@ -385,54 +407,98 @@ export default function ProjectScheduleGantt({
         </button>
       </div>
 
+      <GanttMobileModeSwitch
+        label={`Daftar Pekerjaan (${rows.length})`}
+        mode={mobileViewMode}
+        onChange={setMobileViewMode}
+      />
+
+      {mobileViewMode === 'list' && (
+        <GanttMobileTaskList
+          rows={rows}
+          cpmMetrics={cpm.metrics}
+          projectEndDateById={projectEndDateById}
+          showCriticalPath={showCriticalPath}
+          emptyText="Belum ada pekerjaan terjadwal."
+          onToggleExpand={toggleExpand}
+          onEditTask={setEditTaskId}
+          onOpenDetail={id => {
+            selectTask(id);
+            setDetailOpen(true);
+          }}
+          onAddSubTask={handleOpenAddSubTask}
+          onOpenTodo={setTodoModalTaskId}
+          onDuplicateTask={handleDuplicateAndRefresh}
+          onDeleteTask={handleDeleteAndRefresh}
+        />
+      )}
+
+      {/* Desktop split-pane Gantt (>=768px) or optional mobile horizontal-scroll timeline */}
       <div
-        className="relative flex bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner min-w-0"
+        className={`${
+          mobileViewMode === 'timeline' ? 'flex max-md:overflow-x-auto' : 'hidden md:flex'
+        } relative bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden gantt-planner min-w-0`}
         style={{ height: 'calc(100vh - 380px)', minHeight: 400 }}
       >
-        <div
-          style={{ width: leftWidth, minWidth: 160, maxWidth: '45vw' }}
-          className="shrink-0 h-full overflow-hidden"
-        >
-          <TaskListPanel
+        <div className="flex flex-1 min-h-0 min-w-[680px] md:min-w-0">
+          <div
+            style={{ width: leftWidth, minWidth: 160, maxWidth: '45vw' }}
+            className="shrink-0 h-full overflow-hidden"
+          >
+            <TaskListPanel
+              rows={rows}
+              onReorder={() => {}}
+              onEditTask={setEditTaskId}
+              onAddSubTask={handleOpenAddSubTask}
+              onDuplicateTask={handleDuplicateAndRefresh}
+              onDeleteTask={handleDeleteAndRefresh}
+            />
+          </div>
+          <div
+            className="w-1.5 shrink-0 cursor-col-resize hover:bg-emerald-200/60 active:bg-emerald-300 z-10"
+            onMouseDown={startResizeLeft}
+            role="separator"
+          />
+          <GanttTimeline
             rows={rows}
-            onReorder={() => {}}
+            onCommitDates={commitDates}
+            scrollToTodayRef={scrollToTodayRef}
+            scrollToTaskRef={scrollToTaskRef}
             onEditTask={setEditTaskId}
             onAddSubTask={handleOpenAddSubTask}
             onDuplicateTask={handleDuplicateAndRefresh}
             onDeleteTask={handleDeleteAndRefresh}
           />
+          {detailOpen && (
+            <>
+              <div className="w-1.5 shrink-0 bg-slate-100 hidden md:block" />
+              <div className="hidden md:block w-72 shrink-0 h-full overflow-hidden border-l border-slate-100">
+                <GanttDetailPanel
+                  onEditTask={setEditTaskId}
+                  onAddSubTask={handleOpenAddSubTask}
+                  onDuplicateTask={handleDuplicateAndRefresh}
+                  onDeleteTask={handleDeleteAndRefresh}
+                  onUpdateMeta={handleUpdateMetaAndRefresh}
+                  members={orgMembers}
+                />
+              </div>
+            </>
+          )}
         </div>
-        <div
-          className="w-1.5 shrink-0 cursor-col-resize hover:bg-emerald-200/60 active:bg-emerald-300 z-10"
-          onMouseDown={startResizeLeft}
-          role="separator"
-        />
-        <GanttTimeline
-          rows={rows}
-          onCommitDates={commitDates}
-          scrollToTodayRef={scrollToTodayRef}
-          scrollToTaskRef={scrollToTaskRef}
-          onEditTask={setEditTaskId}
-          onAddSubTask={handleOpenAddSubTask}
-          onDuplicateTask={handleDuplicateAndRefresh}
-          onDeleteTask={handleDeleteAndRefresh}
-        />
-        {detailOpen && (
-          <>
-            <div className="w-1.5 shrink-0 bg-slate-100 hidden md:block" />
-            <div className="w-full md:w-72 shrink-0 h-full overflow-hidden border-l border-slate-100 max-md:absolute max-md:right-0 max-md:top-0 max-md:bottom-0 max-md:z-20 max-md:shadow-xl max-md:bg-white">
-              <GanttDetailPanel
-                onEditTask={setEditTaskId}
-                onAddSubTask={handleOpenAddSubTask}
-                onDuplicateTask={handleDuplicateAndRefresh}
-                onDeleteTask={handleDeleteAndRefresh}
-                onUpdateMeta={handleUpdateMetaAndRefresh}
-                members={orgMembers}
-              />
-            </div>
-          </>
-        )}
       </div>
+
+      {detailOpen && (
+        <GanttMobileDetailDrawer onClose={() => setDetailOpen(false)}>
+          <GanttDetailPanel
+            onEditTask={setEditTaskId}
+            onAddSubTask={handleOpenAddSubTask}
+            onDuplicateTask={handleDuplicateAndRefresh}
+            onDeleteTask={handleDeleteAndRefresh}
+            onUpdateMeta={handleUpdateMetaAndRefresh}
+            members={orgMembers}
+          />
+        </GanttMobileDetailDrawer>
+      )}
 
       <AnimatePresence>
         {editTask && (

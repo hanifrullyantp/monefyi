@@ -46,7 +46,7 @@ export default function ProjectTransactionModals({
             {kind === 'transfer' ? <ArrowLeftRight className="w-5 h-5 text-emerald-600" /> : <Plus className="w-5 h-5 text-emerald-600" />}
             {title}
           </div>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl">
+          <button type="button" onClick={onClose} aria-label="Tutup" className="p-2 hover:bg-slate-100 rounded-xl">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -106,6 +106,10 @@ export default function ProjectTransactionModals({
   );
 }
 
+function sanitizeNumericAmount(raw: string): string {
+  return raw.replace(/[^0-9]/g, '');
+}
+
 function QuickCostForm({
   projectId, userId, canManage, onSaved,
 }: {
@@ -116,6 +120,7 @@ function QuickCostForm({
 }) {
   const [saving, setSaving] = useState(false);
   const [rapItems, setRapItems] = useState<RapItem[]>([]);
+  const [amountTouched, setAmountTouched] = useState(false);
   const [form, setForm] = useState({
     date: todayStr(),
     rapItemId: '',
@@ -146,12 +151,22 @@ function QuickCostForm({
       costKind: selected.type === 'labor' ? 'labor' : 'material',
       description: f.description.trim() || `Realisasi: ${selected.name}`,
       quantity: String(qty),
-      amount: unitPrice > 0 ? String(Math.round(qty * unitPrice)) : f.amount,
+      amount: unitPrice > 0 ? String(Math.max(0, Math.round(qty * unitPrice))) : f.amount,
       supplier: f.supplier.trim() || selected.supplier || '',
     }));
   };
 
+  const parsedAmount = parseMoneyInput(form.amount);
+  const isAmountValid = Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const amountError =
+    form.amount !== '' && !isAmountValid
+      ? 'Nominal harus lebih dari 0'
+      : amountTouched && !isAmountValid
+        ? 'Total nominal wajib diisi dan lebih dari 0'
+        : '';
+
   const handleSubmit = async () => {
+    setAmountTouched(true);
     const amount = parseMoneyInput(form.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       showToast('Nominal harus lebih dari 0', 'error');
@@ -194,11 +209,20 @@ function QuickCostForm({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Tanggal">
-          <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+        <Field label="Tanggal" htmlFor="quick-cost-date">
+          <input
+            id="quick-cost-date"
+            name="date"
+            type="date"
+            value={form.date}
+            onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+            className="w-full px-3 py-2 rounded-xl border text-sm"
+          />
         </Field>
-        <Field label="Jenis Biaya">
+        <Field label="Jenis Biaya" htmlFor="quick-cost-kind">
           <select
+            id="quick-cost-kind"
+            name="costKind"
             value={form.costKind}
             onChange={e => setForm(f => ({ ...f, costKind: e.target.value as 'material' | 'labor' }))}
             className="w-full px-3 py-2 rounded-xl border text-sm bg-white"
@@ -209,8 +233,10 @@ function QuickCostForm({
         </Field>
       </div>
       {rapItems.length > 0 && (
-        <Field label="Pos Item RAP (Disarankan)">
+        <Field label="Pos Item RAP (Disarankan)" htmlFor="quick-cost-rap-item">
           <select
+            id="quick-cost-rap-item"
+            name="rapItemId"
             value={form.rapItemId}
             onChange={e => handleSelectRap(e.target.value)}
             className="w-full px-3 py-2 rounded-xl border text-sm bg-white"
@@ -224,26 +250,78 @@ function QuickCostForm({
           </select>
         </Field>
       )}
-      <Field label="Keterangan">
-        <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="Contoh: Beli semen 10 sak / Upah harian tukang" />
+      <Field label="Keterangan" htmlFor="quick-cost-description">
+        <input
+          id="quick-cost-description"
+          name="description"
+          type="text"
+          value={form.description}
+          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+          className="w-full px-3 py-2 rounded-xl border text-sm"
+          placeholder="Contoh: Beli semen 10 sak / Upah harian tukang"
+        />
       </Field>
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Qty">
-          <input type="number" min="0.01" step="any" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="1" />
+        <Field label="Qty" htmlFor="quick-cost-quantity">
+          <input
+            id="quick-cost-quantity"
+            name="quantity"
+            type="number"
+            min="0.01"
+            step="any"
+            value={form.quantity}
+            onChange={e => setForm(f => ({ ...f, quantity: e.target.value.replace(/-/g, '') }))}
+            className="w-full px-3 py-2 rounded-xl border text-sm"
+            placeholder="1"
+          />
         </Field>
         <div className="col-span-2">
-          <Field label="Total Nominal (Rp)">
-            <input value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="500000" />
+          <Field label="Total Nominal (Rp)" htmlFor="quick-cost-amount">
+            <input
+              id="quick-cost-amount"
+              name="amount"
+              type="text"
+              inputMode="numeric"
+              value={form.amount}
+              onChange={e => {
+                setAmountTouched(true);
+                setForm(f => ({ ...f, amount: sanitizeNumericAmount(e.target.value) }));
+              }}
+              onBlur={() => setAmountTouched(true)}
+              aria-invalid={Boolean(amountError)}
+              aria-describedby={amountError ? 'quick-cost-amount-error' : undefined}
+              className={`w-full px-3 py-2 rounded-xl border text-sm ${
+                amountError ? 'border-rose-400 focus:outline-none focus:ring-2 focus:ring-rose-200' : ''
+              }`}
+              placeholder="500000"
+            />
+            {amountError ? (
+              <p id="quick-cost-amount-error" role="alert" className="text-[11px] font-medium text-rose-600 mt-1">
+                {amountError}
+              </p>
+            ) : isAmountValid ? (
+              <p className="text-[11px] text-slate-500 mt-1">{formatRupiah(parsedAmount)}</p>
+            ) : (
+              <p className="text-[11px] text-slate-400 mt-1">Isi angka nominal lebih dari 0</p>
+            )}
           </Field>
         </div>
       </div>
-      <Field label="Supplier / Penerima (opsional)">
-        <input value={form.supplier} onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))} className="w-full px-3 py-2 rounded-xl border text-sm" placeholder="Contoh: TB Sinar Jaya / Mandor Budi" />
+      <Field label="Supplier / Penerima (opsional)" htmlFor="quick-cost-supplier">
+        <input
+          id="quick-cost-supplier"
+          name="supplier"
+          type="text"
+          value={form.supplier}
+          onChange={e => setForm(f => ({ ...f, supplier: e.target.value }))}
+          className="w-full px-3 py-2 rounded-xl border text-sm"
+          placeholder="Contoh: TB Sinar Jaya / Mandor Budi"
+        />
       </Field>
       <button
         type="button"
         onClick={handleSubmit}
-        disabled={!canManage || saving}
+        disabled={!canManage || saving || !isAmountValid}
         className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm disabled:opacity-50"
       >
         {saving ? 'Menyimpan...' : 'Simpan Biaya Proyek'}
@@ -252,10 +330,10 @@ function QuickCostForm({
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: ReactNode }) {
   return (
     <div>
-      <label className="text-xs font-bold text-slate-500 uppercase">{label}</label>
+      <label htmlFor={htmlFor} className="text-xs font-bold text-slate-500 uppercase">{label}</label>
       <div className="mt-1">{children}</div>
     </div>
   );

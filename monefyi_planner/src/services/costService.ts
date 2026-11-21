@@ -1,6 +1,7 @@
 import { type DbCostRealization } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
 import { assertNoDbError } from '../lib/supabaseErrors';
+import { logProjectAudit } from './auditService';
 import { loadRapItems } from './rapService';
 
 export type CostRealization = DbCostRealization;
@@ -34,6 +35,12 @@ export async function deleteAllCosts(projectId: string) {
   const { error } = await supabase.from('planner_cost_realizations').delete().eq('project_id', projectId);
   if (error) throw new Error(error.message);
   await recalculateProjectSpent(projectId);
+  void logProjectAudit({
+    projectId,
+    action: 'cost.bulk_deleted',
+    targetType: 'project',
+    targetId: projectId,
+  });
 
   if (existing && existing.length > 0) {
     try {
@@ -94,6 +101,20 @@ export async function createCostRealization(
 
   await recalculateProjectSpent(item.project_id);
 
+  void logProjectAudit({
+    projectId: item.project_id,
+    actorId: item.recorded_by,
+    action: 'cost.created',
+    targetType: 'cost',
+    targetId: data.id as string,
+    metadata: {
+      description: item.description,
+      total_amount: Number(data.total_amount) || 0,
+      date: item.date,
+      rap_item_id: item.rap_item_id ?? null,
+    },
+  });
+
   const amount = Number(data.total_amount) || 0;
   if (amount > 0) {
     try {
@@ -123,7 +144,7 @@ export async function createCostRealization(
 export async function deleteCostRealization(id: string, projectId: string) {
   const { data: existing } = await supabase
     .from('planner_cost_realizations')
-    .select('journal_entry_id, description')
+    .select('journal_entry_id, description, total_amount')
     .eq('id', id)
     .maybeSingle();
 
@@ -131,6 +152,17 @@ export async function deleteCostRealization(id: string, projectId: string) {
   if (error) throw new Error(error.message);
 
   await recalculateProjectSpent(projectId);
+
+  void logProjectAudit({
+    projectId,
+    action: 'cost.deleted',
+    targetType: 'cost',
+    targetId: id,
+    metadata: {
+      description: (existing?.description as string | undefined) ?? undefined,
+      total_amount: existing?.total_amount != null ? Number(existing.total_amount) : undefined,
+    },
+  });
 
   if (existing?.journal_entry_id) {
     try {
@@ -193,7 +225,17 @@ export async function setRapItemRealization(input: {
 
   await deleteCostsByRapItemId(projectId, rapItemId);
 
-  if (!realized) return;
+  if (!realized) {
+    void logProjectAudit({
+      projectId,
+      actorId: input.recordedBy,
+      action: 'cost.rap_realization_cleared',
+      targetType: 'rap_item',
+      targetId: rapItemId,
+      metadata: { name: input.rapItemName },
+    });
+    return;
+  }
 
   const plannedQty = Math.max(0, Number(input.plannedQty) || 0);
   const plannedUnitPrice = Number(input.plannedUnitPrice) || 0;
@@ -239,6 +281,17 @@ export async function updateCostRealization(
   const { error } = await supabase.from('planner_cost_realizations').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
   await recalculateProjectSpent(projectId);
+  void logProjectAudit({
+    projectId,
+    action: 'cost.updated',
+    targetType: 'cost',
+    targetId: id,
+    metadata: {
+      fields: Object.keys(patch),
+      ...(patch.description !== undefined ? { description: patch.description } : {}),
+      ...(patch.total_amount !== undefined ? { total_amount: Number(patch.total_amount) } : {}),
+    },
+  });
 }
 
 export async function aggregateCostByRapItem(projectId: string) {

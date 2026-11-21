@@ -34,13 +34,13 @@ function createEmergencyFallback(
   message?: string,
 ): PipelineResult {
   return {
-    intent: 'record_cost',
+    intent: 'unknown',
     params: {},
-    confidence: 0.35,
+    confidence: 0,
     raw: rawInput,
     source: 'fallback',
     layer: 4,
-    reasoning: message || 'Sistem tidak yakin — silakan isi form di bawah lalu catat.',
+    reasoning: message || 'Perintah tidak dipahami atau AI sedang tidak tersedia — pilih aksi manual atau perjelas perintah.',
     preprocessed,
   };
 }
@@ -203,7 +203,7 @@ export async function runNeverFailPipeline(
   onStage?.('ai');
   const aiResult = await aiParseCommand(preprocessed.parseText, context);
 
-  if (aiResult && aiResult.intent !== 'unknown') {
+  if (aiResult && aiResult.intent !== 'unknown' && aiResult.source !== 'fallback') {
     const applied = applyTagHints(preprocessed, aiResult);
     return withSop({
       ...applied,

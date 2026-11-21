@@ -128,26 +128,47 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
           className="flex flex-col flex-1 min-h-0 overflow-hidden"
         >
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <input
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-            placeholder="Nama proyek *"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          />
-          <input
-            value={form.client_name}
-            onChange={e => setForm({ ...form, client_name: e.target.value })}
-            placeholder="Nama klien"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          />
-          <input
-            value={form.location}
-            onChange={e => setForm({ ...form, location: e.target.value })}
-            placeholder="Lokasi"
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
-          />
           <div>
-            <label className="text-xs text-slate-500 mb-1 block">Kategori proyek</label>
+            <label htmlFor="edit-project-name" className="text-xs font-semibold text-slate-600 block mb-1">
+              Nama proyek *
+            </label>
+            <input
+              id="edit-project-name"
+              name="name"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+              placeholder="Nama proyek *"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-project-client" className="text-xs text-slate-500 block mb-1">
+              Nama klien
+            </label>
+            <input
+              id="edit-project-client"
+              name="client_name"
+              value={form.client_name}
+              onChange={e => setForm({ ...form, client_name: e.target.value })}
+              placeholder="Nama klien"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-project-location" className="text-xs text-slate-500 block mb-1">
+              Lokasi
+            </label>
+            <input
+              id="edit-project-location"
+              name="location"
+              value={form.location}
+              onChange={e => setForm({ ...form, location: e.target.value })}
+              placeholder="Lokasi"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm"
+            />
+          </div>
+          <div>
+            <span className="text-xs text-slate-500 mb-1 block">Kategori proyek</span>
             <ProjectTypeSelect
               orgId={tenant?.id || project.tenant_id}
               value={form.type}
@@ -156,8 +177,10 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Mulai</label>
+              <label htmlFor="edit-project-start-date" className="text-xs text-slate-500 mb-1 block">Mulai</label>
               <input
+                id="edit-project-start-date"
+                name="start_date"
                 type="date"
                 value={form.start_date}
                 onChange={e => setForm({ ...form, start_date: e.target.value })}
@@ -165,8 +188,10 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">Selesai</label>
+              <label htmlFor="edit-project-end-date" className="text-xs text-slate-500 mb-1 block">Selesai</label>
               <input
+                id="edit-project-end-date"
+                name="end_date"
                 type="date"
                 value={form.end_date}
                 onChange={e => setForm({ ...form, end_date: e.target.value })}
@@ -175,8 +200,12 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
             </div>
           </div>
           <div className="rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50">
-            <label className="text-xs font-semibold text-slate-600 block">Bulan Laporan Keuangan</label>
+            <label htmlFor="edit-project-finance-month" className="text-xs font-semibold text-slate-600 block">
+              Bulan Laporan Keuangan
+            </label>
             <input
+              id="edit-project-finance-month"
+              name="finance_report_month"
               type="month"
               value={form.finance_report_month}
               onChange={e => setForm({
@@ -195,8 +224,12 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-600 block mb-1">Nilai Kontrak (Rp)</label>
+            <label htmlFor="edit-project-contract-value" className="text-xs font-semibold text-slate-600 block mb-1">
+              Nilai Kontrak (Rp)
+            </label>
             <input
+              id="edit-project-contract-value"
+              name="contract_value"
               type="number"
               min={0}
               value={form.contract_value || ''}
@@ -214,8 +247,12 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-600 block mb-1">Total RAP / Budget Rencana (Rp)</label>
+            <label htmlFor="edit-project-budget-planned" className="text-xs font-semibold text-slate-600 block mb-1">
+              Total RAP / Budget Rencana (Rp)
+            </label>
             <input
+              id="edit-project-budget-planned"
+              name="total_budget_planned"
               type="number"
               min={0}
               value={form.total_budget_planned || ''}
@@ -227,13 +264,20 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
               <p className="text-[11px] text-slate-500 mt-1">{formatRupiah(form.total_budget_planned)}</p>
             )}
           </div>
-          <textarea
-            value={form.description}
-            onChange={e => setForm({ ...form, description: e.target.value })}
-            placeholder="Deskripsi proyek"
-            rows={3}
-            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm resize-none"
-          />
+          <div>
+            <label htmlFor="edit-project-description" className="text-xs text-slate-500 block mb-1">
+              Deskripsi proyek
+            </label>
+            <textarea
+              id="edit-project-description"
+              name="description"
+              value={form.description}
+              onChange={e => setForm({ ...form, description: e.target.value })}
+              placeholder="Deskripsi proyek"
+              rows={3}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm resize-none"
+            />
+          </div>
 
           {canArchive && (
             <div className="pt-4 border-t border-slate-100">
@@ -261,8 +305,10 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
                   <p className="text-xs text-rose-800">
                     Budget tercatat: <strong>{formatRupiah(project.total_budget_planned)}</strong>
                   </p>
-                  <label className="flex items-start gap-2 text-xs text-rose-800 cursor-pointer">
+                  <label htmlFor="edit-project-archive-ack" className="flex items-start gap-2 text-xs text-rose-800 cursor-pointer">
                     <input
+                      id="edit-project-archive-ack"
+                      name="archiveAck"
                       type="checkbox"
                       checked={archiveAck}
                       onChange={e => setArchiveAck(e.target.checked)}
@@ -271,10 +317,12 @@ export default function ProjectEditModal({ project, canArchive, onClose, onSave,
                     Saya mengerti proyek akan diarsipkan dan tidak bisa dipulihkan sendiri setelah 30 hari.
                   </label>
                   <div>
-                    <label className="text-xs text-rose-700 mb-1 block">
+                    <label htmlFor="edit-project-archive-confirm" className="text-xs text-rose-700 mb-1 block">
                       Ketik nama proyek untuk konfirmasi: <strong>{project.name}</strong>
                     </label>
                     <input
+                      id="edit-project-archive-confirm"
+                      name="archiveConfirm"
                       value={archiveConfirm}
                       onChange={e => setArchiveConfirm(e.target.value)}
                       placeholder={project.name}

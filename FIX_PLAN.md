@@ -383,30 +383,43 @@ Seluruh identifier di bawah ini **TIDAK BOLEH diubah** agar tidak mematahkan bac
   - `my-supabase-project/supabase/functions/planner-verify-custom-domain/index.ts` *(opsional aman sesuai Open Decision 2.3: dukung dual-check TXT `_froyek-verify.${host}` dan `_monefyi-verify.${host}` agar domain lama tidak putus)*
   *(Catat kembali: `_shared/email.ts` yang mempertahankan `"Froyek <noreply@support.monefyi.com>"` dan seluruh Edge Functions Personal Finance / Stay di `OPEN-DECISIONS.md` 2.1 tetap dipertahankan.)*
 
-### Fase 5: AI Planner Engine, HR & Audit Trail, Mobile `375px`, Aksesibilitas & Validasi Form
-- **Track 5A (AI Intent, WBS Multi-Industri, Quick Mode `unknown`, Reschedule & Modal Mobile Header):**
-  - `monefyi_planner/src/services/managerAgentService.ts` *(F-15, F-27)*
-  - `monefyi_planner/src/lib/commandParser.ts` *(F-16)*
-  - `monefyi_planner/src/components/CommandModal.tsx` *(F-16 handler UI `intent: 'unknown'` & opsi aman saat offline/gagal)*
-  - `monefyi_planner/src/components/agent/ManagerWorkspaceModal.tsx` *(F-15 render markdown + preview editable WBS/reschedule + F-20 `flex-wrap` header mobile)*
-- **Track 5B (HR Member Deactivation, Seat Count Sync & Audit Trail):**
-  - `monefyi_planner/src/pages/HrEmployees.tsx` *(F-30 format waktu human-readable, sinkronisasi hitungan kuota)*
-  - `monefyi_planner/src/components/hr/EmployeeDetailSheet.tsx` *(F-30 tombol ubah role & nonaktifkan/hapus anggota)*
-  - `monefyi_planner/src/services/auditService.ts` + hook/panggilan audit dari `projectService.ts`, `costService.ts`, `rapService.ts` *(F-30 record `planner_audit_logs` pada mutasi penting)*
-- **Track 5C (Mobile `375px`, CS Offset, Validasi Nominal, Routing Back & Aksesibilitas):**
-  - `monefyi_planner/src/components/projects/gantt/GanttToolbar.tsx` & `TimelineHeader.tsx` *(F-20, F-34)*
-  - `monefyi_planner/src/components/projects/v2/ProjectScheduleGantt.tsx` & `GanttPlannerView.tsx` *(F-20 mobile list-first view di `<768px`)*
-  - `monefyi_planner/src/components/common/CustomerSupportWidget.tsx` *(F-20, F-34 geser offset/sembunyikan saat bottom action bar aktif)*
-  - `monefyi_planner/src/components/projects/v2/ProjectTransactionModals.tsx` *(F-32 `inputMode="numeric"` & sanitasi minus)*
-  - `monefyi_planner/src/components/AuthPages.tsx`, `pages/auth/OwnerSignup.tsx`, `pages/Settings.tsx`, `pages/onboarding/OwnerWizard.tsx`, `components/LandingEntry.tsx`, `components/AppShell.tsx`, `components/projects/v2/ProjectDetailV2.tsx` *(F-31 routing Back `?tab=` + LandingEntry UX; F-36 `<label htmlFor>` + `id`/`name` + kontras; catatan: F-38 auto-redirect login sudah diselesaikan di Fase 1 Track 1A)*
-  *(Catatan: sinkronkan dengan Fase 4 sehingga perubahan F-31/F-36/F-38 di file bersama dilakukan bersih tanpa menimpa Froyek copy Fase 4.)*
+### Fase 5: Perbaikan AI Terukur, HR & Audit Trail, Mobile `375px`, Aksesibilitas & Validasi Form
+> **4 Track Non-Overlapping — 0 Irisan File** *(7 + 10 + 16 + 8 = 41 file eksklusif; full WBS generator & auto-reschedule multi-tugas engine di luar scope dicatat sebagai `[BUTUH-KEPUTUSAN]` sesuai batasan proyek).*
+
+- **Track 5A — AI Scoped Fixes, Editable `add_project`, Markdown & Quick Mode `unknown` (7 file):**
+  - `monefyi_planner/src/services/managerAgentService.ts` & `.test.ts` *(F-15: perketat regex HRD agar kata `"tim 4 orang"` tidak menyalip prompt rencana proyek ke HRD; parse `add_project` `name`/`client`/`contract_value`/durasi (`minggu`/`bulan`) + teruskan ke `createProject`; tangani prompt off-topic/reschedule/rencana proyek tanpa membuang portofolio briefing palsu; F-27 empty-state & `localBriefing` dipertahankan)*
+  - `monefyi_planner/src/lib/commandParser.ts`, `commandPipeline.ts`, & `commandPipeline.test.ts` *(F-16: `createAIFallbackParse` & `createEmergencyFallback` & `all_providers_failed` mengembalikan `intent: 'unknown'`, bukan memaksa `'record_cost'`)*
+  - `monefyi_planner/src/components/CommandModal.tsx` *(F-16: tangani `intent: 'unknown'` dengan pesan klarifikasi & pilihan aksi aman + cegah reset riwayat GM saat toggle `Ruang GM` ↔ `Cepat`; jaga isolasi Worker F-18)*
+  - `monefyi_planner/src/components/agent/ManagerWorkspaceModal.tsx` *(F-15: renderer inline bold aman untuk `**...**` tanpa raw asterisks & field edit inline pada kartu aksi `add_project`; F-20: `flex-wrap` header modal AI & `whitespace-nowrap shrink-0` pada badge `Auto-Pilot Aktif` di `375px`)*
+- **Track 5B — HR Member Deactivation/Role, Quota Sync & Audit Trail (10 file):**
+  - `monefyi_planner/src/services/auditService.ts` & `.test.ts` *(F-30: tambah `logAudit` non-blocking dengan guard `42501`/`403` per sesi + ring-buffer lokal org tergabung ke `listAuditLogs` agar remote sebelum migrasi tidak memicu badai `403`)*
+  - `monefyi_planner/src/services/projectService.ts`, `costService.ts`, `rapService.ts`, `memberService.ts` *(F-30: catat `logAudit` pada mutasi proyek/biaya/RAP/anggota penting)*
+  - `monefyi_planner/src/pages/HrEmployees.tsx` & `monefyi_planner/src/components/team/InviteMemberModal.tsx` *(F-30: teruskan `activeMemberCount={members.length}` agar kuota modal & list HR sinkron; format timestamp Audit Log ke `id-ID` + label aksi human-readable; oper `handleRoleChange` & `handleRemove`)*
+  - `monefyi_planner/src/components/hr/EmployeeDetailSheet.tsx` *(F-30: tombol ubah role `manager`/`worker` + nonaktifkan/hapus anggota sesuai aturan peran)*
+  - `my-supabase-project/supabase/migrations/20261121120000_planner_audit_logs_insert.sql` *(file lokal baru — HANYA tulis SQL `INSERT` policy `planner_audit_logs`; **JANGAN** push ke remote)*
+- **Track 5C-Auth — Onboarding, Routing Back `?tab=`, Settings Duplicate & Aksesibilitas (16 file):**
+  - `monefyi_planner/src/components/AuthPages.tsx`, `components/auth/PasswordField.tsx`, `components/auth/ResetPasswordPanel.tsx`, `pages/auth/OwnerSignup.tsx`, `pages/auth/SignupHub.tsx`, `pages/onboarding/OwnerWizard.tsx` *(F-36: lengkapi `<label htmlFor>` + `id`/`name`/`autoComplete`, tingkatkan kontras link `← Kembali`, perjelas copy Langkah 2–3 `OwnerWizard`)*
+  - `monefyi_planner/src/pages/join/JoinByToken.tsx`, `JoinByCode.tsx`, `FindCompany.tsx` *(F-31: `/join` tanpa token menampilkan CTA ke `/join-by-code` & `/find-company`; F-36 label/id/kontras)*
+  - `monefyi_planner/src/components/LandingEntry.tsx` *(F-31: sediakan fallback/escape aman ke `/login` saat dev URL tidak aktif)*
+  - `monefyi_planner/src/components/account/AIProviderPanel.tsx`, `UserAccountPanel.tsx`, `monefyi_planner/src/pages/Settings.tsx` *(F-33: hapus duplikat `<AIProviderPanel />` di tab `profil` `Settings.tsx`; F-36: `id`/`name`/`htmlFor`/`autoComplete="off"` pada input API key)*
+  - `monefyi_planner/src/components/AppShell.tsx`, `Layout.tsx`, `monefyi_planner/src/pages/Dashboard.tsx` *(F-31: sinkronkan `/app?tab=<id>` pada navigasi sidebar/header/dashboard dan reset default ke `'home'` jika `?tab=` kosong agar Browser Back dari `/app/projects/:id` akurat)*
+- **Track 5C-Mobile — URL Tab ProjectDetailV2, Validasi Nominal, CS Offset & Mobile `375px` Gantt (8 file):**
+  - `monefyi_planner/src/components/projects/v2/ProjectDetailV2.tsx` *(F-31: sinkronkan inner tab proyek ke URL query `?tab=`)*
+  - `monefyi_planner/src/components/projects/v2/ProjectTransactionModals.tsx` & `monefyi_planner/src/components/projects/ProjectEditModal.tsx` *(F-32: `inputMode="numeric"`, tolak/strip `-` real-time, disable tombol jika nominal `<= 0`; F-36 `<label htmlFor>` + `id`/`name`)*
+  - `monefyi_planner/src/components/common/CustomerSupportWidget.tsx` *(F-20, F-34: offset/sembunyikan tombol Mbak Esti di mobile saat bottom bar Detail Proyek aktif & tingkatkan clearance)*
+  - `monefyi_planner/src/components/projects/gantt/GanttToolbar.tsx` & `TimelineHeader.tsx` *(F-20, F-34: perbaiki lebar input pencarian Gantt agar tidak menciut `58px` & rapikan label pill `"Hari ini"` / header bulan)*
+  - `monefyi_planner/src/components/projects/gantt/GanttPlannerView.tsx` & `monefyi_planner/src/components/projects/v2/ProjectScheduleGantt.tsx` *(F-20: tampilan mobile list-first terpisah pada `<768px` agar nama tugas utuh terbaca di `375px`, jaga split-pane desktop `md:flex`)*
 
 ### Fase 6: Keamanan Client Storage, Worker Traces, Komentar Indra & Proxy Vault AI
-- **Track 6A (Semua tugas keamanan & dokumentasi bypass):**
-  - `monefyi_planner/src/services/singleDeviceSessionService.ts` & `.test.ts` *(F-25 `[BUKAN-BUG]` — tambah komentar eksplisit sesuai Keputusan Produk #3)*
-  - `monefyi_planner/src/services/telegramService.ts` *(F-35 — batasi caching kontak `localStorage` hanya untuk Owner/Manager, jangan Worker)*
-  - `monefyi_planner/src/services/runtimeTracer.ts` *(F-35 lanjutan: verifikasi final tidak ada regresi `403` lintas-role; fix akar antrean `localStorage` lintas-user & guard `session.user.id` sudah dijalankan di Fase 1 Track 1A)*
-  - `monefyi_planner/src/services/aiProviderService.ts` & `aiConfigSync.ts` *(F-24 — isolasi/siapkan panggilan lewat backend proxy Edge Function; lihat `OPEN-DECISIONS.md` untuk deployment secret/Vault remote)*
+> **2 Track Paralel — 0 Irisan File** *(9+2 = 11 file Frontend di Track 6A + 2 artefak Backend lokal di Track 6B; **JANGAN** deploy ke remote).*
+
+- **Track 6A — Frontend Security, Storage Isolation, Proxy Client & `F-25` (`monefyi_planner/`):**
+  - `monefyi_planner/src/services/singleDeviceSessionService.ts` & `.test.ts` *(F-25 `[BUKAN-BUG]` — pertahankan `lower.includes('indra')` utuh & tambah komentar penjelas Keputusan Produk #3 + test regresi)*
+  - `monefyi_planner/src/services/aiProviderService.ts`, `aiProviderService.test.ts`, `aiConfigSync.ts`, `components/account/AIProviderPanel.tsx` *(F-24: ubah default `executionMode` ke `'review'`, pisahkan secret `keys` dari `localStorage` plaintext `monefyi_planner_ai_config_v1` ke `sessionStorage` + siapkan jalur `planner-ai-proxy` berbasis flag `VITE_AI_PROXY_ENABLED`, tambah mask/clear key di UI)*
+  - `monefyi_planner/src/services/telegramService.ts`, `telegramService.test.ts`, `AppShell.tsx`, `Settings.tsx`, `store/appStore.ts` *(F-35: hentikan caching kontak & token Telegram ke `localStorage` untuk non-manager/Worker, batasi `Settings.tsx` tab `'koordinasi'`, bersihkan AI keys + Telegram contacts + traces saat `logout()`)*
+- **Track 6B — Local DB RLS Hardening Migration & Edge Function Proxy (`my-supabase-project/`, lokal saja):**
+  - `my-supabase-project/supabase/migrations/20261121130000_phase6_rls_and_secrets_hardening.sql` *(tutup policy `USING(true)` `winning_engine_config`, lindungi kolom istimewa `profiles` & `planner_organizations`, perketat `runtime_traces` `tenant_id` & `planner_org_custom_domains`, buat tabel `planner_user_ai_secrets`)*
+  - `my-supabase-project/supabase/functions/planner-ai-proxy/index.ts` *(Edge Function proxy LLM terenkripsi siap deploy — eksekusi remote `[BLOCKED]`)*
 
 ### Fase 7: QA Regresi, Verifikasi Grep Brand & Penutupan Laporan
 - Jalankan ulang `npx tsc --noEmit`, `npm test`, `npm run build` (`monefyi_planner/`), `npm run typecheck && npm run test:all-engine` (`PlannerLP2/`).

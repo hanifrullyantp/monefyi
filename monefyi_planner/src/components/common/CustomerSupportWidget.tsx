@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   MessageCircle,
   X,
   Send,
   ChevronRight,
-  ExternalLink,
 } from 'lucide-react';
 import {
   CSMessage,
@@ -16,19 +15,22 @@ import {
 } from '../../services/customerSupportService';
 import { escalateQuestionToOwnerTelegram } from '../../services/telegramService';
 import { useAppStore } from '../../store/appStore';
+import { useShellStore } from '../../store/shellStore';
+import { useGanttStore } from '../../store/ganttStore';
 import { useEntitlement } from '../../hooks/useEntitlement';
 import { isAdminFullAccess } from '../../lib/entitlement';
 import { hasEstimatorLicenseAccess } from '../../lib/appProductBrand';
 
 const FAB_SIZE = 44;
-const FAB_POS_KEY = 'froyek_cs_fab_pos_v1';
+const FAB_POS_KEY = 'froyek_cs_fab_pos_v2';
 const DRAG_THRESHOLD = 6;
+const MOBILE_BOTTOM_CLEARANCE = 156;
 
 type FabPos = { x: number; y: number };
 
 function defaultFabPos(): FabPos {
   const margin = 16;
-  const bottomClearance = window.innerWidth < 1024 ? 88 : 96;
+  const bottomClearance = window.innerWidth < 768 ? MOBILE_BOTTOM_CLEARANCE : 96;
   return {
     x: Math.max(margin, window.innerWidth - margin - FAB_SIZE),
     y: Math.max(margin, window.innerHeight - bottomClearance - FAB_SIZE),
@@ -37,10 +39,25 @@ function defaultFabPos(): FabPos {
 
 function clampFabPos(pos: FabPos): FabPos {
   const margin = 8;
+  const bottomClearance = window.innerWidth < 768 ? MOBILE_BOTTOM_CLEARANCE : margin;
   return {
     x: Math.min(Math.max(margin, pos.x), Math.max(margin, window.innerWidth - FAB_SIZE - margin)),
-    y: Math.min(Math.max(margin, pos.y), Math.max(margin, window.innerHeight - FAB_SIZE - margin)),
+    y: Math.min(
+      Math.max(margin, pos.y),
+      Math.max(margin, window.innerHeight - FAB_SIZE - bottomClearance),
+    ),
   };
+}
+
+function hasStoredFabPos(): boolean {
+  try {
+    const raw = localStorage.getItem(FAB_POS_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as FabPos;
+    return Number.isFinite(parsed.x) && Number.isFinite(parsed.y);
+  } catch {
+    return false;
+  }
 }
 
 function readFabPos(): FabPos {
@@ -57,17 +74,40 @@ function readFabPos(): FabPos {
 
 export default function CustomerSupportWidget() {
   const navigate = useNavigate();
-  const { isDemoMode, tenant, platformRole, user, entitlementPreviewMode } = useAppStore();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { isDemoMode, tenant, platformRole, user, entitlementPreviewMode, activeTab } = useAppStore();
+  const shellProjectId = useShellStore(s => s.projectId);
+  const ganttDetailOpen = useGanttStore(s => s.detailOpen);
   const entitlement = useEntitlement();
   const hasEstimatorAccess = hasEstimatorLicenseAccess(
     entitlement,
     isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode),
   );
+
+  const tabParam = searchParams.get('tab');
+  const isProjectDetail =
+    /^\/app\/projects\/[^/]+/.test(location.pathname) || Boolean(shellProjectId);
+  const isHrRoute =
+    location.pathname === '/app' &&
+    (tabParam === 'hr' ||
+      tabParam === 'team' ||
+      (!tabParam && (activeTab === 'hr' || activeTab === 'team')));
+  const isEstimatorRoute = location.pathname.startsWith('/app/estimator');
+  const isGanttDetailMobile =
+    (location.pathname.startsWith('/app/projects') ||
+      (location.pathname === '/app' && (tabParam === 'projects' || activeTab === 'projects'))) &&
+    ganttDetailOpen;
+  // Sembunyikan trigger Mbak Esti di mobile (<768px) saat bottom action bar / FAB / panel tugas aktif
+  const hideFabOnMobile =
+    isProjectDetail || isHrRoute || isEstimatorRoute || isGanttDetailMobile;
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<CSMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [fabPos, setFabPos] = useState<FabPos>(readFabPos);
+  const hasCustomPosRef = useRef(hasStoredFabPos());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fabPosRef = useRef(fabPos);
   const dragRef = useRef<{
@@ -81,7 +121,8 @@ export default function CustomerSupportWidget() {
   fabPosRef.current = fabPos;
 
   useEffect(() => {
-    const onResize = () => setFabPos(current => clampFabPos(current));
+    const onResize = () =>
+      setFabPos(current => (hasCustomPosRef.current ? clampFabPos(current) : defaultFabPos()));
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -116,6 +157,7 @@ export default function CustomerSupportWidget() {
     dragRef.current = null;
     if (!drag?.moved) return;
     suppressClickRef.current = true;
+    hasCustomPosRef.current = true;
     try {
       localStorage.setItem(FAB_POS_KEY, JSON.stringify(fabPosRef.current));
     } catch {
@@ -296,7 +338,9 @@ export default function CustomerSupportWidget() {
               }
               setIsOpen(true);
             }}
-            className="fixed z-40 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-lg shadow-emerald-900/25 flex items-center justify-center text-white cursor-grab active:cursor-grabbing touch-none select-none"
+            className={`fixed z-40 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-lg shadow-emerald-900/25 ${
+              hideFabOnMobile ? 'hidden md:flex' : 'flex'
+            } items-center justify-center text-white cursor-grab active:cursor-grabbing touch-none select-none`}
             aria-label="Buka chat Mbak Esti. Tahan dan geser untuk memindahkan."
             title="Tahan dan geser untuk pindah"
           >
@@ -315,7 +359,7 @@ export default function CustomerSupportWidget() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-16 sm:bottom-6 right-3 sm:right-6 z-50 w-[94vw] sm:w-[400px] h-[580px] max-h-[85vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden"
+            className="fixed bottom-20 md:bottom-6 right-3 sm:right-6 z-50 w-[94vw] sm:w-[400px] h-[580px] max-h-[85vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden"
           >
             {/* Header Concierge */}
             <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 p-4 text-white flex items-center justify-between">

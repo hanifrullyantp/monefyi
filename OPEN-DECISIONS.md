@@ -56,3 +56,14 @@ Dokumen ini mencatat item ambigu, blokir infrastruktur remote, serta implikasi b
      - Berisi `234` kecocokan kata `"Monefyi"` pada hasil build statis lama dari `Mini App Monefyi/` (`bagi-hasil`, `budget`, `cicilan`, `debt-free`, `salary`, `waris`, `zakat`). Karena file HTML/JS minified adalah artefak build statis, pembaruannya memerlukan build ulang dari repositori/folder sumber mini app secara terpisah.
   3. **Edge Functions Remote Deployment (`BLOCKED`):**
      - Perubahan copy/CORS di `my-supabase-project/supabase/functions/*` sudah siap di repo lokal, namun belum di-deploy ke project Supabase remote `zzwqfmdyncxbolestkqp` sesuai batasan tanpa deploy remote.
+
+---
+
+## 5. Cakupan AI Planner/Rescheduler Penuh & Migrasi RLS `planner_audit_logs` (Fase 5)
+
+- **Eksekusi Migrasi `planner_audit_logs_insert` (`BLOCKED` untuk Remote Push):**
+  - File migrasi lokal `my-supabase-project/supabase/migrations/20261121120000_planner_audit_logs_insert.sql` menambahkan policy `INSERT TO authenticated` pada `public.planner_audit_logs`.
+  - Karena tidak boleh melakukan `supabase db push` ke project remote `zzwqfmdyncxbolestkqp`, eksekusi remote berstatus **`[BLOCKED]`**. `auditService.ts` memakai circuit-breaker `42501`/`403` + ring buffer lokal per org (`monefyi_audit_logs_local_v1:<orgId>`) agar riwayat `Audit Log` tampil tanpa spam error jaringan sebelum migrasi dijalankan.
+- **Generator WBS Multi-Fase AI & Engine Auto-Reschedule (`[BUTUH-KEPUTUSAN]`):**
+  - Sesuai batasan scope proyek, Fase 5 memperbaiki bug terukur (`tim 4 orang` salah rute HRD, ekstraksi `add_project`, edit inline draf proyek, parser markdown aman, penolakan jujur input off-topic/reschedule, serta `commandParser` `unknown` fallback).
+  - Rancang bangun generator WBS multi-fase + estimasi bobot otomatis maupun engine *auto-rescheduling* lintas banyak tugas Gantt berbasis LLM (`F-15` / `F-27` penuh) memerlukan keputusan desain produk dan infrastruktur AI proxy terpisah.
