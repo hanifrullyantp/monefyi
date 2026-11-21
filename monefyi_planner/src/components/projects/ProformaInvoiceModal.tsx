@@ -180,7 +180,7 @@ export default function ProformaInvoiceModal({
             </label>
 
             <p className="text-[10px] text-slate-400">
-              Branding & rekening dari Pengaturan Estimator → PDF.
+              Branding &amp; rekening dari Pengaturan Penawaran &amp; PDF.
             </p>
           </div>
 

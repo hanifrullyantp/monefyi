@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     // Jika membutuhkan eskalasi ke Owner (misal: negosiasi diskon atau kasbon karyawan)
     if (result.escalationRequired && config.ownerPhone) {
       const alertMsg =
-        `🚨 *Notifikasi Bot WhatsApp Monefyi*\n\n` +
+        `🚨 *Notifikasi Bot WhatsApp Froyek*\n\n` +
         `Kategori: *${result.senderType === 'employee' ? 'Koordinasi Karyawan' : 'Eskalasi Customer'}*\n` +
         `Pengirim: ${sender}\n` +
         `Isi Pesan: "${message}"\n\n` +
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    service: 'Monefyi WhatsApp Bot Webhook',
+    service: 'Froyek WhatsApp Bot Webhook',
     timestamp: new Date().toISOString(),
   });
 }

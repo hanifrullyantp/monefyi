@@ -58,13 +58,13 @@ self.addEventListener('push', (event) => {
     try {
       data = event.data.json();
     } catch {
-      data = { title: 'Monefyi Admin', body: event.data.text() };
+      data = { title: 'Froyek Admin', body: event.data.text() };
     }
   }
 
-  const title = data.title || 'Monefyi Admin Notifikasi';
+  const title = data.title || 'Froyek Admin Notifikasi';
   const options = {
-    body: data.body || 'Pemberitahuan baru dari sistem Monefyi Admin.',
+    body: data.body || 'Pemberitahuan baru dari sistem Froyek Admin.',
     icon: data.icon || '/brand/admin/icon-192.png',
     badge: '/brand/admin/icon-192.png',
     vibrate: [200, 100, 200, 100, 200],

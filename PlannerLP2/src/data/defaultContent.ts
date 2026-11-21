@@ -2,7 +2,7 @@ import type { SiteContent } from "@/lib/types/content";
 
 export const defaultContent: SiteContent = {
   navbar: {
-    logo: "Monefyi Estimator",
+    logo: "Froyek Estimator",
     logoImage: "/brand/estimator/lockup-light.svg",
     menuItems: [
       { label: "Beranda", href: "#hero" },
@@ -82,7 +82,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
         problem:
           "Survei berjam-jam, tapi baru kirim harga 3 hari kemudian. Semangat klien sudah turun, atau vendor lain sudah masuk.",
         solution:
-          "Gunakan Monefyi Estimator di HP saat survei. Input ukuran, pilih material, dan harga muncul seketika.",
+          "Gunakan Froyek Estimator di HP saat survei. Input ukuran, pilih material, dan harga muncul seketika.",
         importantPoints: [
           "Tunjukkan transparansi harga ke klien",
           "Adjust budget real-time sesuai diskusi",
@@ -121,8 +121,8 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     paragraph1:
       "Menerapkan 3 step di atas terdengar mudah, tapi butuh sistem yang mendukung. Kalau semua masih manual — WA dibalas satu-satu, hitungan di Excel, penawaran di Word, proyek di kepala — kamu akan kembali ke chaos yang sama.",
     paragraph2:
-      "Untuk itu kami buat Monefyi Estimator — sistem yang bantu kamu jalankan 3 step ini setiap hari, tanpa ribet.",
-    ctaText: "Lihat Monefyi Estimator",
+      "Untuk itu kami buat Froyek Estimator — sistem yang bantu kamu jalankan 3 step ini setiap hari, tanpa ribet.",
+    ctaText: "Lihat Froyek Estimator",
   },
 
   relatable: {
@@ -143,7 +143,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     counterMessages: {
       low: "Kamu udah selangkah lebih maju!",
       mid: "Ini masalah yang bisa diatasi. Yuk lihat caranya.",
-      high: "Waktunya ubah sistem kerja. Monefyi Estimator solusinya.",
+      high: "Waktunya ubah sistem kerja. Froyek Estimator solusinya.",
     },
     ctaText: "Lihat Solusinya",
   },
@@ -192,7 +192,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     badge: "THE TRANSFORMATION",
     title: "Dua Nasib yang Berbeda Jauh",
     subtitle:
-      "Monefyi Estimator bukan cuma aplikasi, tapi cara baru menjalankan bisnis jasa proyek.",
+      "Froyek Estimator bukan cuma aplikasi, tapi cara baru menjalankan bisnis jasa proyek.",
     scenarios: [
       {
         time: "Pagi Hari — 08:00 WIB",
@@ -301,12 +301,12 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     ],
     closingQuote:
       "Setiap cerita berbeda. Karena setiap bisnis jasa proyek itu unik. Yang sama: semua menemukan sistem kerja yang lebih waras.",
-    closingAttribution: "— Tim Monefyi",
+    closingAttribution: "— Tim Froyek",
   },
 
   comparison: {
     badge: "COMPARISON",
-    title: "Kenapa Harus Monefyi Estimator?",
+    title: "Kenapa Harus Froyek Estimator?",
     subtitle:
       "Berhenti menebak harga dan mulai berikan penawaran akurat dalam hitungan menit.",
     rows: [
@@ -577,7 +577,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       },
       {
         question: "Ada biaya langganan bulanan?",
-        answer: "Tidak ada. Cukup sekali bayar, kamu bisa menggunakan Monefyi Estimator selamanya.",
+        answer: "Tidak ada. Cukup sekali bayar, kamu bisa menggunakan Froyek Estimator selamanya.",
       },
     ],
   },
@@ -585,7 +585,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
   guarantee: {
     title: "Garansi 7 Hari 100% Uang Kembali",
     paragraph:
-      "Kami sangat yakin Monefyi Estimator akan mengubah cara kerja bisnismu. Jika dalam 7 hari kamu merasa aplikasi ini tidak membantu — kami kembalikan uangmu 100% tanpa potongan. Zero risk.",
+      "Kami sangat yakin Froyek Estimator akan mengubah cara kerja bisnismu. Jika dalam 7 hari kamu merasa aplikasi ini tidak membantu — kami kembalikan uangmu 100% tanpa potongan. Zero risk.",
     checkpoints: [
       "Sudah mulai pakai aplikasinya",
       "Proses review 1–3 hari kerja",
@@ -605,14 +605,14 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         id: "1",
         category: "Umum",
-        question: "Apa itu Monefyi Estimator?",
+        question: "Apa itu Froyek Estimator?",
         answer:
-          "Monefyi Estimator adalah sistem hitung harga proyek tercepat untuk kontraktor, interior designer, dan pelaku jasa proyek. Membantu Anda saring lead WA dan kirim PDF penawaran profesional langsung di tempat survei.",
+          "Froyek Estimator adalah sistem hitung harga proyek tercepat untuk kontraktor, interior designer, dan pelaku jasa proyek. Membantu Anda saring lead WA dan kirim PDF penawaran profesional langsung di tempat survei.",
       },
       {
         id: "2",
         category: "Umum",
-        question: "Untuk siapa Monefyi Estimator cocok?",
+        question: "Untuk siapa Froyek Estimator cocok?",
         answer:
           "Cocok untuk kontraktor renovasi, interior designer, pengusaha kitchen set, furniture custom, kanopi, dan jasa proyek lainnya yang butuh hitung harga cepat dan profesional.",
       },
@@ -621,7 +621,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
         category: "Umum",
         question: "Apa bedanya dengan cara manual?",
         answer:
-          "Cara manual memakan waktu 2-3 hari. Dengan Monefyi Estimator, Anda bisa hitung harga dan kirim PDF penawaran dalam 3-5 menit saat masih di depan klien.",
+          "Cara manual memakan waktu 2-3 hari. Dengan Froyek Estimator, Anda bisa hitung harga dan kirim PDF penawaran dalam 3-5 menit saat masih di depan klien.",
       },
       {
         id: "4",
@@ -642,7 +642,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
         category: "Fitur",
         question: "Bisa dipakai di HP?",
         answer:
-          "Tentu. Monefyi Estimator didesain mobile-first agar mudah digunakan lewat browser HP saat Anda sedang melakukan survei di lokasi proyek.",
+          "Tentu. Froyek Estimator didesain mobile-first agar mudah digunakan lewat browser HP saat Anda sedang melakukan survei di lokasi proyek.",
       },
       {
         id: "9",
@@ -654,7 +654,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         id: "11",
         category: "Harga",
-        question: "Berapa harga Monefyi Estimator?",
+        question: "Berapa harga Froyek Estimator?",
         answer:
           "Ada 2 pilihan paket hemat seumur hidup:\n- Estimator Standard: Rp 93.000 (promo launching, coret Rp 150.000) sekali bayar (unlimited estimasi)\n- Estimator Pro: Rp 199.000 sekali bayar (branding logo, surat perjanjian kerja, invoice & kwitansi)\n\nSemua paket adalah akses seumur hidup tanpa biaya langganan bulanan.",
       },
@@ -698,10 +698,10 @@ Jika iya, saya jadwalkan survei pekan ini."`,
 
   footer: {
     tagline:
-      "Berhenti buang waktu untuk klien yang belum siap. Monefyi Estimator bantu kamu saring lead, hitung harga kilat, dan kirim penawaran profesional — dalam hitungan menit.",
-    email: "support@monefyi.com",
+      "Berhenti buang waktu untuk klien yang belum siap. Froyek Estimator bantu kamu saring lead, hitung harga kilat, dan kirim penawaran profesional — dalam hitungan menit.",
+    email: "support@froyek.com",
     whatsapp: "[ISI NOMOR WA SUPPORT]",
-    instagram: "@monefyi",
+    instagram: "@froyek",
     navLinks: [
       { label: "Fitur", href: "#fitur" },
       { label: "Testimoni", href: "#testimoni" },
@@ -711,15 +711,15 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       { label: "Kebijakan Privasi", href: "/privacy" },
     ],
     socialLinks: [
-      { platform: "Instagram", href: "https://instagram.com/monefyi" },
-      { platform: "Facebook", href: "https://facebook.com/monefyi" },
-      { platform: "YouTube", href: "https://youtube.com/@monefyi" },
-      { platform: "TikTok", href: "https://tiktok.com/@monefyi" },
-      { platform: "LinkedIn", href: "https://linkedin.com/company/monefyi" },
+      { platform: "Instagram", href: "https://instagram.com/froyek" },
+      { platform: "Facebook", href: "https://facebook.com/froyek" },
+      { platform: "YouTube", href: "https://youtube.com/@froyek" },
+      { platform: "TikTok", href: "https://tiktok.com/@froyek" },
+      { platform: "LinkedIn", href: "https://linkedin.com/company/froyek" },
     ],
     disclaimer:
-      "Monefyi Estimator adalah alat bantu hitung bisnis. Hasil akhir bergantung pada input user.",
-    copyright: "© 2026 MONEFYI INDONESIA. ALL RIGHTS RESERVED.",
+      "Froyek Estimator adalah alat bantu hitung bisnis. Hasil akhir bergantung pada input user.",
+    copyright: "© 2026 FROYEK INDONESIA. ALL RIGHTS RESERVED.",
     madeWith: "MADE WITH CARE FOR INDONESIAN CREATIVE ENTREPRENEURS",
   },
 
@@ -741,7 +741,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         name: "Rian Pratama",
         action: "baru saja mulai menggunakan",
-        product: "Monefyi Estimator",
+        product: "Froyek Estimator",
         location: "Semarang",
         timeAgo: "4 menit lalu",
         source: "live_purchase",
@@ -757,7 +757,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         name: "Agus Setiawan",
         action: "baru saja membuat estimasi pertama di",
-        product: "Monefyi Estimator",
+        product: "Froyek Estimator",
         location: "Bekasi",
         timeAgo: "9 menit lalu",
         source: "live_purchase",
@@ -789,7 +789,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         name: "Deni Kurniawan",
         action: "baru saja bergabung ke",
-        product: "Monefyi Estimator",
+        product: "Froyek Estimator",
         location: "Depok",
         timeAgo: "21 menit lalu",
         source: "live_purchase",
@@ -821,7 +821,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         name: "Kevin Sanjaya",
         action: "baru saja mengaktifkan akses",
-        product: "Monefyi Estimator",
+        product: "Froyek Estimator",
         location: "Jakarta Utara",
         timeAgo: "39 menit lalu",
         source: "live_purchase",
@@ -853,7 +853,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         name: "Rizky Maulana",
         action: "baru saja mulai menggunakan",
-        product: "Monefyi Estimator",
+        product: "Froyek Estimator",
         location: "Bogor",
         timeAgo: "56 menit lalu",
         source: "live_purchase",
@@ -869,7 +869,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         name: "Arif Wicaksono",
         action: "baru saja mengaktifkan workspace",
-        product: "Monefyi Estimator",
+        product: "Froyek Estimator",
         location: "Solo",
         timeAgo: "1 jam lalu",
         source: "live_purchase",
@@ -885,7 +885,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
       {
         name: "Bayu Nugroho",
         action: "baru saja mulai menghitung RAB di",
-        product: "Monefyi Estimator",
+        product: "Froyek Estimator",
         location: "Yogyakarta",
         timeAgo: "1 jam lalu",
         source: "live_purchase",
@@ -938,7 +938,7 @@ Jika iya, saya jadwalkan survei pekan ini."`,
     submitButtonText: "Tampilkan QRIS & Bayar",
     securityBadge: "Pembayaran Aman & Terverifikasi",
     guaranteeBadge: "Garansi Akses 100%",
-    footerText: "Estimator App by Monefyi.",
+    footerText: "Estimator App by Froyek.",
   },
 
   sectionOrder: [

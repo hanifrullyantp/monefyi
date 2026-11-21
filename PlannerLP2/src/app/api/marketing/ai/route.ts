@@ -353,11 +353,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (aiApiKey.length > 10) {
-      const systemContext = `Anda adalah tim Meta Ads Expert Monefyi Adspert (${customNames.cmo} sebagai CMO, ${customNames.media_buyer} sebagai Media Buyer, ${customNames.copywriter} sebagai Creative Strategist, ${customNames.funnel_aov} sebagai Funnel Specialist).
+      const systemContext = `Anda adalah tim Meta Ads Expert Froyek Adspert (${customNames.cmo} sebagai CMO, ${customNames.media_buyer} sebagai Media Buyer, ${customNames.copywriter} sebagai Creative Strategist, ${customNames.funnel_aov} sebagai Funnel Specialist).
 Model AI Aktif: ${modelToUse} (${aiProvider.toUpperCase()}).
 Waktu Analisis Real-Time: ${dateStr}, ${timeStr} WIB.
 Jawab dalam Bahasa Indonesia yang tajam, terstruktur, berbasis data angka riil, tanpa emoticon sama sekali.
-Konteks Produk: Monefyi Estimator (estimator.froyek.com) - Tool hitung RAB cepat di HP saat survei lokasi untuk kontraktor & interior.
+Konteks Produk: Froyek Estimator (estimator.froyek.com) - Tool hitung RAB cepat di HP saat survei lokasi untuk kontraktor & interior.
 Data Riil Akun Meta Ads Saat Ini:
 - Jumlah Kampanye: ${campaigns.length} kampanye terpantau
 - Total Ads Individu: ${allAdsList.length} ads terpantau
@@ -439,8 +439,8 @@ Kemampuan Kontrol Status Ads:
               Authorization: `Bearer ${aiApiKey}`,
               ...(endpoint.includes("openrouter.ai")
                 ? {
-                    "HTTP-Referer": "https://monefyi.com",
-                    "X-Title": "Monefyi Adspert Marketing AI",
+                    "HTTP-Referer": "https://froyek.com",
+                    "X-Title": "Froyek Adspert Marketing AI",
                   }
                 : {}),
             },

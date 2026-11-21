@@ -28,11 +28,11 @@ export default function UpgradePlansPanel({
       onSelectPlan(plan.slug);
       return;
     }
-    const subject = encodeURIComponent(`Upgrade Monefyi Planner — ${plan.label}`);
+    const subject = encodeURIComponent(`Upgrade Froyek — ${plan.label}`);
     const body = encodeURIComponent(
-      `Halo tim Monefyi,\n\nSaya ingin upgrade ke paket ${plan.label} (${formatPlanPriceIdr(plan.price_monthly_idr)}/bulan).\n\nTerima kasih.`,
+      `Halo tim Froyek,\n\nSaya ingin upgrade ke paket ${plan.label} (${formatPlanPriceIdr(plan.price_monthly_idr)}/bulan).\n\nTerima kasih.`,
     );
-    window.location.href = `mailto:support@monefyi.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:support@froyek.com?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -129,7 +129,7 @@ export default function UpgradePlansPanel({
       </div>
 
       <p className="text-xs text-slate-600 text-center">
-        Setelah pembayaran dikonfirmasi, paket organisasi Anda akan diaktifkan oleh tim Monefyi.
+        Setelah pembayaran dikonfirmasi, paket organisasi Anda akan diaktifkan oleh tim Froyek.
         Paket berbayar mengaktifkan organisasi Pro (proyek tanpa batas).
       </p>
     </div>

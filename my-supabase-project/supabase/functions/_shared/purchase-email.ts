@@ -20,19 +20,24 @@ export type PurchaseEmailParams = {
   expiresLabel?: string | null;
   isNewUser: boolean;
   setupPasswordUrl?: string | null;
+  /** False for non-Estimator Froyek Pro subscriptions; defaults true for legacy callers. */
+  isEstimator?: boolean;
 };
 
 export function purchaseEmailSubject(planLabel: string): string {
-  return `Pembayaran ${planLabel} berhasil — Monefyi Estimator`;
+  return `Pembayaran ${planLabel} berhasil — Froyek`;
 }
 
 export function purchaseEmailHtml(params: PurchaseEmailParams): string {
-  const brand = EMAIL_BRANDS.estimator;
+  const isEstimator = params.isEstimator ?? !params.expiresLabel;
+  const brand = isEstimator ? EMAIL_BRANDS.estimator : EMAIL_BRANDS.planner;
   const appBase = (params.appBaseUrl || `${params.appUrl.replace(/\/$/, "")}/app`).replace(/\/$/, "");
-  const estimatorUrl = `${appBase}/estimator`;
+  const targetUrl = isEstimator ? `${appBase}/estimator` : appBase;
 
   const intro = params.isNewUser
-    ? "Akun Anda sudah dibuat. Atur password lalu masuk ke aplikasi Estimator."
+    ? (isEstimator
+      ? "Akun Anda sudah dibuat. Atur password lalu masuk ke aplikasi Estimator."
+      : "Akun Anda sudah dibuat. Atur password lalu masuk ke aplikasi Froyek.")
     : "Pembayaran Anda sudah diproses. Login dengan email dan password yang sama.";
 
   const expiryRow = params.expiresLabel
@@ -44,7 +49,7 @@ export function purchaseEmailHtml(params: PurchaseEmailParams): string {
       "<strong>Langkah berikutnya:</strong> buat password Anda (link sekali pakai, jangan dibagikan).",
       "success",
     ) + emailPrimaryButton("Atur password & masuk", params.setupPasswordUrl, brand.accent)
-    : emailPrimaryButton("Buka Monefyi Estimator", estimatorUrl, brand.accent);
+    : emailPrimaryButton("Buka Froyek", targetUrl, brand.accent);
 
   const bodyHtml = [
     emailGreeting(params.name),
@@ -67,8 +72,9 @@ export function purchaseEmailHtml(params: PurchaseEmailParams): string {
 }
 
 export function purchaseEmailText(params: PurchaseEmailParams): string {
+  const isEstimator = params.isEstimator ?? !params.expiresLabel;
   const appBase = (params.appBaseUrl || `${params.appUrl.replace(/\/$/, "")}/app`).replace(/\/$/, "");
-  const estimatorUrl = `${appBase}/estimator`;
+  const targetUrl = isEstimator ? `${appBase}/estimator` : appBase;
   const lines = [
     `Konfirmasi pembayaran — ${params.planLabel}`,
     `Total: Rp ${formatIdr(params.amount)}`,
@@ -78,7 +84,7 @@ export function purchaseEmailText(params: PurchaseEmailParams): string {
   if (params.isNewUser && params.setupPasswordUrl) {
     lines.push("", "Atur password:", params.setupPasswordUrl);
   } else {
-    lines.push("", `Buka aplikasi: ${estimatorUrl}`);
+    lines.push("", `Buka aplikasi: ${targetUrl}`);
   }
   return lines.join("\n");
 }

@@ -41,7 +41,7 @@ function getSupabaseServerClient() {
 }
 
 /**
- * Endpoint utama Monefyi Holistic Winning Engine (/api/engine/tick).
+ * Endpoint utama Froyek Holistic Winning Engine (/api/engine/tick).
  * Dapat dipanggil oleh:
  * 1. Supabase pg_cron setiap 30 menit (otomatis di belakang layar).
  * 2. Tombol "Analisa 5 Pilar & Susun Rencana Winning" di Dashboard Admin.
@@ -194,13 +194,13 @@ async function handleTick(req: NextRequest, ctx: TickCtx) {
     // 2. Panggil AI Strategist (Gemini 2.5 Pro / Claude) untuk menyusun Ringkasan Eksekutif 10-Tahun Expert
     //    serta validasi mendalam terhadap 5 pilar
     await setPhase(ctx.runId, "decide", "Menyusun ringkasan strategi dan rencana aksi.");
-    const systemPrompt = `Anda adalah Monefyi Winning Engine (Facebook/Meta Ads & Growth Expert pengalaman 10 tahun mengelola budget hingga miliaran Rupiah).
+    const systemPrompt = `Anda adalah Froyek Winning Engine (Facebook/Meta Ads & Growth Expert pengalaman 10 tahun mengelola budget hingga miliaran Rupiah).
 KONTEKS PRODUK YANG DIJUAL:
-- Produk Inti: Monefyi Estimator (website: estimator.froyek.com)
+- Produk Inti: Froyek Estimator (website: estimator.froyek.com)
 - Target Audiens Iklan: Kontraktor Umum, Interior Designer, Kitchen Set Vendor, dan Subkontraktor Sipil.
-- Nilai & Masalah Utama: Kontraktor sering kalah tender atau telat closing karena butuh 2-3 hari hitung RAB manual di rumah. Monefyi Estimator memampukan mereka hitung harga akurat dalam 1 menit langsung di HP saat survei lokasi, lalu kirim PDF penawaran berlogo ke WhatsApp klien sebelum mereka sempat membandingkan dengan vendor lain.
+- Nilai & Masalah Utama: Kontraktor sering kalah tender atau telat closing karena butuh 2-3 hari hitung RAB manual di rumah. Froyek Estimator memampukan mereka hitung harga akurat dalam 1 menit langsung di HP saat survei lokasi, lalu kirim PDF penawaran berlogo ke WhatsApp klien sebelum mereka sempat membandingkan dengan vendor lain.
 - Struktur Harga: Sekali Bayar (Lifetime) — Paket Standard Rp 93.000 / Rp 150.000, Paket Pro Rp 199.000 / Rp 250.000. Add-on Order Bump: Upgrade ke Estimator PRO +Rp 50.000 (Hemat Rp 50.000).
-PERINGATAN PENTING: JANGAN menyamakan produk ini dengan aplikasi pengatur keuangan pribadi atau chat bot personal finance monefyi.com. Segala evaluasi Offer, Copywriting Landing Page, Funnel, dan Iklan WAJIB 100% berfokus pada Monefyi Estimator (estimator.froyek.com) untuk kontraktor/interior.
+PERINGATAN PENTING: JANGAN menyamakan produk ini dengan aplikasi pengatur keuangan pribadi atau chat bot personal finance monefyi.com. Segala evaluasi Offer, Copywriting Landing Page, Funnel, dan Iklan WAJIB 100% berfokus pada Froyek Estimator (estimator.froyek.com) untuk kontraktor/interior.
 
 ATURAN KOMUNIKASI WAJIB:
 1. DILARANG menggunakan emoticon/emoji sama sekali.
@@ -209,7 +209,7 @@ ATURAN KOMUNIKASI WAJIB:
 2. Gunakan bahasa Indonesia bisnis yang jernih, tegas, mudah dipahami oleh pemilik bisnis (tidak membuat pusing), namun berbasis angka riil.
 3. Anda menilai 5 Pilar secara utuh: (1) Produk, Harga & Offer Estimator, (2) Kecepatan & Copywriting Landing Page estimator.froyek.com, (3) Checkout & AOV Funnel (Order Bump Mayar), (4) Meta Ads & Rapid Testing, (5) Tracking Pixel + CAPI.
 4. Berikan ringkasan eksekutif maksimal 4 poin singkat:
-   - Diagnosa Jujur Saat Ini (Apa penghambat terbesar menuju winning kampanye Monefyi Estimator)
+   - Diagnosa Jujur Saat Ini (Apa penghambat terbesar menuju winning kampanye Froyek Estimator)
    - Strategi Produk & Offer (Paket Standard vs Pro & Bonus Stacking Kontraktor)
    - Strategi Copywriting Landing Page estimator.froyek.com & Checkout
    - Langkah Meta Ads sesuai ${config.mode === "cuan"
@@ -402,14 +402,14 @@ Susun ringkasan strategis segar, tajam, dan berbasis data riil per ${dateStr} (t
     let notificationResult = null;
     if (body.sendNotification) {
       const notifMessage = [
-        `[LAPORAN MONEFYI WINNING ENGINE - ${config.mode === "cuan" ? "MODE CUAN" : "MODE ADVANCE"
+        `[LAPORAN FROYEK WINNING ENGINE - ${config.mode === "cuan" ? "MODE CUAN" : "MODE ADVANCE"
         }]`,
         `Skor Kesehatan 5 Pilar: ${diagnostics.overallScore}/100`,
         ...diagnostics.pillars.map((p) => `- ${p.label}: ${p.score}/100 (${p.headlineMetric})`),
         ``,
         `Rencana Tindakan Siap: ${finalPlans.filter((p) => p.status === "pending").length} menunggu persetujuan${autoExecutedIds.length > 0 ? `, ${autoExecutedIds.length} dieksekusi otomatis` : ""
         }.`,
-        `Buka dashboard Monefyi > tab Winning Engine untuk meninjau & menyetujui rencana.`,
+        `Buka dashboard Froyek > tab Winning Engine untuk meninjau & menyetujui rencana.`,
       ].join("\n");
 
       notificationResult = await dispatchEngineNotification(

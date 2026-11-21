@@ -199,7 +199,7 @@ export const INITIAL_BENCHMARK_CAMPAIGNS: MetaCampaign[] = [
     purchasesConversionValue: 2392000,
     healthStatus: 'learning',
     targetAudience: 'Custom Audience: Website Visitors (30 Hari) + Initiate Checkout',
-    creativeHook: 'Tunggu dulu! Lisensi Monefyi Kamu Hampir Diamankan Orang Lain',
+    creativeHook: 'Tunggu dulu! Lisensi Froyek Kamu Hampir Diamankan Orang Lain',
     videoThruPlays15s: 2200,
     thumbstopRate: 27.5,
   }),
@@ -253,8 +253,11 @@ export async function fetchMetaCampaigns(
     balance: number;
     amountSpent: number;
     spendCap: number;
+    thresholdAmount: number;
     fundingSource: string;
     currency: string;
+    accountStatus: number;
+    paymentFailed: boolean;
   };
 }> {
   const token = accessToken?.trim() || capiAccessToken?.trim();
@@ -294,8 +297,11 @@ export async function fetchMetaCampaigns(
               balance: Number(data.account.balance || 0),
               amountSpent: Number(data.account.amountSpent || 0),
               spendCap: Number(data.account.spendCap || 0),
-              fundingSource: data.account.fundingSource || "VISA *1385",
+              thresholdAmount: Number(data.account.thresholdAmount || 0),
+              fundingSource: data.account.fundingSource || "",
               currency: data.account.currency || "IDR",
+              accountStatus: Number(data.account.accountStatus || 0),
+              paymentFailed: Boolean(data.account.paymentFailed),
             }
           : undefined,
       };

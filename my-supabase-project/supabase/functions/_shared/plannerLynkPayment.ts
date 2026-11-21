@@ -145,36 +145,36 @@ export function mapProductFromPayload(
     return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Upgrade Estimator Pro", isUpgrade: true };
   }
   if (explicit === "estimator_standard") {
-    return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Monefyi Estimator Standard" };
+    return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Froyek Estimator Standard" };
   }
   if (explicit === "estimator_pro") {
-    return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Monefyi Estimator Pro" };
+    return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Froyek Estimator Pro" };
   }
   if (explicit === "planner_pro" || explicit === "pro") {
-    return { product: "planner_pro", tier: "pro", variant: null, label: "Monefyi Planner Pro Bulanan" };
+    return { product: "planner_pro", tier: "pro", variant: null, label: "Froyek Pro Bulanan" };
   }
 
   const title = String(item?.title ?? custom.item_title ?? "").toLowerCase();
   if (title.includes("planner") && title.includes("pro")) {
-    return { product: "planner_pro", tier: "pro", variant: null, label: "Monefyi Planner Pro Bulanan" };
+    return { product: "planner_pro", tier: "pro", variant: null, label: "Froyek Pro Bulanan" };
   }
   if (title.includes("estimator") && title.includes("pro")) {
-    return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Monefyi Estimator Pro" };
+    return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Froyek Estimator Pro" };
   }
   if (title.includes("estimator")) {
-    return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Monefyi Estimator Standard" };
+    return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Froyek Estimator Standard" };
   }
 
   const promoPrice = Number(pickEnv("ESTIMATOR_LAUNCH_PROMO_PRICE", "93000")) || 93000;
   const stdPrice = Number(pickEnv("ESTIMATOR_STANDARD_PRICE", "93000")) || 93000;
   const proPrice = Number(pickEnv("ESTIMATOR_PRO_PRICE", "199000")) || 199000;
   if (amount === promoPrice || amount === stdPrice) {
-    return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Monefyi Estimator Standard" };
+    return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Froyek Estimator Standard" };
   }
   if (amount === proPrice) {
-    return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Monefyi Estimator Pro" };
+    return { product: "estimator_pro", tier: "estimator", variant: "pro", label: "Froyek Estimator Pro" };
   }
-  return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Monefyi Estimator Standard" };
+  return { product: "estimator_standard", tier: "estimator", variant: "standard", label: "Froyek Estimator Standard" };
 }
 
 function customerEmailFrom(messageData: Record<string, unknown>, custom: Record<string, string>): string {
@@ -301,9 +301,11 @@ async function sendPurchaseConfirmation(params: {
     expiresLabel: params.expiresLabel,
     isNewUser: params.isNewUser,
     setupPasswordUrl: params.setupPasswordUrl,
+    isEstimator,
   };
   const emailRes = await sendEmailSafe({
     to: params.email,
+    product: "froyek",
     subject: purchaseEmailSubject(params.mapped.label),
     html: purchaseEmailHtml(mailParams),
     text: purchaseEmailText(mailParams),
@@ -497,7 +499,9 @@ export async function processPlannerPurchaseActivation(
     setupPasswordUrl = await generateSetupPasswordUrl(
       supa,
       customerEmail,
-      `${appBaseUrl}/estimator?payment=success`,
+      isEstimatorPurchase
+        ? `${appBaseUrl}/estimator?payment=success`
+        : `${appBaseUrl}?payment=success`,
     );
   }
 

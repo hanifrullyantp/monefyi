@@ -2,19 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export interface FunnelEventPayload {
   sessionId: string;
-  event:
-    | "checkout_landed"
-    | "step1_completed"
-    | "step2_completed"
-    | "step3_completed"
-    | "step4_bump_toggled"
-    | "step4_completed"
-    | "step5_method_selected"
-    | "checkout_completed";
+  event: string;
   plan?: string;
   bumpTaken?: boolean;
   paymentMethod?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string | number | boolean | null>;
   timestamp?: string;
 }
 
@@ -33,6 +25,7 @@ interface FunnelSession {
 
 const sessions: Map<string, FunnelSession> = new Map();
 const recentLogs: Array<FunnelEventPayload & { timestamp: string }> = [];
+const behaviorLogs: Array<{ event: string; timestamp: string; metadata?: FunnelEventPayload["metadata"] }> = [];
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,6 +40,12 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString();
+    if (metadata && String(metadata.channel) === "froyek") {
+      behaviorLogs.unshift({ event, timestamp: now, metadata });
+      if (behaviorLogs.length > 200) behaviorLogs.pop();
+      return NextResponse.json({ ok: true });
+    }
+
     let session = sessions.get(sessionId);
 
     const stepMapping: Record<string, number> = {
@@ -198,6 +197,11 @@ export async function GET() {
       paymentDistribution,
       planBreakdown,
       recentLogs: recentLogs.slice(0, 30),
+      behaviorCounts: behaviorLogs.reduce<Record<string, number>>((counts, log) => {
+        counts[log.event] = (counts[log.event] || 0) + 1;
+        return counts;
+      }, {}),
+      behaviorLogs: behaviorLogs.slice(0, 30),
     });
   } catch (err: any) {
     return NextResponse.json(

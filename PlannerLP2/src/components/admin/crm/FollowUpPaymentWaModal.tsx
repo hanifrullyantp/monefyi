@@ -79,15 +79,15 @@ export function FollowUpPaymentWaModal({
   const productName =
     planTier === "pro"
       ? bumpTaken
-        ? "Monefyi Estimator PRO (+1 Akun Lisensi Ekstra)"
-        : "Monefyi Estimator PRO"
+        ? "Froyek Estimator PRO (+1 Akun Lisensi Ekstra)"
+        : "Froyek Estimator PRO"
       : bumpTaken
-      ? "Monefyi Estimator PRO (Upgrade dari Standard via Promo Bump +Rp 50.000)"
-      : "Monefyi Estimator Standard";
+      ? "Froyek Estimator PRO (Upgrade dari Standard via Promo Bump +Rp 50.000)"
+      : "Froyek Estimator Standard";
 
   // Konstruksi Teks Pesan WhatsApp Follow-up Konfirmasi Bayar
   const messageText = `Halo Kak ${recipientName.trim() || "Kontraktor"}! 🙌
-Salam kenal, saya dari tim Monefyi Estimator.
+Salam kenal, saya dari tim Froyek Estimator.
 
 Kami melihat Kakak sudah mengisi data pemesanan *${productName}*, namun proses pembayarannya belum sempat terselesaikan.
 
@@ -105,7 +105,7 @@ Data Kakak (*${recipientName.trim()}*, *${recipientEmail.trim() || "Email Anda"}
 Kakak *TIDAK PERLU* mengisi form dari awal lagi — cukup klik tautan di atas, pilih metode bayar (QRIS / Transfer Bank / VA), dan akun Estimator Kakak akan langsung aktif seketika!
 
 💳 *Atau Pilihan Transfer Bank Manual:*
-• Bank BCA: *869-093-4567* a/n Monefyi
+• Bank BCA: *869-093-4567* a/n Froyek
 (Cukup kirimkan bukti transfer ke chat ini untuk aktivasi instan)
 
 Apakah ada pertanyaan atau kendala saat checkout tadi yang bisa kami bantu jelaskan? Tim kami siap mendampingi Kakak sekarang juga. Terima kasih! 🙏`;

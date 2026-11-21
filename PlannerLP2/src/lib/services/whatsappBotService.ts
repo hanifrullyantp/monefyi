@@ -42,7 +42,7 @@ export const DEFAULT_WA_BOT_CONFIG: WABotConfig = {
   webhookUrl: '/api/webhook/whatsapp',
   csEnabled: true,
   csGreeting:
-    'Halo! Terima kasih sudah menghubungi Monefyi. Saya Mbak Esti, siap membantu Anda seputar aplikasi, RAB, atau info paket upgrade. Ada yang bisa Esti bantu? 😊',
+    'Halo! Terima kasih sudah menghubungi Froyek. Saya Mbak Esti, siap membantu Anda seputar aplikasi, RAB, atau info paket upgrade. Ada yang bisa Esti bantu? 😊',
   employeeCoordinationEnabled: true,
   employees: [
     {
@@ -240,7 +240,7 @@ function handleEmployeeCoordination(
   if (lower === '#bantuan' || lower === '#menu' || lower === 'help') {
     if (employee.role === 'finance') {
       return {
-        replyText: `Halo ${employee.name} (Finance)! Berikut format perintah cepat WhatsApp Monefyi:\n\n` +
+        replyText: `Halo ${employee.name} (Finance)! Berikut format perintah cepat WhatsApp Froyek:\n\n` +
           `• *#kas-masuk [jumlah] [keterangan]*\nContoh: \`#kas-masuk 15jt DP Proyek Pak Budi\`\n\n` +
           `• *#kas-keluar [jumlah] [keterangan]*\nContoh: \`#kas-keluar 2.5jt Beli Triplek Toko Abadi\`\n\n` +
           `• *#cek-kasbon*\nUntuk melihat daftar kasbon mandor/tukang yang pending approval.\n\n` +
@@ -298,7 +298,7 @@ function handleEmployeeCoordination(
         `Tipe: *${isMasuk ? 'KAS MASUK (+)' : 'KAS KELUAR (-)'}*\n` +
         `Dicatat oleh: ${employee.name}\n` +
         `Rincian: ${rawText.replace(/^#(kas-masuk|kas-keluar)/i, '').trim()}\n\n` +
-        `Arus kas di sistem keuangan Monefyi telah disinkronkan real-time.`,
+        `Arus kas di sistem keuangan Froyek telah disinkronkan real-time.`,
       senderType: 'employee',
       employeeRole: employee.role,
     };

@@ -59,7 +59,7 @@ const WA_TEMPLATES = [
     label: "Follow-up Pembayaran",
     desc: "Tanyakan kendala transaksi & kirim link Mayar",
     text: (name: string, amt?: number) =>
-      `Halo Kak ${name}, terima kasih telah memesan Estimator Monefyi. Kami melihat tagihan sebesar ${
+      `Halo Kak ${name}, terima kasih telah memesan Estimator Froyek. Kami melihat tagihan sebesar ${
         amt ? formatCurrency(amt) : "pesanan Anda"
       } masih menunggu pembayaran. Apakah ada kendala pada metode pembayaran atau ada yang bisa kami bantu?`,
   },
@@ -68,21 +68,21 @@ const WA_TEMPLATES = [
     label: "Penawaran Diskon Spesial",
     desc: "Beri voucher potongan agar segera deal",
     text: (name: string) =>
-      `Halo Kak ${name}! Khusus hari ini kami sediakan potongan diskon spesial untuk aktivasi akun Estimator Monefyi Anda. Boleh kami bantu proseskan aktivasi hari ini?`,
+      `Halo Kak ${name}! Khusus hari ini kami sediakan potongan diskon spesial untuk aktivasi akun Estimator Froyek Anda. Boleh kami bantu proseskan aktivasi hari ini?`,
   },
   {
     id: "konfirmasi_akses",
     label: "Konfirmasi Akses Akun",
     desc: "Kirim panduan login & data akun estimator",
     text: (name: string) =>
-      `Halo Kak ${name}, selamat! Pembayaran Estimator Monefyi Anda telah kami terima dengan sukses. Akun Anda sudah aktif dan siap digunakan untuk menyusun RAB & estimasi proyek. Silakan login di https://monefyi.com/login. Jika butuh panduan, tim kami siap membantu.`,
+      `Halo Kak ${name}, selamat! Pembayaran Estimator Froyek Anda telah kami terima dengan sukses. Akun Anda sudah aktif dan siap digunakan untuk menyusun RAB & estimasi proyek. Silakan login di https://froyek.com/login. Jika butuh panduan, tim kami siap membantu.`,
   },
   {
     id: "bantuan_kendala",
     label: "Bantuan Kendala Teknis",
     desc: "Cek kendala pengisian data / RAB",
     text: (name: string) =>
-      `Halo Kak ${name}, ini tim support Monefyi. Apakah ada pertanyaan atau kendala teknis saat mencoba fitur Estimator? Tim kami siap mendampingi Kakak.`,
+      `Halo Kak ${name}, ini tim support Froyek. Apakah ada pertanyaan atau kendala teknis saat mencoba fitur Estimator? Tim kami siap mendampingi Kakak.`,
   },
   {
     id: "chat_manual",
@@ -508,7 +508,7 @@ export default function AdminDashboard() {
             <div className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
             <div>
               <h2 className="text-sm font-extrabold text-emerald-400 uppercase tracking-widest leading-none">
-                Monefyi Executive CRM
+                Froyek Executive CRM
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
                 Monitoring Penjualan Real-Time &amp; Pembayaran Mayar

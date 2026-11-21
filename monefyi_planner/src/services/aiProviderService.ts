@@ -232,7 +232,7 @@ function openAICompatible(
 }
 
 const callOpenRouter = openAICompatible('https://openrouter.ai/api/v1/chat/completions', {
-  'X-Title': 'Monefyi Planner',
+  'X-Title': 'Froyek',
 });
 const callGroq = openAICompatible('https://api.groq.com/openai/v1/chat/completions');
 const callOpenAI = openAICompatible('https://api.openai.com/v1/chat/completions');

@@ -1,5 +1,5 @@
 /**
- * Dispatcher Notifikasi Multi-Kanal (Telegram Bot + WhatsApp Bot) untuk Monefyi Winning Engine.
+ * Dispatcher Notifikasi Multi-Kanal (Telegram Bot + WhatsApp Bot) untuk Froyek Winning Engine.
  * Seluruh pesan bebas emoticon, rapi, terstruktur, dan jelas agar user dapat memantau
  * rekomendasi Mode Cuan maupun eksekusi otomatis Mode Advance dari HP.
  */

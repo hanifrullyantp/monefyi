@@ -18,7 +18,7 @@ export function lynkProductLabel(product: LynkProduct): string {
     case "estimator_pro":
       return "Estimator Pro";
     case "planner_pro":
-      return "Planner Pro";
+      return "Froyek Pro";
     default:
       return product;
   }

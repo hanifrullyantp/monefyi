@@ -68,7 +68,7 @@ export default function EstimatorGuidePage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                  Pusat Panduan Monefyi Estimator
+                  Pusat Panduan Froyek Estimator
                 </h1>
                 <span className="hidden sm:inline-block text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">
                   RESMI 2026
@@ -90,7 +90,7 @@ export default function EstimatorGuidePage() {
               <span>Buat Estimasi Baru</span>
             </button>
             <a
-              href="https://wa.me/6281214736340?text=Halo%20Admin%20Monefyi%2C%20saya%20butuh%20bantuan%20penggunaan%20Estimator"
+              href="https://wa.me/6281214736340?text=Halo%20Admin%20Froyek%2C%20saya%20butuh%20bantuan%20penggunaan%20Estimator"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-colors"
@@ -181,7 +181,7 @@ export default function EstimatorGuidePage() {
                   Alur Kerja 4 Langkah: Dari Hitung Sampai Closing
                 </h3>
                 <p className="text-sm text-slate-600">
-                  Berikut alur kerja kontraktor dan desainer interior profesional saat menggunakan Monefyi Estimator:
+                  Berikut alur kerja kontraktor dan desainer interior profesional saat menggunakan Froyek Estimator:
                 </p>
               </div>
 
@@ -418,7 +418,7 @@ export default function EstimatorGuidePage() {
                   Kalkulator Margin & Waste Material (Anti-Boncos)
                 </h3>
                 <p className="text-sm text-slate-600">
-                  Geser simulator interaktif di bawah ini untuk melihat bagaimana rumus otomatis Monefyi menghitung HPP, cadangan potongan sisa material (waste), keuntungan bersih, dan harga jual ke klien:
+                  Geser simulator interaktif di bawah ini untuk melihat bagaimana rumus otomatis Froyek menghitung HPP, cadangan potongan sisa material (waste), keuntungan bersih, dan harga jual ke klien:
                 </p>
               </div>
 
@@ -720,7 +720,7 @@ export default function EstimatorGuidePage() {
                   <p className="text-slate-400 text-[11px]">Tim technical support kami siap membantu kapan saja via WhatsApp.</p>
                 </div>
                 <a
-                  href="https://wa.me/6281214736340?text=Halo%20Admin%2C%20saya%20butuh%20bantuan%20terkait%20lisensi%20atau%20perangkat%20Estimator"
+                  href="https://wa.me/6281214736340?text=Halo%20Admin%20Froyek%2C%20saya%20butuh%20bantuan%20terkait%20lisensi%20atau%20perangkat%20Estimator"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-white transition-colors"

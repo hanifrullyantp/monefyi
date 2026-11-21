@@ -47,7 +47,7 @@ export const EVM_METRICS: Record<string, EvmMetricDef> = {
     title: 'Actual Cost',
     description: 'Total biaya yang sudah tercatat (realisasi) sampai saat ini.',
     formula: 'AC = Σ realisasi biaya',
-    source: 'Agregasi dari tab Realisasi → Biaya dan Monefyi Button.',
+    source: 'Agregasi dari tab Realisasi → Biaya dan Froyek AI Button.',
   },
   OPI: {
     label: 'OPI',

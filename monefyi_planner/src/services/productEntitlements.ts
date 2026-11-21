@@ -15,4 +15,4 @@ export async function userHasProduct(product: ProductCode): Promise<boolean> {
 }
 
 export const PRODUCT_NOT_REGISTERED =
-  'Akun ini belum terdaftar di Monefyi Planner. Daftar di froyek.com terlebih dahulu.';
+  'Akun ini belum terdaftar di Froyek. Daftar di froyek.com terlebih dahulu.';

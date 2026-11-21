@@ -189,10 +189,10 @@ export const ENTITLEMENT_PREVIEW_OPTIONS: Array<{
   hint: string;
 }> = [
   { id: 'full', label: 'Akses penuh', hint: 'Semua fitur — default admin' },
-  { id: 'free', label: 'Free', hint: `Estimator trial ${FREE_ESTIMATION_LIMIT} estimasi · finance terkunci` },
+  { id: 'free', label: 'Free', hint: 'Mode gratis · finance terkunci' },
   { id: 'estimator_basic', label: 'Estimator Standard', hint: 'Proyek + Estimator, tanpa kwitansi pro' },
   { id: 'estimator_pro', label: 'Estimator Pro', hint: 'Proyek + Estimator + kwitansi & template pro' },
-  { id: 'planner_pro', label: 'Planner Pro', hint: 'Keuangan bisnis + 10 proyek' },
+  { id: 'planner_pro', label: 'Froyek Pro', hint: 'Keuangan bisnis + 10 proyek' },
   { id: 'enterprise', label: 'Enterprise', hint: 'Kuota besar + semua modul' },
 ];
 
@@ -320,6 +320,6 @@ export function plannerNavModuleLabel(module: PlannerNavModule): string {
     case 'estimator': return 'Estimator';
     case 'finance': return 'Keuangan Bisnis';
     case 'hr': return 'HR & Karyawan';
-    default: return 'Fitur Planner';
+    default: return 'Fitur Froyek';
   }
 }

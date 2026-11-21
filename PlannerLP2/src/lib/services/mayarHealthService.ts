@@ -214,7 +214,7 @@ export async function sendMayarAlert(params: {
   });
 
   const alertText = [
-    `🚨 *ALERT MAYAR PAYMENT GATEWAY (MONEFYI)* 🚨`,
+    `🚨 *ALERT MAYAR PAYMENT GATEWAY (FROYEK)* 🚨`,
     ``,
     `⚠️ *STATUS: UNAUTHORIZED (HTTP ${params.status})*`,
     `🕒 *Waktu:* ${timeStr} WIB`,
@@ -227,7 +227,7 @@ export async function sendMayarAlert(params: {
     `👉 *Langkah Penyelesaian Segera:*`,
     `1. Login ke dashboard Mayar (https://dashboard.mayar.id).`,
     `2. Salin API Key aktif yang baru.`,
-    `3. Masuk ke Admin Monefyi -> Pengaturan -> Pembayaran Mayar.`,
+    `3. Masuk ke Admin Froyek -> Pengaturan -> Pembayaran Mayar.`,
     `4. Tempel API Key baru & klik "Test & Simpan".`,
   ]
     .filter(Boolean)
@@ -326,7 +326,7 @@ export async function checkMayarHealth(options?: {
       if (options?.triggerAlertOnFail !== false) {
         await sendMayarAlert({
           status: 401,
-          reason: "Kredensial API Key Mayar ditolak (Unauthorized 401). Mohon perbarui di dashboard Monefyi.",
+          reason: "Kredensial API Key Mayar ditolak (Unauthorized 401). Mohon perbarui di dashboard Froyek.",
         });
       }
 

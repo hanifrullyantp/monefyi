@@ -55,7 +55,7 @@ export default function FieldCoordinationPanel() {
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
 
   const [savingTele, setSavingTele] = useState(false);
-  const [testChatMsg, setTestChatMsg] = useState('Halo dari Monefyi! Bot koordinasi AI berhasil terhubung.');
+  const [testChatMsg, setTestChatMsg] = useState('Halo dari Froyek! Bot koordinasi AI berhasil terhubung.');
   const [sendingTestMsg, setSendingTestMsg] = useState(false);
 
   const orgId = tenant?.id;
@@ -507,7 +507,7 @@ export default function FieldCoordinationPanel() {
           <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
-                <h4 className="font-bold text-slate-800 text-sm">Pengaturan Bot Telegram Monefyi</h4>
+                <h4 className="font-bold text-slate-800 text-sm">Pengaturan Bot Telegram Froyek</h4>
                 <p className="text-xs text-slate-500">
                   Hubungkan bot Telegram Anda agar AI bisa mengirim notifikasi ke mandor, menerima pesan lapangan, dan meneruskan pertanyaan sulit dari user langsung ke Telegram Owner.
                 </p>
@@ -544,7 +544,7 @@ export default function FieldCoordinationPanel() {
                   <input
                     value={teleConfig.botUsername || ''}
                     onChange={e => setTeleConfig(prev => ({ ...prev, botUsername: e.target.value.replace(/^@/, '') }))}
-                    placeholder="MonefyiAssistantBot"
+                    placeholder="FroyekAssistantBot"
                     className="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
@@ -675,7 +675,7 @@ export default function FieldCoordinationPanel() {
                 <span className="font-bold text-emerald-400 text-xs">LANGKAH 2</span>
                 <p className="text-slate-200 font-semibold">Tentukan Nama &amp; Username Bot</p>
                 <p className="text-slate-400 leading-relaxed text-[11px]">
-                  Ketik nama bot Anda (contoh: <i>Monefyi Proyek Bot</i>), lalu buat username unik yang wajib diakhiri kata <b>bot</b> (contoh: <i>monefyi_proyek_bot</i>).
+                  Ketik nama bot Anda (contoh: <i>Froyek Proyek Bot</i>), lalu buat username unik yang wajib diakhiri kata <b>bot</b> (contoh: <i>froyek_proyek_bot</i>).
                 </p>
               </div>
 
@@ -714,7 +714,7 @@ export default function FieldCoordinationPanel() {
                 ⚠️ PENTING: Klik "START" di Bot Anda Sendiri!
               </span>
               <p className="text-slate-300 text-[11px] leading-relaxed">
-                Telegram melarang bot mengirim pesan pertama ke seseorang sebelum orang tersebut menekan tombol <b>START</b>. Jadi, setelah membuat bot di BotFather, silakan cari username bot Anda di Telegram (misal <i>@monefyi_proyek_bot</i>), lalu klik <b>Start</b>. Setelah itu, klik tombol <b>"Tes Koneksi Bot"</b> di atas. Pesan tes akan langsung masuk ke Telegram Anda!
+                Telegram melarang bot mengirim pesan pertama ke seseorang sebelum orang tersebut menekan tombol <b>START</b>. Jadi, setelah membuat bot di BotFather, silakan cari username bot Anda di Telegram (misal <i>@froyek_proyek_bot</i>), lalu klik <b>Start</b>. Setelah itu, klik tombol <b>"Tes Koneksi Bot"</b> di atas. Pesan tes akan langsung masuk ke Telegram Anda!
               </p>
             </div>
           </div>

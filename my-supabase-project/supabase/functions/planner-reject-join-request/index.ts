@@ -57,6 +57,7 @@ serve(async (req) => {
     if (requester?.user?.email) {
       await sendEmailSafe({
         to: requester.user.email,
+        product: "froyek",
         subject: `Ditolak — ${org?.name}`,
         html: requestStatusHtml({ orgName: org?.name || "", approved: false, reason }),
         text: `Permintaan ditolak. ${reason || ""}`,

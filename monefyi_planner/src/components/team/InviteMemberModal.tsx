@@ -96,7 +96,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
           </div>
           <div className="flex flex-col gap-2.5">
             <a
-              href="https://wa.me/6281214736340?text=Halo%20Admin%20Monefyi%2C%20saya%20ingin%20tambah%20lisensi%20karyawan%20untuk%20workspace%20saya"
+              href="https://wa.me/6281214736340?text=Halo%20Admin%20Froyek%2C%20saya%20ingin%20tambah%20lisensi%20karyawan%20untuk%20workspace%20saya"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs"
@@ -184,7 +184,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
     [
       `Halo ${row.name || 'Tim'},`,
       '',
-      'Akun Anda sudah dibuat di Monefyi Planner.',
+      'Akun Anda sudah dibuat di Froyek.',
       `Link login: ${window.location.origin}/login`,
       `Email: ${row.email || '-'}`,
       `Password: ${row.password || '-'}`,

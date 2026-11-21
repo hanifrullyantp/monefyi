@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       const res = await sendMayarAlert({
         status: 401,
         reason: "Ini adalah pengujian manual dari tombol 'Test Kirim Alert' di Admin Dashboard.",
-        context: "Pengujian integrasi jalur alert darurat Monefyi",
+        context: "Pengujian integrasi jalur alert darurat Froyek",
         forceSend: true,
       });
       return NextResponse.json({

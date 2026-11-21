@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import LandingEntry from './components/LandingEntry';
 import { LoginPage } from './components/AuthPages';
+import { ResetPasswordPage } from './components/auth/ResetPasswordPanel';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthOnlyRoute from './components/AuthOnlyRoute';
 import AppShell from './components/AppShell';
@@ -31,6 +32,7 @@ export default function AppRouter() {
       <Routes>
         <Route path="/" element={<><AuthRedirect /><LandingEntry /></>} />
         <Route path="/login" element={<><AuthRedirect /><LoginPage /></>} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/signup" element={<><AuthRedirect /><SignupHubPage /></>} />
         <Route path="/signup/owner" element={<><AuthRedirect /><OwnerSignupPage /></>} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />

@@ -27,7 +27,7 @@ export interface SiteSettings {
 }
 
 export const defaultSettings: SiteSettings = {
-  siteName: "Monefyi Estimator",
+  siteName: "Froyek Estimator",
   siteDescription: "Hitung harga & kirim PDF penawaran untuk jasa proyek",
   siteUrl: "https://estimator.froyek.com",
   primaryColor: "#157F5F",

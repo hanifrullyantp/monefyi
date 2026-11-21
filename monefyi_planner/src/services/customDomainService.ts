@@ -24,6 +24,7 @@ export interface ResolvedDomainContext {
 const DEFAULT_HOSTS = [
   'localhost',
   '127.0.0.1',
+  'froyek.vercel.app',
   'monefyi.vercel.app',
 ];
 
@@ -93,7 +94,7 @@ export async function resolveCustomDomain(hostname?: string): Promise<ResolvedDo
 }
 
 export function cnameTarget(): string {
-  return (import.meta.env.VITE_CUSTOM_DOMAIN_CNAME as string) || 'cname.vercel-dns.com';
+  return (import.meta.env.VITE_CUSTOM_DOMAIN_CNAME as string) || 'cname.froyek.com';
 }
 
 export const CUSTOM_DOMAIN_CTX_KEY = 'monefyi_custom_domain_ctx';

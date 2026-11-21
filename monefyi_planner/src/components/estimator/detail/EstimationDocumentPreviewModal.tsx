@@ -252,7 +252,7 @@ export default function EstimationDocumentPreviewModal({
         <div className="flex-1 min-h-0 bg-slate-100 relative">
           {kwitansiLocked ? (
             <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-slate-600">
-              Generator kwitansi tersedia di Estimator Pro, Planner Pro, dan Enterprise.
+              Generator kwitansi tersedia di Estimator Pro, Froyek Pro, dan Enterprise.
             </div>
           ) : loading && (
             <div className="absolute inset-0 flex items-center justify-center">

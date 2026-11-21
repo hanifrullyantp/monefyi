@@ -6,6 +6,8 @@ import {
   sendMayarAlert,
 } from "@/lib/services/mayarHealthService";
 import { defaultContent } from "@/data/defaultContent";
+import { loadFroyekPromos } from "@/lib/froyek/loadContent";
+import { resolveFroyekCharge } from "@/lib/froyek/pricing";
 
 interface MayarCheckoutPayload {
   product: "free" | "standard" | "pro";
@@ -16,11 +18,69 @@ interface MayarCheckoutPayload {
   amount: number;
   paymentMethod?: string;
   returnUrl?: string;
+  brand?: "froyek" | "estimator";
+  froyekPlan?: string;
+  promoCode?: string;
+}
+
+const froyekHits = new Map<string, number[]>();
+
+function froyekCheckoutLimited(ip: string): boolean {
+  const now = Date.now();
+  const recent = (froyekHits.get(ip) || []).filter((stamp) => now - stamp < 10 * 60 * 1000);
+  if (recent.length >= 8) return true;
+  recent.push(now);
+  froyekHits.set(ip, recent);
+  return false;
+}
+
+function froyekLynkUrl(mayarProduct: string): string {
+  if (mayarProduct === "estimator_standard") {
+    return process.env.NEXT_PUBLIC_LYNK_ESTIMATOR_STANDARD || "http://lynk.id/asfin-ai/16w36xe7z3v1/checkout";
+  }
+  if (mayarProduct === "estimator_pro") {
+    return process.env.NEXT_PUBLIC_LYNK_ESTIMATOR_PRO || "http://lynk.id/asfin-ai/qynky6065k37/checkout";
+  }
+  return process.env.NEXT_PUBLIC_LYNK_PLANNER_PRO || "";
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as MayarCheckoutPayload;
+    let froyekMeta: { planId: string; mayarProduct: string; lynkUrl: string } | null = null;
+    if (body.brand === "froyek") {
+      const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+      if (froyekCheckoutLimited(ip)) {
+        return NextResponse.json(
+          { ok: false, error: "Terlalu banyak percobaan. Coba lagi beberapa menit lagi." },
+          { status: 429 },
+        );
+      }
+      const charge = resolveFroyekCharge(
+        String(body.froyekPlan || ""),
+        body.promoCode,
+        await loadFroyekPromos(),
+      );
+      if (!charge.ok || charge.contact) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: charge.ok
+              ? "Paket ini diurus lewat percakapan, bukan pembayaran otomatis."
+              : charge.error,
+          },
+          { status: 400 },
+        );
+      }
+      body.product = charge.product;
+      body.amount = charge.amount;
+      body.bumpTaken = false;
+      froyekMeta = {
+        planId: charge.planId,
+        mayarProduct: charge.mayarProduct,
+        lynkUrl: froyekLynkUrl(charge.mayarProduct),
+      };
+    }
     const { product, customerName, email, mobile, bumpTaken, amount } = body;
 
     if (!customerName || customerName.trim().length < 2) {
@@ -108,20 +168,26 @@ export async function POST(req: NextRequest) {
       process.env.NEXT_PUBLIC_PLANNER_APP_URL || `${protocol}://${host}`;
     const returnUrl =
       body.returnUrl ||
-      `${appBaseUrl}/app/estimator?checkout_status=success&product=${product}`;
+      (froyekMeta
+        ? `${appBaseUrl}/pilih/sukses?plan=${froyekMeta.planId}`
+        : `${appBaseUrl}/app/estimator?checkout_status=success&product=${product}`);
 
-    const lynkProductKey =
-      product === "pro" ? "estimator_pro" : "estimator_standard";
+    const lynkProductKey = froyekMeta
+      ? froyekMeta.mayarProduct
+      : product === "pro"
+        ? "estimator_pro"
+        : "estimator_standard";
 
     // URLs Fallback Cadangan Resmi
     const lynkUrls = defaultContent.pricing.lynkCheckoutUrls || {};
-    const fallbackLynkUrl =
-      product === "pro" || (product === "standard" && bumpTaken)
+    const fallbackLynkUrl = froyekMeta
+      ? froyekMeta.lynkUrl
+      : product === "pro" || (product === "standard" && bumpTaken)
         ? lynkUrls.estimator_pro || "http://lynk.id/asfin-ai/qynky6065k37/checkout"
         : lynkUrls.estimator_standard || "http://lynk.id/asfin-ai/16w36xe7z3v1/checkout";
 
     const waFallbackUrl = `https://wa.me/6281234567890?text=${encodeURIComponent(
-      `Halo Tim Monefyi, saya ingin konfirmasi pesanan Estimator ${product.toUpperCase()} seharga Rp ${numericAmount.toLocaleString("id-ID")} atas nama ${customerName.trim()} (${formattedMobile}). Mohon instruksi pembayaran & aktivasi.`
+      `Halo Tim Froyek, saya ingin konfirmasi pesanan Estimator ${product.toUpperCase()} seharga Rp ${numericAmount.toLocaleString("id-ID")} atas nama ${customerName.trim()} (${formattedMobile}). Mohon instruksi pembayaran & aktivasi.`
     )}`;
 
     const mayarApiKey = await getActiveMayarApiKey();
@@ -139,7 +205,9 @@ export async function POST(req: NextRequest) {
               email: email.trim().toLowerCase(),
               full_name: customerName.trim(),
               phone: formattedMobile,
-              product_title: `Monefyi Estimator ${product.toUpperCase()} (Fallback Lynk)`,
+              product_title: froyekMeta
+                ? `froyek ${froyekMeta.planId}`
+                : `Froyek Estimator ${product.toUpperCase()} (Fallback Lynk)`,
               grand_total: numericAmount,
               status: "pending_payment",
               raw_payload: {
@@ -154,6 +222,8 @@ export async function POST(req: NextRequest) {
                 redirectUrl: fallbackLynkUrl,
                 status: "pending_payment",
                 isFallback: true,
+                brand: froyekMeta ? "froyek" : "estimator",
+                froyekPlan: froyekMeta?.planId,
                 createdAt: new Date().toISOString(),
               },
             },
@@ -167,12 +237,13 @@ export async function POST(req: NextRequest) {
     // 1. Coba panggil Mayar API jika API Key tersedia
     if (mayarApiKey) {
       const descriptionMeta = {
-        app: "estimator",
+        app: froyekMeta ? "froyek" : "estimator",
         product: lynkProductKey,
         bump_taken: bumpTaken ? "true" : "false",
         customer_name: customerName,
         customer_email: email,
         customer_mobile: formattedMobile,
+        ...(froyekMeta ? { froyek_plan: froyekMeta.planId } : {}),
       };
 
       const chosenMethod = body.paymentMethod === "qris" ? "qris" : undefined;
@@ -222,6 +293,13 @@ export async function POST(req: NextRequest) {
 
           await saveFallbackLeadToDatabase();
 
+          if (froyekMeta && !fallbackLynkUrl) {
+            return NextResponse.json(
+              { ok: false, error: "Pembayaran Mayar belum berhasil dan paket ini belum punya tautan cadangan. Coba lagi sebentar." },
+              { status: 503 },
+            );
+          }
+
           // KEMBALIKAN FALLBACK RESMI TANPA MENGECEWAKAN PEMBELI
           return NextResponse.json({
             ok: true,
@@ -239,6 +317,35 @@ export async function POST(req: NextRequest) {
         const redirectUrl =
           paymentData.link || paymentData.url || json?.link || json?.url;
         const paymentId = paymentData.id || json?.id;
+
+        if (froyekMeta && paymentId) {
+          try {
+            const supabase = getSupabaseClient();
+            if (supabase) {
+              await supabase.from("orders").insert([{
+                id: `fy_${paymentId}`,
+                email: email.trim().toLowerCase(),
+                full_name: customerName.trim(),
+                phone: formattedMobile,
+                product_title: `froyek ${froyekMeta.planId}`,
+                grand_total: numericAmount,
+                status: "pending_payment",
+                raw_payload: {
+                  brand: "froyek",
+                  froyekPlan: froyekMeta.planId,
+                  paymentId,
+                  email: email.trim().toLowerCase(),
+                  name: customerName.trim(),
+                  phone: formattedMobile,
+                  amount: numericAmount,
+                  status: "pending_payment",
+                },
+              }]);
+            }
+          } catch (orderErr) {
+            console.warn("Could not store froyek order", orderErr);
+          }
+        }
 
         // Ambil qr_string dari paymentDetail Mayar jika ada
         const qrCodeProps = paymentData?.paymentDetail?.qr_code?.channel_properties;
@@ -271,6 +378,13 @@ export async function POST(req: NextRequest) {
 
         await saveFallbackLeadToDatabase();
 
+        if (froyekMeta && !fallbackLynkUrl) {
+          return NextResponse.json(
+            { ok: false, error: "Pembayaran Mayar belum berhasil dan paket ini belum punya tautan cadangan. Coba lagi sebentar." },
+            { status: 503 },
+          );
+        }
+
         return NextResponse.json({
           ok: true,
           fallback: true,
@@ -292,6 +406,13 @@ export async function POST(req: NextRequest) {
     });
 
     await saveFallbackLeadToDatabase();
+
+    if (froyekMeta && !fallbackLynkUrl) {
+      return NextResponse.json(
+        { ok: false, error: "Kunci Mayar belum terpasang dan paket ini belum punya tautan cadangan." },
+        { status: 503 },
+      );
+    }
 
     return NextResponse.json({
       ok: true,

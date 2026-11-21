@@ -1,10 +1,11 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Plus, Trash2, Sparkles, List, ChevronDown } from 'lucide-react';
 import { calcEstimationSummary, calcItemRow, countedEstimationItems, effectiveItemSelling, emptyItem, sellingFromHpp, syncEstimationItemPricesList, estimationItemsNeedPriceSync, type ItemPriceEdit } from '../../lib/estimatorCalc';
-import { formatRupiahFull, parseNumberId } from '../../lib/estimatorFormat';
+import { formatRupiahFull } from '../../lib/estimatorFormat';
 import {
   getEstimationItemProductGroup,
   groupEstimationItemsByProduct,
+  groupSharedExpr,
   groupSharedQty,
   hasProductGroup,
   type EstimationItemGroup,
@@ -16,7 +17,7 @@ import { COMMON_UNITS, pricelistToEstimationItem, PRICELIST_CATEGORIES } from '.
 import { ENABLE_ESTIMATOR_SMART_INPUT } from '../../lib/estimatorFeatureFlags';
 import RupiahInput from './RupiahInput';
 import QtyInput from './QtyInput';
-import { applyCabinetPairSync } from '../../lib/estimatorDimension';
+import { applyCabinetPairSync, isCompleteDimensionInput, parseDimensionInput } from '../../lib/estimatorDimension';
 import SmartInputModal from './SmartInputModal';
 import PricelistPickerModal from './PricelistPickerModal';
 import { useUiStore } from '../../store/uiStore';
@@ -27,24 +28,32 @@ function GlobalQtyField({
   onApply,
 }: {
   className: string;
-  onApply: (qty: number) => void;
+  onApply: (qty: number, expr?: string) => void;
 }) {
   const [text, setText] = useState('');
+  const apply = (raw: string) => {
+    if (!isCompleteDimensionInput(raw)) return;
+    const parsed = parseDimensionInput(raw);
+    if (Number.isFinite(parsed.total) && parsed.total >= 0) onApply(parsed.total, parsed.expr);
+  };
   return (
     <input
       type="text"
-      inputMode="decimal"
+      inputMode="text"
       value={text}
-      placeholder="Qty"
+      placeholder="6 atau 2x3"
       aria-label="Ukuran global"
+      title="Isi quantity langsung, atau berapa kali berapa. Contoh: 6 atau 2x3"
       onMouseUp={e => e.preventDefault()}
       onFocus={e => e.currentTarget.select()}
       onChange={e => {
         const raw = e.target.value;
         setText(raw);
-        if (!raw.trim() || !/^[\d.,]+$/.test(raw.trim())) return;
-        const qty = parseNumberId(raw);
-        if (Number.isFinite(qty) && qty >= 0) onApply(qty);
+        apply(raw);
+      }}
+      onBlur={() => apply(text)}
+      onKeyDown={e => {
+        if (e.key === 'Enter') apply(text);
       }}
       className={className}
     />
@@ -181,10 +190,10 @@ export default function EstimationItemsTable({
     });
   };
 
-  const applyGlobalQty = (qty: number) => {
+  const applyGlobalQty = (qty: number, expr = '') => {
     if (readOnly || !Number.isFinite(qty) || qty < 0) return;
     onChange(items.map(item => {
-      const merged = { ...item, qty };
+      const merged = { ...item, qty, dimension_expr: expr };
       const calc = calcItemRow(merged, 'qty');
       const row = { ...merged, ...calc };
       row.total_profit = effectiveItemSelling(row) - (Number(row.total_hpp) || 0);
@@ -200,11 +209,11 @@ export default function EstimationItemsTable({
     group.indices.length > 1 ||
     (group.indices.length === 1 && hasProductGroup(items[group.indices[0]]));
 
-  const setGroupQty = (indices: number[], qty: number) => {
+  const setGroupQty = (indices: number[], qty: number, expr = '') => {
     if (readOnly) return;
     const next = [...items];
     for (const idx of indices) {
-      const merged = { ...next[idx], qty };
+      const merged = { ...next[idx], qty, dimension_expr: expr };
       const calc = calcItemRow(merged, 'qty');
       const row = { ...merged, ...calc };
       row.total_profit = effectiveItemSelling(row) - (Number(row.total_hpp) || 0);
@@ -647,10 +656,11 @@ export default function EstimationItemsTable({
                         <td className={`${tdClass} text-right bg-emerald-50/70`}>
                           <QtyInput
                             value={groupSharedQty(group.indices, items) ?? 0}
-                            onChange={v => setGroupQty(group.indices, v)}
-                            placeholder="—"
+                            dimensionExpr={groupSharedExpr(group.indices, items)}
+                            onChange={(v, expr) => setGroupQty(group.indices, v, expr)}
+                            placeholder="6 atau 2x3"
                             className="w-full px-2 py-1.5 border border-emerald-300 bg-white rounded-lg text-right tabular-nums focus:border-emerald-500 outline-none font-semibold text-emerald-800"
-                            title={`Qty global ${group.key} (${group.indices.length} item)`}
+                            title={`Qty ${group.key} (${group.indices.length} item). Isi angka, atau 2x3.`}
                           />
                         </td>
                         <td colSpan={9} className="px-3 py-2 text-[10px] text-emerald-600 align-middle bg-emerald-50/70">

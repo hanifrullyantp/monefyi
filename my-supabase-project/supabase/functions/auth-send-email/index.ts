@@ -1,5 +1,5 @@
 import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
-import { getAppUrl, getResendFrom, sendEmail } from "../_shared/email.ts";
+import { getAppUrl, sendEmail } from "../_shared/email.ts";
 import {
   emailParagraph,
   emailPrimaryButton,
@@ -178,6 +178,7 @@ Deno.serve(async (req) => {
 
   const result = await sendEmail({
     to: user.email,
+    product: brand.product === "finance" ? "finance" : "froyek",
     subject: subjectFor(action, brand.productName),
     html: buildAuthEmailHtml({
       action,

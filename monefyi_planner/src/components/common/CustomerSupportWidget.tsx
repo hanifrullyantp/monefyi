@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -16,15 +16,112 @@ import {
 } from '../../services/customerSupportService';
 import { escalateQuestionToOwnerTelegram } from '../../services/telegramService';
 import { useAppStore } from '../../store/appStore';
+import { useEntitlement } from '../../hooks/useEntitlement';
+import { isAdminFullAccess } from '../../lib/entitlement';
+import { hasEstimatorLicenseAccess } from '../../lib/appProductBrand';
+
+const FAB_SIZE = 44;
+const FAB_POS_KEY = 'froyek_cs_fab_pos_v1';
+const DRAG_THRESHOLD = 6;
+
+type FabPos = { x: number; y: number };
+
+function defaultFabPos(): FabPos {
+  const margin = 16;
+  const bottomClearance = window.innerWidth < 1024 ? 88 : 96;
+  return {
+    x: Math.max(margin, window.innerWidth - margin - FAB_SIZE),
+    y: Math.max(margin, window.innerHeight - bottomClearance - FAB_SIZE),
+  };
+}
+
+function clampFabPos(pos: FabPos): FabPos {
+  const margin = 8;
+  return {
+    x: Math.min(Math.max(margin, pos.x), Math.max(margin, window.innerWidth - FAB_SIZE - margin)),
+    y: Math.min(Math.max(margin, pos.y), Math.max(margin, window.innerHeight - FAB_SIZE - margin)),
+  };
+}
+
+function readFabPos(): FabPos {
+  try {
+    const raw = localStorage.getItem(FAB_POS_KEY);
+    if (!raw) return defaultFabPos();
+    const parsed = JSON.parse(raw) as FabPos;
+    if (!Number.isFinite(parsed.x) || !Number.isFinite(parsed.y)) return defaultFabPos();
+    return clampFabPos(parsed);
+  } catch {
+    return defaultFabPos();
+  }
+}
 
 export default function CustomerSupportWidget() {
   const navigate = useNavigate();
-  const { isDemoMode, tenant } = useAppStore();
+  const { isDemoMode, tenant, platformRole, user, entitlementPreviewMode } = useAppStore();
+  const entitlement = useEntitlement();
+  const hasEstimatorAccess = hasEstimatorLicenseAccess(
+    entitlement,
+    isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode),
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<CSMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [fabPos, setFabPos] = useState<FabPos>(readFabPos);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fabPosRef = useRef(fabPos);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+  fabPosRef.current = fabPos;
+
+  useEffect(() => {
+    const onResize = () => setFabPos(current => clampFabPos(current));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const onFabPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    suppressClickRef.current = false;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: fabPosRef.current.x,
+      originY: fabPosRef.current.y,
+      moved: false,
+    };
+  };
+
+  const onFabPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    drag.moved = true;
+    const next = clampFabPos({ x: drag.originX + dx, y: drag.originY + dy });
+    fabPosRef.current = next;
+    setFabPos(next);
+  };
+
+  const onFabPointerUp = () => {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag?.moved) return;
+    suppressClickRef.current = true;
+    try {
+      localStorage.setItem(FAB_POS_KEY, JSON.stringify(fabPosRef.current));
+    } catch {
+      /* posisi tetap untuk sesi ini */
+    }
+  };
 
   useEffect(() => {
     if (messages.length === 0 && isOpen) {
@@ -36,11 +133,21 @@ export default function CustomerSupportWidget() {
             text: CS_AGENT_PROFILE.greeting,
             timestamp: new Date(),
             suggestedActions: [
-              {
-                label: '📄 Cara bikin PDF penawaran di HP?',
-                action: 'ask',
-                payload: 'Cara bikin PDF penawaran di HP',
-              },
+              ...(hasEstimatorAccess
+                ? [
+                    {
+                      label: '📄 Cara bikin PDF penawaran di HP?',
+                      action: 'ask' as const,
+                      payload: 'Cara bikin PDF penawaran di HP',
+                    },
+                  ]
+                : [
+                    {
+                      label: '📁 Cara kelola proyek & RAP?',
+                      action: 'ask' as const,
+                      payload: 'Cara kelola proyek dan RAP di Froyek',
+                    },
+                  ]),
               {
                 label: '🚀 Apa keuntungan paket Pro?',
                 action: 'ask',
@@ -55,14 +162,14 @@ export default function CustomerSupportWidget() {
                 label: '📲 Tanya Langsung via WhatsApp',
                 action: 'link_whatsapp',
                 payload:
-                  'https://wa.me/6281234567890?text=Halo%20Mbak%20Nisa,%20mau%20tanya%20seputar%20Monefyi',
+                  'https://wa.me/6281234567890?text=Halo%20Mbak%20Esti,%20mau%20tanya%20seputar%20Froyek',
               },
             ],
           },
         ]);
       }, 300);
     }
-  }, [isOpen, messages.length]);
+  }, [isOpen, messages.length, hasEstimatorAccess]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -84,7 +191,7 @@ export default function CustomerSupportWidget() {
     setIsTyping(true);
 
     setTimeout(() => {
-      const replyData = getCustomerSupportReply(text);
+      const replyData = getCustomerSupportReply(text, { allowEstimatorInfo: hasEstimatorAccess });
       const isComplexQuery = /diskon|kurang|spesial|khusus|custom|kerjasama|tender besar|komplain|nego|partnership|kantor kami/i.test(text);
 
       const actions = [...(replyData.suggestedActions || [])];
@@ -100,7 +207,7 @@ export default function CustomerSupportWidget() {
         id: `cs_${Date.now()}`,
         sender: 'cs',
         text: isComplexQuery
-          ? `${replyData.text}\n\n💡 *Catatan:* Karena ini menyangkut penawaran atau keputusan khusus, Mas/Mbak bisa klik tombol **"🚨 Teruskan Pertanyaan ke Telegram Owner"** di bawah agar Nisa langsung kirim pesan ke Telegram pribadi Owner kami ya!`
+          ? `${replyData.text}\n\n💡 *Catatan:* Karena ini menyangkut penawaran atau keputusan khusus, Mas/Mbak bisa klik tombol **"🚨 Teruskan Pertanyaan ke Telegram Owner"** di bawah agar Esti langsung kirim pesan ke Telegram pribadi Owner kami ya!`
           : replyData.text,
         timestamp: new Date(),
         suggestedActions: actions,
@@ -143,7 +250,7 @@ export default function CustomerSupportWidget() {
         return;
       }
       setIsTyping(true);
-      const res = await escalateQuestionToOwnerTelegram(action.payload, 'User Aplikasi Monefyi Planner');
+      const res = await escalateQuestionToOwnerTelegram(action.payload, 'User Aplikasi Froyek');
       setIsTyping(false);
 
       setMessages((prev) => [
@@ -152,14 +259,14 @@ export default function CustomerSupportWidget() {
           id: `cs_${Date.now()}`,
           sender: 'cs',
           text: res.ok
-            ? `✅ *Sudah Nisa teruskan ke Telegram Owner!* 🚀\n\nPesan Anda sudah masuk ke Telegram pribadi Owner Monefyi lengkap dengan detail pertanyaan. Beliau akan segera mengecek dan memberikan keputusan terbaik ya Mas/Mbak.`
+            ? `✅ *Sudah Esti teruskan ke Telegram Owner!* 🚀\n\nPesan Anda sudah masuk ke Telegram pribadi Owner Froyek lengkap dengan detail pertanyaan. Beliau akan segera mengecek dan memberikan keputusan terbaik ya Mas/Mbak.`
             : `⚠️ Bot Telegram belum tersambung ke Chat ID Owner (${res.error}).\n\nUntuk respon cepat sekarang, Mas/Mbak bisa langsung klik tombol WhatsApp Support di bawah ya!`,
           timestamp: new Date(),
           suggestedActions: [
             {
               label: '💬 Chat WhatsApp Owner Sekarang',
               action: 'link_whatsapp',
-              payload: `https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Owner Monefyi, saya mau follow up pertanyaan: "${action.payload}"`)}`,
+              payload: `https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Owner Froyek, saya mau follow up pertanyaan: "${action.payload}"`)}`,
             },
           ],
         },
@@ -172,32 +279,32 @@ export default function CustomerSupportWidget() {
       {/* Floating Button */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.div
+          <motion.button
+            type="button"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            className="fixed bottom-24 sm:bottom-6 right-4 sm:right-6 z-40 flex items-center gap-2.5"
+            style={{ left: fabPos.x, top: fabPos.y, width: FAB_SIZE, height: FAB_SIZE }}
+            onPointerDown={onFabPointerDown}
+            onPointerMove={onFabPointerMove}
+            onPointerUp={onFabPointerUp}
+            onPointerCancel={onFabPointerUp}
+            onClick={() => {
+              if (suppressClickRef.current) {
+                suppressClickRef.current = false;
+                return;
+              }
+              setIsOpen(true);
+            }}
+            className="fixed z-40 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-lg shadow-emerald-900/25 flex items-center justify-center text-white cursor-grab active:cursor-grabbing touch-none select-none"
+            aria-label="Buka chat Mbak Esti. Tahan dan geser untuk memindahkan."
+            title="Tahan dan geser untuk pindah"
           >
-            {/* Pop-up pill notification */}
-            <div
-              onClick={() => setIsOpen(true)}
-              className="hidden md:flex items-center gap-2 bg-white text-slate-800 px-3.5 py-2 rounded-2xl shadow-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition-all text-xs font-bold"
-            >
-              <span className="text-base">👩‍💼</span>
-              <span>Butuh bantuan / info app? Tanya Mbak Esti</span>
-            </div>
-
-            <button
-              onClick={() => setIsOpen(true)}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-xl shadow-emerald-900/30 flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all relative group"
-              aria-label="Buka Chat CS Mbak Esti"
-            >
-              <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7" />
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-400 text-slate-900 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white shadow">
-                1
-              </div>
-            </button>
-          </motion.div>
+            <MessageCircle className="w-5 h-5 pointer-events-none" />
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 text-slate-900 rounded-full flex items-center justify-center text-[9px] font-black border-2 border-white shadow pointer-events-none">
+              1
+            </span>
+          </motion.button>
         )}
       </AnimatePresence>
 
@@ -304,7 +411,7 @@ export default function CustomerSupportWidget() {
 
             {/* Quick Questions Carousel */}
             <div className="p-2.5 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto scrollbar-none">
-              {POPULAR_CS_QUESTIONS.map((q, idx) => (
+              {POPULAR_CS_QUESTIONS.filter(q => hasEstimatorAccess || !/pdf penawaran/i.test(q)).map((q, idx) => (
                 <button
                   key={idx}
                   type="button"
@@ -328,7 +435,7 @@ export default function CustomerSupportWidget() {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Tanya Mbak Esti seputar Monefyi..."
+                placeholder="Tanya Mbak Esti seputar Froyek..."
                 className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-emerald-500"
               />
               <button

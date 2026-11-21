@@ -426,7 +426,7 @@ export async function dispatchProactiveAIOutreach(params: {
  */
 export async function escalateQuestionToOwnerTelegram(
   userQuestion: string,
-  userIdentifier: string = 'User Aplikasi Monefyi',
+  userIdentifier: string = 'User Aplikasi Froyek',
   contextNotes?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const config = loadTelegramConfig();
@@ -439,7 +439,7 @@ export async function escalateQuestionToOwnerTelegram(
   }
 
   const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-  const text = `🚨 *[ESKALASI PERTANYAAN USER - MONEFYI]*\n\n👤 *Dari:* ${userIdentifier}\n🕒 *Waktu:* ${timeStr} WIB\n\n❓ *Pertanyaan User:*\n"${userQuestion}"\n\n💡 *Catatan AI:* Pertanyaan ini membutuhkan keputusan Owner (misal: negosiasi diskon khusus, kustomisasi fitur, atau persetujuan tender).\n${contextNotes ? `📌 *Detail Tambahan:* ${contextNotes}\n` : ''}\n👉 Mohon berikan arahan atau hubungi user langsung.`;
+  const text = `🚨 *[ESKALASI PERTANYAAN USER - FROYEK]*\n\n👤 *Dari:* ${userIdentifier}\n🕒 *Waktu:* ${timeStr} WIB\n\n❓ *Pertanyaan User:*\n"${userQuestion}"\n\n💡 *Catatan AI:* Pertanyaan ini membutuhkan keputusan Owner (misal: negosiasi diskon khusus, kustomisasi fitur, atau persetujuan tender).\n${contextNotes ? `📌 *Detail Tambahan:* ${contextNotes}\n` : ''}\n👉 Mohon berikan arahan atau hubungi user langsung.`;
 
   return sendTelegramMessage(config.botToken, targetChatId, text);
 }

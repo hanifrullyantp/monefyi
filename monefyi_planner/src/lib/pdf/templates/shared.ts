@@ -355,7 +355,7 @@ export function footerBlock(ctx: PdfBrandFields, muted = '#94a3b8'): Content[] {
   if (!ctx.options.showFooter) return [];
   const extra = [ctx.companyWebsite, ctx.companyEmail].filter(Boolean).join(' · ');
   return [{
-    text: `${ctx.footerText}${extra ? ` · ${extra}` : ''} · Monefyi ${new Date().getFullYear()}`,
+    text: `${ctx.footerText}${extra ? ` · ${extra}` : ''} · Froyek ${new Date().getFullYear()}`,
     fontSize: 7,
     color: muted,
     alignment: 'center',

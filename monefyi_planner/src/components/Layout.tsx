@@ -18,7 +18,7 @@ import PreviewModeMenu from './layout/PreviewModeMenu';
 import EntitlementPreviewPanel from './layout/EntitlementPreviewPanel';
 import { PlannerLogo } from './MonefyiLogo';
 import { EstimatorLogo } from './EstimatorLogo';
-import { shouldShowEstimatorProductBrand } from '../lib/appProductBrand';
+import { hasEstimatorLicenseAccess, shouldShowEstimatorProductBrand } from '../lib/appProductBrand';
 import { ESTIMATOR_THEME_COLOR } from '../lib/estimatorBrand';
 import ToastHost from './ToastHost';
 import EstimatorLaunchPromoAdminModal from './admin/EstimatorLaunchPromoAdminModal';
@@ -94,6 +94,7 @@ export default function Layout({ children }: LayoutProps) {
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
   const hideMobileProductNav = estimatorOnly && isEstimatorShell;
+  const hasEstimatorAccess = hasEstimatorLicenseAccess(entitlement, adminFullAccess);
   const showEstimatorBrand =
     !adminFullAccess && shouldShowEstimatorProductBrand(entitlement);
 
@@ -114,7 +115,7 @@ export default function Layout({ children }: LayoutProps) {
       { id: 'home', label: 'Home', icon: Home },
       { id: 'projects', label: 'Proyek', icon: FolderOpen },
       { id: 'command', label: '✦', icon: Sparkles, special: true },
-      { id: 'estimator', label: 'Estimator', icon: Receipt },
+      ...(hasEstimatorAccess ? [{ id: 'estimator', label: 'Estimator', icon: Receipt }] : []),
       { id: 'finance', label: 'Finance', icon: Wallet },
     ];
 
@@ -157,7 +158,7 @@ export default function Layout({ children }: LayoutProps) {
       { id: 'home', label: 'Dashboard', icon: Home },
       { id: 'projects', label: 'Proyek', icon: FolderOpen },
       { id: 'database', label: 'Database', icon: Database },
-      { id: 'estimator', label: 'Estimator', icon: Receipt },
+      ...(hasEstimatorAccess ? [{ id: 'estimator', label: 'Estimator', icon: Receipt }] : []),
       { id: 'finance', label: 'Keuangan Bisnis', icon: Wallet },
       ...(canAccessHr
         ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
@@ -256,7 +257,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const openCommandModal = () => {
     if (estimatorOnly) {
-      openUpgrade('pro_feature', 'Monefyi AI');
+      openUpgrade('pro_feature', 'Froyek AI');
       return;
     }
     setCommandModalOpen(true);
@@ -275,19 +276,19 @@ export default function Layout({ children }: LayoutProps) {
   const lastSyncText = lastSynced ? `${Math.floor((Date.now() - lastSynced.getTime()) / 60000)} mnt lalu` : 'Belum pernah';
 
   const userMenuItems = [
-    {
+    ...(hasEstimatorAccess ? [{
       id: 'guide',
       label: 'Panduan Aplikasi',
       icon: <BookOpen className="w-4 h-4 shrink-0 text-emerald-600" />,
       onClick: () => navigate('/app/estimator/guide'),
-    },
+    }] : []),
     {
       id: 'profile',
       label: 'Profil saya',
       icon: <User className="w-4 h-4 shrink-0" />,
       onClick: () => goSettingsTab('profil'),
     },
-    ...(isEstimatorShell ? [{
+    ...(isEstimatorShell && hasEstimatorAccess ? [{
       id: 'estimator-settings',
       label: 'Pengaturan Penawaran & PDF',
       icon: <Settings className="w-4 h-4 shrink-0" />,
@@ -351,25 +352,24 @@ export default function Layout({ children }: LayoutProps) {
         className={`hidden lg:flex flex-col shell-sidebar z-30 transition-[width] duration-200 shrink-0 ${navSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
           }`}
       >
-        {/* Logo + collapse + Monefyi AI */}
+        {/* Logo + collapse + Froyek AI */}
         <div className={`${navSidebarCollapsed ? 'px-2 py-3' : 'p-4'}`}>
           <div className={`flex items-center gap-2 ${navSidebarCollapsed ? 'flex-col' : ''}`}>
             {showEstimatorBrand ? (
-              <EstimatorLogo className="rounded-xl object-contain shadow-xs shrink-0 w-9 h-9" />
-            ) : (
-              <PlannerLogo
-                className={`rounded-xl object-contain shadow-xs shrink-0 ${navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'
-                  }`}
-              />
-            )}
+              <EstimatorLogo className="rounded-xl object-contain shrink-0 w-9 h-9" />
+            ) : navSidebarCollapsed ? (
+              <PlannerLogo className="w-8 h-8 object-contain shrink-0" />
+            ) : null}
             {!navSidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <div
-                  className="font-black text-sm leading-tight text-[#0F172A]"
-                >
-                  {showEstimatorBrand ? 'Estimator' : 'Planner'}
+                {showEstimatorBrand ? (
+                  <div className="font-black text-sm leading-tight text-[#0F172A]">Estimator</div>
+                ) : (
+                  <PlannerLogo variant="lockup" />
+                )}
+                <div className="text-[11px] text-[#5B6B7A] font-medium truncate">
+                  {showEstimatorBrand ? 'Froyek Workspace' : 'Agent for your Project'}
                 </div>
-                <div className="text-[11px] text-[#5B6B7A] font-medium truncate">Monefyi Workspace</div>
               </div>
             )}
             <button
@@ -394,13 +394,13 @@ export default function Layout({ children }: LayoutProps) {
               ? 'w-11 h-11 mx-auto rounded-xl'
               : 'w-full h-11 rounded-xl gap-2'
               }`}
-            style={{ background: 'linear-gradient(135deg, #064E3B 0%, #047857 50%, #059669 100%)' }}
-            aria-label="Buka Monefyi AI"
-            title="Monefyi AI"
+            style={{ background: 'linear-gradient(135deg, #0A3A2E 0%, #047857 55%, #10B981 100%)' }}
+            aria-label="Buka Agent"
+            title="Agent"
           >
             <Sparkles className="w-5 h-5 text-white shrink-0" />
             {!navSidebarCollapsed && (
-              <span className="text-sm font-bold text-white">Monefyi AI</span>
+              <span className="text-sm font-bold text-white">Agent</span>
             )}
             {pendingSyncCount > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -508,7 +508,7 @@ export default function Layout({ children }: LayoutProps) {
                   ? 'Pekerja'
                   : 'Staff'
         }
-        tenantName={tenant?.name || 'Monefyi'}
+        tenantName={tenant?.name || 'Froyek'}
         isSuperAdmin={isSuperAdmin}
         uiViewMode={uiViewMode}
         onOpenPreviewMode={() => setPreviewSheetOpen(true)}
@@ -517,7 +517,7 @@ export default function Layout({ children }: LayoutProps) {
           setSidebarOpen(false);
         }}
         onOpenSettings={() => {
-          if (isEstimatorShell) {
+          if (isEstimatorShell && hasEstimatorAccess) {
             void goSettingsTab('estimator');
           } else {
             void goSettingsTab(defaultSettingsTab);
@@ -538,6 +538,7 @@ export default function Layout({ children }: LayoutProps) {
         }}
         isOnline={isOnline}
         isEstimator={showEstimatorBrand}
+        showEstimator={hasEstimatorAccess}
       />
 
       {/* Main Content Area */}
@@ -546,7 +547,7 @@ export default function Layout({ children }: LayoutProps) {
         {!isProjectDetail && !isEstimatorDetail && (
           <div className="lg:hidden">
             <AppHeader
-              title={showEstimatorBrand ? 'Estimator' : 'Planner'}
+              title={showEstimatorBrand ? 'Estimator' : 'froyek'}
               isEstimator={showEstimatorBrand}
               onOpenMenu={() => setSidebarOpen(true)}
               onOpenNotif={() => setNotifOpen(v => !v)}
@@ -770,7 +771,7 @@ export default function Layout({ children }: LayoutProps) {
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-emerald-600 font-bold mt-1">Monefyi</span>
+                      <span className="text-xs text-emerald-600 font-bold mt-1">Froyek</span>
                     </button>
                   ) : (
                     <button
@@ -796,6 +797,7 @@ export default function Layout({ children }: LayoutProps) {
               onSelectTab={(tab) => handleNav(tab)}
               onOpenMonefyiAi={openCommandModal}
               pendingSyncCount={pendingSyncCount}
+              showEstimator={hasEstimatorAccess}
             />
           )
         )}

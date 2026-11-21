@@ -9,11 +9,18 @@ import { config } from '../lib/config';
 import { isValidEmail, validatePassword } from '../lib/validators';
 import { runBootstrap } from '../hooks/useBootstrap';
 import PasswordField, { isPasswordReady } from './auth/PasswordField';
+import ResetPasswordPanel, { finishPasswordReset } from './auth/ResetPasswordPanel';
 import {
   signInWithPassword,
   signUpWithPassword,
   resetPasswordForEmail,
+  onAuthStateChange,
 } from '../services/authService';
+import {
+  hasPasswordRecoveryIntent,
+  markPasswordRecoveryIntent,
+  readPasswordRecoveryError,
+} from '../lib/passwordRecoveryIntent';
 import { setActiveOrgTimeZone } from '../lib/adapters';
 import {
   useAppStore,
@@ -26,6 +33,7 @@ import {
 } from '../store/appStore';
 import { EstimatorLogo } from './EstimatorLogo';
 import { PlannerLogo } from './MonefyiLogo';
+import { PLANNER_BRAND_NAME, PLANNER_TAGLINE } from '../lib/plannerBrand';
 import { applyEstimatorDocumentBrand, isEstimatorBrandContext } from '../lib/estimatorBrand';
 import { estimatorAppEntryPath } from '../lib/pwaBrand';
 import { checkAndClearDeviceKickoutReason } from '../services/singleDeviceSessionService';
@@ -198,6 +206,9 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [resetMode, setResetMode] = useState(
+    () => hasPasswordRecoveryIntent() || Boolean(readPasswordRecoveryError()),
+  );
   const [deviceKickoutNotice, setDeviceKickoutNotice] = useState(false);
   const navigate = useNavigate();
 
@@ -211,6 +222,15 @@ export function LoginPage() {
       setDeviceKickoutNotice(true);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const subscription = onAuthStateChange((event) => {
+      if (event !== 'PASSWORD_RECOVERY') return;
+      markPasswordRecoveryIntent();
+      setResetMode(true);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
   const {
     setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing,
     setHasMembership, setOnboardingCompleted, setEmailVerified, setAuthError,
@@ -218,12 +238,12 @@ export function LoginPage() {
     customDomainContext,
   } = useAppStore();
   const estimatorBrand = isEstimatorBrandContext();
-  const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Monefyi Estimator' : 'Monefyi Planner');
+  const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Froyek Estimator' : PLANNER_BRAND_NAME);
   const loginSubtitle = customDomainContext
     ? 'Masuk ke workspace perusahaan Anda'
     : estimatorBrand
       ? 'Masuk ke dashboard Estimator'
-      : 'Masuk ke akun kamu';
+      : PLANNER_TAGLINE;
 
   useEffect(() => {
     if (!estimatorBrand) return;
@@ -290,6 +310,16 @@ export function LoginPage() {
     }
   };
 
+  const handlePasswordUpdated = async () => {
+    setAuthInitializing(true);
+    try {
+      await finishPasswordReset(navigate);
+      setResetMode(false);
+    } finally {
+      setAuthInitializing(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     if (!email.trim()) {
       setError('Masukkan email terlebih dahulu');
@@ -320,20 +350,27 @@ export function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl p-8 shadow-2xl"
         >
-          <div className="flex items-center gap-2 mb-8">
+          <div className="mb-8">
             {estimatorBrand ? (
-              <EstimatorLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
+              <div className="flex items-center gap-2">
+                <EstimatorLogo className="w-10 h-10 rounded-xl object-contain" />
+                <div>
+                  <div className="font-black text-slate-900">{loginTitle}</div>
+                  <div className="text-xs text-slate-500">{loginSubtitle}</div>
+                </div>
+              </div>
             ) : (
-              <PlannerLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
+              <div>
+                <PlannerLogo variant="lockup" />
+                <div className="text-xs text-slate-500 mt-2">
+                  {resetMode ? 'Buat password baru' : (customDomainContext ? loginTitle : loginSubtitle)}
+                </div>
+              </div>
             )}
-            <div>
-              <div className="font-black text-slate-900">{loginTitle}</div>
-              <div className="text-xs text-slate-500">{loginSubtitle}</div>
-            </div>
           </div>
           {customDomainContext && (
             <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-4">
-              Powered by Monefyi Planner
+              Powered by Froyek
             </p>
           )}
 
@@ -355,6 +392,9 @@ export function LoginPage() {
             </div>
           )}
 
+          {resetMode ? (
+            <ResetPasswordPanel onUpdated={handlePasswordUpdated} />
+          ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             {deviceKickoutNotice && (
               <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in">
@@ -403,7 +443,7 @@ export function LoginPage() {
 
             {resetSent && (
               <p className="text-sm text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
-                Link reset password dikirim ke email Anda.
+                Tautan reset dikirim. Buka email, lalu isi password baru di halaman yang terbuka.
               </p>
             )}
 
@@ -426,9 +466,12 @@ export function LoginPage() {
               )}
             </button>
           </form>
+          )}
 
+          {!resetMode && (
+          <>
           <p className="text-center text-sm text-slate-500 mt-4">
-            <Link to="/join" className="text-emerald-600 font-semibold hover:underline">
+            <Link to="/join-by-code" className="text-emerald-600 font-semibold hover:underline">
               Punya undangan? Klik di sini
             </Link>
           </p>
@@ -438,6 +481,8 @@ export function LoginPage() {
               Daftar gratis
             </Link>
           </p>
+          </>
+          )}
         </motion.div>
       </div>
     </div>

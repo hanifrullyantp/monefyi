@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isCompleteDimensionInput,
   parseDimensionInput,
   isCabinetAtas,
   isCabinetBawah,
@@ -26,12 +27,34 @@ describe('parseDimensionInput', () => {
     expect(res.isL).toBe(true);
   });
 
-  it('mem-parsing format perkalian 2x2 sebagai segmen siku 2+2', () => {
-    const res = parseDimensionInput('2x2');
-    expect(res.total).toBe(4);
-    expect(res.expr).toBe('2+2');
-    expect(res.segments).toEqual([2, 2]);
-    expect(res.isL).toBe(true);
+  it('mengalikan 2x3 menjadi quantity 6', () => {
+    const res = parseDimensionInput('2x3');
+    expect(res.total).toBe(6);
+    expect(res.expr).toBe('2x3');
+    expect(res.segments).toEqual([]);
+    expect(res.isL).toBe(false);
+  });
+
+  it('mengalikan 2 kali 3, 2×3, dan 2*3 menjadi 6', () => {
+    for (const raw of ['2 kali 3', '2×3', '2*3', '2 x 3']) {
+      const res = parseDimensionInput(raw);
+      expect(res.total).toBe(6);
+      expect(res.expr).toBe('2x3');
+      expect(res.isL).toBe(false);
+    }
+  });
+
+  it('mengalikan lebih dari dua faktor dan desimal koma', () => {
+    expect(parseDimensionInput('2x3x2').total).toBe(12);
+    expect(parseDimensionInput('2,5x2')).toMatchObject({ total: 5, expr: '2.5x2', isL: false });
+  });
+
+  it('tidak menganggap 2x sebagai quantity yang selesai', () => {
+    expect(isCompleteDimensionInput('2x')).toBe(false);
+    expect(isCompleteDimensionInput('2 kali')).toBe(false);
+    expect(isCompleteDimensionInput('2x3')).toBe(true);
+    expect(isCompleteDimensionInput('6')).toBe(true);
+    expect(parseDimensionInput('2x').total).toBe(0);
   });
 
   it('menghapus ukuran L jika diisi total manual langsung (misal "5")', () => {

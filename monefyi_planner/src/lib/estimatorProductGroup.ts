@@ -43,3 +43,10 @@ export function groupSharedQty(indices: number[], items: EstimationItemDraft[]):
   if (first == null) return null;
   return indices.every(i => items[i].qty === first) ? first : null;
 }
+
+/** Rumus qty yang sama di semua baris kelompok, misalnya "2x3". Kosong jika berbeda. */
+export function groupSharedExpr(indices: number[], items: EstimationItemDraft[]): string {
+  if (!indices.length) return '';
+  const first = items[indices[0]]?.dimension_expr ?? '';
+  return indices.every(i => (items[i].dimension_expr ?? '') === first) ? first : '';
+}

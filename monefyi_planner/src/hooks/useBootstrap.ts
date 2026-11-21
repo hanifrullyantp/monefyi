@@ -9,6 +9,7 @@ import {
   onAuthStateChange,
   signOutGlobal,
 } from '../services/authService';
+import { hasPasswordRecoveryIntent, markPasswordRecoveryIntent } from '../lib/passwordRecoveryIntent';
 import { loadOrg } from '../services/orgService';
 import { loadProfile } from '../services/profileService';
 import { loadProjects } from '../services/projectService';
@@ -231,6 +232,12 @@ export function useBootstrap() {
     const processAuth = (event: string, session: Session | null) => {
       if (useAppStore.getState().isDemoMode) {
         settleInit('demo-mode');
+        return;
+      }
+
+      if (event === 'PASSWORD_RECOVERY') markPasswordRecoveryIntent();
+      if (session?.user && hasPasswordRecoveryIntent()) {
+        settleInit('password-recovery');
         return;
       }
 

@@ -2,14 +2,16 @@
  * Shared CORS configuration for all Edge Functions.
  *
  * Reflects the request Origin when it is on the whitelist (multi-domain support).
- * Falls back to https://www.monefyi.com when Origin is missing or not allowed.
+ * Falls back to https://froyek.com when Origin is missing or not allowed.
  */
 
 const ALLOWED_ORIGINS = [
+  "https://froyek.com",
+  "https://www.froyek.com",
+  "https://app.froyek.com",
+  "https://estimator.froyek.com",
   "https://www.monefyi.com",
   "https://monefyi.com",
-  "https://froyek.com",
-  "https://estimator.froyek.com",
   "https://planner.monefyi.com",
   "https://estimator.monefyi.com",
   "http://localhost:5500",
@@ -90,7 +92,7 @@ export function jsonResponse(
     });
   }
 
-  const req = _boundRequest ?? new Request("https://www.monefyi.com/");
+  const req = _boundRequest ?? new Request("https://froyek.com/");
   const body = reqOrBody;
   const status = typeof bodyOrStatus === "number" ? bodyOrStatus : 200;
   return new Response(JSON.stringify(body), {
@@ -117,7 +119,7 @@ export function errorResponse(
 }
 
 /** @deprecated Static headers — prefer getCorsHeaders(request) */
-export const corsHeaders = getCorsHeaders(new Request("https://www.monefyi.com/"));
+export const corsHeaders = getCorsHeaders(new Request("https://froyek.com/"));
 
 /** @deprecated Use origin reflection via getCorsHeaders */
 export const APP_CORS_ORIGIN = ALLOWED_ORIGINS[0];

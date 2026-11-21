@@ -296,7 +296,7 @@ export default function ConvertEstimationWizard({
       onConverted(summary);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Gagal membuat proyek';
-      if (msg.includes('Kuota') || msg.includes('Beli Estimator')) {
+      if (msg.includes('Kuota') || msg.includes('Beli Estimator') || msg.includes('Upgrade ke Froyek Pro')) {
         analytics.projectLimitHit({ currentCount: currentActiveProjects, tier });
         setUpgradeOpen(true);
         analytics.upgradeModalShown('project_limit');

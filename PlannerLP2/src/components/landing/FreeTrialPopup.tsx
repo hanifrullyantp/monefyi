@@ -214,7 +214,7 @@ export function FreeTrialPopup() {
             detail: {
               name: cleanName,
               action: "baru saja mulai menggunakan",
-              product: "Monefyi Estimator",
+              product: "Froyek Estimator",
               location: "Baru saja",
               timeAgo: "Baru saja",
               source: "live_purchase",

@@ -1,5 +1,5 @@
 /**
- * Dual-brand config: Estimator (product LP/app) vs Monefyi (multi-product).
+ * Dual-brand config: Estimator (product LP/app) vs Froyek (multi-product).
  * Single source for logos, theme-color, titles.
  */
 
@@ -35,7 +35,7 @@ const V = "2026-10-28";
 export const BRANDS: Record<BrandId, BrandDefinition> = {
   estimator: {
     id: "estimator",
-    name: "Monefyi Estimator",
+    name: "Froyek Estimator",
     shortName: "Estimator",
     titleSuffix: "Estimator",
     themeColor: "#157F5F",
@@ -55,9 +55,9 @@ export const BRANDS: Record<BrandId, BrandDefinition> = {
   },
   planner: {
     id: "planner",
-    name: "Monefyi Planner",
-    shortName: "Planner",
-    titleSuffix: "Planner",
+    name: "froyek",
+    shortName: "froyek",
+    titleSuffix: "froyek",
     themeColor: "#059669",
     backgroundColor: "#0f172a",
     assets: {
@@ -107,7 +107,7 @@ export function resolveBrand(
 
   if (onEstimatorHost) return BRANDS.estimator;
 
-  return BRANDS.estimator;
+  return defaultBrandForHost(hostname);
 }
 
 /** First paint on estimator subdomain always Estimator (no flicker). */

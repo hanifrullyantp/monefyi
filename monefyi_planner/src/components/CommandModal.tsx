@@ -812,7 +812,7 @@ export default function CommandModal() {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <div className="font-black text-slate-900 text-sm">Monefyi Assistant (Input Cepat)</div>
+              <div className="font-black text-slate-900 text-sm">Froyek Assistant (Input Cepat)</div>
               <div className="text-xs text-slate-600">
                 Konteks: <span className="text-emerald-600 font-medium">{activeProject?.name || 'Umum'}</span>
               </div>
@@ -1249,7 +1249,7 @@ export default function CommandModal() {
         )}
 
         <div className="px-5 py-3 border-t border-slate-100 text-center shrink-0">
-          <span className="text-xs text-slate-600">Powered by <span className="font-semibold text-emerald-500">Monefyi AI</span> · Memori → Aturan → Fuzzy → AI</span>
+          <span className="text-xs text-slate-600">Powered by <span className="font-semibold text-emerald-500">Froyek AI</span> · Memori → Aturan → Fuzzy → AI</span>
         </div>
       </motion.div>
     </motion.div>

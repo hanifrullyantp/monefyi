@@ -42,7 +42,7 @@ export function EditCustomerModal({ lead, onClose, onUpdated }: Props) {
   );
   const [status, setStatus] = useState<LeadStatus>(lead.status);
   const [notes, setNotes] = useState(lead.notes || "");
-  const [projectType, setProjectType] = useState(lead.projectType || "Monefyi Estimator");
+  const [projectType, setProjectType] = useState(lead.projectType || "Froyek Estimator");
   const [estimatedValue, setEstimatedValue] = useState<number>(lead.estimatedValue || lead.amount || 0);
 
   const [showPassword, setShowPassword] = useState(false);

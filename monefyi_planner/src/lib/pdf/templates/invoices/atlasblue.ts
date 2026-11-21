@@ -187,7 +187,7 @@ export function buildInvoiceAtlasBlue(ctx: InvoicePdfContext): TDocumentDefiniti
               columns: [
                 { text: ctx.companyPhone ? `Telp: ${ctx.companyPhone}` : '', fontSize: 7.5, color: '#FFFFFF', alignment: 'left' },
                 { text: ctx.companyAddress || '', fontSize: 7.5, color: '#FFFFFF', alignment: 'center' },
-                { text: 'www.monefyi.com', fontSize: 7.5, color: '#FFFFFF', alignment: 'right' },
+                { text: 'www.froyek.com', fontSize: 7.5, color: '#FFFFFF', alignment: 'right' },
               ],
               fillColor: blueSky,
               margin: [10, 6, 10, 6] as [number, number, number, number],

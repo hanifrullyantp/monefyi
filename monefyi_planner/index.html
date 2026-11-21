@@ -3,23 +3,38 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Monefyi Planner — Your Intelligent Business Assistant</title>
-    <meta name="description" content="Monefyi Planner - Platform manajemen project dan bisnis cerdas. 1 Button for All — Your Intelligent Business Assistant." />
-    <meta name="theme-color" content="#059669" />
+    <title>froyek — Agent for your Project</title>
+    <meta name="description" content="froyek — Agent for your Project. Manajemen proyek untuk jasa." />
+    <meta name="theme-color" content="#0A3A2E" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Planner" />
+    <meta name="apple-mobile-web-app-title" content="froyek" />
     <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
-    <link rel="icon" type="image/png" href="/icons/favicon.png?v=2026-08-13-m" sizes="32x32" />
-    <link rel="icon" type="image/png" href="/icons/icon-192.png?v=2026-08-13-m" sizes="192x192" />
-    <link rel="apple-touch-icon" href="/icons/icon-180.png?v=2026-08-13-m" />
+    <link rel="icon" href="/icons/froyek/favicon.svg?v=2026-11-16-froyek" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/froyek/favicon.svg?v=2026-11-16-froyek" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      try {
+        var hash = new URLSearchParams(location.hash.slice(1));
+        var query = new URLSearchParams(location.search);
+        var type = hash.get('type') || query.get('type');
+        var errorCode = hash.get('error_code') || query.get('error_code');
+        var errorFlag = hash.get('error') || query.get('error');
+        if (type === 'recovery') sessionStorage.setItem('monefyi_password_recovery', '1');
+        if (errorFlag || errorCode) {
+          var message = errorCode === 'otp_expired'
+            ? 'Tautan reset sudah kedaluwarsa. Minta tautan baru.'
+            : (hash.get('error_description') || query.get('error_description') || 'Tautan reset tidak valid. Minta tautan baru.');
+          sessionStorage.setItem('monefyi_password_recovery_error', message);
+        }
+      } catch (e) {}
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

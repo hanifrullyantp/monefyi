@@ -1,15 +1,20 @@
-/** Brand assets — Monefyi Planner (bukan logo Ø / umbrella). */
+/** Brand froyek — tanda "f" dan wordmark. Bukan logo Estimator. */
 import { resolveSpaAssetUrl } from './spaAssets';
 
-const V = '2026-10-28-planner';
+const V = '2026-11-16-froyek';
 
-/** Mark aplikasi Planner — icon PWA, bukan monefyi-logo.png (Ø). */
-export const PLANNER_LOGO_SRC = `/icons/icon-192.png?v=${V}`;
-export const PLANNER_FAVICON_SRC = `/icons/favicon.png?v=${V}`;
-export const PLANNER_APPLE_ICON_SRC = `/icons/icon-180.png?v=${V}`;
+/** Tanda f di atas terang. Lockup dirakit di komponen agar wordmark memakai Poppins. */
+export const PLANNER_LOGO_SRC = `/icons/froyek/mark-dark.svg?v=${V}`;
+export const PLANNER_LOGO_ON_DARK_SRC = `/icons/froyek/mark-white.svg?v=${V}`;
+export const PLANNER_FAVICON_SRC = `/icons/froyek/favicon.svg?v=${V}`;
+export const PLANNER_APPLE_ICON_SRC = `/icons/froyek/favicon.svg?v=${V}`;
 
-export const PLANNER_BRAND_NAME = 'Monefyi Planner';
-export const PLANNER_THEME_COLOR = '#059669';
+export const PLANNER_BRAND_NAME = 'froyek';
+export const PLANNER_TAGLINE = 'Agent for your Project';
+/** Hijau gelap — warna utama panduan brand. */
+export const PLANNER_THEME_COLOR = '#0A3A2E';
+export const PLANNER_EMERALD = '#10B981';
+export const PLANNER_GREEN = '#047857';
 
 export function applyPlannerDocumentBrand(): void {
   if (typeof document === 'undefined') return;

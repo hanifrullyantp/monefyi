@@ -79,8 +79,11 @@ interface MarketingStore {
     balance: number;
     amountSpent: number;
     spendCap: number;
+    thresholdAmount: number;
     fundingSource: string;
     currency: string;
+    accountStatus: number;
+    paymentFailed: boolean;
   };
   setDatePreset: (preset: string) => Promise<void>;
   selectAdAccount: (accountId: string) => Promise<void>;
@@ -1027,7 +1030,7 @@ export const useMarketingStore = create<MarketingStore>()(
         {
           id: 'welcome_1',
           sender: 'cmo',
-          text: `Selamat datang di **Monefyi Adspert**.\n\nSaya **Mas Danu** (CMO AI), memimpin tim spesialis untuk menganalisa data riil Meta Ads, demografi pemenang, dan mengeksekusi optimasi 5 Pilar Winning Anda:\n- **Bima (Media Buyer)**: Membaca metrik 26 kolom, menaikkan budget kampanye winning, dan mematikan iklan boncos.\n- **Sinta (Creative & LP Copywriter)**: Merancang hook 3-detik, copywriting Landing Page PAS/HSO, dan evaluasi Offer.\n- **Aris (Funnel & Tracking Specialist)**: Mengoptimalkan kecepatan OCLP, Order Bump, Upsell OTO, dan CAPI server-side.\n\nBuka tab **Winning Engine** atau tanyakan strategi kampanye Anda sekarang.`,
+          text: `Selamat datang di **Froyek Adspert**.\n\nSaya **Mas Danu** (CMO AI), memimpin tim spesialis untuk menganalisa data riil Meta Ads, demografi pemenang, dan mengeksekusi optimasi 5 Pilar Winning Anda:\n- **Bima (Media Buyer)**: Membaca metrik 26 kolom, menaikkan budget kampanye winning, dan mematikan iklan boncos.\n- **Sinta (Creative & LP Copywriter)**: Merancang hook 3-detik, copywriting Landing Page PAS/HSO, dan evaluasi Offer.\n- **Aris (Funnel & Tracking Specialist)**: Mengoptimalkan kecepatan OCLP, Order Bump, Upsell OTO, dan CAPI server-side.\n\nBuka tab **Winning Engine** atau tanyakan strategi kampanye Anda sekarang.`,
           timestamp: new Date().toISOString(),
         },
       ],
@@ -1076,7 +1079,7 @@ export const useMarketingStore = create<MarketingStore>()(
         features: [
           'Lisensi Lifetime tanpa biaya langganan bulanan',
           'Sesi 1-on-1 setup database harga proyek bersama spesialis',
-          'Akses eksklusif grup komunitas kontraktor & vendor Monefyi',
+          'Akses eksklusif grup komunitas kontraktor & vendor Froyek',
         ],
         takeRateEstimate: 16,
       },

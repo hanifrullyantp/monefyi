@@ -93,10 +93,10 @@ export default function UpgradeModal({
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
           <h2 className="font-bold text-slate-900">
             {trigger === 'project_limit' && 'Kuota proyek tercapai'}
-            {trigger === 'pro_feature' && 'Fitur Planner Pro'}
-            {trigger === 'estimator_pro_feature' && 'Estimator Pro'}
+            {trigger === 'pro_feature' && 'Fitur Froyek Pro'}
+            {trigger === 'estimator_pro_feature' && 'Froyek Estimator Pro'}
             {trigger === 'estimation_accepted' && 'Penawaran diterima!'}
-            {trigger === 'estimator_paywall' && 'Upgrade Estimator'}
+            {trigger === 'estimator_paywall' && 'Upgrade Froyek Estimator'}
             {trigger === 'manual' && 'Upgrade paket'}
           </h2>
           <button type="button" onClick={handleClose} className="p-2 rounded-lg hover:bg-slate-100" aria-label="Tutup">
@@ -119,7 +119,7 @@ export default function UpgradeModal({
                 </button>
               </div>
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2">
-                <p className="font-semibold text-emerald-900">Opsi 2: Upgrade ke Planner Pro</p>
+                <p className="font-semibold text-emerald-900">Opsi 2: Upgrade ke Froyek Pro</p>
                 <ul className="text-xs space-y-1 text-emerald-800">
                   <li>✅ 10 proyek aktif</li>
                   <li>✅ Keuangan bisnis penuh</li>
@@ -139,7 +139,7 @@ export default function UpgradeModal({
             <>
               <p className="flex items-center gap-2 font-semibold text-slate-800">
                 <Lock className="w-4 h-4" />
-                {featureName || 'Generator Kwitansi Pro'} tersedia di Estimator Pro
+                {featureName || 'Generator Kwitansi Pro'} tersedia di Froyek Estimator Pro
               </p>
               <ul className="text-xs space-y-1 text-slate-600">
                 <li>• Kwitansi pembayaran PDF profesional</li>
@@ -165,7 +165,7 @@ export default function UpgradeModal({
             <>
               <p className="flex items-center gap-2 font-semibold text-slate-800">
                 <Lock className="w-4 h-4" />
-                {featureName || 'Fitur ini'} tersedia di Planner Pro
+                {featureName || 'Fitur ini'} tersedia di Froyek Pro
               </p>
               <ul className="text-xs space-y-1">
                 <li>• Track kas, piutang, hutang</li>
@@ -210,7 +210,7 @@ export default function UpgradeModal({
             </>
           )}
           {trigger === 'manual' && (
-            <p>Upgrade paket untuk membuka fitur Estimator dan alur penawaran profesional.</p>
+            <p>Upgrade ke Froyek Pro untuk membuka kuota proyek lebih besar, keuangan bisnis, dan kolaborasi tim.</p>
           )}
         </div>
 

@@ -7,6 +7,7 @@ type Props = {
   onSelectTab: (tab: BottomNavTab) => void;
   onOpenMonefyiAi: () => void;
   pendingSyncCount?: number;
+  showEstimator?: boolean;
 };
 
 export default function BottomNav({
@@ -14,6 +15,7 @@ export default function BottomNav({
   onSelectTab,
   onOpenMonefyiAi,
   pendingSyncCount = 0,
+  showEstimator = false,
 }: Props) {
   const isHome = activeTab === 'home';
   const isProjects = activeTab === 'projects';
@@ -51,11 +53,11 @@ export default function BottomNav({
         <span className="text-[11px] leading-none">Proyek</span>
       </button>
 
-      {/* Monefyi AI FAB */}
+      {/* Froyek AI FAB */}
       <button
         type="button"
         onClick={onOpenMonefyiAi}
-        aria-label="Tanya Monefyi AI"
+        aria-label="Tanya Froyek AI"
         className="relative -top-3 w-16 flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
       >
         <span className="relative w-[54px] h-[54px] rounded-full bg-gradient-to-br from-[#064E3B] to-[#059669] text-white flex items-center justify-center shadow-[0_8px_18px_-6px_rgba(4,120,87,0.7)] border-[3px] border-white">
@@ -67,22 +69,24 @@ export default function BottomNav({
           )}
         </span>
         <span className="text-[11px] font-extrabold text-[#047857] leading-none">
-          Monefyi
+          Froyek
         </span>
       </button>
 
-      {/* Estimator */}
-      <button
-        type="button"
-        onClick={() => onSelectTab('estimator')}
-        aria-label="Estimator"
-        className={`w-16 h-full flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform ${
-          isEstimator ? 'text-[#047857] font-extrabold' : 'text-[#5B6B7A] font-semibold'
-        }`}
-      >
-        <Receipt className="w-[22px] h-[22px]" />
-        <span className="text-[11px] leading-none">Estimator</span>
-      </button>
+      {/* Estimator (hanya untuk paket dengan akses Estimator) */}
+      {showEstimator && (
+        <button
+          type="button"
+          onClick={() => onSelectTab('estimator')}
+          aria-label="Estimator"
+          className={`w-16 h-full flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform ${
+            isEstimator ? 'text-[#047857] font-extrabold' : 'text-[#5B6B7A] font-semibold'
+          }`}
+        >
+          <Receipt className="w-[22px] h-[22px]" />
+          <span className="text-[11px] leading-none">Estimator</span>
+        </button>
+      )}
 
       {/* Finance */}
       <button

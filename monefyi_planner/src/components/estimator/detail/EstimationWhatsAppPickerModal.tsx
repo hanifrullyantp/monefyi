@@ -176,7 +176,7 @@ export default function EstimationWhatsAppPickerModal({
         analytics.estimationWaShared({ estimationId, shareType: 'pdf' });
       } else if (attachFile && attachment === 'kwitansi') {
         if (!canGenerateKwitansi(entitlement)) {
-          onToast('Generator kwitansi hanya untuk Estimator Pro, Planner Pro, dan Enterprise.', 'error');
+          onToast('Generator kwitansi hanya untuk Estimator Pro, Froyek Pro, dan Enterprise.', 'error');
           return;
         }
         const blob = await generateKwitansiPdfBlob(buildKwitansiPdfInputFromDraft(draft, settings));

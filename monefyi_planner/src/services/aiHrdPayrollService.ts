@@ -459,5 +459,5 @@ A/N: ${item.bankHolder}
 Kode Ref: ${item.disbursementRef || 'PENDING'}
 Status: *LUNAS & BERHASIL DITRANSFER ✅*
 ━━━━━━━━━━━━━━━━━━━━━
-_Diterbitkan otomatis oleh AI HRD Monefyi Planner._`;
+_Diterbitkan otomatis oleh AI HRD Froyek._`;
 }

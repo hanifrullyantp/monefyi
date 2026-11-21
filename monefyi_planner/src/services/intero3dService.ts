@@ -1,5 +1,5 @@
 // monefyi_planner/src/services/intero3dService.ts
-// Service jembatan antara Monefyi Estimator dan 3D Intero (3d.intero.id)
+// Service jembatan antara Froyek Estimator dan 3D Intero (3d.intero.id)
 import { compressToEncodedURIComponent } from 'lz-string';
 import type { EstimationFormDraft, EstimationItem, EstimationItemDraft } from '../types/estimator';
 import { parseDimensionInput } from '../lib/estimatorDimension';
@@ -60,7 +60,7 @@ function lengthMeters(unit: string, qty: number): number | null {
 }
 
 /**
- * Menganalisis daftar item estimasi Monefyi dan mengusulkan parameter 3D Intero.
+ * Menganalisis daftar item estimasi Froyek dan mengusulkan parameter 3D Intero.
  */
 export function analyzeEstimationForIntero(
   draft: EstimationFormDraft,
@@ -255,7 +255,7 @@ export function buildInteroWizardLaunch(
     app: '3d-intero',
     kind: 'wizard',
     version: 1,
-    projectName: draft.title || 'Desain Kitchen Set Monefyi',
+    projectName: draft.title || 'Desain Kitchen Set Froyek',
     clientName: draft.customer_name || '',
     notes: draft.notes || '',
     ceilingCm: proposal.ceilingCm,

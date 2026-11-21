@@ -327,6 +327,7 @@ async function processFinanceLynkPurchaseInner(
 
   const emailRes = await sendEmailSafe({
     to: customerEmail,
+    product: "finance",
     subject: financePurchaseEmailSubject(),
     html: mailHtml,
     text: financePurchaseEmailText({

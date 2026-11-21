@@ -75,18 +75,18 @@ export function EvergreenFunnelPlanner({
     const used = lead.estimatorActivity?.usedEstimations ?? 0;
 
     if (stageType === "onboarding") {
-      return `Halo ${name}, terima kasih telah mengaktifkan akun trial Monefyi Estimator. Kami ingin memastikan apakah Anda sudah sempat mencoba kalkulator estimasi untuk proyek pertama Anda? Jika butuh panduan cepat, Anda dapat langsung login di estimator.froyek.com atau balas pesan ini jika ada kendala saat mulai menghitung.`;
+      return `Halo ${name}, terima kasih telah mengaktifkan akun trial Froyek Estimator. Kami ingin memastikan apakah Anda sudah sempat mencoba kalkulator estimasi untuk proyek pertama Anda? Jika butuh panduan cepat, Anda dapat langsung login di estimator.froyek.com atau balas pesan ini jika ada kendala saat mulai menghitung.`;
     }
 
     if (stageType === "exploration") {
-      return `Halo ${name}, kami melihat Anda telah berhasil membuat ${used} dari 3 estimasi proyek di Monefyi Estimator. Apakah penawaran harga dan perhitungan HPP sudah sesuai dengan kebutuhan di lapangan? Anda juga dapat mengunduh format PDF penawaran resmi berlogo untuk langsung dikirimkan ke calon klien Anda.`;
+      return `Halo ${name}, kami melihat Anda telah berhasil membuat ${used} dari 3 estimasi proyek di Froyek Estimator. Apakah penawaran harga dan perhitungan HPP sudah sesuai dengan kebutuhan di lapangan? Anda juga dapat mengunduh format PDF penawaran resmi berlogo untuk langsung dikirimkan ke calon klien Anda.`;
     }
 
     if (stageType === "closing") {
-      return `Halo ${name}, kuota 3 estimasi trial gratis Anda di Monefyi Estimator telah terpakai seluruhnya. Untuk melanjutkan perhitungan proyek tanpa batas kuota serta membuka fitur Proforma Invoice dan kalkulasi HPP otomatis, kami sedang membuka penawaran upgrade ke Paket Standard / PRO Sekali Bayar Selamanya. Apakah Anda ingin kami kirimkan rincian akses selamanya ini?`;
+      return `Halo ${name}, kuota 3 estimasi trial gratis Anda di Froyek Estimator telah terpakai seluruhnya. Untuk melanjutkan perhitungan proyek tanpa batas kuota serta membuka fitur Proforma Invoice dan kalkulasi HPP otomatis, kami sedang membuka penawaran upgrade ke Paket Standard / PRO Sekali Bayar Selamanya. Apakah Anda ingin kami kirimkan rincian akses selamanya ini?`;
     }
 
-    return `Halo ${name}, akun trial Monefyi Estimator Anda masih tersedia dengan 3 kuota estimasi gratis. Apakah Anda memiliki kendala teknis saat memasukkan item pekerjaan atau material? Tim kami siap membantu memandu Anda agar perhitungan proyek berjalan cepat dan akurat.`;
+    return `Halo ${name}, akun trial Froyek Estimator Anda masih tersedia dengan 3 kuota estimasi gratis. Apakah Anda memiliki kendala teknis saat memasukkan item pekerjaan atau material? Tim kami siap membantu memandu Anda agar perhitungan proyek berjalan cepat dan akurat.`;
   };
 
   const handleCopyText = (text: string, templateKey: string) => {
@@ -116,7 +116,7 @@ export function EvergreenFunnelPlanner({
                   Evergreen Campaign Engine
                 </span>
                 <span className="px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-full text-xs font-black uppercase tracking-wider">
-                  Monefyi Estimator
+                  Froyek Estimator
                 </span>
               </div>
               <h2 className="text-2xl md:text-3xl font-black mt-2 tracking-tight">
@@ -273,7 +273,7 @@ export function EvergreenFunnelPlanner({
             <div className="mt-4 pt-3 border-t border-slate-200">
               <span className="text-[11px] font-extrabold text-teal-700 block mb-1.5">Contoh Pesan Sapaan:</span>
               <p className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 leading-normal">
-                Halo Bapak/Ibu, terima kasih telah mengaktifkan trial Monefyi Estimator. Kami ingin memastikan apakah Anda sudah sempat mencoba kalkulator estimasi untuk proyek pertama Anda? Jika butuh panduan cepat, Anda dapat langsung login di estimator.froyek.com.
+                Halo Bapak/Ibu, terima kasih telah mengaktifkan trial Froyek Estimator. Kami ingin memastikan apakah Anda sudah sempat mencoba kalkulator estimasi untuk proyek pertama Anda? Jika butuh panduan cepat, Anda dapat langsung login di estimator.froyek.com.
               </p>
             </div>
           </div>
@@ -300,7 +300,7 @@ export function EvergreenFunnelPlanner({
             <div className="mt-4 pt-3 border-t border-slate-200">
               <span className="text-[11px] font-extrabold text-blue-700 block mb-1.5">Contoh Pesan Discovery:</span>
               <p className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 leading-normal">
-                Halo Bapak/Ibu, kami melihat Anda telah berhasil membuat estimasi proyek di Monefyi Estimator. Apakah penawaran harga sudah sesuai? Anda dapat mengunduh format PDF penawaran resmi berlogo untuk langsung dikirimkan ke calon klien Anda.
+                Halo Bapak/Ibu, kami melihat Anda telah berhasil membuat estimasi proyek di Froyek Estimator. Apakah penawaran harga sudah sesuai? Anda dapat mengunduh format PDF penawaran resmi berlogo untuk langsung dikirimkan ke calon klien Anda.
               </p>
             </div>
           </div>
@@ -327,7 +327,7 @@ export function EvergreenFunnelPlanner({
             <div className="mt-4 pt-3 border-t border-slate-200">
               <span className="text-[11px] font-extrabold text-amber-700 block mb-1.5">Contoh Pesan Closing:</span>
               <p className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 leading-normal">
-                Halo Bapak/Ibu, kuota 3 estimasi trial gratis Anda di Monefyi Estimator telah terpakai seluruhnya. Untuk melanjutkan perhitungan tanpa batas kuota serta membuka fitur Proforma Invoice, kami sedang membuka penawaran upgrade Paket Sekali Bayar Selamanya. Mau kami kirimkan rinciannya?
+                Halo Bapak/Ibu, kuota 3 estimasi trial gratis Anda di Froyek Estimator telah terpakai seluruhnya. Untuk melanjutkan perhitungan tanpa batas kuota serta membuka fitur Proforma Invoice, kami sedang membuka penawaran upgrade Paket Sekali Bayar Selamanya. Mau kami kirimkan rinciannya?
               </p>
             </div>
           </div>

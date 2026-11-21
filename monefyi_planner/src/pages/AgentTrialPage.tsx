@@ -1,8 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { SOP_CATALOG } from '../../../agent-core/src/sopData';
 import { buildContextPack, emptyProfile, parametersFromProfile, type ModelTier } from '../../../agent-core/src/profile';
 import { previewWizard } from '../../../agent-core/src/profileWizard';
 import { routeCatatBiaya } from '../../../agent-core/src/sop';
+import { useAppStore } from '../store/appStore';
+import { isPlatformAdmin } from '../services/adminService';
 
 const SAMPLE_ANSWERS = {
   zona_waktu: 'Asia/Jakarta',
@@ -14,6 +17,10 @@ const SAMPLE_ANSWERS = {
 
 /** Pratinjau keputusan dari profil lokal. Tidak menulis database. */
 export default function AgentTrialPage() {
+  const navigate = useNavigate();
+  const { authInitializing, platformRole, user } = useAppStore();
+  const isAdmin = isPlatformAdmin(platformRole, user?.email);
+
   const [scenario, setScenario] = useState('beli semen 10 sak 65000');
   const [sopId, setSopId] = useState('catat_biaya');
   const [tier, setTier] = useState<ModelTier>('rendah');
@@ -21,6 +28,37 @@ export default function AgentTrialPage() {
     const built = previewWizard(SAMPLE_ANSWERS);
     return 'version' in built ? built : emptyProfile();
   }, []);
+
+  useEffect(() => {
+    if (authInitializing || isAdmin) return;
+    navigate('/app', { replace: true });
+  }, [authInitializing, isAdmin, navigate]);
+
+  if (authInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F4F7F5]">
+        <div className="text-sm text-[#5B6B7A]">Memuat...</div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F4F7F5] p-4">
+        <div className="max-w-md w-full rounded-2xl border border-[#E5EAE8] bg-white p-6 text-center space-y-3 shadow-sm">
+          <h1 className="text-lg font-black text-[#0F172A]">Akses Ditolak</h1>
+          <p className="text-sm text-[#5B6B7A]">Halaman Uji Agen hanya tersedia untuk admin platform.</p>
+          <Link
+            to="/app"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#059669] text-white text-sm font-bold hover:bg-emerald-700"
+          >
+            Kembali ke Beranda
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const sop = SOP_CATALOG.find((item) => item.id === sopId) ?? SOP_CATALOG[0];
   const routed = routeCatatBiaya(scenario);
   const parameters = parametersFromProfile(sop, profile);

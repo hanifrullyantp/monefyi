@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { BRANDS } from "@/lib/brand/brand.config";
+import { isFroyekMarketingHost } from "@/lib/config/publicHosts";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -13,7 +15,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 const brand = BRANDS.estimator;
 
-export const metadata: Metadata = {
+const estimatorMetadata: Metadata = {
   title: {
     default: "Kirim Penawaran Sebelum Kamu Pulang Survei - Estimator",
     template: "%s - Estimator",
@@ -51,11 +53,35 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: brand.themeColor,
-  width: "device-width",
-  initialScale: 1,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
+  if (!isFroyekMarketingHost(host)) return estimatorMetadata;
+  return {
+    title: {
+      default: "froyek — proyek lebih terbaca",
+      template: "%s — froyek",
+    },
+    description:
+      "Kelola proyek berbayar, catat biaya, dan kirim laporan. Lisensi Estimator hanya untuk penawaran.",
+    openGraph: {
+      title: "froyek",
+      description: "Proyek, biaya, dan laporan dalam satu tempat.",
+      type: "website",
+      images: [{ url: "/brand/planner/icon-512.png", width: 512, height: 512, alt: "froyek" }],
+    },
+  };
+}
+
+export async function generateViewport(): Promise<Viewport> {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
+  return {
+    themeColor: isFroyekMarketingHost(host) ? "#059669" : brand.themeColor,
+    width: "device-width",
+    initialScale: 1,
+  };
+}
 
 export default function RootLayout({
   children,

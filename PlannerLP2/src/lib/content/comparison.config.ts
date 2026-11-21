@@ -18,7 +18,7 @@ export const COMPARISON_SECTION = {
   /** Default headline — alternatif disimpan untuk eksperimen copy. */
   title: "Bedanya Terasa di Setiap Proyek",
   titleAlternatives: [
-    "Kenapa Harus Monefyi Estimator?",
+    "Kenapa Harus Froyek Estimator?",
     "Dari Excel & WA ke Alur yang Lebih Rapi",
   ],
   subtitle:
@@ -108,7 +108,7 @@ export const COMPARISON_ROWS: ComparisonBenefitRow[] = [
     id: "tim-ikut-bekerja",
     situation: "Tim ikut bekerja",
     old: "Berbagi satu file, data bisa tertimpa",
-    new: "Tiap orang punya akses sesuai perannya (paket tim / Planner Pro)",
+    new: "Tiap orang punya akses sesuai perannya (paket tim / Froyek Pro)",
     status: "live",
     primary: false,
   },

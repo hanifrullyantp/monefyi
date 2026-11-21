@@ -12,7 +12,7 @@ export function SignupHubPage() {
         <Link to="/" className="text-slate-400 hover:text-white text-sm mb-8 inline-block">← Beranda</Link>
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
           <h1 className="text-2xl font-black text-slate-900 mb-2">Daftar Gratis</h1>
-          <p className="text-sm text-slate-500 mb-6">Pilih cara bergabung dengan Monefyi Planner</p>
+          <p className="text-sm text-slate-500 mb-6">Pilih cara bergabung dengan Froyek</p>
 
           <div className="flex gap-2 mb-6">
             {(['owner', 'join'] as const).map(t => (
