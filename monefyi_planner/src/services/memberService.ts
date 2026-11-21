@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { config } from '../lib/config';
 import { assertNoDbError } from '../lib/supabaseErrors';
 import type { MemberRole, MemberProfilePatch, OrgMember } from '../types/onboarding';
+import { logAudit } from './auditService';
 
 async function invokeFn<T>(name: string, body?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, { body: body || {} });
@@ -48,6 +49,26 @@ export async function updateMemberProfile(memberId: string, patch: MemberProfile
     .update(patch)
     .eq('id', memberId);
   assertNoDbError(error);
+
+  try {
+    const { data: row } = await supabase
+      .from('planner_org_members')
+      .select('org_id, user_id')
+      .eq('id', memberId)
+      .maybeSingle();
+    if (row?.org_id) {
+      void logAudit({
+        orgId: row.org_id as string,
+        action: 'member.profile_updated',
+        targetType: 'member',
+        targetId: memberId,
+        targetUserId: (row.user_id as string | null) ?? null,
+        metadata: { fields: Object.keys(patch) },
+      });
+    }
+  } catch {
+    // Audit metadata lookup must never break profile save.
+  }
 }
 
 export async function changeMemberRole(
@@ -63,6 +84,22 @@ export async function changeMemberRole(
   assertNoDbError(fetchErr);
 
   const result = await invokeFn<{ ok: boolean }>(config.fnChangeMemberRole, { member_id: memberId, role });
+
+  const orgId = undoContext?.orgId ?? (existing?.org_id as string | undefined);
+  if (orgId) {
+    void logAudit({
+      orgId,
+      actorId: undoContext?.actorId ?? null,
+      action: 'member.role_changed',
+      targetType: 'member',
+      targetId: memberId,
+      targetUserId: (existing?.user_id as string | undefined) ?? null,
+      metadata: {
+        previous_role: existing?.role,
+        new_role: role,
+      },
+    });
+  }
 
   let undoActionId: string | undefined;
   if (undoContext) {
@@ -83,14 +120,48 @@ export async function changeMemberRole(
 }
 
 export async function removeMember(memberId: string) {
-  return invokeFn<{ ok: boolean }>(config.fnRemoveMember, { member_id: memberId });
+  let existing: { org_id?: string | null; user_id?: string | null; role?: string | null } | null = null;
+  try {
+    const { data } = await supabase
+      .from('planner_org_members')
+      .select('org_id, user_id, role')
+      .eq('id', memberId)
+      .maybeSingle();
+    existing = (data as { org_id?: string | null; user_id?: string | null; role?: string | null } | null) ?? null;
+  } catch {
+    existing = null;
+  }
+
+  const result = await invokeFn<{ ok: boolean }>(config.fnRemoveMember, { member_id: memberId });
+
+  if (existing?.org_id) {
+    void logAudit({
+      orgId: existing.org_id,
+      action: 'member.removed',
+      targetType: 'member',
+      targetId: memberId,
+      targetUserId: existing.user_id ?? null,
+      metadata: {
+        previous_role: existing.role ?? undefined,
+      },
+    });
+  }
+
+  return result;
 }
 
 export async function transferOwnership(orgId: string, targetMemberId: string) {
-  return invokeFn<{ ok: boolean }>(config.fnTransferOwnership, {
+  const result = await invokeFn<{ ok: boolean }>(config.fnTransferOwnership, {
     org_id: orgId,
     target_member_id: targetMemberId,
   });
+  void logAudit({
+    orgId,
+    action: 'ownership.transferred',
+    targetType: 'member',
+    targetId: targetMemberId,
+  });
+  return result;
 }
 
 export async function updateOrgAccessSettings(orgId: string, settings: {
@@ -109,6 +180,15 @@ export async function updateOrgAccessSettings(orgId: string, settings: {
 
   const { error } = await supabase.from('planner_organizations').update(settings).eq('id', orgId);
   assertNoDbError(error);
+
+  void logAudit({
+    orgId,
+    actorId: undoContext?.actorId ?? null,
+    action: 'org.access_updated',
+    targetType: 'organization',
+    targetId: orgId,
+    metadata: { fields: Object.keys(settings) },
+  });
 
   let undoActionId: string | undefined;
   if (undoContext) {

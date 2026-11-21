@@ -1,5 +1,6 @@
 import { type DbRapItem } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
+import { logProjectAudit } from './auditService';
 
 export type RapItem = DbRapItem;
 
@@ -17,18 +18,68 @@ export async function loadRapItems(projectId: string): Promise<RapItem[]> {
 export async function createRapItem(item: Omit<RapItem, 'id' | 'created_at' | 'updated_at'>) {
   const { data, error } = await supabase.from('planner_rap_items').insert(item).select().single();
   if (error) throw new Error(error.message);
-  return data as RapItem;
+  const created = data as RapItem;
+  void logProjectAudit({
+    projectId: created.project_id,
+    actorId: created.updated_by ?? item.updated_by ?? null,
+    action: 'rap.created',
+    targetType: 'rap_item',
+    targetId: created.id,
+    metadata: {
+      name: created.name,
+      type: created.type,
+      quantity: Number(created.quantity) || 0,
+      unit_price: Number(created.unit_price) || 0,
+    },
+  });
+  return created;
 }
 
 export async function updateRapItem(id: string, item: Partial<RapItem>) {
   const { data, error } = await supabase.from('planner_rap_items').update(item).eq('id', id).select().single();
   if (error) throw new Error(error.message);
-  return data as RapItem;
+  const updated = data as RapItem;
+  void logProjectAudit({
+    projectId: updated.project_id,
+    actorId: item.updated_by ?? updated.updated_by ?? null,
+    action: 'rap.updated',
+    targetType: 'rap_item',
+    targetId: updated.id,
+    metadata: {
+      name: updated.name,
+      type: updated.type,
+      fields: Object.keys(item),
+    },
+  });
+  return updated;
 }
 
 export async function deleteRapItem(id: string) {
+  let existing: { project_id?: string | null; name?: string | null; type?: string | null } | null = null;
+  try {
+    const res = await supabase
+      .from('planner_rap_items')
+      .select('project_id, name, type')
+      .eq('id', id)
+      .maybeSingle();
+    existing = (res.data as { project_id?: string | null; name?: string | null; type?: string | null } | null) ?? null;
+  } catch {
+    existing = null;
+  }
   const { error } = await supabase.from('planner_rap_items').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  if (existing?.project_id) {
+    void logProjectAudit({
+      projectId: existing.project_id,
+      action: 'rap.deleted',
+      targetType: 'rap_item',
+      targetId: id,
+      metadata: {
+        name: existing.name ?? undefined,
+        type: existing.type ?? undefined,
+      },
+    });
+  }
 }
 
 /** Membaca total_budget setelah trigger RAP. Klien tidak menulis kolom turunan. */
@@ -49,10 +100,31 @@ export async function removeRapItemWithCleanup(
 ): Promise<{ budget: number; spent: number }> {
   const { deleteCostsByRapItemId, recalculateProjectSpent } = await import('./costService');
   const { deleteLaborSlotsByRapItem } = await import('./laborAssignmentService');
+  let existing: { name?: string | null; type?: string | null } | null = null;
+  try {
+    const res = await supabase
+      .from('planner_rap_items')
+      .select('name, type')
+      .eq('id', rapItemId)
+      .maybeSingle();
+    existing = (res.data as { name?: string | null; type?: string | null } | null) ?? null;
+  } catch {
+    existing = null;
+  }
   await deleteCostsByRapItemId(projectId, rapItemId);
   await deleteLaborSlotsByRapItem(rapItemId);
   const { error } = await supabase.from('planner_rap_items').delete().eq('id', rapItemId);
   if (error) throw new Error(error.message);
+  void logProjectAudit({
+    projectId,
+    action: 'rap.deleted',
+    targetType: 'rap_item',
+    targetId: rapItemId,
+    metadata: {
+      name: existing?.name ?? undefined,
+      type: existing?.type ?? undefined,
+    },
+  });
   const spent = await recalculateProjectSpent(projectId);
   const budget = await syncProjectBudgetFromRap(projectId);
   return { budget, spent };
@@ -117,6 +189,12 @@ export async function duplicateRapItem(
 export async function deleteAllRapItems(projectId: string) {
   const { error } = await supabase.from('planner_rap_items').delete().eq('project_id', projectId);
   if (error) throw new Error(error.message);
+  void logProjectAudit({
+    projectId,
+    action: 'rap.bulk_deleted',
+    targetType: 'project',
+    targetId: projectId,
+  });
 }
 
 export function rapSummary(items: RapItem[], actualByType?: Record<string, number>) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   MoreVertical,
@@ -63,6 +63,23 @@ import { formatRupiah } from '../../../utils/projectUi';
 
 type TabId = 'overview' | 'keuangan' | 'deviden' | 'progress' | 'rap' | 'analisa' | 'laporan';
 
+const VALID_TABS: readonly TabId[] = [
+  'overview',
+  'keuangan',
+  'deviden',
+  'progress',
+  'rap',
+  'analisa',
+  'laporan',
+];
+
+function parseProjectTabParam(raw: string | null): TabId {
+  if (raw && (VALID_TABS as readonly string[]).includes(raw)) {
+    return raw as TabId;
+  }
+  return 'overview';
+}
+
 const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutGrid },
   { id: 'keuangan', label: 'Keuangan', icon: Wallet },
@@ -88,6 +105,7 @@ type Props = {
 
 export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, tenant, platformRole, isDemoMode, updateProject, removeProject } = useAppStore();
   const canManage =
     user?.role === 'owner' ||
@@ -96,7 +114,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     platformRole === 'admin';
   const { setShellMeta, clearShellMeta } = useShellStore();
   const [project, setProject] = useState(initialProject);
-  const [tab, setTab] = useState<TabId>('overview');
+  const [tab, setTab] = useState<TabId>(() => parseProjectTabParam(searchParams.get('tab')));
   const [loading, setLoading] = useState(true);
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -121,6 +139,15 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const loadedOnceRef = useRef(false);
   const projectRef = useRef(project);
   projectRef.current = project;
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const rapDraftRef = useRef(rapDraft);
+  rapDraftRef.current = rapDraft;
+
+  useEffect(() => {
+    const urlTab = parseProjectTabParam(searchParams.get('tab'));
+    setTab(prev => (prev === urlTab ? prev : urlTab));
+  }, [searchParams]);
 
   const reload = useCallback(async () => {
     if (!loadedOnceRef.current) setLoading(true);
@@ -265,6 +292,30 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     void reload();
   }, [reload]);
 
+  const confirmDiscardRapDraft = useCallback((): boolean => {
+    const activeDraft = rapDraftRef.current;
+    if (tabRef.current !== 'rap' || !activeDraft?.hasChanges) return true;
+    const ok = window.confirm(
+      'Ada perubahan RAP belum disimpan. Pindah halaman akan membuang perubahan. Lanjutkan?',
+    );
+    if (ok) activeDraft.discard();
+    return ok;
+  }, []);
+
+  const trySetTab = useCallback((next: TabId) => {
+    if (next === tabRef.current) return;
+    if (!confirmDiscardRapDraft()) return;
+    setTab(next);
+    setSearchParams(
+      prev => {
+        const updated = new URLSearchParams(prev);
+        updated.set('tab', next);
+        return updated;
+      },
+      { replace: true },
+    );
+  }, [confirmDiscardRapDraft, setSearchParams]);
+
   useEffect(() => {
     setShellMeta({
       breadcrumb: [{ label: 'Proyek' }, { label: project.name }],
@@ -273,7 +324,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       onOpenProgress: () => trySetTab('progress'),
     });
     return () => clearShellMeta();
-  }, [project.id, project.name, setShellMeta, clearShellMeta]);
+  }, [project.id, project.name, setShellMeta, clearShellMeta, trySetTab]);
 
   const normalized = useMemo(() => {
     if (!mapped) return null;
@@ -352,21 +403,6 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     removeProject(project.id);
     showToast('Proyek diarsipkan', 'success');
     onClose();
-  };
-
-  const confirmDiscardRapDraft = (): boolean => {
-    if (tab !== 'rap' || !rapDraft?.hasChanges) return true;
-    const ok = window.confirm(
-      'Ada perubahan RAP belum disimpan. Pindah halaman akan membuang perubahan. Lanjutkan?',
-    );
-    if (ok) rapDraft.discard();
-    return ok;
-  };
-
-  const trySetTab = (next: TabId) => {
-    if (next === tab) return;
-    if (!confirmDiscardRapDraft()) return;
-    setTab(next);
   };
 
   const tryClose = () => {

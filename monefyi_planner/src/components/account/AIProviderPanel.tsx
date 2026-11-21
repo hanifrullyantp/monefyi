@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Loader2, ExternalLink } from 'lucide-react';
 import {
   AI_PROVIDERS,
@@ -15,6 +15,7 @@ import { useAppStore } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 
 export default function AIProviderPanel() {
+  const uid = useId();
   const userId = useAppStore(s => s.user?.id);
   const [config, setConfig] = useState<AIConfig>(() => loadAIConfig());
   const [testing, setTesting] = useState(false);
@@ -75,10 +76,13 @@ export default function AIProviderPanel() {
 
       <div className="grid sm:grid-cols-2 gap-3">
         <div className="sm:col-span-2">
-          <label className="text-xs font-semibold text-slate-500">API Key {meta.label}</label>
+          <label htmlFor={`${uid}-api-key`} className="text-xs font-semibold text-slate-600">API Key {meta.label}</label>
           <input
+            id={`${uid}-api-key`}
+            name={`aiApiKey_${provider}`}
             type="password"
             autoComplete="off"
+            spellCheck={false}
             value={config.keys[provider] || ''}
             onChange={e => update({ keys: { ...config.keys, [provider]: e.target.value } })}
             placeholder={meta.keyHint}
@@ -89,8 +93,10 @@ export default function AIProviderPanel() {
           </a>
         </div>
         <div>
-          <label className="text-xs font-semibold text-slate-500">Model</label>
+          <label htmlFor={`${uid}-model-select`} className="text-xs font-semibold text-slate-600">Model</label>
           <select
+            id={`${uid}-model-select`}
+            name="aiModel"
             value={meta.models.some(m => m.id === getActiveModel(config)) ? getActiveModel(config) : '__custom'}
             onChange={e => update({ models: { ...config.models, [provider]: e.target.value === '__custom' ? '' : e.target.value } })}
             className="w-full mt-1 px-3 py-2 rounded-xl border text-sm"
@@ -100,8 +106,13 @@ export default function AIProviderPanel() {
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-slate-500">ID model kustom (opsional)</label>
+          <label htmlFor={`${uid}-custom-model`} className="text-xs font-semibold text-slate-600">ID model kustom (opsional)</label>
           <input
+            id={`${uid}-custom-model`}
+            name="aiCustomModel"
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
             value={config.models[provider] || ''}
             onChange={e => update({ models: { ...config.models, [provider]: e.target.value } })}
             placeholder={meta.models[0].id}
@@ -109,8 +120,10 @@ export default function AIProviderPanel() {
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-slate-500">Mode eksekusi Manager</label>
+          <label htmlFor={`${uid}-execution-mode`} className="text-xs font-semibold text-slate-600">Mode eksekusi Manager</label>
           <select
+            id={`${uid}-execution-mode`}
+            name="aiExecutionMode"
             value={config.executionMode}
             onChange={e => update({ executionMode: e.target.value as AIConfig['executionMode'] })}
             className="w-full mt-1 px-3 py-2 rounded-xl border text-sm"
@@ -120,9 +133,13 @@ export default function AIProviderPanel() {
           </select>
         </div>
         <div>
-          <label className="text-xs font-semibold text-slate-500">Batas auto-eksekusi (Rp)</label>
+          <label htmlFor={`${uid}-auto-limit`} className="text-xs font-semibold text-slate-600">Batas auto-eksekusi (Rp)</label>
           <input
+            id={`${uid}-auto-limit`}
+            name="aiAutoLimit"
             type="number"
+            autoComplete="off"
+            spellCheck={false}
             min={0}
             value={config.autoLimit}
             onChange={e => update({ autoLimit: Math.max(0, Number(e.target.value) || 0) })}

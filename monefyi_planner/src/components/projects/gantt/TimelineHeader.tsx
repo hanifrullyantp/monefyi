@@ -23,62 +23,93 @@ export default function TimelineHeader({ range, viewMode, zoomScale = 1, scrollL
   const todayOffset = ((Date.now() - range.minDate) / 86400000) * pxPerDay;
 
   return (
-    <div className="sticky top-0 z-20 bg-white border-b border-slate-200" style={{ height: HEADER_HEIGHT }}>
-      <div className="flex items-center justify-between px-2 py-1 border-b border-slate-100 bg-slate-50/80">
-        <button type="button" onClick={() => onScroll(-200)} className="p-1 rounded hover:bg-slate-200">
-          <ChevronLeft className="w-4 h-4 text-slate-500" />
+    <div
+      className="sticky top-0 z-20 bg-white border-b border-slate-200 flex flex-col"
+      style={{ height: HEADER_HEIGHT }}
+    >
+      <div className="h-5 shrink-0 flex items-center justify-between px-2 border-b border-slate-100 bg-slate-50/80">
+        <button
+          type="button"
+          onClick={() => onScroll(-200)}
+          aria-label="Geser timeline ke kiri"
+          className="p-0.5 rounded hover:bg-slate-200 shrink-0"
+        >
+          <ChevronLeft className="w-3.5 h-3.5 text-slate-500" />
         </button>
-        <span className="text-xs font-bold text-slate-600">
+        <span className="text-[11px] font-bold text-slate-600 truncate min-w-0 px-2">
           {monthGroups.map(g => g.label).slice(0, 3).join(' · ')}
         </span>
-        <button type="button" onClick={() => onScroll(200)} className="p-1 rounded hover:bg-slate-200">
-          <ChevronRight className="w-4 h-4 text-slate-500" />
+        <button
+          type="button"
+          onClick={() => onScroll(200)}
+          aria-label="Geser timeline ke kanan"
+          className="p-0.5 rounded hover:bg-slate-200 shrink-0"
+        >
+          <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
         </button>
       </div>
 
-      <div className="relative overflow-hidden" style={{ height: HEADER_HEIGHT - 28 }}>
+      <div className="relative flex-1 min-h-0 overflow-hidden flex flex-col">
         <div
-          className="absolute top-0 flex"
-          style={{ width: totalWidth, transform: `translateX(-${scrollLeft}px)` }}
+          className="h-[17px] shrink-0 overflow-hidden border-b border-slate-100 bg-slate-50"
         >
-          {monthGroups.map((group, gi) => (
-            <div
-              key={gi}
-              className="border-r border-slate-200 text-[10px] font-bold text-slate-500 px-2 py-0.5 bg-slate-50 truncate"
-              style={{ width: group.span * pxPerDay }}
-            >
-              {group.label}
-            </div>
-          ))}
+          <div
+            className="flex h-full"
+            style={{ width: totalWidth, transform: `translateX(-${scrollLeft}px)` }}
+          >
+            {monthGroups.map((group, gi) => {
+              const cellWidth = group.span * pxPerDay;
+              return (
+                <div
+                  key={gi}
+                  className="shrink-0 h-full border-r border-slate-200 text-[10px] leading-none font-bold text-slate-600 px-1.5 flex items-center truncate overflow-hidden whitespace-nowrap"
+                  style={{ width: cellWidth }}
+                  title={group.label}
+                >
+                  {cellWidth >= 20 ? group.label : ''}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div
-          className="absolute bottom-0 flex"
-          style={{ width: totalWidth, transform: `translateX(-${scrollLeft}px)`, height: 20 }}
-        >
-          {days.map((d, i) => {
-            const isToday = d.toDateString() === new Date().toDateString();
-            const weekend = isWeekend(d);
-            const showLabel = viewMode === 'day' || (viewMode === 'week' && d.getDay() === 1) || (viewMode === 'month' && d.getDate() === 1);
+        <div className="h-[18px] shrink-0 overflow-hidden">
+          <div
+            className="flex h-full"
+            style={{ width: totalWidth, transform: `translateX(-${scrollLeft}px)` }}
+          >
+            {days.map((d, i) => {
+              const isToday = d.toDateString() === new Date().toDateString();
+              const weekend = isWeekend(d);
+              const showLabel =
+                viewMode === 'day' ||
+                (viewMode === 'week' && d.getDay() === 1 && pxPerDay >= 6) ||
+                (viewMode === 'month' && d.getDate() === 1 && pxPerDay >= 10);
 
-            return (
-              <div
-                key={i}
-                className={`border-r text-center text-[9px] flex items-center justify-center ${isToday ? 'bg-rose-50 text-rose-600 font-bold' : weekend ? 'bg-slate-50 text-slate-400' : 'text-slate-500'
+              return (
+                <div
+                  key={i}
+                  className={`shrink-0 h-full border-r text-center text-[9px] leading-none flex items-center justify-center overflow-hidden ${
+                    isToday
+                      ? 'bg-rose-50 text-rose-600 font-bold'
+                      : weekend
+                        ? 'bg-slate-50 text-slate-400'
+                        : 'text-slate-500'
                   }`}
-                style={{ width: pxPerDay, borderColor: GANTT_COLORS.grid }}
-              >
-                {showLabel ? d.getDate() : ''}
-              </div>
-            );
-          })}
+                  style={{ width: pxPerDay, borderColor: GANTT_COLORS.grid }}
+                >
+                  {showLabel ? d.getDate() : ''}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div
           className="absolute top-0 bottom-0 w-px bg-rose-500 z-30 pointer-events-none"
           style={{ left: todayOffset - scrollLeft }}
         >
-          <span className="absolute -top-0 left-1 text-[8px] font-bold text-rose-500 bg-white px-0.5 rounded whitespace-nowrap">
+          <span className="absolute bottom-0.5 left-1 text-[8px] leading-none font-bold text-rose-600 bg-white/95 border border-rose-200 px-1 py-0.5 rounded shadow-xs whitespace-nowrap">
             Hari ini
           </span>
         </div>

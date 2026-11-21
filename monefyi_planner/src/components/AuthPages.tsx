@@ -341,7 +341,7 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 text-sm">
+        <Link to="/" className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors mb-8 text-sm">
           <ArrowLeft className="w-4 h-4" /> Kembali ke beranda
         </Link>
 
@@ -406,11 +406,14 @@ export function LoginPage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+              <label htmlFor="login-email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
+                  id="login-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="kamu@bisnis.com"
@@ -419,24 +422,32 @@ export function LoginPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <label htmlFor="login-password" className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
+                  id="login-password"
+                  name="password"
                   type={showPw ? 'text' : 'password'}
+                  autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none text-sm"
                 />
-                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-800"
+                >
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             <div className="flex justify-end">
-              <button type="button" onClick={handleForgotPassword} className="text-xs text-emerald-600 font-medium hover:underline">
+              <button type="button" onClick={handleForgotPassword} className="text-xs text-emerald-700 font-semibold hover:underline">
                 Lupa password?
               </button>
             </div>
@@ -470,14 +481,14 @@ export function LoginPage() {
 
           {!resetMode && (
           <>
-          <p className="text-center text-sm text-slate-500 mt-4">
-            <Link to="/join-by-code" className="text-emerald-600 font-semibold hover:underline">
+          <p className="text-center text-sm text-slate-600 mt-4">
+            <Link to="/join-by-code" className="text-emerald-700 font-semibold hover:underline">
               Punya undangan? Klik di sini
             </Link>
           </p>
-          <p className="text-center text-sm text-slate-500 mt-2">
+          <p className="text-center text-sm text-slate-600 mt-2">
             Belum punya akun?{' '}
-            <Link to="/signup" className="text-emerald-600 font-semibold hover:underline">
+            <Link to="/signup" className="text-emerald-700 font-semibold hover:underline">
               Daftar gratis
             </Link>
           </p>
@@ -613,7 +624,7 @@ export function SignupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 text-sm">
+        <Link to="/" className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors mb-8 text-sm">
           <ArrowLeft className="w-4 h-4" /> Kembali
         </Link>
 
@@ -627,32 +638,90 @@ export function SignupPage() {
           {step === 1 && (
             <div className="space-y-4 mt-6">
               <h3 className="font-bold text-slate-800">Info Akun</h3>
-              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nama lengkap" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" className={`w-full px-4 py-3 rounded-xl border text-sm ${form.email && !isValidEmail(form.email) ? 'border-rose-300' : 'border-slate-200'}`} />
+              <div>
+                <label htmlFor="signup-name" className="block text-sm font-medium text-slate-700 mb-1.5">Nama lengkap</label>
+                <input
+                  id="signup-name"
+                  name="name"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder="Nama lengkap"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="signup-email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                <input
+                  id="signup-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  placeholder="Email"
+                  className={`w-full px-4 py-3 rounded-xl border text-sm ${form.email && !isValidEmail(form.email) ? 'border-rose-300' : 'border-slate-200'}`}
+                />
+              </div>
               {form.email && !isValidEmail(form.email) && (
                 <p className="text-xs text-rose-600 -mt-2">Format email tidak valid</p>
               )}
-              <PasswordField
-                value={form.password}
-                onChange={password => setForm({ ...form, password })}
-                placeholder="Password (min 8, huruf besar, angka, simbol)"
-              />
+              <div>
+                <label htmlFor="signup-password" className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                <PasswordField
+                  id="signup-password"
+                  name="password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={password => setForm({ ...form, password })}
+                  placeholder="Password (min 8, huruf besar, angka, simbol)"
+                />
+              </div>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4 mt-6">
               <h3 className="font-bold text-slate-800">Info Bisnis</h3>
-              <input value={form.businessName} onChange={e => setForm({ ...form, businessName: e.target.value })} placeholder="Nama bisnis / perusahaan" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <select value={form.businessType} onChange={e => setForm({ ...form, businessType: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm">
-                <option value="construction">Konstruksi</option>
-                <option value="service">Jasa</option>
-                <option value="other">Lainnya</option>
-              </select>
-              <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm">
-                <option value="IDR">IDR — Rupiah</option>
-                <option value="USD">USD</option>
-              </select>
+              <div>
+                <label htmlFor="signup-business-name" className="block text-sm font-medium text-slate-700 mb-1.5">Nama bisnis / perusahaan</label>
+                <input
+                  id="signup-business-name"
+                  name="businessName"
+                  autoComplete="organization"
+                  value={form.businessName}
+                  onChange={e => setForm({ ...form, businessName: e.target.value })}
+                  placeholder="Nama bisnis / perusahaan"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="signup-business-type" className="block text-sm font-medium text-slate-700 mb-1.5">Tipe bisnis</label>
+                <select
+                  id="signup-business-type"
+                  name="businessType"
+                  value={form.businessType}
+                  onChange={e => setForm({ ...form, businessType: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                >
+                  <option value="construction">Konstruksi</option>
+                  <option value="service">Jasa</option>
+                  <option value="other">Lainnya</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="signup-currency" className="block text-sm font-medium text-slate-700 mb-1.5">Mata uang</label>
+                <select
+                  id="signup-currency"
+                  name="currency"
+                  value={form.currency}
+                  onChange={e => setForm({ ...form, currency: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                >
+                  <option value="IDR">IDR — Rupiah</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
             </div>
           )}
 
@@ -660,7 +729,7 @@ export function SignupPage() {
             <div className="text-center space-y-4 mt-6">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
               <h3 className="font-black text-xl">Siap mulai!</h3>
-              <p className="text-sm text-slate-500">Organisasi <strong>{form.businessName}</strong> akan dibuat otomatis.</p>
+              <p className="text-sm text-slate-600">Organisasi <strong>{form.businessName}</strong> akan dibuat otomatis.</p>
             </div>
           )}
 
@@ -668,7 +737,7 @@ export function SignupPage() {
 
           <div className="flex gap-3 mt-8">
             {step > 1 && (
-              <button type="button" onClick={() => { setError(''); setStep((step - 1) as SignupStep); }} className="px-4 py-3 border border-slate-200 rounded-xl">
+              <button type="button" aria-label="Langkah sebelumnya" onClick={() => { setError(''); setStep((step - 1) as SignupStep); }} className="px-4 py-3 border border-slate-200 rounded-xl">
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
@@ -689,7 +758,7 @@ export function SignupPage() {
           </div>
 
           {step === 1 && !canProceed && (
-            <p className="text-xs text-slate-400 text-center mt-3">Lengkapi semua field dan penuhi syarat password untuk melanjutkan.</p>
+            <p className="text-xs text-slate-600 text-center mt-3">Lengkapi semua field dan penuhi syarat password untuk melanjutkan.</p>
           )}
         </motion.div>
       </div>

@@ -15,10 +15,11 @@ export function OwnerOnboardingWizard() {
   const [step, setStep] = useState<Step>(1);
   const [brandColor, setBrandColor] = useState('#059669');
   const [timezone, setTimezone] = useState('Asia/Jakarta');
+  const [startTarget, setStartTarget] = useState<'/app' | '/app?tab=projects' | '/app?tab=hr'>('/app');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const finish = async (skipped = false) => {
+  const finish = async (skipped = false, destination?: string) => {
     setLoading(true);
     setError('');
     try {
@@ -53,7 +54,7 @@ export function OwnerOnboardingWizard() {
       }
 
       showToast(skipped ? 'Onboarding dilewati' : 'Workspace siap!', 'success');
-      navigate('/app', { replace: true });
+      navigate(skipped ? '/app' : (destination || startTarget), { replace: true });
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Gagal menyimpan';
       setError(message);
@@ -74,40 +75,111 @@ export function OwnerOnboardingWizard() {
 
         {step === 1 && (
           <div className="space-y-4">
-            <h1 className="text-xl font-black">Setup workspace</h1>
-            <p className="text-sm text-slate-500">Atur tampilan dasar {tenant?.name || 'perusahaan Anda'}</p>
-            <label className="block text-sm font-medium">Warna brand</label>
-            <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-full h-10 rounded-lg" />
-            <label className="block text-sm font-medium">Timezone</label>
-            <select value={timezone} onChange={e => setTimezone(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm">
-              <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
-              <option value="Asia/Makassar">Asia/Makassar (WITA)</option>
-              <option value="Asia/Jayapura">Asia/Jayapura (WIT)</option>
-            </select>
+            <h1 className="text-xl font-black text-slate-900">Setup workspace</h1>
+            <p className="text-sm text-slate-600">Atur tampilan dasar {tenant?.name || 'perusahaan Anda'}</p>
+            <div>
+              <label htmlFor="wizard-brand-color" className="block text-sm font-medium text-slate-700 mb-1.5">Warna brand</label>
+              <input
+                id="wizard-brand-color"
+                name="brandColor"
+                type="color"
+                value={brandColor}
+                onChange={e => setBrandColor(e.target.value)}
+                className="w-full h-10 rounded-lg cursor-pointer"
+              />
+            </div>
+            <div>
+              <label htmlFor="wizard-timezone" className="block text-sm font-medium text-slate-700 mb-1.5">Timezone</label>
+              <select
+                id="wizard-timezone"
+                name="timezone"
+                value={timezone}
+                onChange={e => setTimezone(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+              >
+                <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
+                <option value="Asia/Makassar">Asia/Makassar (WITA)</option>
+                <option value="Asia/Jayapura">Asia/Jayapura (WIT)</option>
+              </select>
+            </div>
           </div>
         )}
 
         {step === 2 && (
-          <div className="text-center space-y-4">
-            <h1 className="text-xl font-black">Buat project pertama?</h1>
-            <p className="text-sm text-slate-500">Anda bisa membuat project nanti dari dashboard.</p>
-            <p className="text-xs text-slate-600">Klik Lanjut di bawah — project bisa dibuat setelah masuk aplikasi.</p>
+          <div className="space-y-4">
+            <div className="text-center space-y-1.5">
+              <h1 className="text-xl font-black text-slate-900">Siap buat proyek pertama?</h1>
+              <p className="text-sm text-slate-600">
+                Pilih apakah Anda ingin langsung membuka halaman Proyek setelah setup selesai atau mulai dari Dashboard dulu.
+              </p>
+            </div>
+            <div className="space-y-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => { setStartTarget('/app?tab=projects'); setStep(3); }}
+                className={`w-full p-4 rounded-xl border text-left transition-colors ${
+                  startTarget === '/app?tab=projects'
+                    ? 'border-emerald-500 bg-emerald-50/70'
+                    : 'border-slate-200 hover:border-emerald-300'
+                }`}
+              >
+                <div className="font-bold text-sm text-slate-900">Langsung buka menu Proyek setelah setup</div>
+                <div className="text-xs text-slate-600 mt-0.5">Buat proyek pertama dengan template RAP & jadwal kerja.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setStartTarget('/app'); setStep(3); }}
+                className={`w-full p-4 rounded-xl border text-left transition-colors ${
+                  startTarget === '/app'
+                    ? 'border-emerald-500 bg-emerald-50/70'
+                    : 'border-slate-200 hover:border-emerald-300'
+                }`}
+              >
+                <div className="font-bold text-sm text-slate-900">Nanti dulu — mulai dari Dashboard</div>
+                <div className="text-xs text-slate-600 mt-0.5">Proyek bisa dibuat kapan saja lewat tombol Buat Proyek di Dashboard.</div>
+              </button>
+            </div>
           </div>
         )}
 
         {step === 3 && (
-          <div className="text-center space-y-4">
-            <h1 className="text-xl font-black">Undang anggota pertama?</h1>
-            <p className="text-sm text-slate-500">Buka halaman Tim setelah setup untuk mengundang.</p>
-            <p className="text-xs text-slate-600">Klik Lanjut di bawah — undangan bisa dikirim setelah masuk aplikasi.</p>
+          <div className="space-y-4">
+            <div className="text-center space-y-1.5">
+              <h1 className="text-xl font-black text-slate-900">Undang anggota tim?</h1>
+              <p className="text-sm text-slate-600">
+                Anda bisa membagikan link atau kode undangan 6-digit untuk manajer, staf, dan pekerja lapangan dari menu HR & Karyawan.
+              </p>
+            </div>
+            <div className="space-y-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => { setStartTarget('/app?tab=hr'); setStep(4); }}
+                className={`w-full p-4 rounded-xl border text-left transition-colors ${
+                  startTarget === '/app?tab=hr'
+                    ? 'border-emerald-500 bg-emerald-50/70'
+                    : 'border-slate-200 hover:border-emerald-300'
+                }`}
+              >
+                <div className="font-bold text-sm text-slate-900">Buka menu HR & Karyawan untuk undang tim</div>
+                <div className="text-xs text-slate-600 mt-0.5">Kirim undangan link/kode langsung setelah setup selesai.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(4)}
+                className="w-full p-4 rounded-xl border border-slate-200 hover:border-emerald-300 text-left transition-colors"
+              >
+                <div className="font-bold text-sm text-slate-900">Lewati undangan tim untuk sekarang</div>
+                <div className="text-xs text-slate-600 mt-0.5">Lanjutkan ke ringkasan akhir dan mulai pakai Froyek sendiri dulu.</div>
+              </button>
+            </div>
           </div>
         )}
 
         {step === 4 && (
           <div className="text-center space-y-4">
             <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
-            <h1 className="text-xl font-black">Tour singkat</h1>
-            <ul className="text-sm text-slate-600 text-left space-y-2">
+            <h1 className="text-xl font-black text-slate-900">Tour singkat</h1>
+            <ul className="text-sm text-slate-700 text-left space-y-2">
               <li>• Dashboard — ringkasan proyek & AI insights</li>
               <li>• Projects — RAP, timeline, biaya</li>
               <li>• Froyek AI Button — perintah suara/teks</li>
@@ -120,7 +192,7 @@ export function OwnerOnboardingWizard() {
         )}
 
         <div className="flex gap-3 mt-8">
-          <button type="button" onClick={() => finish(true)} disabled={loading} className="flex items-center gap-1 px-4 py-2 text-sm text-slate-500 disabled:opacity-50">
+          <button type="button" onClick={() => finish(true)} disabled={loading} className="flex items-center gap-1 px-4 py-2 text-sm text-slate-600 hover:text-slate-900 disabled:opacity-50">
             <SkipForward className="w-4 h-4" /> Lewati
           </button>
           {step < 4 ? (

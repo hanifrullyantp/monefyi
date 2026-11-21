@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Save, Clock, Wallet, ListTodo } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Loader2, Save, Clock, Wallet, ListTodo, ShieldCheck, UserX } from 'lucide-react';
 import BottomSheet from '../ui/BottomSheet';
 import MetricMiniCard from '../ui/MetricMiniCard';
 import { updateMemberProfile } from '../../services/memberService';
@@ -31,10 +31,15 @@ interface EmployeeDetailSheetProps {
   orgId: string;
   open: boolean;
   canManage: boolean;
+  currentUserId?: string;
+  currentUserRole?: string;
+  canManageMembers?: boolean;
   compensation?: MemberCompensation;
   hoursPerDay?: number;
   onClose: () => void;
   onUpdated: () => void;
+  onRoleChange?: (memberId: string, role: 'manager' | 'worker') => Promise<void> | void;
+  onRemoveMember?: (memberId: string) => Promise<boolean | void> | boolean | void;
 }
 
 const EMP_TYPES = [
@@ -49,13 +54,21 @@ export default function EmployeeDetailSheet({
   orgId,
   open,
   canManage,
+  currentUserId,
+  currentUserRole,
+  canManageMembers = false,
   compensation,
   hoursPerDay = 8,
   onClose,
   onUpdated,
+  onRoleChange,
+  onRemoveMember,
 }: EmployeeDetailSheetProps) {
   const [tab, setTab] = useState<SheetTab>('info');
   const [saving, setSaving] = useState(false);
+  const [roleBusy, setRoleBusy] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [form, setForm] = useState<MemberProfilePatch>({});
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [monthSummary, setMonthSummary] = useState({
@@ -74,36 +87,46 @@ export default function EmployeeDetailSheet({
     type: 'check_in' as 'check_in' | 'check_out',
   });
 
+  const memberId = member?.id;
+  const memberUserId = member?.user_id;
+  const memberName = member?.profile?.name;
+  const memberRef = useRef<OrgMember | null>(member);
+  memberRef.current = member;
+
   useEffect(() => {
-    if (!member) return;
+    const currentMember = memberRef.current;
+    if (!currentMember || !open) return;
     setForm({
-      position: member.position || '',
-      department: member.department || '',
-      phone: member.phone || '',
-      bio: member.bio || '',
-      employee_id: member.employee_id || '',
-      address: member.address || '',
-      employment_type: member.employment_type || 'full_time',
-      bank_name: member.bank_name || '',
-      bank_account: member.bank_account || '',
-      bank_holder: member.bank_holder || '',
+      position: currentMember.position || '',
+      department: currentMember.department || '',
+      phone: currentMember.phone || '',
+      bio: currentMember.bio || '',
+      employee_id: currentMember.employee_id || '',
+      address: currentMember.address || '',
+      employment_type: currentMember.employment_type || 'full_time',
+      bank_name: currentMember.bank_name || '',
+      bank_account: currentMember.bank_account || '',
+      bank_holder: currentMember.bank_holder || '',
     });
     setTab('info');
-  }, [member]);
+    setConfirmRemove(false);
+    setRoleBusy(false);
+    setRemoving(false);
+  }, [memberId, open]);
 
   useEffect(() => {
-    if (!member || !open) return;
-    void getMonthlySummary(member.user_id, orgId, hoursPerDay).then(setMonthSummary);
-  }, [member, orgId, open, hoursPerDay]);
+    if (!memberUserId || !open) return;
+    void getMonthlySummary(memberUserId, orgId, hoursPerDay).then(setMonthSummary);
+  }, [memberUserId, orgId, open, hoursPerDay]);
 
   const loadTabData = useCallback(async () => {
-    if (!member || !open) return;
+    if (!memberUserId || !open) return;
     setLoadingTab(true);
     try {
       if (tab === 'absensi') {
         const [records, summary] = await Promise.all([
-          getUserAttendance(member.user_id, orgId, 60),
-          getMonthlySummary(member.user_id, orgId, hoursPerDay),
+          getUserAttendance(memberUserId, orgId, 60),
+          getMonthlySummary(memberUserId, orgId, hoursPerDay),
         ]);
         setAttendance(records);
         setMonthSummary(summary);
@@ -112,8 +135,8 @@ export default function EmployeeDetailSheet({
           listPayrollEntries(orgId),
           listBonRequests(orgId),
         ]);
-        setPayroll(entries.filter(e => e.user_id === member.user_id));
-        setBons(bonList.filter(b => b.user_id === member.user_id));
+        setPayroll(entries.filter(e => e.user_id === memberUserId));
+        setBons(bonList.filter(b => b.user_id === memberUserId));
       } else if (tab === 'todo') {
         const items = await loadWorkItemsForOrg(orgId);
         setWorkItems(items.slice(0, 20));
@@ -123,17 +146,17 @@ export default function EmployeeDetailSheet({
     } finally {
       setLoadingTab(false);
     }
-  }, [member, orgId, open, tab, hoursPerDay]);
+  }, [memberUserId, orgId, open, tab, hoursPerDay]);
 
   useEffect(() => {
     if (tab !== 'info') loadTabData();
   }, [tab, loadTabData]);
 
   const handleSave = async () => {
-    if (!member || !canManage) return;
+    if (!memberId || !canManage) return;
     setSaving(true);
     try {
-      await updateMemberProfile(member.id, form);
+      await updateMemberProfile(memberId, form);
       showToast('Profil karyawan disimpan', 'success');
       onUpdated();
     } catch (e) {
@@ -144,13 +167,13 @@ export default function EmployeeDetailSheet({
   };
 
   const handleAdminAttendance = async () => {
-    if (!member || !canManage) return;
+    if (!memberUserId || !canManage) return;
     const recordedAt = new Date(`${attForm.date}T${attForm.time}:00`).toISOString();
     try {
       await recordAdminAttendance({
         org_id: orgId,
-        user_id: member.user_id,
-        user_name: member.profile?.name,
+        user_id: memberUserId,
+        user_name: memberName,
         type: attForm.type,
         recorded_at: recordedAt,
       });
@@ -166,6 +189,50 @@ export default function EmployeeDetailSheet({
 
   const name = member.profile?.name || 'Karyawan';
   const estSalary = formatSalaryLabel(compensation);
+  const isSelf = Boolean(currentUserId && member.user_id === currentUserId);
+  const isTargetOwner = member.role === 'owner';
+  const actorIsOwner = currentUserRole === 'owner' || currentUserRole === 'admin';
+  const actorIsManager = currentUserRole === 'manager';
+
+  const canChangeRole = Boolean(
+    canManageMembers &&
+      onRoleChange &&
+      actorIsOwner &&
+      !isSelf &&
+      !isTargetOwner,
+  );
+
+  const canDeactivateMember = Boolean(
+    canManageMembers &&
+      onRemoveMember &&
+      !isSelf &&
+      !isTargetOwner &&
+      (actorIsOwner || (actorIsManager && member.role === 'worker')),
+  );
+
+  const handleSelectRole = async (nextRole: 'manager' | 'worker') => {
+    if (!canChangeRole || !onRoleChange || member.role === nextRole || roleBusy) return;
+    setRoleBusy(true);
+    try {
+      await onRoleChange(member.id, nextRole);
+    } finally {
+      setRoleBusy(false);
+    }
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!canDeactivateMember || !onRemoveMember || removing) return;
+    setRemoving(true);
+    try {
+      const ok = await onRemoveMember(member.id);
+      if (ok !== false) {
+        setConfirmRemove(false);
+        onClose();
+      }
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const tabs: { id: SheetTab; label: string; icon: typeof Clock }[] = [
     { id: 'info', label: 'Info', icon: Save },
@@ -274,6 +341,80 @@ export default function EmployeeDetailSheet({
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Simpan
               </button>
+            )}
+
+            {(canChangeRole || canDeactivateMember) && (
+              <div className="pt-4 mt-2 border-t border-slate-200 space-y-3">
+                <div className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Kelola Akses Anggota</span>
+                </div>
+
+                {canChangeRole && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs text-slate-500">Role di organisasi</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['manager', 'worker'] as const).map(r => {
+                        const active = member.role === r;
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            disabled={roleBusy || active}
+                            onClick={() => handleSelectRole(r)}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold border transition-colors flex items-center justify-center gap-1.5 ${
+                              active
+                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            } disabled:opacity-60`}
+                          >
+                            {roleBusy && !active ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                            <span>{r === 'manager' ? 'Manager' : 'Worker'}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {canDeactivateMember && (
+                  !confirmRemove ? (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmRemove(true)}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                    >
+                      <UserX className="w-4 h-4" />
+                      <span>Nonaktifkan / Hapus Anggota</span>
+                    </button>
+                  ) : (
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-2.5">
+                      <p className="text-xs text-rose-900 font-medium leading-relaxed">
+                        Nonaktifkan akses <strong>{name}</strong> dari organisasi ini? Anggota tidak lagi dapat mengakses proyek dan data tim.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={removing}
+                          onClick={() => setConfirmRemove(false)}
+                          className="flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        >
+                          Batal
+                        </button>
+                        <button
+                          type="button"
+                          disabled={removing}
+                          onClick={handleConfirmRemove}
+                          className="flex-1 py-2 px-3 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+                        >
+                          {removing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                          <span>Ya, Nonaktifkan</span>
+                        </button>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
             )}
           </div>
         )}

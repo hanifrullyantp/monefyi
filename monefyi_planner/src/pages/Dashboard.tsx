@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   AlertCircle,
@@ -69,9 +70,15 @@ export default function Dashboard({
 }: {
   onOpenProject?: (id: string) => void;
 }) {
+  const navigate = useNavigate();
   const { user, projects, tenant, isDemoMode, setActiveTab, setProjectsListFilter } = useAppStore();
   const demoActive = isDemoMode || tenant?.id === 'demo';
   const canCreate = user?.role === 'owner' || user?.role === 'manager';
+
+  const navigateToTab = (tab: string) => {
+    setActiveTab(tab);
+    navigate(`/app?tab=${tab}`);
+  };
 
   const [cashflowData, setCashflowData] = useState<
     { date: string; inflow: number; outflow: number; net: number }[]
@@ -222,7 +229,7 @@ export default function Dashboard({
     if (onOpenProject) {
       onOpenProject(id);
     } else {
-      setActiveTab('projects');
+      navigateToTab('projects');
     }
   };
 
@@ -300,7 +307,7 @@ export default function Dashboard({
             value={`${activeProjectsCount} / ${projects.length}`}
             subInfo="aktif dari total"
             variant="green"
-            onClick={() => setActiveTab('projects')}
+            onClick={() => navigateToTab('projects')}
             ariaLabel={`Proyek: ${activeProjectsCount} aktif dari ${projects.length} total`}
           />
 
@@ -310,7 +317,7 @@ export default function Dashboard({
             value={formatCompact(netCash)}
             subInfo={`masuk ${formatCompact(totalInflow)} · keluar ${formatCompact(totalOutflow)}`}
             variant="blue"
-            onClick={() => setActiveTab('finance')}
+            onClick={() => navigateToTab('finance')}
             ariaLabel={`Keuangan: Kas bersih ${formatRupiah(netCash)}`}
           />
 
@@ -331,7 +338,7 @@ export default function Dashboard({
             value={`${attendanceSummary.present} / ${attendanceSummary.total}`}
             subInfo="hadir hari ini"
             variant="teal"
-            onClick={() => setActiveTab('hr')}
+            onClick={() => navigateToTab('hr')}
             ariaLabel="Karyawan: kehadiran hari ini"
           />
         </div>
@@ -387,7 +394,7 @@ export default function Dashboard({
             setHealthFilter('all');
             setSearch('');
           }}
-          onViewAll={() => setActiveTab('projects')}
+          onViewAll={() => navigateToTab('projects')}
           viewAllLabel="Lihat Semua →"
         />
 
@@ -538,7 +545,7 @@ export default function Dashboard({
               type="button"
               onClick={() => {
                 setProjectsListFilter('at_risk');
-                setActiveTab('projects');
+                navigateToTab('projects');
               }}
               className="flex items-center gap-2 px-4 h-11 bg-rose-50 border border-rose-200 rounded-full hover:bg-rose-100 transition-colors"
             >
@@ -555,7 +562,7 @@ export default function Dashboard({
             value={`${activeProjectsCount} / ${projects.length}`}
             subInfo="aktif dari total"
             variant="green"
-            onClick={() => setActiveTab('projects')}
+            onClick={() => navigateToTab('projects')}
             ariaLabel={`Proyek: ${activeProjectsCount} aktif dari ${projects.length} total`}
           />
           <GradientStatCard
@@ -563,7 +570,7 @@ export default function Dashboard({
             value={formatCompact(netCash)}
             subInfo={`masuk ${formatCompact(totalInflow)} · keluar ${formatCompact(totalOutflow)}`}
             variant="blue"
-            onClick={() => setActiveTab('finance')}
+            onClick={() => navigateToTab('finance')}
             ariaLabel={`Keuangan: Kas bersih ${formatRupiah(netCash)}`}
           />
           <GradientStatCard
@@ -580,7 +587,7 @@ export default function Dashboard({
             value={`${attendanceSummary.present} / ${attendanceSummary.total}`}
             subInfo="hadir hari ini"
             variant="teal"
-            onClick={() => setActiveTab('hr')}
+            onClick={() => navigateToTab('hr')}
             ariaLabel="Karyawan: kehadiran hari ini"
           />
         </div>
@@ -615,8 +622,8 @@ export default function Dashboard({
         <DashboardProjectList
           projects={filteredProjects}
           onOpenProject={onOpenProject}
-          onViewAll={() => setActiveTab('projects')}
-          onCreateProject={() => setActiveTab('projects')}
+          onViewAll={() => navigateToTab('projects')}
+          onCreateProject={() => navigateToTab('projects')}
           canCreate={canCreate}
         />
 

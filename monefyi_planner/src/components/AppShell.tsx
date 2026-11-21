@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Layout from './Layout';
 import Dashboard from '../pages/Dashboard';
@@ -46,17 +46,23 @@ function AppContent() {
     }
   }, [tenant?.id, isDemoMode]);
 
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab) setActiveTab(tab);
-  }, [searchParams, setActiveTab]);
+  const urlSyncKey = projectIdParam
+    ? `project:${projectIdParam}`
+    : `tab:${searchParams.get('tab') ?? ''}`;
+  const urlTargetTab = projectIdParam ? 'projects' : (searchParams.get('tab') || 'home');
+  const syncedUrlKeyRef = useRef<string | null>(null);
+  const effectiveTab = syncedUrlKeyRef.current !== urlSyncKey ? urlTargetTab : activeTab;
 
   useEffect(() => {
+    syncedUrlKeyRef.current = urlSyncKey;
     if (projectIdParam) {
       setSelectedProjectId(projectIdParam);
       setActiveTab('projects');
+      return;
     }
-  }, [projectIdParam, setSelectedProjectId, setActiveTab]);
+    const tab = searchParams.get('tab');
+    setActiveTab(tab || 'home');
+  }, [urlSyncKey, projectIdParam, searchParams, setSelectedProjectId, setActiveTab]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -80,35 +86,35 @@ function AppContent() {
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
   useEffect(() => {
-    if (activeTab === 'estimator') {
+    if (effectiveTab === 'estimator') {
       navigate('/app/estimator', { replace: true });
       return;
     }
-    if (activeTab === 'database') {
+    if (effectiveTab === 'database') {
       navigate('/app/database', { replace: true });
       return;
     }
-    if (activeTab !== 'finance') return;
+    if (effectiveTab !== 'finance') return;
     if (isSandboxFinance(financeVersion)) {
       navigate('/app/finance-v2', { replace: true });
     }
-  }, [activeTab, financeVersion, navigate]);
+  }, [effectiveTab, financeVersion, navigate]);
 
   useEffect(() => {
     if (isWorker || entitlement.isLoading || adminFullAccess) return;
     if (!isEstimatorOnlyPlan(entitlement)) return;
     const blockedTabs = new Set(['home', 'database', 'finance', 'hr', 'team']);
     const onAllowedModule =
-      activeTab === 'projects'
-      || activeTab === 'estimator'
-      || activeTab === 'settings'
+      effectiveTab === 'projects'
+      || effectiveTab === 'estimator'
+      || effectiveTab === 'settings'
       || Boolean(projectIdParam);
-    if (!onAllowedModule || blockedTabs.has(activeTab)) {
+    if (!onAllowedModule || blockedTabs.has(effectiveTab)) {
       setActiveTab('projects');
       navigate('/app?tab=projects', { replace: true });
     }
   }, [
-    activeTab,
+    effectiveTab,
     projectIdParam,
     adminFullAccess,
     entitlement,
@@ -119,9 +125,9 @@ function AppContent() {
   ]);
 
   const renderPage = () => {
-    if (activeTab === 'settings') return <Settings />;
+    if (effectiveTab === 'settings') return <Settings />;
     if (isWorker) return <WorkerDashboard />;
-    switch (activeTab) {
+    switch (effectiveTab) {
       case 'home':
         return (
           <PlannerModuleGuard module="home">
@@ -165,7 +171,7 @@ function AppContent() {
       {showChecklist && <OnboardingChecklist />}
       <AnimatePresence mode="wait">
         <motion.div
-          key={activeTab + (projectIdParam || '')}
+          key={effectiveTab + (projectIdParam || '')}
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -10 }}

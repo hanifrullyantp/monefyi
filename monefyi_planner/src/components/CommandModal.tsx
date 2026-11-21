@@ -276,8 +276,8 @@ export default function CommandModal() {
   }, [user?.id, isDemo, isWorker, setCommandLogs]);
 
   useEffect(() => {
-    if (stage === 'idle') inputRef.current?.focus();
-  }, [stage]);
+    if (stage === 'idle' && (isWorker || !managerMode)) inputRef.current?.focus();
+  }, [stage, isWorker, managerMode]);
 
   // Load taggable entities (projects + workers + RAP + work items + aliases) and memory hints.
   useEffect(() => {
@@ -524,7 +524,29 @@ export default function CommandModal() {
     );
     setLearnText(result.preprocessed.parseText);
 
+    if (result.intent === 'unknown') {
+      setBatchMode(false);
+      setBatchLines([]);
+      setOrigParse({
+        intent: 'unknown',
+        params: result.params,
+        confidence: result.confidence,
+        raw: result.raw,
+        source: result.source,
+        reasoning: result.reasoning,
+        layer: result.layer,
+      });
+      setResultMessage('Perintah tidak dipahami atau AI sedang tidak tersedia');
+      setResultDetails(
+        result.reasoning ||
+          'Perintah belum dikenali sebagai transaksi proyek. Silakan ubah perintah atau pilih jenis pencatatan manual di bawah.',
+      );
+      setStage('error');
+      return;
+    }
+
     if (isWorker && !isWorkerAllowedIntent(result.intent)) {
+      setOrigParse(null);
       setResultMessage('Perintah dibatasi untuk peran Pekerja');
       setResultDetails('Asisten lapangan hanya melayani update progress, absensi pekerja, dan cek progress proyek.');
       setStage('error');
@@ -551,7 +573,20 @@ export default function CommandModal() {
     setStage('processing');
     setPipelineStage('ai');
     const aiResult = await aiParseCommand(input, pipelineContext());
+    if (aiResult.intent === 'unknown') {
+      setBatchMode(false);
+      setBatchLines([]);
+      setOrigParse(aiResult);
+      setResultMessage('Perintah tidak dipahami atau AI sedang tidak tersedia');
+      setResultDetails(
+        aiResult.reasoning ||
+          'AI belum dapat mengenali perintah ini. Silakan ubah perintah atau pilih pencatatan manual di bawah.',
+      );
+      setStage('error');
+      return;
+    }
     if (isWorker && !isWorkerAllowedIntent(aiResult.intent)) {
+      setOrigParse(null);
       setResultMessage('Perintah dibatasi untuk peran Pekerja');
       setResultDetails('Asisten lapangan hanya melayani update progress, absensi pekerja, dan cek progress proyek.');
       setStage('error');
@@ -562,8 +597,15 @@ export default function CommandModal() {
     setStage('confirm');
   };
 
-  const openManualForm = () => {
-    const defaultIntent = isWorker ? 'update_progress' : 'record_cost';
+  const openManualForm = (intentOverride?: string) => {
+    const defaultIntent =
+      intentOverride && (!isWorker || isWorkerAllowedIntent(intentOverride))
+        ? intentOverride
+        : isWorker
+          ? 'update_progress'
+          : 'record_cost';
+    setBatchMode(false);
+    setBatchLines([]);
     setForm({
       intent: defaultIntent,
       data: defaultFieldsForIntent(defaultIntent),
@@ -572,6 +614,11 @@ export default function CommandModal() {
     setOrigParse({ intent: defaultIntent, params: {}, confidence: 1, raw: input, source: 'fallback' });
     setEdited(true);
     setStage('confirm');
+  };
+
+  const handleEditCommand = () => {
+    setStage('idle');
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const updateField = (key: string, value: string) => {
@@ -601,7 +648,7 @@ export default function CommandModal() {
   };
 
   const handleExecute = async () => {
-    if (!user || !tenant || !form.intent) return;
+    if (!user || !tenant || !form.intent || form.intent === 'unknown') return;
     if (isWorker && !isWorkerAllowedIntent(form.intent)) {
       setResultMessage('Perintah dibatasi untuk peran Pekerja');
       setResultDetails('Asisten lapangan hanya melayani update progress, absensi pekerja, dan cek progress proyek.');
@@ -776,26 +823,27 @@ export default function CommandModal() {
     );
   };
 
-  if (!isWorker && managerMode) {
-    return (
-      <ManagerWorkspaceModal
-        onClose={() => setCommandModalOpen(false)}
-        onSwitchToQuick={() => {
-          try { localStorage.setItem('monefyi_ai_mode', 'quick'); } catch { /* ignore */ }
-          setManagerMode(false);
-        }}
-      />
-    );
-  }
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) setCommandModalOpen(false); }}
-    >
+    <>
+      {!isWorker && (
+        <div className={managerMode ? 'contents' : 'hidden'} aria-hidden={!managerMode}>
+          <ManagerWorkspaceModal
+            onClose={() => setCommandModalOpen(false)}
+            onSwitchToQuick={() => {
+              try { localStorage.setItem('monefyi_ai_mode', 'quick'); } catch { /* ignore */ }
+              setManagerMode(false);
+            }}
+          />
+        </div>
+      )}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        aria-hidden={!isWorker && managerMode}
+        className={`${!isWorker && managerMode ? 'hidden' : 'flex'} fixed inset-0 bg-black/50 backdrop-blur-sm z-50 items-end sm:items-center justify-center p-0 sm:p-4`}
+        onClick={(e) => { if (e.target === e.currentTarget) setCommandModalOpen(false); }}
+      >
       <motion.div
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -1185,31 +1233,85 @@ export default function CommandModal() {
               </motion.div>
             )}
 
-            {/* ERROR */}
+            {/* ERROR / CLARIFICATION */}
             {stage === 'error' && (
               <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-6">
                 <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
                   <AlertCircle className="w-8 h-8 text-amber-600" />
                 </div>
                 <p className="text-lg font-bold text-slate-800 mb-2">{resultMessage || 'Perintah tidak dipahami'}</p>
-                <p className="text-sm text-slate-500 mb-6">{resultDetails || 'Coba ulangi dengan lebih spesifik.'}</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={handleReset} className="py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">
-                    Coba Lagi
-                  </button>
-                  <button onClick={handleFixWithAI} className="py-3 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-100 flex items-center justify-center gap-1">
-                    <Wand2 className="w-3.5 h-3.5" /> AI
-                  </button>
-                  <button onClick={openManualForm} className="py-3 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1">
-                    <PencilLine className="w-3.5 h-3.5" /> Manual
-                  </button>
-                </div>
+                <p className="text-sm text-slate-600 mb-4">{resultDetails || 'Coba ulangi dengan lebih spesifik.'}</p>
+                {origParse?.intent === 'unknown' ? (
+                  <>
+                    <p className="text-xs text-slate-500 mb-5">
+                      {isWorker
+                        ? 'Contoh: "update progress pondasi 75%" atau "hari ini hadir 8 orang"'
+                        : 'Pilih aksi manual yang ingin dicatat atau perbaiki kalimat perintah Anda:'}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {isWorker ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openManualForm('update_progress')}
+                            className="py-3 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
+                          >
+                            <BarChart3 className="w-4 h-4" /> Update Progress
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openManualForm('add_worker_log')}
+                            className="py-3 px-3 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-100 flex items-center justify-center gap-1.5"
+                          >
+                            <Clock className="w-4 h-4" /> Log Pekerja
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openManualForm('record_cost')}
+                            className="py-3 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1.5"
+                          >
+                            <Wallet className="w-4 h-4" /> Catat Biaya
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openManualForm('record_income')}
+                            className="py-3 px-3 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-100 flex items-center justify-center gap-1.5"
+                          >
+                            <TrendingUp className="w-4 h-4" /> Catat Pemasukan
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleEditCommand}
+                        className="py-3 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5"
+                      >
+                        <PencilLine className="w-4 h-4" /> Ubah Perintah
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={handleReset} className="py-3 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50">
+                      Coba Lagi
+                    </button>
+                    <button onClick={handleEditCommand} className="py-3 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-xl text-sm font-semibold hover:bg-emerald-100 flex items-center justify-center gap-1">
+                      <PencilLine className="w-3.5 h-3.5" /> Ubah
+                    </button>
+                    <button onClick={() => openManualForm()} className="py-3 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-1">
+                      <PencilLine className="w-3.5 h-3.5" /> Manual
+                    </button>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {stage === 'confirm' && (
+        {stage === 'confirm' && form.intent !== 'unknown' && (
           <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-3 space-y-3">
             {batchMode && !batchCanSave && batchResult?.blockers && batchResult.blockers.length > 0 && (
               <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
@@ -1253,5 +1355,6 @@ export default function CommandModal() {
         </div>
       </motion.div>
     </motion.div>
+    </>
   );
 }

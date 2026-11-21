@@ -348,7 +348,7 @@ DAFTAR JENIS AKSI ("type") & "params":
 - record_transfer: {fromProject?:"P1", toProject?:"P2", counterparty?:"Kas Kantor", amount:2000000, transferType?:"loan|repayment", description?:"Talangan material"}
 - update_progress: {project:"P1", workItem:"W1.1 atau nama pekerjaan", progress:65}
 - add_worker_log: {project:"P1", workers:6}
-- add_project: {name:"Renovasi Ruko Kemang", client:"Pak Hendro", location?:"Jakarta Selatan"}
+- add_project: {name:"Renovasi Ruko Kemang", client:"Pak Hendro", location?:"Jakarta Selatan", contract_value?:250000000, start_date?:"YYYY-MM-DD", end_date?:"YYYY-MM-DD"}
 - update_project_status: {project:"P1", status:"planning|active|on_hold|completed"}
 - add_rap_item: {project:"P1", name:"Besi Beton 10mm", qty:50, unit:"btg", unitPrice:85000, type?:"material|labor|equipment|subcontract|other"}
 - add_work_item: {project:"P1", name:"Pekerjaan Atap Baja Ringan", plannedStart?:"YYYY-MM-DD", plannedEnd?:"YYYY-MM-DD", weight?:15}
@@ -405,7 +405,20 @@ function normalizeActions(raw: unknown, config: AIConfig): AgentAction[] {
     const r = item as { type?: string; params?: Record<string, unknown>; summary?: string };
     const type = r?.type as ActionType | undefined;
     if (!type || !(type in ACTION_DIVISION)) continue;
-    const params = r.params && typeof r.params === 'object' ? r.params : {};
+    const params = r.params && typeof r.params === 'object' ? { ...r.params } : {};
+    if (type === 'add_project') {
+      const startDate = /^\d{4}-\d{2}-\d{2}$/.test(String(params.start_date || ''))
+        ? String(params.start_date)
+        : todayStr();
+      params.start_date = startDate;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(params.end_date || ''))) {
+        const dur = Number(params.duration_days);
+        params.end_date =
+          Number.isFinite(dur) && dur > 0
+            ? addDaysIso(startDate, Math.round(dur))
+            : addMonthsIso(startDate, 3);
+      }
+    }
     out.push({
       id: `act-${Date.now()}-${actionSeq++}`,
       type,
@@ -483,15 +496,40 @@ export function localBriefing(context: ContextPack): string {
   return parts.join('\n');
 }
 
+function addDaysIso(isoDate: string, days: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  if (!y || !m || !d) {
+    const dt = new Date();
+    dt.setDate(dt.getDate() + days);
+    return dt.toISOString().slice(0, 10);
+  }
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return dt.toISOString().slice(0, 10);
+}
+
+function addMonthsIso(isoDate: string, months: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  if (!y || !m || !d) {
+    const dt = new Date();
+    dt.setMonth(dt.getMonth() + months);
+    return dt.toISOString().slice(0, 10);
+  }
+  const dt = new Date(Date.UTC(y, m - 1 + months, d));
+  return dt.toISOString().slice(0, 10);
+}
+
 function parseIdrAmount(raw: string): number {
   const clean = raw.trim().replace(/^rp\.?\s*/i, '');
-  const m = clean.match(/(\d+(?:[.,]\d+)?)\s*(miliar|m|juta|jt|ribu|rb|k)?/i);
+  const m = clean.match(/(\d+(?:[.,]\d+)*)\s*(miliar|milyar|m|juta|jt|ribu|rb|k)?/i);
   if (!m) return 0;
   const numStr = m[1];
   const unit = (m[2] || '').toLowerCase();
   if (unit) {
-    const val = parseFloat(numStr.replace(',', '.'));
-    if (unit === 'miliar' || unit === 'm') return Math.round(val * 1_000_000_000);
+    const normalized = /\.\d{3}(?:\.\d{3})+$/.test(numStr)
+      ? numStr.replace(/\./g, '')
+      : numStr.replace(',', '.');
+    const val = parseFloat(normalized);
+    if (unit === 'miliar' || unit === 'milyar' || unit === 'm') return Math.round(val * 1_000_000_000);
     if (unit === 'juta' || unit === 'jt') return Math.round(val * 1_000_000);
     if (unit === 'ribu' || unit === 'rb' || unit === 'k') return Math.round(val * 1_000);
     return Math.round(val);
@@ -499,6 +537,130 @@ function parseIdrAmount(raw: string): number {
   // Angka ribuan berformat titik seperti 650.000 atau 1.500.000
   const digitsOnly = numStr.replace(/[.,]/g, '');
   return parseInt(digitsOnly, 10) || 0;
+}
+
+interface ExtractedProjectDetails {
+  name: string;
+  client: string;
+  contractValue?: number;
+  durationDays?: number;
+  durationLabel?: string;
+  teamSize?: number;
+  startDate: string;
+  endDate: string;
+}
+
+function extractProjectDetails(rawBody: string): ExtractedProjectDetails {
+  let working = rawBody.trim();
+  let contractValue: number | undefined;
+  let durationDays: number | undefined;
+  let durationLabel: string | undefined;
+  let teamSize: number | undefined;
+  let client = '';
+
+  const contractMatch = working.match(
+    /,?\s*(?:dengan\s+)?(?:nilai\s+kontrak|kontrak(?:\s+senilai)?|nilai\s+proyek|rab)\s*(?:sebesar|senilai|:|=)?\s*(?:rp\.?\s*)?(\d+(?:[.,]\d+)*\s*(?:miliar|milyar|m|juta|jt|ribu|rb|k)?)/i,
+  );
+  if (contractMatch) {
+    const parsed = parseIdrAmount(contractMatch[1]);
+    if (parsed > 0) contractValue = parsed;
+    working = working.replace(contractMatch[0], ' ');
+  }
+
+  const durMatch = working.match(
+    /,?\s*(?:(?:dalam|selama|durasi|waktu|target|estimasi(?:\s+waktu)?)\s+)?(\d+(?:[.,]\d+)?)\s*(minggu|mgg|pekan|bulan|bln|hari|hr)\b/i,
+  );
+  if (durMatch) {
+    const qty = parseFloat(durMatch[1].replace(',', '.'));
+    const unit = durMatch[2].toLowerCase();
+    if (Number.isFinite(qty) && qty > 0) {
+      if (unit.startsWith('m') || unit.startsWith('p')) {
+        durationDays = Math.round(qty * 7);
+        durationLabel = `${durMatch[1]} minggu`;
+      } else if (unit.startsWith('b')) {
+        durationDays = Math.round(qty * 30);
+        durationLabel = `${durMatch[1]} bulan`;
+      } else {
+        durationDays = Math.round(qty);
+        durationLabel = `${durMatch[1]} hari`;
+      }
+      working = working.replace(durMatch[0], ' ');
+    }
+  }
+
+  const teamMatch = working.match(/,?\s*(?:dengan\s+)?tim\s+(\d+)\s*(?:orang|org|anggota|personel)?/i);
+  if (teamMatch) {
+    const n = parseInt(teamMatch[1], 10);
+    if (n > 0) teamSize = n;
+    working = working.replace(teamMatch[0], ' ');
+  }
+
+  const clientMatch = working.match(
+    /,?\s*(?:untuk\s+)?(?:klien|client|customer|pelanggan)\s*(?::|=)?\s*([^,\n]+)/i,
+  );
+  if (clientMatch) {
+    client = clientMatch[1].replace(/^["']|["']$/g, '').replace(/\s{2,}/g, ' ').trim();
+    working = working.replace(clientMatch[0], ' ');
+  }
+
+  const name = working
+    .replace(/\s*,\s*,/g, ',')
+    .replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, '')
+    .replace(/^["']|["']$/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  const startDate = todayStr();
+  const endDate =
+    durationDays && durationDays > 0
+      ? addDaysIso(startDate, durationDays)
+      : addMonthsIso(startDate, 3);
+
+  return {
+    name,
+    client,
+    contractValue,
+    durationDays,
+    durationLabel,
+    teamSize,
+    startDate,
+    endDate,
+  };
+}
+
+function buildAddProjectDraft(details: ExtractedProjectDetails): {
+  type: ActionType;
+  params: Record<string, unknown>;
+  summary: string;
+} {
+  const summaryMeta: string[] = [];
+  if (details.client) summaryMeta.push(`Klien: ${details.client}`);
+  if (details.contractValue != null && details.contractValue > 0) {
+    summaryMeta.push(`Kontrak: ${rp(details.contractValue)}`);
+  }
+  if (details.durationLabel) {
+    summaryMeta.push(`Durasi: ${details.durationLabel} (${details.durationDays} hari)`);
+  }
+  const params: Record<string, unknown> = {
+    name: details.name,
+    client: details.client,
+    start_date: details.startDate,
+    end_date: details.endDate,
+  };
+  if (details.contractValue != null && details.contractValue > 0) {
+    params.contract_value = details.contractValue;
+  }
+  if (details.durationDays != null && details.durationDays > 0) {
+    params.duration_days = details.durationDays;
+  }
+  if (details.teamSize != null && details.teamSize > 0) {
+    params.description = `Rencana tim: ${details.teamSize} orang`;
+  }
+  return {
+    type: 'add_project',
+    params,
+    summary: `Buat proyek baru "${details.name}"${summaryMeta.length ? ` (${summaryMeta.join(' · ')})` : ''}`,
+  };
 }
 
 function detectTargetProject(text: string, context: ContextPack): [string, Project] | null {
@@ -623,17 +785,15 @@ export function extractMultiClauseActions(
     const pName = targetProj?.[1]?.name || 'Proyek';
 
     // 1. Buat proyek baru
-    const addProjMatch = clause.match(/(?:buat|tambah|buka)\s+proyek(?:\s+baru)?\s+["']?([^,"'\n]+)["']?(?:\s+klien\s+([^,\n]+))?/i);
-    if (addProjMatch && !/rap|pekerjaan|tugas/i.test(addProjMatch[1])) {
-      const name = addProjMatch[1].trim();
-      const client = (addProjMatch[2] || '').trim();
-      rawActions.push({
-        type: 'add_project',
-        params: { name, client },
-        summary: `Buat proyek baru "${name}"${client ? ` (Klien: ${client})` : ''}`,
-      });
-      delegationsMap.set('project', `Pak Raka menyiapkan ruang kerja proyek baru "${name}".`);
-      continue;
+    const addProjMatch = clause.match(/^(?:tolong\s+)?(?:buat|tambah|buka)\s+proyek(?:\s+baru)?\s+(.+)$/i);
+    if (addProjMatch && !/^(?:item\s+)?(?:rap|pekerjaan|tugas)\b/i.test(addProjMatch[1].trim())) {
+      const details = extractProjectDetails(addProjMatch[1]);
+      if (details.name && !/^(?:item\s+)?(?:rap|pekerjaan|tugas)\b/i.test(details.name)) {
+        const draft = buildAddProjectDraft(details);
+        rawActions.push(draft);
+        delegationsMap.set('project', `Pak Raka menyiapkan draf proyek baru "${details.name}".`);
+        continue;
+      }
     }
 
     // 2. Konversi estimasi jadi proyek
@@ -940,6 +1100,30 @@ export function localSmartManagerTurn(
     };
   }
 
+  // 1c. Permintaan penjadwalan ulang multi-tugas (reschedule / geser jadwal)
+  if (
+    /(?:jadwalkan\s+ulang|reschedule|geser\s+jadwal|undur\s+jadwal|mundur(?:kan)?\s+(?:jadwal|tugas|pekerjaan)|geser\s+(?:semua\s+)?(?:tugas|pekerjaan|timeline)|perpanjang\s+jadwal)/i.test(
+      lower,
+    )
+  ) {
+    return {
+      reply:
+        'Mode Mesin Lokal belum dapat menggeser jadwal banyak tugas secara otomatis lewat chat (membutuhkan LLM/planner backend yang ditingkatkan).\n\nUntuk menjadwalkan ulang secara akurat di Froyek, silakan buka **Progress > Gantt**, lalu:\n• Geser langsung **bar Gantt** pada pekerjaan yang berubah, atau\n• Klik **Edit Sub Tugas** dan atur dependensi **FS (Finish-to-Start)** agar sub-tugas penerus ikut bergeser otomatis (*auto-cascade*).',
+      delegations: [
+        {
+          division: 'project',
+          note: 'Pak Raka mengarahkan penyesuaian jadwal melalui Progress > Gantt (drag bar Gantt / Edit Sub Tugas dengan FS auto-cascade).',
+          status: 'done',
+        },
+      ],
+      actions: [],
+      followUps: [
+        'Briefing kondisi semua proyek hari ini',
+        'Proyek mana yang paling berisiko rugi?',
+      ],
+    };
+  }
+
   // 2. Simulasi kenaikan harga / sensitivitas biaya
   if (/simulasi|naik\s*\d+\s*%|kenaikan/i.test(lower)) {
     const pctMatch = lower.match(/(\d+)\s*%/);
@@ -1029,8 +1213,8 @@ export function localSmartManagerTurn(
     };
   }
 
-  // 4. Kasbon / HRD
-  if (/kasbon|bon\b|gaji|payroll|karyawan|tukang|tim\b/i.test(lower)) {
+  // 4. Kasbon / HRD (hanya kata kunci HRD eksplisit — hindari salah rute dari kata "tim")
+  if (/(?:\bkasbon\b|\bbon\b|\bgaji\b|\bpayroll\b|\bkaryawan\b|\btukang\b|\babsen\b|\babsensi\b|\bcuti\b|\blembur\b|\bpersonel\b)/i.test(lower)) {
     const delegations: DelegationReport[] = [
       { division: 'hr', note: `Bu Nadia memeriksa ${context.members.size} personel aktif & ${context.bons.size} antrean kasbon.`, status: 'done' },
     ];
@@ -1056,7 +1240,74 @@ export function localSmartManagerTurn(
     };
   }
 
-  // 5. Default Executive Briefing
+  // 4b. Perencanaan proyek natural (mis. "Peluncuran website toko online dalam 6 minggu, tim 4 orang")
+  const looksLikeBriefingOrQuery =
+    /\b(?:briefing|laporan|kondisi\s+semua|status\s+proyek|proyek\s+mana|cek\s+|berapa\s+|siapa\s+|apa\s+|kenapa\s+|mengapa\s+|bagaimana|gimana)\b/i.test(
+      lower,
+    );
+  const hasNaturalPlanningSignal =
+    /\b(?:rencana(?:kan)?|perencanaan|peluncuran|launch|kickoff|pembangunan|pembuatan|pengembangan|renovasi|instalasi|setup)\b/i.test(
+      lower,
+    ) &&
+    (/\b\d+(?:[.,]\d+)?\s*(?:minggu|mgg|pekan|bulan|bln|hari|hr)\b/i.test(lower) ||
+      /\b(?:proyek|project|tim\s+\d+|nilai\s+kontrak|kontrak)\b/i.test(lower));
+
+  if (hasNaturalPlanningSignal && !looksLikeBriefingOrQuery) {
+    const cleanedTitleBody = userText
+      .replace(/^(?:tolong\s+)?(?:buat(?:kan)?\s+(?:rencana|jadwal)\s+(?:proyek\s+)?|rencanakan\s+(?:proyek\s+)?)/i, '')
+      .trim();
+    const details = extractProjectDetails(cleanedTitleBody || userText);
+    if (details.name) {
+      const draft = buildAddProjectDraft(details);
+      const actions = normalizeActions([draft], config);
+      const durInfo = details.durationLabel
+        ? `durasi **${details.durationLabel} (${details.durationDays} hari)**, target selesai **${details.endDate}**`
+        : `target selesai **${details.endDate}**`;
+      return {
+        reply:
+          `Saya sudah menyiapkan **draf proyek yang bisa Anda edit** untuk **"${details.name}"** (${durInfo}).\n\nℹ️ **Catatan Mode Mesin Lokal**: Mode lokal hanya membuat **kerangka draf proyek** yang bisa langsung Anda sesuaikan di kartu di bawah (` +
+          `nama, klien, nilai kontrak, target selesai) sebelum klik **Setujui & Eksekusi**. Untuk penyusunan **WBS / sub-tugas multi-fase** otomatis, silakan isi **API Key LLM** atau gunakan planner backend yang ditingkatkan.`,
+        delegations: [
+          {
+            division: 'project',
+            note: `Pak Raka menyiapkan draf proyek "${details.name}" (${details.startDate} s.d. ${details.endDate}${details.durationDays ? `, ${details.durationDays} hari` : ''}).`,
+            status: 'working',
+          },
+        ],
+        actions,
+        followUps: [
+          'Briefing kondisi semua proyek hari ini',
+          'Proyek mana yang paling berisiko rugi?',
+        ],
+      };
+    }
+  }
+
+  // 5. Briefing Portofolio Eksplisit vs Input di Luar Cakupan
+  const isExplicitOffTopic =
+    /(?:resep|masak|nasi\s+goreng|cuaca|ramalan|zodiak|lirik|lagu|film|sepak\s*bola|puisi|cerpen|game|crypto)/i.test(
+      lower,
+    );
+  const isOperationalOrBriefingQuery =
+    /\b(?:briefing|ringkasan|summary|laporan|kondisi|status|proyek|project|progres|progress|anggaran|rap|rab|biaya|pengeluaran|kas|uang|dana|termin|dp|margin|laba|rugi|keuangan|estimasi|pricelist|material|harga|tugas|todo|jadwal|gantt|pekerjaan|opname|kontrak|klien|portofolio|portfolio|prioritas|divisi|halo|hai|pagi|siang|sore|malam|bantu|help|cek|lihat|audit)\b/i.test(
+      lower,
+    );
+
+  if (isExplicitOffTopic || !isOperationalOrBriefingQuery) {
+    return {
+      reply:
+        'Maaf Bos, permintaan ini di luar cakupan operasional **Froyek** atau belum dikenali oleh Mode Mesin Lokal. Saya fokus pada manajemen proyek, anggaran RAP/RAB, arus kas, progres lapangan, dan SDM tim.\n\nSilakan berikan perintah proyek yang spesifik (mis. *"Briefing kondisi semua proyek hari ini"* atau *"Buat proyek Renovasi Ruko klien Pak Budi nilai kontrak 250 juta"*), atau isi **API Key LLM** untuk diskusi bebas.',
+      delegations: [],
+      actions: [],
+      followUps: [
+        'Briefing kondisi semua proyek hari ini',
+        'Proyek mana yang paling berisiko rugi?',
+        'Ada kasbon yang perlu diputuskan?',
+      ],
+    };
+  }
+
+  // 6. Default Executive Briefing (hanya untuk query operasional / briefing)
   return {
     reply: localBriefing(context),
     delegations: [
@@ -1298,23 +1549,54 @@ export async function executeAgentAction(
       case 'add_project': {
         const name = String(p.name || '').trim();
         if (!name) return { ok: false, message: 'Nama proyek wajib diisi.' };
-        const end = new Date();
-        end.setMonth(end.getMonth() + 3);
-        const created = await createProject({
+        const startDate = /^\d{4}-\d{2}-\d{2}$/.test(String(p.start_date || ''))
+          ? String(p.start_date)
+          : todayStr();
+        const durationDays = Number(p.duration_days);
+        const endDate = /^\d{4}-\d{2}-\d{2}$/.test(String(p.end_date || ''))
+          ? String(p.end_date)
+          : Number.isFinite(durationDays) && durationDays > 0
+            ? addDaysIso(startDate, Math.round(durationDays))
+            : addMonthsIso(startDate, 3);
+        if (endDate < startDate) {
+          return { ok: false, message: 'Target selesai proyek tidak boleh lebih awal dari tanggal mulai.' };
+        }
+        const rawCv = p.contract_value;
+        const trimmedCv = rawCv === undefined || rawCv === null ? '' : String(rawCv).trim();
+        const parsedCv =
+          typeof rawCv === 'number'
+            ? rawCv
+            : trimmedCv !== ''
+              ? /^-?\d+$/.test(trimmedCv)
+                ? Number(trimmedCv)
+                : parseIdrAmount(trimmedCv)
+              : NaN;
+        if (trimmedCv !== '' && (!Number.isFinite(parsedCv) || parsedCv < 0)) {
+          return { ok: false, message: 'Nilai kontrak proyek tidak boleh negatif atau tidak valid.' };
+        }
+        const hasContractValue = trimmedCv !== '' && Number.isFinite(parsedCv) && parsedCv >= 0;
+
+        let created = await createProject({
           org_id: env.orgId,
           created_by: env.userId,
           name,
           client_name: String(p.client || ''),
           location: String(p.location || ''),
           description: String(p.description || ''),
-          start_date: todayStr(),
-          end_date: end.toISOString().slice(0, 10),
+          start_date: startDate,
+          end_date: endDate,
           status: 'planning',
         });
+        if (hasContractValue) {
+          created = await updateProject(created.id, { contract_value: parsedCv }).catch(() => ({
+            ...created,
+            contract_value: parsedCv,
+          }));
+        }
         await env.onRefreshProjects();
         return {
           ok: true,
-          message: `Proyek "${created.name}" berhasil dibuat oleh Divisi Proyek.`,
+          message: `Proyek "${created.name}" berhasil dibuat oleh Divisi Proyek${hasContractValue ? ` (Kontrak ${rp(parsedCv)})` : ''}.`,
           navigateTo: `/app/projects/${created.id}`,
         };
       }
