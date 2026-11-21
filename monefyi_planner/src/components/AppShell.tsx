@@ -20,7 +20,11 @@ import { isAdminFullAccess, isEstimatorOnlyPlan } from '../lib/entitlement';
 import PlannerModuleGuard from './entitlement/PlannerModuleGuard';
 import AgentTrialPage from '../pages/AgentTrialPage';
 import { hydrateAIConfigFromAccount } from '../services/aiConfigSync';
-import { fetchTelegramConfigFromSupabase, fetchFieldMemberContactsFromSupabase } from '../services/telegramService';
+import {
+  clearTelegramLocalCache,
+  fetchFieldMemberContactsFromSupabase,
+  fetchTelegramConfigFromSupabase,
+} from '../services/telegramService';
 
 function AppContent() {
   const { id: projectIdParam } = useParams();
@@ -32,6 +36,8 @@ function AppContent() {
   } = useAppStore();
   const entitlement = useEntitlement();
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+  const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
+  const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
   useEffect(() => {
     if (user?.id && !isDemoMode && tenant?.id !== 'demo') {
@@ -40,11 +46,15 @@ function AppContent() {
   }, [user?.id, isDemoMode, tenant?.id]);
 
   useEffect(() => {
-    if (tenant?.id && !isDemoMode && tenant.id !== 'demo') {
+    if (!tenant?.id || isDemoMode || tenant.id === 'demo') return;
+    if (canAccessHr) {
       void fetchTelegramConfigFromSupabase(tenant.id);
       void fetchFieldMemberContactsFromSupabase(tenant.id);
+    } else {
+      // Non-manager (worker/staff) tidak boleh membaca atau menyimpan cache bot/kontak Telegram di perangkat bersama
+      clearTelegramLocalCache();
     }
-  }, [tenant?.id, isDemoMode]);
+  }, [tenant?.id, isDemoMode, canAccessHr]);
 
   const urlSyncKey = projectIdParam
     ? `project:${projectIdParam}`
@@ -81,9 +91,6 @@ function AppContent() {
       window.removeEventListener('offline', handleOffline);
     };
   }, [setOnline, setSyncStatus]);
-
-  const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
-  const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
   useEffect(() => {
     if (effectiveTab === 'estimator') {

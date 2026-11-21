@@ -35,6 +35,7 @@ import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pri
 import { useEntitlement } from '../hooks/useEntitlement';
 import { isAdminFullAccess } from '../lib/entitlement';
 import { hasEstimatorLicenseAccess } from '../lib/appProductBrand';
+import { canAccessManagerFeatures } from '../utils/platformUi';
 
 type SettingsTab = 'profil' | 'estimator' | 'akun' | 'koordinasi' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'diagnostik' | 'tentang' | 'developer';
 
@@ -101,12 +102,13 @@ export default function Settings() {
   const [searchParams] = useSearchParams();
   const {
     user, tenant, logout, setUser, setTenant, setActiveTab, setFinanceVersionPreference, platformRole,
-    entitlementPreviewMode, syncStatus, isOnline, lastSynced, isDemoMode, projects,
+    uiViewMode, entitlementPreviewMode, syncStatus, isOnline, lastSynced, isDemoMode, projects,
   } = useAppStore();
 
   const demoActive = isDemoMode || tenant?.id === 'demo';
   const isOwner = user?.role === 'owner';
   const canEditOrg = isOwner;
+  const canManageTeam = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const showAdminLink = isPlatformAdmin(platformRole, user?.email);
   const entitlement = useEntitlement();
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
@@ -153,9 +155,10 @@ export default function Settings() {
   const isTabRestricted = useCallback((candidate: SettingsTab) => {
     if (OWNER_ONLY_TABS.includes(candidate) && !isOwner) return true;
     if (ADMIN_ONLY_TABS.includes(candidate) && !showAdminLink) return true;
+    if (candidate === 'koordinasi' && !canManageTeam) return true;
     if (candidate === 'estimator' && !entitlement.isLoading && !hasEstimatorAccess) return true;
     return false;
-  }, [isOwner, showAdminLink, entitlement.isLoading, hasEstimatorAccess]);
+  }, [isOwner, showAdminLink, canManageTeam, entitlement.isLoading, hasEstimatorAccess]);
 
   useEffect(() => {
     const rawSt = searchParams.get('st') || searchParams.get('tab');
@@ -435,7 +438,7 @@ export default function Settings() {
     { id: 'profil', label: 'Profil', icon: User, show: true },
     { id: 'estimator', label: 'Estimator', icon: FileSpreadsheet, show: hasEstimatorAccess },
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
-    { id: 'koordinasi', label: 'Koordinasi AI & Bot Telegram', icon: Bot, show: true },
+    { id: 'koordinasi', label: 'Koordinasi AI & Bot Telegram', icon: Bot, show: canManageTeam },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
     { id: 'pricelist', label: 'Pricelist', icon: CreditCard, show: canEditOrg },
     { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg },
@@ -682,7 +685,7 @@ export default function Settings() {
         </div>
       )}
 
-      {tab === 'koordinasi' && (
+      {tab === 'koordinasi' && canManageTeam && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
           {demoActive ? (
             <p className="text-sm text-[#5B6B7A]">Koordinasi AI & Bot Telegram tidak tersedia di mode demo.</p>

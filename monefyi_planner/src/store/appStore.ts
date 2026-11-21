@@ -388,6 +388,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { clearRuntimeTraceQueue } = await import('../services/runtimeTracer');
       clearRuntimeTraceQueue(user?.id);
     } catch { /* ignore */ }
+    try {
+      const { clearAIConfigLocal } = await import('../services/aiProviderService');
+      clearAIConfigLocal();
+    } catch { /* ignore */ }
+    try {
+      const { clearTelegramLocalCache } = await import('../services/telegramService');
+      clearTelegramLocalCache();
+    } catch { /* ignore */ }
     if (!isDemoMode) {
       try {
         sessionStorage.setItem('monefyi_manual_logout', '1');
