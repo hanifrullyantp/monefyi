@@ -41,7 +41,7 @@ function escapeHtml(raw: string): string {
 
 // 1. Template: Konfirmasi Pembayaran
 function getPaymentConfirmationTemplate(opts: SendEmailOptions) {
-  const name = escapeHtml(opts.name || "Pelanggan Monefyi");
+  const name = escapeHtml(opts.name || "Pelanggan Froyek");
   const plan = escapeHtml((opts.planTier || "standard").toUpperCase());
   const amountStr = opts.amount ? formatCurrency(opts.amount) : "Rp 0 (Akses Gratis)";
   const method = escapeHtml((opts.paymentMethod || "QRIS").toUpperCase());

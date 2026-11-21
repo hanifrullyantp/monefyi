@@ -131,6 +131,7 @@ const nextConfig: NextConfig = {
       { source: "/app", destination: `${plannerAppOrigin}/app` },
       { source: "/app/:path*", destination: `${plannerAppOrigin}/app/:path*` },
       { source: "/login", destination: `${plannerAppOrigin}/login` },
+      { source: "/reset-password", destination: `${plannerAppOrigin}/reset-password` },
       { source: "/signup", destination: `${plannerAppOrigin}/signup` },
       { source: "/signup/:path*", destination: `${plannerAppOrigin}/signup/:path*` },
       { source: "/verify-email", destination: `${plannerAppOrigin}/verify-email` },

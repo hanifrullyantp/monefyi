@@ -5,7 +5,7 @@ import { usePaymentReturn } from '../../hooks/usePaymentReturn';
 import { invalidateEntitlementCache } from '../../hooks/useEntitlement';
 
 export default function PaymentReturnHandler() {
-  const { modal, dismiss, goPricelist, goNewEstimation, goEstimator } = usePaymentReturn();
+  const { modal, dismiss, goPricelist, goNewEstimation, goDashboard } = usePaymentReturn();
 
   if (modal?.kind === 'success') {
     return (
@@ -19,7 +19,7 @@ export default function PaymentReturnHandler() {
         }}
         onSetupPricelist={goPricelist}
         onNewEstimation={goNewEstimation}
-        onGoDashboard={goEstimator}
+        onGoDashboard={goDashboard}
       />
     );
   }

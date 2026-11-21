@@ -151,8 +151,8 @@ async function callSingleProvider(
           Authorization: `Bearer ${apiKey}`,
           ...(provider === "openrouter"
             ? {
-                "HTTP-Referer": "https://monefyi.com",
-                "X-Title": "Monefyi Winning Engine",
+                "HTTP-Referer": "https://froyek.com",
+                "X-Title": "Froyek Winning Engine",
               }
             : {}),
         },
@@ -444,8 +444,8 @@ export async function submitOpenRouterBatch(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey.trim()}`,
-        "HTTP-Referer": "https://monefyi.com",
-        "X-Title": "Monefyi Winning Engine",
+        "HTTP-Referer": "https://froyek.com",
+        "X-Title": "Froyek Winning Engine",
       },
       body: JSON.stringify({
         model: normalizedModel,
@@ -509,8 +509,8 @@ export async function pollOpenRouterBatch(
       method: "GET",
       headers: {
         Authorization: `Bearer ${apiKey.trim()}`,
-        "HTTP-Referer": "https://monefyi.com",
-        "X-Title": "Monefyi Winning Engine",
+        "HTTP-Referer": "https://froyek.com",
+        "X-Title": "Froyek Winning Engine",
       },
     });
 

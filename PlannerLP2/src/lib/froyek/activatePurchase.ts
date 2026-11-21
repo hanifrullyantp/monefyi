@@ -34,7 +34,7 @@ async function findOrCreateUser(
   });
   if (created.data.user?.id) return { userId: created.data.user.id, isNew: true };
 
-  for (let page = 1; page <= 5; page += 1) {
+  for (let page = 1; page <= 50; page += 1) {
     const listed = await admin.auth.admin.listUsers({ page, perPage: 200 });
     const found = listed.data.users.find((user) => user.email?.toLowerCase() === email);
     if (found?.id) return { userId: found.id, isNew: false };

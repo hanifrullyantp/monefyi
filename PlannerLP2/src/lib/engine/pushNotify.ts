@@ -18,7 +18,7 @@ export async function sendAdminPush(payload: {
 }): Promise<{ sent: number; failed: number; skipped?: string }> {
   if (!pushConfigured()) return { sent: 0, failed: 0, skipped: "VAPID belum dikonfigurasi" };
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:admin@monefyi.com",
+    process.env.VAPID_SUBJECT || "mailto:admin@froyek.com",
     process.env.VAPID_PUBLIC_KEY as string,
     process.env.VAPID_PRIVATE_KEY as string
   );

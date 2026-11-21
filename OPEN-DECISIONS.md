@@ -43,3 +43,16 @@ Dokumen ini mencatat item ambigu, blokir infrastruktur remote, serta implikasi b
 - **Implikasi Bisnis untuk Diputuskan Stakeholder:**
   1. Calon pengguna baru atau trial di paket `Free` **tetap tidak dapat membuat proyek baru** melalui Wizard `+ Buat Proyek Baru` maupun AI GM (`Setujui & Eksekusi`) sampai mereka melakukan upgrade paket berbayar.
   2. Teks `0/2 proyek bulan ini` di `Settings.tsx` berasal dari konfigurasi `pricingPlans.ts` dan tetap bertentangan dengan kuota aktif `0` di `entitlement.ts` kecuali stakeholder memutuskan untuk menyelaraskan `pricingPlans.ts` (`projects_per_month: 0`) atau membuka kuota trial 1 proyek di iterasi berikutnya.
+
+---
+
+## 4. Arsitektur Auth Route Admin/Webhook `PlannerLP2` & Bundel Statis `/bonus/mini` (Di Luar Scope `F-01`..`F-38`)
+
+- **Temuan Review Kode `PlannerLP2/` (Pra-eksisting / Perubahan Fitur LP2 di Branch Fase 4):**
+  1. **Endpoint API Admin/CRM & Webhook tanpa Auth Session/Secret Khusus:**
+     - `PlannerLP2/src/app/api/crm/lead/route.ts` (`GET`/`PATCH`/`DELETE`), `PlannerLP2/src/app/api/email/resend/route.ts`, `PlannerLP2/src/app/api/health/mayar/route.ts` (`GET ?test_url=` & `POST`), `PlannerLP2/src/app/api/webhook/mayar/route.ts` (tanpa verifikasi signature Mayar / memakai anon client untuk query `orders`), dan `PlannerLP2/src/app/api/webhook/whatsapp/route.ts`.
+     - **Alasan tidak dipaksa `requireEngineAuth` pada Fase 4:** Dashboard Admin CRM/Marketing `PlannerLP2` memanggil endpoint tersebut langsung dari browser tanpa header `x-engine-secret` sehingga mengubah mekanismenya di luar scope akan memutus dashboard Admin & webhook eksisting. Perlu hardening terpisah (cookie/session Admin CRM terverifikasi di server + verifikasi signature webhook Mayar/WhatsApp + whitelist URL Mayar).
+  2. **Bundel Statis `PlannerLP2/public/bonus/mini/*`:**
+     - Berisi `234` kecocokan kata `"Monefyi"` pada hasil build statis lama dari `Mini App Monefyi/` (`bagi-hasil`, `budget`, `cicilan`, `debt-free`, `salary`, `waris`, `zakat`). Karena file HTML/JS minified adalah artefak build statis, pembaruannya memerlukan build ulang dari repositori/folder sumber mini app secara terpisah.
+  3. **Edge Functions Remote Deployment (`BLOCKED`):**
+     - Perubahan copy/CORS di `my-supabase-project/supabase/functions/*` sudah siap di repo lokal, namun belum di-deploy ke project Supabase remote `zzwqfmdyncxbolestkqp` sesuai batasan tanpa deploy remote.

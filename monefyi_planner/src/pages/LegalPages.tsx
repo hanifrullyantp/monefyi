@@ -46,13 +46,14 @@ export function PrivacyPage() {
 }
 
 export function TermsPage() {
+  const isEstimator = useIsEstimatorContext();
   return (
     <LegalShell title="Syarat & Ketentuan">
       <p>Dengan menggunakan Froyek, Anda setuju menggunakan layanan secara legal dan bertanggung jawab atas data proyek yang dimasukkan.</p>
       <p>Layanan disediakan &quot;sebagaimana adanya&quot;. Fitur beta dapat berubah tanpa pemberitahuan sebelumnya.</p>
       <p className="font-semibold text-slate-800">Garansi uang kembali 7 hari</p>
       <p>
-        Pembelian Estimator dapat diajukan refund dalam {REFUND_WINDOW_DAYS} hari jika produk tidak sesuai harapan.
+        Pembelian {isEstimator ? 'Froyek Estimator' : 'Froyek'} dapat diajukan refund dalam {REFUND_WINDOW_DAYS} hari jika produk tidak sesuai harapan.
         Refund diproses manual ke metode pembayaran asal (Lynk) setelah review tim — bukan otomatis instan.
       </p>
     </LegalShell>
@@ -60,6 +61,7 @@ export function TermsPage() {
 }
 
 function RefundRequestForm() {
+  const isEstimator = useIsEstimatorContext();
   const { isAuthenticated } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [reason, setReason] = useState('');
@@ -126,7 +128,7 @@ function RefundRequestForm() {
         rows={4}
         required
         minLength={10}
-        placeholder="Jelaskan mengapa Estimator tidak sesuai kebutuhan bisnis Anda..."
+        placeholder={`Jelaskan mengapa ${isEstimator ? 'Froyek Estimator' : 'Froyek'} tidak sesuai kebutuhan bisnis Anda...`}
         className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
       />
       <button
@@ -142,6 +144,7 @@ function RefundRequestForm() {
 }
 
 export function ContactPage() {
+  const isEstimator = useIsEstimatorContext();
   const [params] = useSearchParams();
   const showRefund = params.get('refund') === '1';
 
@@ -150,7 +153,7 @@ export function ContactPage() {
       {showRefund ? (
         <>
           <p>
-            Ajukan garansi uang kembali 100% jika Froyek Estimator tidak membantu bisnis Anda dalam{' '}
+            Ajukan garansi uang kembali 100% jika {isEstimator ? 'Froyek Estimator' : 'Froyek'} tidak membantu bisnis Anda dalam{' '}
             {REFUND_WINDOW_DAYS} hari pertama setelah pembelian.
           </p>
           <RefundRequestForm />

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Mail } from 'lucide-react';
 import PasswordField, { isPasswordReady } from './PasswordField';
+import { EstimatorLogo } from '../EstimatorLogo';
 import { PlannerLogo } from '../MonefyiLogo';
 import { authUserMessage } from '../../lib/authMessages';
 import { isEstimatorBrandContext } from '../../lib/estimatorBrand';
@@ -222,7 +223,14 @@ export function ResetPasswordPage() {
           <ArrowLeft className="w-4 h-4" /> Kembali ke login
         </Link>
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
-          <PlannerLogo variant="lockup" />
+          {isEstimatorBrandContext() ? (
+            <div className="flex items-center gap-2.5">
+              <EstimatorLogo />
+              <span className="text-lg font-extrabold text-slate-900">Froyek Estimator</span>
+            </div>
+          ) : (
+            <PlannerLogo variant="lockup" />
+          )}
           <p className="text-xs text-slate-500 mt-2 mb-6">Buat password baru</p>
           <ResetPasswordPanel onUpdated={handleUpdated} />
         </div>
