@@ -67,3 +67,14 @@ Dokumen ini mencatat item ambigu, blokir infrastruktur remote, serta implikasi b
 - **Generator WBS Multi-Fase AI & Engine Auto-Reschedule (`[BUTUH-KEPUTUSAN]`):**
   - Sesuai batasan scope proyek, Fase 5 memperbaiki bug terukur (`tim 4 orang` salah rute HRD, ekstraksi `add_project`, edit inline draf proyek, parser markdown aman, penolakan jujur input off-topic/reschedule, serta `commandParser` `unknown` fallback).
   - Rancang bangun generator WBS multi-fase + estimasi bobot otomatis maupun engine *auto-rescheduling* lintas banyak tugas Gantt berbasis LLM (`F-15` / `F-27` penuh) memerlukan keputusan desain produk dan infrastruktur AI proxy terpisah.
+
+---
+
+## 6. Deployment Migrasi RLS Hardening & Edge Function `planner-ai-proxy` (Fase 6 — `[BLOCKED]` Remote)
+
+- **Artefak Lokal Siap Deploy (Belum Diterapkan ke Remote `zzwqfmdyncxbolestkqp`):**
+  1. `my-supabase-project/supabase/migrations/20261121130000_phase6_rls_and_secrets_hardening.sql`: menutup policy permisif `winning_engine_config`, memisahkan write policy `profiles` + trigger proteksi kolom istimewa (`profiles` & `planner_organizations`), memperketat `runtime_traces` `tenant_id` & `planner_org_custom_domains`, serta membuat tabel `planner_user_ai_secrets`.
+  2. `my-supabase-project/supabase/functions/planner-ai-proxy/index.ts`: Edge Function terenkripsi AES-GCM (`status`, `set_key`, `delete_key`, `chat`).
+- **Status Eksekusi Remote:** `BLOCKED` (aturan kerja melarang push DB atau deploy Edge Functions ke Supabase remote produksi/aktif).
+- **Mitigasi Aktif:** Di klien, BYOK API keys sudah dipisahkan keluar dari `localStorage` (`monefyi_planner_ai_config_v1`) ke `sessionStorage`/memori, dibersihkan otomatis saat `logout()` dan saat pergantian user, default `executionMode` diturunkan ke `'review'`, dan pemanggilan `planner-ai-proxy` dikunci di belakang env `VITE_AI_PROXY_ENABLED === 'true'` agar belum memicu `404` sebelum server di-deploy (saat deploy nanti: jalankan migrasi SQL -> deploy `planner-ai-proxy` + set secret `AI_SECRET_KEY` -> aktifkan `VITE_AI_PROXY_ENABLED=true`).
+- **Keputusan Terkait `F-25` (`[BUKAN-BUG]`):** `lower.includes('indra')` di `singleDeviceSessionService.ts` tetap dipertahankan dengan komentar kode eksplisit sesuai Keputusan Produk #3.

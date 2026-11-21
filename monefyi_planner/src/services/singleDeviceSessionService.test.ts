@@ -14,6 +14,11 @@ describe('singleDeviceSession', () => {
     expect(isExemptFromSingleDeviceSession('user', 'indra@gmail.com')).toBe(true);
   });
 
+  it('mempertahankan pengecualian substring indra untuk tim QA internal (F-25 [BUKAN-BUG])', () => {
+    // Sengaja dipertahankan sesuai Product Decision #3 (internal QA multi-device testing exemption).
+    expect(isExemptFromSingleDeviceSession('user', 'hendra.indra@example.com')).toBe(true);
+  });
+
   it('akun dengan flag allow_multi_device atau exempt_single_device dibebaskan', () => {
     expect(isExemptFromSingleDeviceSession('user', 'custom@domain.com', { allow_multi_device: true })).toBe(true);
     expect(isExemptFromSingleDeviceSession('user', 'custom@domain.com', { exempt_single_device: true })).toBe(true);
