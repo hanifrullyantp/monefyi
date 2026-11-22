@@ -1,10 +1,15 @@
 import { type DbRapItem } from '../lib/adapters';
+import { isDemoOrInvalidUuid } from '../lib/demo/demoMode';
 import { supabase } from '../lib/supabase';
+import { useAppStore } from '../store/appStore';
 import { logProjectAudit } from './auditService';
 
 export type RapItem = DbRapItem;
 
 export async function loadRapItems(projectId: string): Promise<RapItem[]> {
+  if (isDemoOrInvalidUuid(projectId, useAppStore.getState().isDemoMode)) {
+    return [];
+  }
   const { data, error } = await supabase
     .from('planner_rap_items')
     .select('*')
