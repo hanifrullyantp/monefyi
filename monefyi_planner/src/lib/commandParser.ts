@@ -187,6 +187,15 @@ export async function aiParseCommand(
   context: PipelineContext,
 ): Promise<ParsedCommand> {
   try {
+    const { useAppStore } = await import('../store/appStore');
+    const isDemo =
+      useAppStore.getState().isDemoMode === true ||
+      context.orgId === 'demo' ||
+      (typeof context.orgId === 'string' && context.orgId.startsWith('demo-'));
+    if (isDemo) {
+      return createAIFallbackParse(input, 'Mode demo menggunakan parser aturan lokal.');
+    }
+
     const { config } = await import('./config');
     const { supabase } = await import('./supabase');
 

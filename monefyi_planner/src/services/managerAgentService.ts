@@ -6,9 +6,10 @@
  * - Deterministic executor + Hybrid Multi-Clause Parser: memastikan model murah sekalipun selalu akurat mengeksekusi perintah.
  */
 import { formatCurrency, todayStr } from '../lib/adapters';
+import { isDemoOrInvalidUuid } from '../lib/demo/demoMode';
 import { executeIntent, type IntentContext } from '../lib/intentExecutor';
 import type { ParsedCommand } from '../lib/commandParser';
-import type { Project } from '../store/appStore';
+import { useAppStore, type Project } from '../store/appStore';
 import { loadWorkItems, type WorkItem } from './workItemService';
 import { loadRapItems, type RapItem } from './rapService';
 import { listMembers } from './memberService';
@@ -211,10 +212,17 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     activeProjectCode = 'P1';
   }
 
+  const isDemoCtx = isDemoOrInvalidUuid(env.orgId, useAppStore.getState().isDemoMode);
   const active = live.filter(p => p.status === 'active' || p.status === 'planning').slice(0, 6);
   const [wiLists, rapLists] = await Promise.all([
     Promise.all(active.map(p => safe(loadWorkItems(p.id), [] as WorkItem[]))),
-    Promise.all(active.map(p => safe(loadRapItems(p.id), [] as RapItem[]))),
+    Promise.all(
+      active.map(p =>
+        isDemoCtx || isDemoOrInvalidUuid(p.id, isDemoCtx)
+          ? Promise.resolve([] as RapItem[])
+          : safe(loadRapItems(p.id), [] as RapItem[]),
+      ),
+    ),
   ]);
 
   const rapLines: string[] = [];
@@ -240,13 +248,15 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
   });
   if (wiLines.length) lines.push('ITEM PEKERJAAN / JADWAL LAPANGAN:', ...wiLines);
 
-  const [memberList, pendingBons, todoList, ests, items] = await Promise.all([
-    safe(listMembers(env.orgId), [] as OrgMember[]),
-    safe(listBonRequests(env.orgId, 'pending'), [] as BonRequest[]),
-    safe(loadTodosForOrg(env.orgId), [] as PlannerTodo[]),
-    safe(loadEstimations(env.orgId), [] as Estimation[]),
-    safe(loadPricelistItems(env.orgId), []),
-  ]);
+  const [memberList, pendingBons, todoList, ests, items] = isDemoCtx
+    ? [[], [], [], [], []]
+    : await Promise.all([
+        safe(listMembers(env.orgId), [] as OrgMember[]),
+        safe(listBonRequests(env.orgId, 'pending'), [] as BonRequest[]),
+        safe(loadTodosForOrg(env.orgId), [] as PlannerTodo[]),
+        safe(loadEstimations(env.orgId), [] as Estimation[]),
+        safe(loadPricelistItems(env.orgId), []),
+      ]);
 
   lines.push('TIM & KARYAWAN (HRD):');
   const activeMembers = memberList.filter(m => m.status !== 'removed').slice(0, 30);
