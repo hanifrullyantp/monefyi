@@ -1,5 +1,6 @@
 import type { GanttSnapshot } from '../lib/gantt/snapshot';
 import type { GanttTask } from '../lib/gantt/types';
+import { dependencyTypeGanttToDb } from '../lib/gantt/criticalPath';
 import { updateProject as updateProjectApi } from './projectService';
 import { updateWorkItem, updateProjectProgressFromWorkItems } from './workItemService';
 import { persistGanttDependency, removeGanttDependency } from './ganttDependencyService';
@@ -16,12 +17,24 @@ export interface SaveGanttResult {
   projectProgress: Record<string, number>;
 }
 
+export interface SaveGanttOptions {
+  forceOverwrite?: boolean;
+}
+
+function getTaskAssignee(task: GanttTask): string | null {
+  if (task.assignedMemberId !== undefined) {
+    return task.assignedMemberId ?? null;
+  }
+  return task.assigneeId ?? null;
+}
+
 export async function saveGanttChanges(
   orgId: string,
   current: GanttSnapshot,
   baseline: GanttSnapshot,
   workItems: WorkItem[],
   currency?: string,
+  options?: SaveGanttOptions,
 ): Promise<SaveGanttResult> {
   const wiMap = new Map(workItems.map(w => [w.id, { ...w }]));
 
@@ -29,11 +42,16 @@ export async function saveGanttChanges(
     const base = baseline.tasks.find(t => t.id === task.id);
     if (!base) continue;
 
+    const taskAssignee = getTaskAssignee(task);
+    const baseAssignee = getTaskAssignee(base);
+
     const changed = task.startDate !== base.startDate
       || task.endDate !== base.endDate
       || task.name !== base.name
       || task.progress !== base.progress
-      || task.status !== base.status;
+      || task.status !== base.status
+      || task.priority !== base.priority
+      || taskAssignee !== baseAssignee;
 
     if (!changed) continue;
 
@@ -45,20 +63,34 @@ export async function saveGanttChanges(
         status: task.status as import('../store/appStore').Project['status'],
       }, currency);
     } else {
-      await updateWorkItem(task.id, {
+      const existingWi = wiMap.get(task.id);
+      const payload: Partial<WorkItem> = {
         name: task.name,
         planned_start: task.startDate,
         planned_end: task.endDate,
         progress_pct: task.progress,
         status: task.status,
+      };
+      if (task.priority !== base.priority) {
+        payload.priority = task.priority;
+      }
+      if (taskAssignee !== baseAssignee) {
+        payload.assigned_member_id = taskAssignee;
+      }
+
+      const expectedUpdatedAt = options?.forceOverwrite
+        ? undefined
+        : (task.updatedAt ?? existingWi?.updated_at ?? undefined);
+
+      // Rethrows WorkItemConflictError cleanly so UI can present F-19 conflict dialog
+      const savedWi = await updateWorkItem(task.id, payload, {
+        expectedUpdatedAt,
       });
-      const wi = wiMap.get(task.id);
-      if (wi) {
-        wi.name = task.name;
-        wi.planned_start = task.startDate;
-        wi.planned_end = task.endDate;
-        wi.progress_pct = task.progress;
-        wi.status = task.status;
+
+      if (existingWi) {
+        Object.assign(existingWi, savedWi);
+      } else {
+        wiMap.set(task.id, savedWi);
       }
     }
   }
@@ -70,8 +102,12 @@ export async function saveGanttChanges(
     if (!baseDepIds.has(dep.id)) {
       await persistGanttDependency(orgId, dep, current.tasks, [...wiMap.values()]);
       const wi = wiMap.get(dep.toTaskId);
-      if (wi && !(wi.dependencies || []).includes(dep.fromTaskId)) {
-        wi.dependencies = [...(wi.dependencies || []), dep.fromTaskId];
+      if (wi) {
+        if (!(wi.dependencies || []).includes(dep.fromTaskId)) {
+          wi.dependencies = [...(wi.dependencies || []), dep.fromTaskId];
+        }
+        wi.dependency_type = dependencyTypeGanttToDb(dep.type);
+        wi.updated_at = new Date().toISOString();
       }
     }
   }
@@ -82,6 +118,7 @@ export async function saveGanttChanges(
       const wi = wiMap.get(dep.toTaskId);
       if (wi) {
         wi.dependencies = (wi.dependencies || []).filter(id => id !== dep.fromTaskId);
+        wi.updated_at = new Date().toISOString();
       }
     }
   }

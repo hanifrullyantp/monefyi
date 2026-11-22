@@ -1,4 +1,5 @@
 import { Bell, Eye } from 'lucide-react';
+import { PlannerLogo } from '../MonefyiLogo';
 
 type Props = {
   title?: string;
@@ -50,13 +51,13 @@ export default function AppHeader({
           </svg>
         </button>
 
-        <div
-          className={`w-[30px] h-[30px] rounded-[9px] text-white font-extrabold text-base flex items-center justify-center shrink-0 ${
-            isEstimator ? 'bg-[#157F5F]' : 'bg-[#059669]'
-          }`}
-        >
-          {isEstimator ? 'E' : 'M'}
-        </div>
+        {isEstimator ? (
+          <div className="w-[30px] h-[30px] rounded-[9px] text-white font-extrabold text-base flex items-center justify-center shrink-0 bg-[#157F5F]">
+            E
+          </div>
+        ) : (
+          <PlannerLogo className="w-[30px] h-[30px] object-contain shrink-0" />
+        )}
 
         <div className="ml-1.5 leading-[1.15] min-w-0">
           <div className="font-extrabold text-base text-[#0F172A] truncate">

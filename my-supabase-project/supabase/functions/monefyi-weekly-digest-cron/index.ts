@@ -118,6 +118,7 @@ Deno.serve(async (req) => {
         if (email?.includes("@") && content.has_data) {
           await sendEmailSafe({
             to: email,
+            product: "finance",
             subject: "Rekap mingguan Monefyi sudah siap",
             html: `
               <p>Hai${p.name ? ` ${p.name}` : ""},</p>

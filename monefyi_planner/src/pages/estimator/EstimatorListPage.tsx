@@ -160,7 +160,8 @@ function sortRows(rows: Estimation[], key: SortKey): Estimation[] {
 
 export default function EstimatorListPage() {
   const navigate = useNavigate();
-  const { tenant, user, projects, addProject } = useAppStore();
+  const { tenant, user, projects, isDemoMode, addProject } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const showToast = useUiStore(s => s.showToast);
   const entitlement = useEntitlement();
 
@@ -225,6 +226,12 @@ export default function EstimatorListPage() {
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
+    if (demoActive) {
+      // Mode demo melewati query estimasi ke Supabase (org_id='demo' -> UUID 22P02).
+      setRows([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await loadEstimations(tenant.id);
@@ -234,24 +241,24 @@ export default function EstimatorListPage() {
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id, showToast]);
+  }, [tenant?.id, demoActive, showToast]);
 
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || demoActive) return;
     void countLifetimeEstimations(tenant.id)
       .then(setLifetimeCount)
       .catch(error => console.error('Kuota estimasi gagal dimuat:', error));
-  }, [tenant?.id, rows]);
+  }, [tenant?.id, demoActive, rows]);
 
   useEffect(() => {
-    if (!tenant?.id || !user?.id || loading || onboardingChecked) return;
+    if (!tenant?.id || !user?.id || loading || onboardingChecked || demoActive) return;
     void shouldShowEstimatorOnboarding(user.id, tenant.id, tenant.name).then(should => {
       setOnboardingChecked(true);
       if (should) setOnboardingOpen(true);
     });
-  }, [tenant?.id, tenant?.name, user?.id, loading, onboardingChecked]);
+  }, [tenant?.id, tenant?.name, user?.id, loading, onboardingChecked, demoActive]);
 
   const statusCounts = useMemo(() => countEstimationsByStatus(rows), [rows]);
   const listStats = useMemo(() => getEstimationListStats(rows), [rows]);
@@ -409,6 +416,10 @@ export default function EstimatorListPage() {
   };
 
   const handleDelete = async (id: string, title: string) => {
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     if (!window.confirm(`Hapus estimasi "${title}"?\nEstimasi akan dipindahkan ke arsip selama 30 hari sebelum dihapus permanen.`)) return;
     try {
       await deleteEstimation(id, user?.id);
@@ -421,6 +432,10 @@ export default function EstimatorListPage() {
 
   const handleDuplicate = async (id: string) => {
     if (!tenant?.id || !user?.id) return;
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     try {
       const used = lifetimeCount ?? await countLifetimeEstimations(tenant.id);
       if (!canCreateEstimation(entitlement, used)) {
@@ -438,6 +453,10 @@ export default function EstimatorListPage() {
   };
 
   const handleConvert = async (id: string) => {
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     try {
       const est = await loadEstimation(id);
       if (!est) throw new Error('Estimasi tidak ditemukan');
@@ -451,6 +470,10 @@ export default function EstimatorListPage() {
 
   const handleShareWhatsApp = async (id: string) => {
     if (!tenant?.id) return;
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     setWaLoadingId(id);
     try {
       const est = await loadEstimation(id);
@@ -478,6 +501,10 @@ export default function EstimatorListPage() {
 
   const handleKwitansi = async (id: string) => {
     if (!tenant?.id) return;
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     if (!canGenerateKwitansi(entitlement)) {
       setUpgradeTrigger('estimator_pro_feature');
       setUpgradeFeatureName('Generator Kwitansi Pro');
@@ -503,6 +530,10 @@ export default function EstimatorListPage() {
   };
 
   const handleStatusChange = async (estId: string, next: EstimationWorkflowStatus | 'rejected') => {
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     const est = rows.find(r => r.id === estId);
     if (!est) return;
     const prevStatus = normalizeEstimationStatus(est.status);
@@ -569,6 +600,10 @@ export default function EstimatorListPage() {
   };
 
   const handleBulkDelete = () => {
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     const targets = bulkSelectedEstimations();
     if (targets.length === 0) {
       showToast('Tidak ada estimasi yang dipilih', 'info');
@@ -599,6 +634,10 @@ export default function EstimatorListPage() {
   }, [rows, selectedIds]);
 
   const handleBulkArchive = () => {
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     const targets = bulkSelectedEstimations().filter(r => !isEstimationArchived(r.status));
     if (targets.length === 0) {
       showToast('Tidak ada estimasi yang bisa diarsipkan', 'info');
@@ -624,6 +663,10 @@ export default function EstimatorListPage() {
   };
 
   const handleBulkStatusPick = async (next: EstimationWorkflowStatus | 'rejected') => {
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     const targets = bulkSelectedEstimations();
     if (targets.length === 0) return;
     setBulkBusy(true);
@@ -647,6 +690,10 @@ export default function EstimatorListPage() {
   };
 
   const handleArchiveStale = () => {
+    if (demoActive) {
+      showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+      return;
+    }
     const stale = rows.filter(r => isEstimationStale(r));
     if (stale.length === 0) return;
     openArchiveConfirm(stale.length, async () => {
@@ -744,7 +791,9 @@ export default function EstimatorListPage() {
       id: item.id,
       sort_order: idx,
     }));
-    await updateEstimationOrder(payload);
+    if (!demoActive) {
+      await updateEstimationOrder(payload);
+    }
   };
 
   const quotaUsed = lifetimeCount ?? listStats.total;
@@ -812,7 +861,7 @@ export default function EstimatorListPage() {
           </div>
           <div className="min-w-0">
             <div className="text-xs font-black text-slate-900 truncate">
-              Panduan Aplikasi Estimator Resmi
+              Panduan Aplikasi Froyek Estimator Resmi
             </div>
             <p className="text-[11px] text-slate-500 truncate">
               Kalkulator margin, rumus waste 8%, kop surat kustom, &amp; kirim WA
@@ -1031,6 +1080,10 @@ export default function EstimatorListPage() {
         isProjectActive={isStatusPickerProjectActive}
         onUnlinkProject={async () => {
           if (!statusPickerEst) return;
+          if (demoActive) {
+            showToast('Aksi estimasi tidak tersedia di mode demo', 'info');
+            return;
+          }
           try {
             await unlinkEstimationProject(statusPickerEst.id);
             showToast('Kaitan proyek dilepas. Status diubah ke Disetujui', 'success');
@@ -1106,7 +1159,7 @@ export default function EstimatorListPage() {
         />
       )}
 
-      {onboardingOpen && tenant?.id && user?.id && (
+      {!demoActive && onboardingOpen && tenant?.id && user?.id && (
         <EstimatorOnboardingWizard
           open={onboardingOpen}
           orgId={tenant.id}

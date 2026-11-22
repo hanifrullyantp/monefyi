@@ -86,9 +86,9 @@ const ANGLE_TEMPLATES: Record<CopyAngle, { headlines: string[]; bodies: string[]
       "Menang Closing Cepat Saat Survei Lokasi",
     ],
     bodies: [
-      "Masih bawa catatan kertas saat survei lalu lembur sampai malam di Excel? Dengan Monefyi Estimator, cukup input ukuran di HP saat survei lokasi dan kirim PDF penawaran berlogo ke WA klien sebelum pulang.",
+      "Masih bawa catatan kertas saat survei lalu lembur sampai malam di Excel? Dengan Froyek Estimator, cukup input ukuran di HP saat survei lokasi dan kirim PDF penawaran berlogo ke WA klien sebelum pulang.",
       "Sering kalah cepat karena vendor sebelah sudah kirim harga duluan? Hitung HPP bahan + upah tukang akurat dalam 1 menit langsung di HP saat survei, lalu kirim PDF penawaran rapi saat itu juga.",
-      "Tidak perlu tunggu sampai kantor untuk hitung penawaran proyek. Pilih template di Monefyi Estimator, masukkan ukuran, PDF penawaran siap kirim ke WhatsApp klien sebelum Anda beranjak dari lokasi.",
+      "Tidak perlu tunggu sampai kantor untuk hitung penawaran proyek. Pilih template di Froyek Estimator, masukkan ukuran, PDF penawaran siap kirim ke WhatsApp klien sebelum Anda beranjak dari lokasi.",
     ],
   },
   pain_tekor: {
@@ -100,9 +100,9 @@ const ANGLE_TEMPLATES: Record<CopyAngle, { headlines: string[]; bodies: string[]
       "Cek HPP Akurat Sebelum Kirim Harga",
     ],
     bodies: [
-      "Proyek terlihat ramai tapi pas tutup buku malah tekor? Sering kali kebocoran terjadi di HPP material dan upah borongan yang terlewat di Excel manual. Kunci margin laba proyek Anda dengan Monefyi Estimator.",
-      "Satu kesalahan rumus Excel bisa bikin tekor jutaan rupiah beli material. Gunakan Monefyi Estimator: perhitungan bahan, aksesoris, dan upah tukang terstruktur otomatis langsung dari HP.",
-      "Berhenti membuang waktu berjam-jam membuat RAB yang akhirnya dighosting klien atau bikin rugi di akhir proyek. Hitung biaya modal riil secara akurat dalam hitungan menit dengan Monefyi Estimator.",
+      "Proyek terlihat ramai tapi pas tutup buku malah tekor? Sering kali kebocoran terjadi di HPP material dan upah borongan yang terlewat di Excel manual. Kunci margin laba proyek Anda dengan Froyek Estimator.",
+      "Satu kesalahan rumus Excel bisa bikin tekor jutaan rupiah beli material. Gunakan Froyek Estimator: perhitungan bahan, aksesoris, dan upah tukang terstruktur otomatis langsung dari HP.",
+      "Berhenti membuang waktu berjam-jam membuat RAB yang akhirnya dighosting klien atau bikin rugi di akhir proyek. Hitung biaya modal riil secara akurat dalam hitungan menit dengan Froyek Estimator.",
     ],
   },
   bukti_profesional: {
@@ -114,7 +114,7 @@ const ANGLE_TEMPLATES: Record<CopyAngle, { headlines: string[]; bodies: string[]
       "Saring Klien Serius Sejak Penawaran",
     ],
     bodies: [
-      "Klien proyek besar menilai keseriusan vendor dari kerapian penawaran pertamanya. Dengan Monefyi Estimator, Anda langsung menghasilkan PDF penawaran berlogo usaha sendiri yang detail dan meyakinkan langsung dari HP.",
+      "Klien proyek besar menilai keseriusan vendor dari kerapian penawaran pertamanya. Dengan Froyek Estimator, Anda langsung menghasilkan PDF penawaran berlogo usaha sendiri yang detail dan meyakinkan langsung dari HP.",
       "Naikkan kelas layanan kontraktor dan workshop interior Anda. Setiap rincian pekerjaan, volume, material, dan margin keuntungan terhitung rapi dalam PDF siap kirim ke WhatsApp owner.",
       "Tinggalkan penawaran tulis tangan atau chat WA berantakan. Kirim dokumen PDF penawaran profesional berlogo brand Anda sendiri agar klien yakin dan cepat memutuskan DP.",
     ],
@@ -128,9 +128,9 @@ const ANGLE_TEMPLATES: Record<CopyAngle, { headlines: string[]; bodies: string[]
       "Investasi Sekali Pakai Selamanya di HP",
     ],
     bodies: [
-      "Cukup bayar satu kali tanpa biaya bulanan yang membebani kas proyek. Monefyi Estimator membantu kontraktor dan vendor interior menghitung RAB cepat dan mengirim PDF penawaran profesional dari HP.",
-      "Bandingkan biaya satu kali kesalahan hitung di Excel dengan lisensi Monefyi Estimator yang hanya sekali bayar. Mulai dari Rp 93.000 untuk Standard atau Rp 199.000 untuk fitur lengkap Pro.",
-      "Amankan harga promo sekali bayar Monefyi Estimator sekarang. Semua template RAB bangunan & kitchen set siap pakai langsung dari smartphone Anda saat survei lokasi.",
+      "Cukup bayar satu kali tanpa biaya bulanan yang membebani kas proyek. Froyek Estimator membantu kontraktor dan vendor interior menghitung RAB cepat dan mengirim PDF penawaran profesional dari HP.",
+      "Bandingkan biaya satu kali kesalahan hitung di Excel dengan lisensi Froyek Estimator yang hanya sekali bayar. Mulai dari Rp 93.000 untuk Standard atau Rp 199.000 untuk fitur lengkap Pro.",
+      "Amankan harga promo sekali bayar Froyek Estimator sekarang. Semua template RAB bangunan & kitchen set siap pakai langsung dari smartphone Anda saat survei lokasi.",
     ],
   },
   umum: {
@@ -140,8 +140,8 @@ const ANGLE_TEMPLATES: Record<CopyAngle, { headlines: string[]; bodies: string[]
       "Kirim PDF Penawaran Langsung ke WA Klien",
     ],
     bodies: [
-      "Monefyi Estimator membantu kontraktor dan desainer interior menghitung RAB material dan upah tukang dalam hitungan menit di HP, lalu mengirim PDF penawaran berlogo ke WhatsApp klien.",
-      "Tinggalkan cara manual yang rawan salah hitung. Gunakan Monefyi Estimator untuk menyusun estimasi biaya dan penawaran proyek lebih cepat dan rapi langsung saat survei.",
+      "Froyek Estimator membantu kontraktor dan desainer interior menghitung RAB material dan upah tukang dalam hitungan menit di HP, lalu mengirim PDF penawaran berlogo ke WhatsApp klien.",
+      "Tinggalkan cara manual yang rawan salah hitung. Gunakan Froyek Estimator untuk menyusun estimasi biaya dan penawaran proyek lebih cepat dan rapi langsung saat survei.",
     ],
   },
 };

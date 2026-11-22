@@ -26,7 +26,10 @@ export default function EstimatorPaywall() {
       </div>
       <Calculator className="w-10 h-10 text-emerald-600 mx-auto mb-3" />
 
-      <h1 className="text-2xl font-black text-slate-900">Lanjut dengan Estimator</h1>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 mb-1">
+        Modul Estimator · Froyek
+      </p>
+      <h1 className="text-2xl font-black text-slate-900">Lanjut dengan Froyek Estimator</h1>
       <p className="text-sm text-slate-500 mt-2">
         Coba gratis {FREE_ESTIMATION_LIMIT} estimasi, atau langsung ambil Standard / Pro sekali bayar.
       </p>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -8,6 +8,7 @@ import {
   Settings2,
   Check,
   Ban,
+  Trash2,
   ExternalLink,
   Sparkles,
   CheckCircle2,
@@ -63,6 +64,68 @@ const DIVISION_PROMPTS: Record<DivisionId, string> = {
   hr: 'Bu Nadia, cek daftar tim, kasbon yang menunggu, dan tugas aktif hari ini',
   purchasing: 'Pak Hendra, cek item harga material di database master pricelist kita',
 };
+
+/** Render inline markdown (**bold**, *italic*, `code`) safely as React nodes without dangerouslySetInnerHTML. */
+function renderFormattedInline(text: string, dark = false): ReactNode[] {
+  if (!text) return [text];
+  const tokenRe = /(\*\*[^*\n]+?\*\*|`[^`\n]+?`|\*[^\s*\n](?:[^*\n]*?[^\s*\n])?\*)/g;
+  const parts: ReactNode[] = [];
+  let lastIdx = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = tokenRe.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      parts.push(text.slice(lastIdx, match.index));
+    }
+    const token = match[0];
+    if (token.startsWith('**') && token.endsWith('**')) {
+      parts.push(
+        <strong key={`b-${key++}`} className="font-bold">
+          {token.slice(2, -2)}
+        </strong>,
+      );
+    } else if (token.startsWith('`') && token.endsWith('`')) {
+      parts.push(
+        <code
+          key={`c-${key++}`}
+          className={`px-1 py-0.5 rounded text-[12px] font-mono ${
+            dark ? 'bg-white/10 text-emerald-200' : 'bg-slate-100 text-slate-800'
+          }`}
+        >
+          {token.slice(1, -1)}
+        </code>,
+      );
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      parts.push(
+        <em key={`i-${key++}`} className="italic">
+          {token.slice(1, -1)}
+        </em>,
+      );
+    }
+    lastIdx = tokenRe.lastIndex;
+  }
+
+  if (lastIdx < text.length) {
+    parts.push(text.slice(lastIdx));
+  }
+  return parts.length > 0 ? parts : [text];
+}
+
+function formatProjectDraftSummary(params: Record<string, unknown>): string {
+  const name = String(params.name || '').trim() || 'Proyek Baru';
+  const client = String(params.client || '').trim();
+  const cvRaw = params.contract_value;
+  const cv = cvRaw !== undefined && cvRaw !== null && String(cvRaw).trim() !== '' ? Number(cvRaw) : NaN;
+  const endDate = String(params.end_date || '').trim();
+  const parts: string[] = [];
+  if (client) parts.push(`Klien: ${client}`);
+  if (Number.isFinite(cv) && cv > 0) {
+    parts.push(`Kontrak: Rp ${cv.toLocaleString('id-ID')}`);
+  }
+  if (endDate) parts.push(`Target: ${endDate}`);
+  return `Buat proyek baru "${name}"${parts.length ? ` (${parts.join(' · ')})` : ''}`;
+}
 
 export default function ManagerWorkspaceModal({
   onClose,
@@ -166,6 +229,45 @@ export default function ManagerWorkspaceModal({
           },
       ),
     );
+
+  const removeAction = (turnId: string, actionId: string) =>
+    setItems(cur =>
+      cur.map(it =>
+        it.id !== turnId || !it.turn
+          ? it
+          : {
+            ...it,
+            turn: {
+              ...it.turn,
+              actions: it.turn.actions.filter(a => a.id !== actionId),
+            },
+          },
+      ),
+    );
+
+  const updateProjectDraftField = (
+    turnId: string,
+    action: AgentAction,
+    key: 'name' | 'client' | 'contract_value' | 'end_date',
+    rawValue: string,
+  ) => {
+    const nextParams = { ...action.params };
+    if (key === 'contract_value') {
+      const digits = rawValue.replace(/[^0-9]/g, '');
+      if (digits === '') {
+        delete nextParams.contract_value;
+      } else {
+        const parsed = Number(digits);
+        nextParams.contract_value = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+      }
+    } else {
+      nextParams[key] = rawValue;
+    }
+    patchAction(turnId, action.id, {
+      params: nextParams,
+      summary: formatProjectDraftSummary(nextParams),
+    });
+  };
 
   const runAction = async (turnId: string, action: AgentAction) => {
     if (!env) return;
@@ -311,70 +413,75 @@ export default function ManagerWorkspaceModal({
         onClick={e => e.stopPropagation()}
       >
         {/* Header Ruang Komando GM */}
-        <header className="px-4 py-3 border-b bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-xl shrink-0">
-            👔
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-white text-sm truncate">General Manager & Tim Operasional</h2>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                <span className={`w-1.5 h-1.5 rounded-full ${busy ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-                {busy ? 'Sedang Bekerja' : config.executionMode === 'auto' ? 'Auto-Pilot Aktif' : 'Mode Review'}
-              </span>
+        <header className="px-4 py-3 border-b bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 flex-1 min-w-[210px]">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-lg sm:text-xl shrink-0">
+              👔
             </div>
-            <p className="text-[11px] text-slate-300 truncate mt-0.5">
-              {keyReady
-                ? `${meta.label} · ${getActiveModel(config, workingProvider)} · 5 Kepala Divisi Siap`
-                : 'Mode Mesin Lokal Aktif (Isi API Key untuk diskusi LLM penuh)'}
-            </p>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h2 className="font-bold text-white text-sm truncate max-w-full">General Manager &amp; Tim Operasional</h2>
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 whitespace-nowrap shrink-0">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${busy ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+                  {busy ? 'Sedang Bekerja' : config.executionMode === 'auto' ? 'Auto-Pilot Aktif' : 'Mode Review'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 truncate mt-0.5">
+                {keyReady
+                  ? `${meta.label} · ${getActiveModel(config, workingProvider)} · 5 Kepala Divisi Siap`
+                  : 'Mode Mesin Lokal Aktif (Isi API Key untuk diskusi LLM penuh)'}
+              </p>
+            </div>
           </div>
 
-          <button
-            type="button"
-            title="Tes koneksi AI"
-            disabled={testingConn || !keyReady}
-            className="text-xs px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 inline-flex items-center gap-1 font-semibold text-white disabled:opacity-40"
-            onClick={() => void runConnectionTest()}
-          >
-            {testingConn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            Tes AI
-          </button>
-          <button
-            type="button"
-            title="Konfigurasi API Key & Model AI"
-            className={`text-xs px-2.5 py-1.5 rounded-xl border inline-flex items-center gap-1 font-semibold transition-colors ${showKeyConfig
-                ? 'bg-emerald-500 text-white border-emerald-400'
-                : 'bg-white/10 hover:bg-white/20 text-white border-white/15'
-              }`}
-            onClick={() => {
-              setShowKeyConfig(v => !v);
-              setConfigVersion(v => v + 1);
-            }}
-          >
-            <Settings2 className="w-3.5 h-3.5" /> API Key
-          </button>
-          <button
-            type="button"
-            title="Mode Input Cepat"
-            className="text-xs px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold"
-            onClick={() => {
-              if (onSwitchToQuick) onSwitchToQuick();
-              else {
-                onClose();
-                setCommandModalOpen(true);
-              }
-            }}
-          >
-            ⚡ Cepat
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            <button
+              type="button"
+              title="Tes koneksi AI"
+              disabled={testingConn || !keyReady}
+              className="text-xs px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 inline-flex items-center gap-1 font-semibold text-white disabled:opacity-40 whitespace-nowrap shrink-0"
+              onClick={() => void runConnectionTest()}
+            >
+              {testingConn ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              Tes AI
+            </button>
+            <button
+              type="button"
+              title="Konfigurasi API Key & Model AI"
+              className={`text-xs px-2.5 py-1.5 rounded-xl border inline-flex items-center gap-1 font-semibold transition-colors whitespace-nowrap shrink-0 ${showKeyConfig
+                  ? 'bg-emerald-500 text-white border-emerald-400'
+                  : 'bg-white/10 hover:bg-white/20 text-white border-white/15'
+                }`}
+              onClick={() => {
+                setShowKeyConfig(v => !v);
+                setConfigVersion(v => v + 1);
+              }}
+            >
+              <Settings2 className="w-3.5 h-3.5" /> API Key
+            </button>
+            <button
+              type="button"
+              title="Mode Input Cepat"
+              className="text-xs px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold whitespace-nowrap shrink-0"
+              onClick={() => {
+                if (onSwitchToQuick) onSwitchToQuick();
+                else {
+                  onClose();
+                  setCommandModalOpen(true);
+                }
+              }}
+            >
+              ⚡ Cepat
+            </button>
+            <button
+              type="button"
+              aria-label="Tutup"
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </header>
 
         {showKeyConfig && (
@@ -507,7 +614,7 @@ export default function ManagerWorkspaceModal({
                       <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 mb-1">
                         <span>👔 General Manager</span>
                       </div>
-                      <div className="whitespace-pre-wrap leading-relaxed">{it.content}</div>
+                      <div className="whitespace-pre-wrap leading-relaxed">{renderFormattedInline(it.content)}</div>
                     </div>
                   )}
 
@@ -533,7 +640,7 @@ export default function ManagerWorkspaceModal({
                               <div className="font-semibold text-emerald-300">
                                 {DIVISIONS[d.division].headName}
                               </div>
-                              <div className="text-slate-300 leading-snug">{d.note}</div>
+                              <div className="text-slate-300 leading-snug">{renderFormattedInline(d.note, true)}</div>
                             </div>
                           </div>
                         ))}
@@ -557,12 +664,12 @@ export default function ManagerWorkspaceModal({
                             }`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="space-y-0.5">
+                            <div className="space-y-0.5 min-w-0">
                               <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600">
                                 <span>{DIVISIONS[a.division].emoji}</span>
                                 <span>{DIVISIONS[a.division].headName}</span>
                               </div>
-                              <p className="font-bold text-slate-900">{a.summary}</p>
+                              <p className="font-bold text-slate-900">{renderFormattedInline(a.summary)}</p>
                             </div>
                             <span
                               className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full ${a.status === 'done'
@@ -597,18 +704,70 @@ export default function ManagerWorkspaceModal({
                                 }`}
                             >
                               {a.status === 'done' ? '✓ Hasil Kerja: ' : '⚠️ Kendala: '}
-                              {a.resultMessage}
+                              {renderFormattedInline(a.resultMessage)}
                             </p>
                           )}
 
+                          {a.status === 'pending' && a.type === 'add_project' && (
+                            <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <label className="block space-y-1">
+                                <span className="text-[11px] font-semibold text-slate-600">Nama Proyek</span>
+                                <input
+                                  type="text"
+                                  value={String(a.params.name ?? '')}
+                                  onChange={e => updateProjectDraftField(it.id, a, 'name', e.target.value)}
+                                  placeholder="Wajib diisi"
+                                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </label>
+                              <label className="block space-y-1">
+                                <span className="text-[11px] font-semibold text-slate-600">Klien</span>
+                                <input
+                                  type="text"
+                                  value={String(a.params.client ?? '')}
+                                  onChange={e => updateProjectDraftField(it.id, a, 'client', e.target.value)}
+                                  placeholder="Nama klien (opsional)"
+                                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </label>
+                              <label className="block space-y-1">
+                                <span className="text-[11px] font-semibold text-slate-600">Nilai Kontrak (Rp)</span>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={
+                                    a.params.contract_value !== undefined &&
+                                    a.params.contract_value !== null &&
+                                    String(a.params.contract_value) !== ''
+                                      ? String(a.params.contract_value)
+                                      : ''
+                                  }
+                                  onChange={e => updateProjectDraftField(it.id, a, 'contract_value', e.target.value)}
+                                  placeholder="Contoh: 250000000"
+                                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </label>
+                              <label className="block space-y-1">
+                                <span className="text-[11px] font-semibold text-slate-600">Target Selesai</span>
+                                <input
+                                  type="date"
+                                  value={String(a.params.end_date ?? '')}
+                                  onChange={e => updateProjectDraftField(it.id, a, 'end_date', e.target.value)}
+                                  className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                />
+                              </label>
+                            </div>
+                          )}
+
                           {a.status === 'pending' && (
-                            <div className="mt-3 flex gap-2">
+                            <div className="mt-3 flex flex-wrap gap-2">
                               <button
                                 type="button"
+                                disabled={a.type === 'add_project' && !String(a.params.name ?? '').trim()}
                                 onClick={() => void runAction(it.id, a)}
-                                className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                                className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-45 disabled:cursor-not-allowed"
                               >
-                                <Check className="w-3.5 h-3.5" /> Setujui & Eksekusi
+                                <Check className="w-3.5 h-3.5" /> Setujui &amp; Eksekusi
                               </button>
                               <button
                                 type="button"
@@ -616,6 +775,26 @@ export default function ManagerWorkspaceModal({
                                 className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600"
                               >
                                 <Ban className="w-3.5 h-3.5" /> Batalkan
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeAction(it.id, a.id)}
+                                title="Hapus draf yang belum dieksekusi"
+                                className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-500 ml-auto"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Hapus Draf
+                              </button>
+                            </div>
+                          )}
+
+                          {a.status === 'rejected' && (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                onClick={() => removeAction(it.id, a.id)}
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-rose-700"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Hapus draf dari daftar
                               </button>
                             </div>
                           )}

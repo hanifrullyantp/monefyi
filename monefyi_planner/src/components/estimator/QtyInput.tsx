@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { formatNumberId } from '../../lib/estimatorFormat';
-import { parseDimensionInput } from '../../lib/estimatorDimension';
+import { isCompleteDimensionInput, parseDimensionInput } from '../../lib/estimatorDimension';
 
 interface Props {
   value: number;
@@ -20,11 +20,8 @@ function displayValue(n: number): string {
 }
 
 /**
- * Input ukuran cerdas:
- * 1. Bisa diisi total panjang biasa (misal: "4")
- * 2. Bisa diisi format segmen siku L (misal: "2+2", "2.4+1.8", "2x2")
- *    - Jika diisi L, total bertambah otomatis
- *    - Jika diisi total manual, ukuran L terhapus otomatis
+ * Quantity bisa diisi langsung (6) atau berapa kali berapa (2x3, 2 kali 3).
+ * Hasil perkalian menjadi quantity. "2+2" tetap jumlah dinding siku.
  */
 export default function QtyInput({
   value,
@@ -68,27 +65,27 @@ export default function QtyInput({
       return;
     }
 
+    if (!isCompleteDimensionInput(trimmed)) return;
+
     const parsed = parseDimensionInput(trimmed);
     const finalVal = Math.max(min, parsed.total);
     onChange(finalVal, parsed.expr);
+    setText(parsed.expr && parsed.isL ? parsed.expr : displayValue(finalVal));
+  };
 
-    if (parsed.expr) {
-      setText(parsed.expr);
-    } else {
-      setText(displayValue(finalVal));
-    }
+  const commitFromInput = (raw: string) => {
+    if (raw.trim() === '' && value <= 0 && !dimensionExpr) return;
+    commit(raw);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      commit(text);
-      (e.target as HTMLInputElement).blur();
-    }
+    if (e.key === 'Enter') e.currentTarget.blur();
     onKeyDown?.(e);
   };
 
-  const shown = focused ? text : dimensionExpr ? dimensionExpr : displayValue(value);
   const isLMode = Boolean(dimensionExpr && dimensionExpr.includes('+'));
+  const isProduct = Boolean(dimensionExpr && /[x*]/i.test(dimensionExpr) && !isLMode);
+  const shown = focused ? text : isLMode && dimensionExpr ? dimensionExpr : displayValue(value);
 
   return (
     <div className="relative w-full">
@@ -98,22 +95,21 @@ export default function QtyInput({
         inputMode="text"
         value={shown}
         title={
-          title ||
-          (isLMode
-            ? `Bentuk L (${dimensionExpr}) = Total ${displayValue(value)} m`
-            : value > 0
-            ? `Total: ${displayValue(value)}`
-            : undefined)
+          isProduct
+            ? `${dimensionExpr} = ${displayValue(value)}`
+            : isLMode
+              ? `Bentuk L (${dimensionExpr}) = ${displayValue(value)} m`
+              : title || (value > 0 ? `Quantity: ${displayValue(value)}` : undefined)
         }
-        placeholder={placeholder || '0 atau 2+2'}
+        placeholder={placeholder || '6 atau 2x3'}
         onMouseUp={e => e.preventDefault()}
         onFocus={() => {
           setFocused(true);
           setText(dimensionExpr || displayValue(value));
         }}
-        onBlur={() => {
+        onBlur={e => {
           setFocused(false);
-          commit(text);
+          commitFromInput(e.currentTarget.value);
         }}
         onChange={e => setText(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -122,13 +118,20 @@ export default function QtyInput({
         } placeholder:text-slate-400`}
       />
 
-      {/* Indikator kecil jika terisi segmen L saat tidak fokus */}
       {!focused && isLMode && (
         <span
           className="absolute -bottom-3.5 right-1 text-[9px] font-extrabold text-amber-700 bg-amber-100/90 px-1 rounded tracking-tight pointer-events-none"
           title={`Total dihitung otomatis: ${displayValue(value)}`}
         >
           Σ {displayValue(value)}m
+        </span>
+      )}
+      {!focused && isProduct && dimensionExpr && (
+        <span
+          className="absolute -bottom-3.5 right-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-100/90 px-1 rounded tracking-tight pointer-events-none"
+          title={`${dimensionExpr} = ${displayValue(value)}`}
+        >
+          {dimensionExpr}
         </span>
       )}
     </div>

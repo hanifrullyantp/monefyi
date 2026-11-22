@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Home, FolderOpen, Wallet, Settings, Bell, Menu, X, ArrowLeft,
+  Home, FolderOpen, Wallet, Settings, Bell, Menu, X, ArrowLeft, LogOut,
   Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
   BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User, Eye, BookOpen,
 } from 'lucide-react';
@@ -13,16 +13,17 @@ import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
 import { AppHeader, AccountMenu, BottomNav } from './common';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
+import ErrorBoundary from './ErrorBoundary';
 import PreviewModeMenu from './layout/PreviewModeMenu';
 import EntitlementPreviewPanel from './layout/EntitlementPreviewPanel';
 import { PlannerLogo } from './MonefyiLogo';
 import { EstimatorLogo } from './EstimatorLogo';
-import { shouldShowEstimatorProductBrand } from '../lib/appProductBrand';
+import { hasEstimatorLicenseAccess, shouldShowEstimatorProductBrand } from '../lib/appProductBrand';
 import { ESTIMATOR_THEME_COLOR } from '../lib/estimatorBrand';
 import ToastHost from './ToastHost';
 import EstimatorLaunchPromoAdminModal from './admin/EstimatorLaunchPromoAdminModal';
 import UndoToast from './ui/UndoToast';
-import { loadFinanceVersion } from '../lib/financeVersion';
+import { loadFinanceVersion, isSandboxFinance } from '../lib/financeVersion';
 import { loadMigrationFlags } from '../lib/migrationFlags';
 import { DEFAULT_MIGRATION_FLAGS } from '../types/rpp';
 import { useOrgBrand } from '../hooks/useOrgBrand';
@@ -45,13 +46,13 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const {
-    user, tenant, activeTab, setActiveTab, setFinanceVersionPreference,
+    user, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
     migrationFlags, setMigrationFlags,
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
     rightPanelHidden, toggleRightPanelHidden,
     platformRole, uiViewMode, setUiViewMode, entitlementPreviewMode,
-    selectedProjectId, logout,
+    selectedProjectId, logout, isDemoMode,
   } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -65,14 +66,14 @@ export default function Layout({ children }: LayoutProps) {
   const { isLoading: entitlementLoading } = entitlement;
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || isDemoMode || tenant?.id === 'demo') return;
     loadFinanceVersion(user.id)
       .then(setFinanceVersionPreference)
       .catch(() => setFinanceVersionPreference('v3'));
     loadMigrationFlags(user.id)
       .then(setMigrationFlags)
       .catch(() => setMigrationFlags({ ...DEFAULT_MIGRATION_FLAGS }));
-  }, [user?.id, setFinanceVersionPreference, setMigrationFlags]);
+  }, [user?.id, isDemoMode, tenant?.id, setFinanceVersionPreference, setMigrationFlags]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -88,9 +89,12 @@ export default function Layout({ children }: LayoutProps) {
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
   const estimatorOnly = !adminFullAccess && isEstimatorOnlyPlan(entitlement);
   const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
+  const canEditOrg = user?.role === 'owner';
+  const defaultSettingsTab = canEditOrg ? 'organisasi' : 'profil';
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
   const hideMobileProductNav = estimatorOnly && isEstimatorShell;
+  const hasEstimatorAccess = hasEstimatorLicenseAccess(entitlement, adminFullAccess);
   const showEstimatorBrand =
     !adminFullAccess && shouldShowEstimatorProductBrand(entitlement);
 
@@ -111,7 +115,7 @@ export default function Layout({ children }: LayoutProps) {
       { id: 'home', label: 'Home', icon: Home },
       { id: 'projects', label: 'Proyek', icon: FolderOpen },
       { id: 'command', label: '✦', icon: Sparkles, special: true },
-      { id: 'estimator', label: 'Estimator', icon: Receipt },
+      ...(hasEstimatorAccess ? [{ id: 'estimator', label: 'Estimator', icon: Receipt }] : []),
       { id: 'finance', label: 'Finance', icon: Wallet },
     ];
 
@@ -140,7 +144,9 @@ export default function Layout({ children }: LayoutProps) {
       return activeTab === 'home'
         && !location.pathname.startsWith('/app/estimator')
         && !location.pathname.startsWith('/app/finance-v2')
-        && !location.pathname.startsWith('/app/database');
+        && !location.pathname.startsWith('/app/database')
+        && !location.pathname.startsWith('/app/settings')
+        && !location.pathname.startsWith('/app/uji-agen');
     }
     return activeTab === tabId;
   };
@@ -154,7 +160,7 @@ export default function Layout({ children }: LayoutProps) {
       { id: 'home', label: 'Dashboard', icon: Home },
       { id: 'projects', label: 'Proyek', icon: FolderOpen },
       { id: 'database', label: 'Database', icon: Database },
-      { id: 'estimator', label: 'Estimator', icon: Receipt },
+      ...(hasEstimatorAccess ? [{ id: 'estimator', label: 'Estimator', icon: Receipt }] : []),
       { id: 'finance', label: 'Keuangan Bisnis', icon: Wallet },
       ...(canAccessHr
         ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
@@ -226,10 +232,10 @@ export default function Layout({ children }: LayoutProps) {
       navigate('/app/database');
     } else if (tabId === 'finance') {
       setActiveTab('finance');
-      navigate('/app/finance-v2');
+      navigate(isSandboxFinance(financeVersion) ? '/app/finance-v2' : '/app?tab=finance');
     } else {
-      navigate('/app');
       setActiveTab(tabId);
+      navigate(`/app?tab=${tabId}`);
     }
     setSidebarOpen(false);
   };
@@ -246,9 +252,14 @@ export default function Layout({ children }: LayoutProps) {
     setSidebarOpen(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
   const openCommandModal = () => {
     if (estimatorOnly) {
-      openUpgrade('pro_feature', 'Monefyi AI');
+      openUpgrade('pro_feature', 'Froyek AI');
       return;
     }
     setCommandModalOpen(true);
@@ -267,19 +278,19 @@ export default function Layout({ children }: LayoutProps) {
   const lastSyncText = lastSynced ? `${Math.floor((Date.now() - lastSynced.getTime()) / 60000)} mnt lalu` : 'Belum pernah';
 
   const userMenuItems = [
-    {
+    ...(hasEstimatorAccess ? [{
       id: 'guide',
       label: 'Panduan Aplikasi',
       icon: <BookOpen className="w-4 h-4 shrink-0 text-emerald-600" />,
       onClick: () => navigate('/app/estimator/guide'),
-    },
+    }] : []),
     {
       id: 'profile',
       label: 'Profil saya',
       icon: <User className="w-4 h-4 shrink-0" />,
       onClick: () => goSettingsTab('profil'),
     },
-    ...(isEstimatorShell ? [{
+    ...(isEstimatorShell && hasEstimatorAccess ? [{
       id: 'estimator-settings',
       label: 'Pengaturan Penawaran & PDF',
       icon: <Settings className="w-4 h-4 shrink-0" />,
@@ -289,7 +300,7 @@ export default function Layout({ children }: LayoutProps) {
       id: 'settings',
       label: isEstimatorShell ? 'Semua Pengaturan' : 'Pengaturan',
       icon: <Settings className="w-4 h-4 shrink-0" />,
-      onClick: () => goSettingsTab('organisasi'),
+      onClick: () => goSettingsTab(defaultSettingsTab),
     },
     ...(isSuperAdmin ? [{
       id: 'admin',
@@ -343,22 +354,24 @@ export default function Layout({ children }: LayoutProps) {
         className={`hidden lg:flex flex-col shell-sidebar z-30 transition-[width] duration-200 shrink-0 ${navSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
           }`}
       >
-        {/* Logo + collapse + Monefyi AI */}
+        {/* Logo + collapse + Froyek AI */}
         <div className={`${navSidebarCollapsed ? 'px-2 py-3' : 'p-4'}`}>
           <div className={`flex items-center gap-2 ${navSidebarCollapsed ? 'flex-col' : ''}`}>
             {showEstimatorBrand ? (
-              <EstimatorLogo className="rounded-xl object-contain shadow-xs shrink-0 w-9 h-9" />
-            ) : (
-              <PlannerLogo
-                className={`rounded-xl object-contain shrink-0 ${navSidebarCollapsed ? 'w-9 h-9' : 'w-9 h-9'}`}
-              />
-            )}
+              <EstimatorLogo className="rounded-xl object-contain shrink-0 w-9 h-9" />
+            ) : navSidebarCollapsed ? (
+              <PlannerLogo className="w-8 h-8 object-contain shrink-0" />
+            ) : null}
             {!navSidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <div className={showEstimatorBrand ? 'font-black text-sm leading-tight text-[#0F172A]' : 'froyek-wordmark text-sm leading-tight'}>
-                  {showEstimatorBrand ? 'Estimator' : 'froyek'}
+                {showEstimatorBrand ? (
+                  <div className="font-black text-sm leading-tight text-[#0F172A]">Estimator</div>
+                ) : (
+                  <PlannerLogo variant="lockup" />
+                )}
+                <div className="text-[11px] text-[#5B6B7A] font-medium truncate">
+                  {showEstimatorBrand ? 'Froyek Workspace' : 'Agent for your Project'}
                 </div>
-                <div className="text-[11px] text-[#5B6B7A] font-medium truncate">{showEstimatorBrand ? 'Monefyi Workspace' : 'Agent for your Project'}</div>
               </div>
             )}
             <button
@@ -383,7 +396,7 @@ export default function Layout({ children }: LayoutProps) {
               ? 'w-11 h-11 mx-auto rounded-xl'
               : 'w-full h-11 rounded-xl gap-2'
               }`}
-            style={{ background: 'linear-gradient(135deg, #0A3A2E 0%, #047857 50%, #10B981 100%)' }}
+            style={{ background: 'linear-gradient(135deg, #0A3A2E 0%, #047857 55%, #10B981 100%)' }}
             aria-label="Buka Agent"
             title="Agent"
           >
@@ -457,6 +470,23 @@ export default function Layout({ children }: LayoutProps) {
         {isSuperAdmin && (
           <EntitlementPreviewPanel collapsed={navSidebarCollapsed} />
         )}
+
+        <div className={`border-t border-[#E5EAE8] shrink-0 ${navSidebarCollapsed ? 'p-2' : 'p-3'}`}>
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
+            title={navSidebarCollapsed ? (isDemoMode ? 'Keluar Demo' : 'Keluar') : undefined}
+            aria-label={isDemoMode ? 'Keluar Demo' : 'Keluar'}
+            className={`w-full flex items-center rounded-xl text-sm font-bold text-[#9F1239] bg-[#FFF1F2] border border-[#FECDD3] hover:bg-rose-100 transition-colors min-h-11 ${
+              navSidebarCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3.5 py-2.5'
+            }`}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            {!navSidebarCollapsed && (
+              <span className="truncate">{isDemoMode ? 'Keluar Demo' : 'Keluar'}</span>
+            )}
+          </button>
+        </div>
       </aside>
 
       {/* Mobile Drawer (Account Menu) */}
@@ -469,8 +499,18 @@ export default function Layout({ children }: LayoutProps) {
           setSidebarOpen(false);
         }}
         userName={user?.name || 'User'}
-        userRole={user?.role === 'owner' ? 'Pemilik' : user?.role === 'manager' ? 'Manajer' : user?.role === 'admin' ? 'Admin' : 'Staff'}
-        tenantName={tenant?.name || 'Monefyi'}
+        userRole={
+          user?.role === 'owner'
+            ? 'Pemilik'
+            : user?.role === 'manager'
+              ? 'Manajer'
+              : user?.role === 'admin'
+                ? 'Admin'
+                : user?.role === 'worker'
+                  ? 'Pekerja'
+                  : 'Staff'
+        }
+        tenantName={tenant?.name || 'Froyek'}
         isSuperAdmin={isSuperAdmin}
         uiViewMode={uiViewMode}
         onOpenPreviewMode={() => setPreviewSheetOpen(true)}
@@ -479,10 +519,10 @@ export default function Layout({ children }: LayoutProps) {
           setSidebarOpen(false);
         }}
         onOpenSettings={() => {
-          if (isEstimatorShell) {
+          if (isEstimatorShell && hasEstimatorAccess) {
             void goSettingsTab('estimator');
           } else {
-            void goSettingsTab('organisasi');
+            void goSettingsTab(defaultSettingsTab);
           }
           setSidebarOpen(false);
         }}
@@ -491,15 +531,16 @@ export default function Layout({ children }: LayoutProps) {
           setSidebarOpen(false);
         }}
         onOpenFullSettings={() => {
-          void goSettingsTab('organisasi');
+          void goSettingsTab(defaultSettingsTab);
           setSidebarOpen(false);
         }}
         onLogout={() => {
           setSidebarOpen(false);
-          void logout();
+          void handleLogout();
         }}
         isOnline={isOnline}
         isEstimator={showEstimatorBrand}
+        showEstimator={hasEstimatorAccess}
       />
 
       {/* Main Content Area */}
@@ -624,9 +665,11 @@ export default function Layout({ children }: LayoutProps) {
                   </span>
                 )}
               </button>
-              <AnimatePresence>
-                {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
-              </AnimatePresence>
+              <ErrorBoundary componentName="NotificationPanel">
+                <AnimatePresence>
+                  {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+                </AnimatePresence>
+              </ErrorBoundary>
             </div>
 
             {isSuperAdmin && <PreviewModeMenu />}
@@ -645,10 +688,10 @@ export default function Layout({ children }: LayoutProps) {
 
             <button
               type="button"
-              onClick={() => goSettingsTab('organisasi')}
+              onClick={() => goSettingsTab(defaultSettingsTab)}
               className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-[#F4F7F5] text-[#5B6B7A] hover:text-[#0F172A] transition-colors"
-              aria-label="Pengaturan organisasi"
-              title="Pengaturan organisasi"
+              aria-label={canEditOrg ? 'Pengaturan organisasi' : 'Pengaturan akun'}
+              title={canEditOrg ? 'Pengaturan organisasi' : 'Pengaturan akun'}
             >
               <Settings className="w-5 h-5" />
             </button>
@@ -662,14 +705,27 @@ export default function Layout({ children }: LayoutProps) {
             >
               {user?.name?.charAt(0) || 'U'}
             </button>
+
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="ml-1 inline-flex items-center gap-1.5 h-9 px-3 rounded-xl border border-[#FECDD3] bg-[#FFF1F2] text-[#9F1239] hover:bg-rose-100 text-xs font-bold transition-colors shrink-0"
+              aria-label={isDemoMode ? 'Keluar Demo' : 'Keluar'}
+              title={isDemoMode ? 'Keluar Demo' : 'Keluar'}
+            >
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden xl:inline">{isDemoMode ? 'Keluar Demo' : 'Keluar'}</span>
+            </button>
           </div>
         </header>
 
         {/* Mobile Notification Panel overlay */}
         <div className="lg:hidden">
-          <AnimatePresence>
-            {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
-          </AnimatePresence>
+          <ErrorBoundary componentName="NotificationPanel">
+            <AnimatePresence>
+              {notifOpen && <NotificationPanel onClose={() => setNotifOpen(false)} />}
+            </AnimatePresence>
+          </ErrorBoundary>
         </div>
 
         {/* Page Content + Right Panel */}
@@ -717,7 +773,7 @@ export default function Layout({ children }: LayoutProps) {
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-emerald-600 font-bold mt-1">Monefyi</span>
+                      <span className="text-xs text-emerald-600 font-bold mt-1">Froyek</span>
                     </button>
                   ) : (
                     <button
@@ -743,6 +799,7 @@ export default function Layout({ children }: LayoutProps) {
               onSelectTab={(tab) => handleNav(tab)}
               onOpenMonefyiAi={openCommandModal}
               pendingSyncCount={pendingSyncCount}
+              showEstimator={hasEstimatorAccess}
             />
           )
         )}

@@ -264,7 +264,7 @@ async function handleManual(req: NextRequest, preBody?: any) {
       }
 
       const newName =
-        body.name || `[MONEFYI WINNING DRAFT] ${new Date().toLocaleDateString("id-ID")}`;
+        body.name || `[FROYEK WINNING DRAFT] ${new Date().toLocaleDateString("id-ID")}`;
       const objective = body.objective || "OUTCOME_SALES";
       const dailyBudget = Math.max(50000, Math.round(Number(body.dailyBudget || 150000)));
 

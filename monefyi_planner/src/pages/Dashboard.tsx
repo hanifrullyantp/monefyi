@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   AlertCircle,
@@ -9,14 +10,23 @@ import {
   Plus,
 } from 'lucide-react';
 import { useAppStore, type Project } from '../store/appStore';
+import { showToast } from '../store/uiStore';
 import { getProjectStats } from '../services/projectService';
 import { getTodayAttendanceSummary } from '../services/dashboardService';
 import { aggregateNetCashflow } from '../services/projectFinanceService';
 import DashboardInteractiveCards from '../components/dashboard/DashboardInteractiveCards';
-import AgentHomePanel from '../components/dashboard/AgentHomePanel';
 import DashboardProjectList from '../components/dashboard/DashboardProjectList';
 import { loadRecentLogs } from '../services/dailyLogService';
-import { analyzeProject, type AnalyzeResult } from '../services/analyzeService';
+import {
+  analyzeProject,
+  loadLatestAnalysisSnapshot,
+  type AnalyzeResult,
+} from '../services/analyzeService';
+import {
+  getAgentBriefingLead,
+  matchesDashboardHealthFilter,
+} from '../lib/dashboard/dashboardHelpers';
+import { isDemoOrInvalidUuid } from '../lib/demo/demoMode';
 import {
   XAxis,
   YAxis,
@@ -60,14 +70,22 @@ export default function Dashboard({
 }: {
   onOpenProject?: (id: string) => void;
 }) {
-  const { user, projects, tenant, setActiveTab, setProjectsListFilter } = useAppStore();
+  const navigate = useNavigate();
+  const { user, projects, tenant, isDemoMode, setActiveTab, setProjectsListFilter } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const canCreate = user?.role === 'owner' || user?.role === 'manager';
+
+  const navigateToTab = (tab: string) => {
+    setActiveTab(tab);
+    navigate(`/app?tab=${tab}`);
+  };
 
   const [cashflowData, setCashflowData] = useState<
     { date: string; inflow: number; outflow: number; net: number }[]
   >([]);
   const [recentLogs, setRecentLogs] = useState<Array<{ description: string; date: string }>>([]);
   const [recommendations, setRecommendations] = useState<AnalyzeResult['recommendations']>([]);
+  const [aiEmptyMessage, setAiEmptyMessage] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [stats, setStats] = useState({ atRisk: 0, avgProgress: 0 });
   const [attendanceSummary, setAttendanceSummary] = useState({ present: 0, total: 0 });
@@ -90,7 +108,20 @@ export default function Dashboard({
   const firstActive = projects.find(p => p.status === 'active') || projects[0];
 
   useEffect(() => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || demoActive) {
+      if (demoActive) {
+        // Mode demo memakai data lokal tanpa query UUID ke Supabase ('demo' -> 22P02).
+        const atRisk = projects.filter(
+          p => p.status === 'active' && (p.health_status === 'at_risk' || p.health_status === 'behind'),
+        ).length;
+        const avgProgress =
+          projects.length > 0
+            ? Math.round(projects.reduce((s, p) => s + (p.progress_percentage || 0), 0) / projects.length)
+            : 0;
+        setStats({ atRisk, avgProgress });
+      }
+      return;
+    }
     getProjectStats(tenant.id)
       .then(s => setStats({ atRisk: s.atRisk, avgProgress: s.avgProgress }))
       .catch(console.error);
@@ -101,16 +132,58 @@ export default function Dashboard({
     loadRecentLogs(tenant.id)
       .then(logs => setRecentLogs(logs.map(l => ({ description: l.description, date: l.date }))))
       .catch(console.error);
-  }, [tenant?.id, projects.length]);
+  }, [tenant?.id, projects.length, demoActive]);
+
+  useEffect(() => {
+    if (!firstActive?.id || isDemoOrInvalidUuid(firstActive.id, demoActive)) {
+      setRecommendations([]);
+      setAiEmptyMessage(null);
+      return;
+    }
+    let cancelled = false;
+    setAiEmptyMessage(null);
+    loadLatestAnalysisSnapshot(firstActive.id)
+      .then(snapshot => {
+        if (cancelled) return;
+        if (snapshot?.recommendations?.length) {
+          setRecommendations(snapshot.recommendations.slice(0, 3));
+        } else {
+          setRecommendations([]);
+        }
+      })
+      .catch(() => {
+        /* snapshot bersifat opsional saat mount */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [firstActive?.id, demoActive]);
 
   const handleLoadAiRecommendations = async () => {
     if (!firstActive || aiLoading) return;
+    if (demoActive) {
+      showToast('Analisa AI tidak tersedia di mode demo', 'info');
+      return;
+    }
     setAiLoading(true);
+    setAiEmptyMessage(null);
     try {
       const r = await analyzeProject(firstActive.id);
-      if (r?.recommendations) setRecommendations(r.recommendations.slice(0, 3));
+      const recs = (r?.recommendations ?? []).slice(0, 3);
+      setRecommendations(recs);
+      if (recs.length === 0) {
+        const hasEvmInputs =
+          (r?.evm?.total_budget ?? firstActive.total_budget_planned ?? 0) > 0 ||
+          (r?.evm?.ac ?? firstActive.spent_amount ?? 0) > 0;
+        const msg = hasEvmInputs
+          ? 'Analisa selesai — belum ada temuan risiko untuk proyek ini.'
+          : 'Isi RAP & transaksi dulu untuk analisa EVM.';
+        setAiEmptyMessage(msg);
+        showToast(msg, 'info');
+      }
     } catch (e) {
       console.error(e);
+      showToast(e instanceof Error ? e.message : 'Gagal memuat rekomendasi AI', 'error');
     } finally {
       setAiLoading(false);
     }
@@ -133,7 +206,7 @@ export default function Dashboard({
     return projects
       .filter(p => p.status !== 'archived')
       .filter(p => {
-        if (healthFilter !== 'all' && p.health_status !== healthFilter) return false;
+        if (!matchesDashboardHealthFilter(p.health_status, healthFilter)) return false;
         if (search.trim()) {
           const q = search.toLowerCase();
           const matchName = p.name.toLowerCase().includes(q);
@@ -149,19 +222,29 @@ export default function Dashboard({
   const remainingCount = filteredProjects.length - visibleCount;
 
   const goAtRiskProjects = () => {
-    setHealthFilter('at_risk');
+    setHealthFilter('attention');
   };
 
   const handleOpenProject = (id: string) => {
     if (onOpenProject) {
       onOpenProject(id);
     } else {
-      setActiveTab('projects');
+      navigateToTab('projects');
     }
   };
 
   const handleSaveQuickLog = async () => {
     if (!logModalProj || !logText.trim() || !user || !tenant) return;
+    if (demoActive) {
+      setRecentLogs(prev => [
+        { description: logText.trim(), date: new Date().toISOString().slice(0, 10) },
+        ...prev,
+      ]);
+      setLogModalProj(null);
+      setLogText('');
+      showToast('Log harian disimpan sementara (mode demo)', 'info');
+      return;
+    }
     try {
       const { createDailyLog } = await import('../services/dailyLogService');
       await createDailyLog({
@@ -224,7 +307,7 @@ export default function Dashboard({
             value={`${activeProjectsCount} / ${projects.length}`}
             subInfo="aktif dari total"
             variant="green"
-            onClick={() => setActiveTab('projects')}
+            onClick={() => navigateToTab('projects')}
             ariaLabel={`Proyek: ${activeProjectsCount} aktif dari ${projects.length} total`}
           />
 
@@ -234,7 +317,7 @@ export default function Dashboard({
             value={formatCompact(netCash)}
             subInfo={`masuk ${formatCompact(totalInflow)} · keluar ${formatCompact(totalOutflow)}`}
             variant="blue"
-            onClick={() => setActiveTab('finance')}
+            onClick={() => navigateToTab('finance')}
             ariaLabel={`Keuangan: Kas bersih ${formatRupiah(netCash)}`}
           />
 
@@ -244,8 +327,8 @@ export default function Dashboard({
             value={attentionCount}
             subInfo="perlu ditindak"
             variant="orange"
-            active={healthFilter === 'at_risk' || healthFilter === 'behind'}
-            onClick={() => setHealthFilter(prev => (prev === 'at_risk' ? 'all' : 'at_risk'))}
+            active={healthFilter === 'attention'}
+            onClick={() => setHealthFilter(prev => (prev === 'attention' ? 'all' : 'attention'))}
             ariaLabel={`Perhatian: ${attentionCount} proyek perlu ditindak`}
           />
 
@@ -255,7 +338,7 @@ export default function Dashboard({
             value={`${attendanceSummary.present} / ${attendanceSummary.total}`}
             subInfo="hadir hari ini"
             variant="teal"
-            onClick={() => setActiveTab('hr')}
+            onClick={() => navigateToTab('hr')}
             ariaLabel="Karyawan: kehadiran hari ini"
           />
         </div>
@@ -267,7 +350,7 @@ export default function Dashboard({
             AGEN HARI INI
           </div>
           <div className="text-[13px] font-semibold text-[#0F172A] mt-1.5 leading-snug">
-            Laporan pagi: antrean persetujuan dan proyek aktif.
+            {getAgentBriefingLead()} antrean persetujuan dan proyek aktif.
           </div>
           <div className="text-xs text-[#5B6B7A] mt-1">
             {stats.atRisk > 0
@@ -289,7 +372,13 @@ export default function Dashboard({
 
         {/* Tool Row */}
         <ToolRow
-          title={healthFilter !== 'all' ? 'Perlu perhatian' : 'Daftar Proyek'}
+          title={
+            healthFilter === 'attention' || healthFilter === 'at_risk' || healthFilter === 'behind'
+              ? 'Perlu perhatian'
+              : healthFilter === 'on_track'
+                ? 'Proyek On track'
+                : 'Daftar Proyek'
+          }
           count={filteredProjects.length}
           search={search}
           searchOpen={searchOpen}
@@ -305,7 +394,7 @@ export default function Dashboard({
             setHealthFilter('all');
             setSearch('');
           }}
-          onViewAll={() => setActiveTab('projects')}
+          onViewAll={() => navigateToTab('projects')}
           viewAllLabel="Lihat Semua →"
         />
 
@@ -387,6 +476,10 @@ export default function Dashboard({
                         type="button"
                         onClick={e => {
                           e.stopPropagation();
+                          if (demoActive) {
+                            showToast('Catat biaya tidak tersedia di mode demo', 'info');
+                            return;
+                          }
                           setTxModal({ open: true, kind: 'cost', project: proj });
                         }}
                         className="flex-1 h-11 rounded-xl border border-[#D5DDDA] bg-white text-[#0F172A] font-semibold text-xs flex items-center justify-center active:scale-95 transition-transform"
@@ -452,7 +545,7 @@ export default function Dashboard({
               type="button"
               onClick={() => {
                 setProjectsListFilter('at_risk');
-                setActiveTab('projects');
+                navigateToTab('projects');
               }}
               className="flex items-center gap-2 px-4 h-11 bg-rose-50 border border-rose-200 rounded-full hover:bg-rose-100 transition-colors"
             >
@@ -469,7 +562,7 @@ export default function Dashboard({
             value={`${activeProjectsCount} / ${projects.length}`}
             subInfo="aktif dari total"
             variant="green"
-            onClick={() => setActiveTab('projects')}
+            onClick={() => navigateToTab('projects')}
             ariaLabel={`Proyek: ${activeProjectsCount} aktif dari ${projects.length} total`}
           />
           <GradientStatCard
@@ -477,7 +570,7 @@ export default function Dashboard({
             value={formatCompact(netCash)}
             subInfo={`masuk ${formatCompact(totalInflow)} · keluar ${formatCompact(totalOutflow)}`}
             variant="blue"
-            onClick={() => setActiveTab('finance')}
+            onClick={() => navigateToTab('finance')}
             ariaLabel={`Keuangan: Kas bersih ${formatRupiah(netCash)}`}
           />
           <GradientStatCard
@@ -485,8 +578,8 @@ export default function Dashboard({
             value={attentionCount}
             subInfo="perlu ditindak"
             variant="orange"
-            active={healthFilter === 'at_risk' || healthFilter === 'behind'}
-            onClick={() => setHealthFilter(prev => (prev === 'at_risk' ? 'all' : 'at_risk'))}
+            active={healthFilter === 'attention'}
+            onClick={() => setHealthFilter(prev => (prev === 'attention' ? 'all' : 'attention'))}
             ariaLabel={`Perhatian: ${attentionCount} proyek perlu ditindak`}
           />
           <GradientStatCard
@@ -494,7 +587,7 @@ export default function Dashboard({
             value={`${attendanceSummary.present} / ${attendanceSummary.total}`}
             subInfo="hadir hari ini"
             variant="teal"
-            onClick={() => setActiveTab('hr')}
+            onClick={() => navigateToTab('hr')}
             ariaLabel="Karyawan: kehadiran hari ini"
           />
         </div>
@@ -506,7 +599,7 @@ export default function Dashboard({
             AGEN HARI INI
           </div>
           <div className="text-sm font-bold text-[#0F172A] mt-1.5 leading-snug">
-            Laporan pagi: antrean persetujuan dan proyek aktif.
+            {getAgentBriefingLead()} antrean persetujuan dan proyek aktif.
           </div>
           <div className="text-xs text-[#5B6B7A] mt-1">
             {stats.atRisk > 0
@@ -529,8 +622,8 @@ export default function Dashboard({
         <DashboardProjectList
           projects={filteredProjects}
           onOpenProject={onOpenProject}
-          onViewAll={() => setActiveTab('projects')}
-          onCreateProject={() => setActiveTab('projects')}
+          onViewAll={() => navigateToTab('projects')}
+          onCreateProject={() => navigateToTab('projects')}
           canCreate={canCreate}
         />
 
@@ -606,21 +699,23 @@ export default function Dashboard({
                   Rekomendasi AI ({firstActive.name})
                 </h2>
               </div>
-              {recommendations.length === 0 && (
-                <button
-                  type="button"
-                  onClick={handleLoadAiRecommendations}
-                  disabled={aiLoading}
-                  className="text-xs font-bold px-3.5 h-9 rounded-xl bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
-                >
-                  {aiLoading ? 'Menganalisa...' : 'Jalankan Analisa AI'}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleLoadAiRecommendations}
+                disabled={aiLoading}
+                className="text-xs font-bold px-3.5 h-9 rounded-xl bg-emerald-50 text-[#059669] border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
+              >
+                {aiLoading
+                  ? 'Menganalisa...'
+                  : recommendations.length > 0
+                    ? 'Analisa Ulang'
+                    : 'Jalankan Analisa AI'}
+              </button>
             </div>
             {recommendations.length === 0 ? (
               <p className="text-xs text-[#5B6B7A]">
-                Klik &ldquo;Jalankan Analisa AI&rdquo; untuk mendapatkan rekomendasi efisiensi biaya
-                & jadwal pada proyek aktif.
+                {aiEmptyMessage ||
+                  'Klik \u201cJalankan Analisa AI\u201d untuk mendapatkan rekomendasi efisiensi biaya & jadwal pada proyek aktif.'}
               </p>
             ) : (
               <div className="space-y-2">
@@ -630,7 +725,7 @@ export default function Dashboard({
                     className="p-3 bg-[#F4F7F5] rounded-xl text-xs space-y-1 border border-[#E5EAE8]"
                   >
                     <div className="font-bold text-[#0F172A]">{rec.title || rec.action}</div>
-                    <div className="text-[#5B6B7A]">{rec.message}</div>
+                    <div className="text-[#5B6B7A]">{rec.description || rec.message}</div>
                   </div>
                 ))}
               </div>
@@ -640,7 +735,7 @@ export default function Dashboard({
       </div>
 
       {/* Quick Cost Realization Modal from ListCard action */}
-      {txModal.open && txModal.project && tenant?.id && user?.id && (
+      {!demoActive && txModal.open && txModal.project && tenant?.id && user?.id && (
         <ProjectTransactionModals
           open={txModal.open}
           kind={txModal.kind}

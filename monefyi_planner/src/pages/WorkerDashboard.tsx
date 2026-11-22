@@ -1,11 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   MapPin, Clock, CheckCircle, Circle, Wallet, TrendingUp,
-  Calendar, RefreshCw, Loader2,
+  Calendar, RefreshCw, Loader2, LogOut, ClipboardList, AlertTriangle, Check,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
+import { supabase } from '../lib/supabase';
+import { isDemoOrInvalidUuid } from '../lib/demo/demoMode';
+import { PRIORITY_BADGE_COLOR } from '../lib/gantt/constants';
+import { formatDateId } from '../utils/projectUi';
 import { loadWorkItemsForOrg, updateWorkItem } from '../services/workItemService';
 import type { WorkItem } from '../services/workItemService';
 import {
@@ -33,8 +38,120 @@ import TeamTodoBoard from '../components/team/TeamTodoBoard';
 import { listMembers } from '../services/memberService';
 import type { OrgMember } from '../types/onboarding';
 
+export const MIN_BON_AMOUNT = 1000;
+
+export function parseAndValidateBonAmount(
+  rawInput: string,
+): { ok: true; amount: number } | { ok: false; error: string } {
+  const trimmed = rawInput.trim();
+  if (!trimmed) {
+    return { ok: false, error: 'Masukkan nominal bon minimal Rp1.000' };
+  }
+  if (trimmed.includes('-')) {
+    return { ok: false, error: 'Nominal bon tidak boleh negatif' };
+  }
+  const withoutCurrency = trimmed.replace(/^(?:rp|idr)\s*/i, '');
+  if (!/^\d[\d.,\s]*$/.test(withoutCurrency)) {
+    return { ok: false, error: 'Masukkan nominal bon berupa angka yang valid' };
+  }
+  const normalizedDigits = withoutCurrency.replace(/[.,\s]/g, '');
+  const amount = Number(normalizedDigits);
+  if (!Number.isFinite(amount) || amount < MIN_BON_AMOUNT) {
+    return { ok: false, error: 'Nominal bon minimal Rp1.000' };
+  }
+  return { ok: true, amount };
+}
+
+const DEMO_WORKER_MEMBERS: OrgMember[] = [
+  {
+    id: 'demo-m-1',
+    org_id: 'demo',
+    user_id: 'demo-u-1',
+    role: 'owner',
+    status: 'active',
+    profile: { name: 'Budi Santoso' },
+  },
+  {
+    id: 'demo-m-2',
+    org_id: 'demo',
+    user_id: 'demo-u-2',
+    role: 'manager',
+    status: 'active',
+    profile: { name: 'Sari Dewi' },
+  },
+  {
+    id: 'demo-m-3',
+    org_id: 'demo',
+    user_id: 'demo-u-3',
+    role: 'worker',
+    status: 'active',
+    profile: { name: 'Ahmad Rizky' },
+  },
+];
+
+function buildDemoWorkItems(projects: Array<{ id: string; name: string }>): WorkItem[] {
+  const primaryProjectId = projects[0]?.id || 'demo-proj-1';
+  const secondaryProjectId = projects[1]?.id || primaryProjectId;
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const threeDaysLater = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+  const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  return [
+    {
+      id: 'demo-wi-1',
+      project_id: primaryProjectId,
+      name: 'Pekerjaan Pondasi & Sloof',
+      planned_start: today,
+      planned_end: threeDaysLater,
+      progress_pct: 45,
+      status: 'in_progress',
+      priority: 'high',
+      assigned_member_id: 'demo-m-3',
+      sort_order: 1,
+    },
+    {
+      id: 'demo-wi-2',
+      project_id: primaryProjectId,
+      name: 'Pengecoran Kolom Utama',
+      planned_start: yesterday,
+      planned_end: yesterday,
+      progress_pct: 50,
+      status: 'in_progress',
+      priority: 'critical',
+      assigned_member_id: 'demo-m-3',
+      sort_order: 2,
+    },
+    {
+      id: 'demo-wi-3',
+      project_id: secondaryProjectId,
+      name: 'Pemasangan Dinding Bata',
+      planned_start: today,
+      planned_end: nextWeek,
+      progress_pct: 20,
+      status: 'in_progress',
+      priority: 'medium',
+      assigned_member_id: 'demo-m-2',
+      sort_order: 3,
+    },
+  ];
+}
+
 export default function WorkerDashboard() {
-  const { user, tenant, projects, activeTab, setActiveTab, setCommandModalOpen } = useAppStore();
+  const navigate = useNavigate();
+  const {
+    user,
+    tenant,
+    projects,
+    todos,
+    isDemoMode,
+    activeTab,
+    setActiveTab,
+    setCommandModalOpen,
+    setSelectedProjectId,
+    setCommandPrefill,
+    logout,
+  } = useAppStore();
+  const isDemo = isDemoMode || tenant?.id === 'demo';
   const showToast = useUiStore(s => s.showToast);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,7 +169,9 @@ export default function WorkerDashboard() {
   const [bonRequests, setBonRequests] = useState<BonRequest[]>([]);
   const [bonAmount, setBonAmount] = useState('');
   const [bonReason, setBonReason] = useState('');
+  const [bonError, setBonError] = useState<string | null>(null);
   const [bonSubmitting, setBonSubmitting] = useState(false);
+  const [cancelingBonId, setCancelingBonId] = useState<string | null>(null);
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [attendanceSettings, setAttendanceSettings] = useState<AttendanceSettings | null>(null);
   const [partialDays, setPartialDays] = useState<ReturnType<typeof getPartialDays>>([]);
@@ -72,34 +191,64 @@ export default function WorkerDashboard() {
   });
 
   const refreshStatus = useCallback(async () => {
-    if (!user?.id || !tenant?.id || tenant.id === 'demo') return;
+    if (!user?.id || !tenant?.id || isDemo || tenant.id === 'demo') return;
+    const timeZone = tenant.timezone || 'Asia/Jakarta';
     setAttendanceLoading(true);
     try {
-      const [todayStatus, records, pay, bons, orgDetails] = await Promise.all([
-        getUserTodayStatus(user.id, tenant.id),
-        getUserAttendance(user.id, tenant.id, 31),
-        getUserPayrollForMonth(tenant.id, user.id),
-        listBonRequests(tenant.id),
-        loadOrgDetails(tenant.id).catch(() => null),
-      ]);
+      const [todayStatusRes, recordsRes, payRes, bonsRes, orgDetailsRes] =
+        await Promise.allSettled([
+          getUserTodayStatus(user.id, tenant.id, timeZone),
+          getUserAttendance(user.id, tenant.id, 31),
+          getUserPayrollForMonth(tenant.id, user.id),
+          listBonRequests(tenant.id),
+          loadOrgDetails(tenant.id),
+        ]);
+
+      const orgDetails = orgDetailsRes.status === 'fulfilled' ? orgDetailsRes.value : null;
       const attSettings = parseAttendanceSettings(orgDetails?.settings as Record<string, unknown>);
       setAttendanceSettings(attSettings);
-      setPartialDays(getPartialDays(records, attSettings.hours_per_day));
-      const summary = await getMonthlySummary(user.id, tenant.id, attSettings.hours_per_day);
-      setMonthDaysPresent(summary.daysPresent);
-      setStatus(todayStatus);
-      setHistory(records);
-      setPayroll(pay);
-      setBonRequests(bons.filter(b => b.user_id === user.id));
+
+      if (todayStatusRes.status === 'fulfilled') {
+        setStatus(todayStatusRes.value);
+      }
+
+      if (recordsRes.status === 'fulfilled') {
+        const records = recordsRes.value;
+        setHistory(records);
+        setPartialDays(getPartialDays(records, attSettings.hours_per_day, new Date(), timeZone));
+      }
+
+      try {
+        const summary = await getMonthlySummary(user.id, tenant.id, attSettings.hours_per_day, timeZone);
+        setMonthDaysPresent(summary.daysPresent);
+      } catch (summaryErr) {
+        console.warn('Gagal memuat ringkasan absensi bulanan:', summaryErr);
+      }
+
+      if (payRes.status === 'fulfilled') {
+        setPayroll(payRes.value);
+      }
+      if (bonsRes.status === 'fulfilled') {
+        setBonRequests(bonsRes.value.filter(b => b.user_id === user.id));
+      }
+
+      if (todayStatusRes.status === 'rejected' && recordsRes.status === 'rejected') {
+        const reason = todayStatusRes.reason ?? recordsRes.reason;
+        showToast(reason instanceof Error ? reason.message : 'Gagal memuat absensi', 'error');
+      }
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal memuat absensi', 'error');
     } finally {
       setAttendanceLoading(false);
     }
-  }, [user?.id, tenant?.id, showToast]);
+  }, [user?.id, tenant?.id, tenant?.timezone, isDemo, showToast]);
 
   const loadTasks = useCallback(async () => {
-    if (!tenant?.id || tenant.id === 'demo') return;
+    if (!tenant?.id) return;
+    if (isDemo || tenant.id === 'demo') {
+      setWorkItems(prev => (prev.length > 0 ? prev : buildDemoWorkItems(projects)));
+      return;
+    }
     setLoading(true);
     try {
       const items = await loadWorkItemsForOrg(tenant.id);
@@ -109,15 +258,17 @@ export default function WorkerDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id]);
+  }, [tenant?.id, isDemo, projects]);
 
   useEffect(() => {
     refreshStatus();
     loadTasks();
-    if (tenant?.id && tenant.id !== 'demo') {
+    if (isDemo || tenant?.id === 'demo') {
+      setMembers(DEMO_WORKER_MEMBERS);
+    } else if (tenant?.id) {
       void listMembers(tenant.id).then(setMembers).catch(() => setMembers([]));
     }
-  }, [refreshStatus, loadTasks, tenant?.id]);
+  }, [refreshStatus, loadTasks, isDemo, tenant?.id]);
 
   const projectName = (projectId: string) => projects.find(p => p.id === projectId)?.name || 'Proyek';
   const defaultProject =
@@ -128,11 +279,71 @@ export default function WorkerDashboard() {
   const scopedWorkItems = chosenProjectId
     ? workItems.filter(wi => wi.project_id === chosenProjectId)
     : workItems;
+
+  const myMemberIds = useMemo(() => {
+    const ids = new Set<string>();
+    const userEmail = user?.email?.trim().toLowerCase();
+    for (const m of members) {
+      if (user?.id && m.user_id === user.id) ids.add(m.id);
+      if (userEmail && m.email?.trim().toLowerCase() === userEmail) ids.add(m.id);
+    }
+    return ids;
+  }, [members, user?.id, user?.email]);
+
+  const myAssignedTasks = useMemo(() => {
+    if (myMemberIds.size === 0) return [];
+    return scopedWorkItems
+      .filter(wi => Boolean(wi.assigned_member_id && myMemberIds.has(wi.assigned_member_id)))
+      .sort((a, b) => {
+        const aDone = (Number(a.progress_pct) || 0) >= 100 ? 1 : 0;
+        const bDone = (Number(b.progress_pct) || 0) >= 100 ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
+        return (a.planned_end || '').localeCompare(b.planned_end || '');
+      });
+  }, [scopedWorkItems, myMemberIds]);
+
+  const todayIso = useMemo(() => {
+    try {
+      return new Date().toLocaleDateString('en-CA', {
+        timeZone: tenant?.timezone || 'Asia/Jakarta',
+      });
+    } catch {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }, [tenant?.timezone]);
+
   const activeTasks = scopedWorkItems.filter(wi => (Number(wi.progress_pct) || 0) < 100);
   const doneTasks = scopedWorkItems.filter(wi => (Number(wi.progress_pct) || 0) >= 100);
 
   const handleCheckIn = async () => {
     if (!user?.id || !tenant?.id) return;
+    if (isDemo || tenant.id === 'demo') {
+      const nowIso = new Date().toISOString();
+      const timeLabel = formatAttendanceTime(nowIso);
+      setStatus({
+        checkedIn: true,
+        checkInTime: timeLabel,
+        checkOutTime: undefined,
+        checkInAtIso: nowIso,
+        checkOutAtIso: undefined,
+      });
+      setHistory(prev => [
+        {
+          id: `demo-att-${Date.now()}`,
+          user_id: user.id,
+          user_name: user.name || 'Karyawan',
+          org_id: tenant.id,
+          type: 'check_in',
+          timestamp: nowIso,
+          project_id: defaultProject?.id,
+          project_name: defaultProjectName,
+        },
+        ...prev,
+      ]);
+      setMonthDaysPresent(prev => Math.max(prev, 1));
+      showToast('Check-in demo tercatat', 'success');
+      return;
+    }
     setAttendanceLoading(true);
     try {
       const settings = attendanceSettings || parseAttendanceSettings(null);
@@ -142,7 +353,7 @@ export default function WorkerDashboard() {
       } else if (loc.message && !loc.isOffsite) {
         showToast(loc.message, 'info');
       }
-      await recordAttendance({
+      const created = await recordAttendance({
         user_id: user.id,
         user_name: user.name || 'Karyawan',
         org_id: tenant.id,
@@ -155,6 +366,18 @@ export default function WorkerDashboard() {
         is_offsite: loc.isOffsite,
         source: loc.isOffsite ? 'manual' : (settings.geofence_enabled ? 'geofence' : 'manual'),
       });
+      setStatus({
+        checkedIn: true,
+        checkInTime: new Date(created.timestamp).toLocaleTimeString('id-ID', {
+          timeZone: tenant.timezone || 'Asia/Jakarta',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        checkOutTime: undefined,
+        checkInAtIso: created.timestamp,
+        checkOutAtIso: undefined,
+      });
+      setHistory(prev => [created, ...prev.filter(item => item.id !== created.id)]);
       await refreshStatus();
       showToast(loc.isOffsite ? 'Check-in tercatat (luar lokasi)' : 'Check-in tercatat', loc.isOffsite ? 'info' : 'success');
     } catch (e) {
@@ -166,6 +389,31 @@ export default function WorkerDashboard() {
 
   const handleCheckOut = async () => {
     if (!user?.id || !tenant?.id) return;
+    if (isDemo || tenant.id === 'demo') {
+      const nowIso = new Date().toISOString();
+      const timeLabel = formatAttendanceTime(nowIso);
+      setStatus(prev => ({
+        ...prev,
+        checkedIn: false,
+        checkOutTime: timeLabel,
+        checkOutAtIso: nowIso,
+      }));
+      setHistory(prev => [
+        {
+          id: `demo-att-${Date.now()}`,
+          user_id: user.id,
+          user_name: user.name || 'Karyawan',
+          org_id: tenant.id,
+          type: 'check_out',
+          timestamp: nowIso,
+          project_id: defaultProject?.id,
+          project_name: defaultProjectName,
+        },
+        ...prev,
+      ]);
+      showToast('Check-out demo tercatat', 'success');
+      return;
+    }
     setAttendanceLoading(true);
     try {
       const settings = attendanceSettings || parseAttendanceSettings(null);
@@ -173,7 +421,7 @@ export default function WorkerDashboard() {
       if (loc.isOffsite && settings.warn_offsite) {
         showToast('Check-out di luar lokasi kerja.', 'info');
       }
-      await recordAttendance({
+      const created = await recordAttendance({
         user_id: user.id,
         user_name: user.name || 'Karyawan',
         org_id: tenant.id,
@@ -185,6 +433,17 @@ export default function WorkerDashboard() {
         location_accuracy: loc.position?.accuracy,
         is_offsite: loc.isOffsite,
       });
+      setStatus(prev => ({
+        ...prev,
+        checkedIn: false,
+        checkOutTime: new Date(created.timestamp).toLocaleTimeString('id-ID', {
+          timeZone: tenant.timezone || 'Asia/Jakarta',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        checkOutAtIso: created.timestamp,
+      }));
+      setHistory(prev => [created, ...prev.filter(item => item.id !== created.id)]);
       await refreshStatus();
       showToast('Check-out tercatat', 'success');
     } catch (e) {
@@ -195,7 +454,7 @@ export default function WorkerDashboard() {
   };
 
   useAttendanceAutomation({
-    enabled: !!tenant?.id && tenant.id !== 'demo',
+    enabled: !isDemo && !!tenant?.id && tenant.id !== 'demo',
     orgId: tenant?.id || '',
     userId: user?.id || '',
     userName: user?.name,
@@ -207,11 +466,26 @@ export default function WorkerDashboard() {
     onNotify: (message, type) => showToast(message, type),
   });
 
-  const handleProgressChange = async (wi: WorkItem, pct: number) => {
+  const handleProgressChange = async (wi: WorkItem, rawPct: number) => {
+    const pct = Math.min(100, Math.max(0, Math.round(rawPct)));
+    const nextStatus = pct >= 100 ? 'completed' : pct > 0 ? 'in_progress' : 'pending';
     setUpdatingId(wi.id);
     try {
-      await updateWorkItem(wi.id, { progress_pct: pct });
-      setWorkItems(prev => prev.map(w => (w.id === wi.id ? { ...w, progress_pct: pct } : w)));
+      let nextUpdatedAt = wi.updated_at;
+      if (!isDemo && tenant?.id !== 'demo' && !isDemoOrInvalidUuid(wi.id)) {
+        const updated = await updateWorkItem(wi.id, {
+          progress_pct: pct,
+          status: nextStatus,
+        });
+        if (updated?.updated_at) nextUpdatedAt = updated.updated_at;
+      }
+      setWorkItems(prev =>
+        prev.map(w =>
+          w.id === wi.id
+            ? { ...w, progress_pct: pct, status: nextStatus, updated_at: nextUpdatedAt }
+            : w,
+        ),
+      );
       showToast(`Progress ${wi.name}: ${pct}%`, 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal update', 'error');
@@ -222,14 +496,32 @@ export default function WorkerDashboard() {
 
   const handleBonRequest = async () => {
     if (!user?.id || !tenant?.id) return;
-    const amount = Number(bonAmount.replace(/\D/g, ''));
-    if (!amount || amount <= 0) {
-      showToast('Masukkan nominal bon yang valid', 'error');
+    const parsed = parseAndValidateBonAmount(bonAmount);
+    if (!parsed.ok) {
+      setBonError(parsed.error);
+      showToast(parsed.error, 'error');
       return;
     }
+    setBonError(null);
     setBonSubmitting(true);
     try {
-      await createBonRequest(tenant.id, user.id, amount, bonReason.trim() || undefined);
+      if (isDemo || tenant.id === 'demo') {
+        const newDemoBon: BonRequest = {
+          id: `demo-bon-${Date.now()}`,
+          org_id: tenant.id,
+          user_id: user.id,
+          amount: parsed.amount,
+          reason: bonReason.trim() || null,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        };
+        setBonRequests(prev => [newDemoBon, ...prev]);
+        setBonAmount('');
+        setBonReason('');
+        showToast('Pengajuan bon demo terkirim', 'success');
+        return;
+      }
+      await createBonRequest(tenant.id, user.id, parsed.amount, bonReason.trim() || undefined);
       setBonAmount('');
       setBonReason('');
       await refreshStatus();
@@ -239,6 +531,44 @@ export default function WorkerDashboard() {
     } finally {
       setBonSubmitting(false);
     }
+  };
+
+  const handleCancelBonRequest = async (bonId: string) => {
+    if (!user?.id || !tenant?.id) return;
+    setCancelingBonId(bonId);
+    try {
+      if (isDemo || tenant.id === 'demo') {
+        setBonRequests(prev => prev.filter(b => b.id !== bonId));
+        showToast('Pengajuan bon dibatalkan', 'success');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('planner_bon_requests')
+        .delete()
+        .eq('id', bonId)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .select('id');
+      if (error) throw new Error(error.message);
+      if (!data || data.length === 0) {
+        showToast(
+          'Pengajuan bon tidak dapat dibatalkan (sudah diproses atau tidak memiliki izin hapus).',
+          'error',
+        );
+        return;
+      }
+      setBonRequests(prev => prev.filter(b => b.id !== bonId));
+      showToast('Pengajuan bon dibatalkan', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal membatalkan bon', 'error');
+    } finally {
+      setCancelingBonId(null);
+    }
+  };
+
+  const handleWorkerLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   const pendingBon = bonRequests.filter(b => b.status === 'pending').length;
@@ -254,14 +584,25 @@ export default function WorkerDashboard() {
               <h1 className="text-2xl font-black text-[#0F172A]">{user?.name?.split(' ')[0]} 👷</h1>
               <div className="text-xs text-[#5B6B7A] mt-0.5">{dateStr}</div>
             </div>
-            <button
-              type="button"
-              onClick={() => { refreshStatus(); loadTasks(); }}
-              className="min-h-11 min-w-11 flex items-center justify-center border border-[#E5EAE8] bg-white rounded-xl hover:bg-slate-50 shadow-sm transition-colors"
-              aria-label="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading || attendanceLoading ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => { refreshStatus(); loadTasks(); }}
+                className="min-h-11 min-w-11 flex items-center justify-center border border-[#E5EAE8] bg-white rounded-xl hover:bg-slate-50 shadow-sm transition-colors"
+                aria-label="Refresh data"
+              >
+                <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading || attendanceLoading ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleWorkerLogout()}
+                className="min-h-11 px-3 flex items-center justify-center gap-1.5 border border-[#E5EAE8] bg-white text-rose-600 rounded-xl hover:bg-rose-50 shadow-sm transition-colors text-xs font-bold"
+                aria-label={isDemo ? 'Keluar Demo' : 'Keluar'}
+              >
+                <LogOut className="w-4 h-4" />
+                <span>{isDemo ? 'Keluar Demo' : 'Keluar'}</span>
+              </button>
+            </div>
           </div>
         </motion.div>
 
@@ -339,8 +680,141 @@ export default function WorkerDashboard() {
               <p className="text-[11px] text-[#5B6B7A] text-center font-medium">Auto absensi WiFi kantor aktif</p>
             )}
 
-            <div>
-              <h2 className="font-bold text-[#0F172A] mb-3 text-base">Pekerjaan Aktif</h2>
+            <section aria-labelledby="worker-my-tasks-heading" className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ClipboardList className="w-5 h-5 text-[#059669] shrink-0" />
+                  <h2 id="worker-my-tasks-heading" className="font-bold text-[#0F172A] text-base">
+                    Tugas Saya
+                  </h2>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                  {myAssignedTasks.length}
+                </span>
+              </div>
+
+              {loading && myAssignedTasks.length === 0 ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#059669]" />
+                </div>
+              ) : myAssignedTasks.length === 0 ? (
+                <p className="text-sm text-[#5B6B7A] bg-white border border-[#E5EAE8] rounded-2xl p-4 text-center shadow-sm">
+                  Belum ada tugas khusus yang ditugaskan ke Anda saat ini.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {myAssignedTasks.map(wi => {
+                    const pct = Math.min(100, Math.max(0, Math.round(Number(wi.progress_pct) || 0)));
+                    const isDone = pct >= 100 || wi.status === 'completed';
+                    const prioMeta = PRIORITY_BADGE_COLOR[wi.priority || 'medium'] ?? PRIORITY_BADGE_COLOR.medium;
+                    const endIso = (wi.planned_end || '').slice(0, 10);
+                    const isOverdue = Boolean(!isDone && endIso && endIso < todayIso);
+                    const isBusy = updatingId === wi.id;
+
+                    return (
+                      <div
+                        key={wi.id}
+                        className={`bg-white border rounded-2xl p-4 shadow-sm space-y-3 ${
+                          isOverdue
+                            ? 'border-rose-300'
+                            : isDone
+                              ? 'border-emerald-200 bg-emerald-50/30'
+                              : 'border-[#E5EAE8]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-sm text-[#0F172A] break-words [overflow-wrap:anywhere]">
+                              {wi.name}
+                            </div>
+                            <div className="text-xs text-[#5B6B7A] mt-0.5 truncate">
+                              {projectName(wi.project_id)}
+                            </div>
+                          </div>
+                          <span className="font-black text-base text-[#059669] shrink-0 tabular-nums">
+                            {pct}%
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full border ${prioMeta.badgeClass}`}
+                          >
+                            {prioMeta.label}
+                          </span>
+                          {endIso && (
+                            <span
+                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                                isOverdue
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : isDone
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}
+                            >
+                              {isOverdue ? (
+                                <AlertTriangle className="w-3 h-3 shrink-0" />
+                              ) : (
+                                <Calendar className="w-3 h-3 shrink-0" />
+                              )}
+                              <span>
+                                Tenggat: {formatDateId(endIso)}
+                                {isOverdue ? ' · Terlambat' : ''}
+                              </span>
+                            </span>
+                          )}
+                          {isDone && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                              <Check className="w-3 h-3" />
+                              Selesai
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              isDone ? 'bg-emerald-500' : isOverdue ? 'bg-rose-500' : 'bg-[#059669]'
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={isBusy || pct >= 100}
+                            onClick={() => void handleProgressChange(wi, Math.min(100, pct + 25))}
+                            className="min-h-11 py-2 px-3 rounded-xl border border-[#D5DDDA] bg-white hover:bg-slate-50 text-[#0F172A] text-xs font-bold disabled:opacity-50 transition-colors"
+                          >
+                            +25%
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isBusy || pct >= 100}
+                            onClick={() => void handleProgressChange(wi, 100)}
+                            className="min-h-11 py-2 px-3 rounded-xl bg-[#059669] hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Selesai 100%</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section aria-labelledby="worker-all-tasks-heading" className="pt-2 border-t border-[#E5EAE8]">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h2 id="worker-all-tasks-heading" className="font-bold text-[#0F172A] text-base">
+                  Semua Pekerjaan Proyek
+                </h2>
+                <span className="text-xs font-semibold text-[#5B6B7A]">
+                  {activeTasks.length} aktif
+                </span>
+              </div>
               {loading && activeTasks.length === 0 ? (
                 <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#059669]" /></div>
               ) : activeTasks.length === 0 ? (
@@ -351,11 +825,11 @@ export default function WorkerDashboard() {
                 activeTasks.slice(0, 5).map(wi => (
                   <div key={wi.id} className="bg-white border border-[#E5EAE8] rounded-2xl p-4 mb-3 shadow-sm">
                     <div className="flex justify-between mb-2">
-                      <div>
-                        <div className="font-semibold text-sm text-[#0F172A]">{wi.name}</div>
+                      <div className="min-w-0 pr-2">
+                        <div className="font-semibold text-sm text-[#0F172A] break-words [overflow-wrap:anywhere]">{wi.name}</div>
                         <div className="text-xs text-[#5B6B7A]">{projectName(wi.project_id)}</div>
                       </div>
-                      <span className="font-black text-[#059669]">{Number(wi.progress_pct) || 0}%</span>
+                      <span className="font-black text-[#059669] shrink-0">{Number(wi.progress_pct) || 0}%</span>
                     </div>
                     <input
                       type="range"
@@ -370,17 +844,18 @@ export default function WorkerDashboard() {
                     <button
                       type="button"
                       onClick={() => {
+                        setSelectedProjectId(wi.project_id);
+                        setCommandPrefill(`update progress ${wi.name} `);
                         setCommandModalOpen(true);
-                        showToast(`Gunakan: update progress ${wi.name} 75%`, 'info');
                       }}
                       className="min-h-11 w-full py-2.5 border border-[#E5EAE8] text-[#059669] bg-emerald-50/50 hover:bg-emerald-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <TrendingUp className="w-4 h-4" /> Update via Monefyi Button
+                      <TrendingUp className="w-4 h-4" /> Update Progres via Asisten
                     </button>
                   </div>
                 ))
               )}
-            </div>
+            </section>
           </div>
         )}
 
@@ -443,10 +918,19 @@ export default function WorkerDashboard() {
                   type="text"
                   inputMode="numeric"
                   value={bonAmount}
-                  onChange={e => setBonAmount(e.target.value)}
-                  placeholder="Nominal bon (Rp)"
+                  onChange={e => {
+                    setBonAmount(e.target.value);
+                    if (bonError) setBonError(null);
+                  }}
+                  placeholder="Nominal bon (Rp, min. 1.000)"
+                  aria-invalid={bonError ? 'true' : 'false'}
                   className="w-full h-11 px-3.5 rounded-xl border border-[#E5EAE8] text-sm text-[#0F172A] focus:border-[#059669] focus:outline-none"
                 />
+                {bonError && (
+                  <p role="alert" className="text-xs font-medium text-rose-600">
+                    {bonError}
+                  </p>
+                )}
                 <input
                   type="text"
                   value={bonReason}
@@ -468,9 +952,21 @@ export default function WorkerDashboard() {
                 <div className="mt-4 pt-4 border-t border-[#E5EAE8] space-y-2">
                   <p className="text-xs font-semibold text-[#5B6B7A]">Riwayat pengajuan</p>
                   {bonRequests.slice(0, 5).map(b => (
-                    <div key={b.id} className="flex justify-between text-xs">
+                    <div key={b.id} className="flex items-center justify-between gap-2 text-xs">
                       <span className="font-medium text-[#0F172A]">{formatCurrency(b.amount)}</span>
-                      <span className="capitalize text-[#5B6B7A]">{b.status}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="capitalize text-[#5B6B7A]">{b.status}</span>
+                        {b.status === 'pending' && (
+                          <button
+                            type="button"
+                            onClick={() => void handleCancelBonRequest(b.id)}
+                            disabled={cancelingBonId === b.id}
+                            className="px-2 py-1 text-[11px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg disabled:opacity-60 transition-colors"
+                          >
+                            {cancelingBonId === b.id ? 'Membatalkan...' : 'Batalkan'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -480,13 +976,31 @@ export default function WorkerDashboard() {
         )}
 
         {workerTab === 'todos' && tenant?.id && user?.id && (
-          <TeamTodoBoard
-            orgId={tenant.id}
-            members={members}
-            title="Task Saya"
-            filterUserId={user.id}
-            hideAssigneeFilter
-          />
+          isDemo ? (
+            <div className="bg-white border border-[#E5EAE8] rounded-2xl p-5 shadow-sm space-y-3">
+              <h3 className="font-bold text-[#0F172A]">Task Saya (Mode Demo)</h3>
+              {todos.length === 0 ? (
+                <p className="text-sm text-[#5B6B7A] text-center py-4">Belum ada task demo.</p>
+              ) : (
+                <div className="space-y-2">
+                  {todos.map(t => (
+                    <div key={t.id} className="flex items-center justify-between py-2 border-b border-[#E5EAE8] last:border-0 text-sm">
+                      <span className="font-medium text-[#0F172A]">{t.title}</span>
+                      <span className="text-xs capitalize text-[#5B6B7A]">{t.status}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <TeamTodoBoard
+              orgId={tenant.id}
+              members={members}
+              title="Task Saya"
+              filterUserId={user.id}
+              hideAssigneeFilter
+            />
+          )
         )}
       </div>
     </div>

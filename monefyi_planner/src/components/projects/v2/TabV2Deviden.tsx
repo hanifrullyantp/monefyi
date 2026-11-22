@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Coins, Loader2, Plus, Trash2 } from 'lucide-react';
 import type { Project } from '../../../store/appStore';
+import { useAppStore } from '../../../store/appStore';
+import { isDemoOrInvalidUuid } from '../../../lib/demo/demoMode';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
 import { formatRupiah } from '../../../utils/projectUi';
 import {
@@ -24,6 +26,7 @@ type Props = {
 export default function TabV2Deviden({
   project, normalized, orgId, userId, canManage = true, onRefresh,
 }: Props) {
+  const isDemoMode = useAppStore(s => s.isDemoMode);
   const [config, setConfig] = useState<DividendConfig>({ parties: [], payouts: [] });
   const [lines, setLines] = useState<DividendPreviewLine[]>([]);
   const [pool, setPool] = useState(0);
@@ -39,6 +42,14 @@ export default function TabV2Deviden({
 
   const reload = useCallback(async (next?: DividendConfig) => {
     if (!orgId) return;
+    if (isDemoOrInvalidUuid(orgId, isDemoMode) || isDemoOrInvalidUuid(project.id, isDemoMode)) {
+      setLines([]);
+      setPool(Math.max(0, contractValue - spent));
+      setOwnerPiutang(0);
+      setPctTotal(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const preview = await buildProjectDividendPreview({
@@ -55,11 +66,11 @@ export default function TabV2Deviden({
       setOwnerPiutang(preview.ownerPiutang);
       setPctTotal(preview.pctTotal);
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal memuat deviden', 'error');
+      showToast(e instanceof Error ? e.message : 'Gagal memuat dividen', 'error');
     } finally {
       setLoading(false);
     }
-  }, [orgId, project.id, received, spent, contractValue]);
+  }, [orgId, project.id, received, spent, contractValue, isDemoMode]);
 
   useEffect(() => { void reload(); }, [reload]);
 
@@ -68,7 +79,7 @@ export default function TabV2Deviden({
     try {
       const saved = await saveProjectDividendConfig(project.id, next);
       await reload(saved);
-      showToast('Pengaturan deviden disimpan', 'success');
+      showToast('Pengaturan dividen disimpan', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');
     } finally {
@@ -96,11 +107,11 @@ export default function TabV2Deviden({
         spent,
         contractValue,
       });
-      showToast('Deviden dibayarkan. Kas proyek berkurang.', 'success');
+      showToast('Dividen dibayarkan. Kas proyek berkurang.', 'success');
       await onRefresh();
       await reload();
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Gagal membayar deviden', 'error');
+      showToast(e instanceof Error ? e.message : 'Gagal membayar dividen', 'error');
     } finally {
       setPaying(false);
     }
@@ -119,14 +130,14 @@ export default function TabV2Deviden({
       <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-2">
           <Coins className="w-5 h-5 text-amber-600" />
-          <h3 className="font-black text-slate-900">Deviden Proyek</h3>
+          <h3 className="font-black text-slate-900">Dividen Proyek</h3>
         </div>
         <p className="text-xs text-slate-500 leading-relaxed">
           Bagi sisa kas proyek ke pihak yang terlibat, tanpa masuk Kas Bisnis.
           Piutang akun owner dipulihkan ke kolam dulu, lalu dipotong dari jatah owner.
         </p>
         <div className="grid grid-cols-2 gap-3 mt-4">
-          <Stat label="Kolam deviden" value={formatRupiah(pool)} />
+          <Stat label="Kolam dividen" value={formatRupiah(pool)} />
           <Stat label="Piutang owner (dipulihkan)" value={formatRupiah(ownerPiutang)} />
         </div>
       </div>
@@ -242,7 +253,7 @@ export default function TabV2Deviden({
             onClick={() => void handlePay()}
             className="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm disabled:opacity-50"
           >
-            {paying ? 'Memproses…' : 'Bayar deviden (kas proyek berkurang)'}
+            {paying ? 'Memproses…' : 'Bayar dividen (kas proyek berkurang)'}
           </button>
         )}
       </div>

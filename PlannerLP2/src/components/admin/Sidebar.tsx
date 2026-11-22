@@ -15,6 +15,7 @@ import {
   X,
   Sun,
   Moon,
+  PanelsTopLeft,
 } from "lucide-react";
 import { EstimatorLogo } from "@/components/brand/EstimatorLogo";
 import { cn } from "@/lib/utils/cn";
@@ -61,6 +62,11 @@ const mainNavItems = [
     icon: Settings,
     label: "Page Setup",
   },
+  {
+    href: "/admin/froyek",
+    icon: PanelsTopLeft,
+    label: "Landing Froyek",
+  },
 ];
 
 interface SidebarProps {
@@ -105,16 +111,16 @@ export function Sidebar({ onClose, isMobileDrawer = false }: SidebarProps) {
           href="/admin"
           onClick={onClose}
           className="flex items-center gap-3 font-bold group"
-          title="Monefyi Estimator Dashboard"
+          title="Froyek Admin Dashboard"
         >
           <EstimatorLogo className="w-8 h-8 rounded-xl shadow-md group-hover:scale-105 transition-transform flex-shrink-0" />
           {isExpanded && (
             <div className="overflow-hidden whitespace-nowrap">
               <p className="text-sm font-extrabold text-white leading-tight tracking-tight">
-                Monefyi
+                froyek
               </p>
               <p className="text-[10px] text-emerald-400 font-semibold tracking-wider uppercase">
-                Admin Panel
+                Admin
               </p>
             </div>
           )}
@@ -248,7 +254,7 @@ export function Sidebar({ onClose, isMobileDrawer = false }: SidebarProps) {
             "w-full flex items-center rounded-xl text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all cursor-pointer group",
             isExpanded ? "justify-start gap-3 px-3 py-2.5" : "justify-center p-2.5"
           )}
-          title="Keluar dari Admin Monefyi"
+          title="Keluar dari Admin Froyek"
         >
           <LogOut className="w-4 h-4 flex-shrink-0 group-hover:-translate-x-0.5 transition-transform" />
           {isExpanded && <span>Keluar</span>}

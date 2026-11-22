@@ -16,6 +16,9 @@ import { formatRupiah } from '../utils/projectUi';
 import MaterialAutosuggest from '../components/migration/MaterialAutosuggest';
 import { useShellStore } from '../store/shellStore';
 import GenerateRapFromTemplateModal from '../components/migration/GenerateRapFromTemplateModal';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { isAdminFullAccess } from '../lib/entitlement';
+import { hasEstimatorLicenseAccess } from '../lib/appProductBrand';
 
 type Tab = 'bahan' | 'tenaga' | 'alat' | 'vendor' | 'klien' | 'template';
 
@@ -29,9 +32,15 @@ const TABS: { id: Tab; label: string; icon: typeof Package }[] = [
 ];
 
 export default function DatabaseMaster() {
-  const { tenant } = useAppStore();
+  const { tenant, isDemoMode, platformRole, user, entitlementPreviewMode } = useAppStore();
+  const entitlement = useEntitlement();
+  const hasEstimatorAccess = hasEstimatorLicenseAccess(
+    entitlement,
+    isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode),
+  );
   const { setShellMeta, clearShellMeta } = useShellStore();
   const orgId = tenant?.id || '';
+  const demoActive = isDemoMode || orgId === 'demo';
   const [tab, setTab] = useState<Tab>('bahan');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -47,6 +56,15 @@ export default function DatabaseMaster() {
 
   const reload = useCallback(async () => {
     if (!orgId) return;
+    if (demoActive) {
+      // Mode demo melewati query Supabase (org_id='demo' -> UUID 22P02).
+      setMaterials([]);
+      setWorkers([]);
+      setTemplates([]);
+      setMeta({ tools: [], vendors: [], clients: [] });
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const master = await loadRppMaster(orgId);
@@ -59,7 +77,7 @@ export default function DatabaseMaster() {
     } finally {
       setLoading(false);
     }
-  }, [orgId]);
+  }, [orgId, demoActive]);
 
   useEffect(() => { void reload(); }, [reload]);
 
@@ -69,7 +87,7 @@ export default function DatabaseMaster() {
   }, [setShellMeta, clearShellMeta]);
 
   const saveMeta = async (next: DatabaseMeta) => {
-    if (!orgId) return;
+    if (!orgId || demoActive) return;
     await upsertDatabaseMeta(orgId, next);
     setMeta(next);
   };
@@ -79,6 +97,10 @@ export default function DatabaseMaster() {
 
   const addMaterial = async () => {
     if (!orgId || !matForm.name.trim()) return;
+    if (demoActive) {
+      showToast('Database master tidak dapat diubah di mode demo', 'info');
+      return;
+    }
     setSaving(true);
     try {
       await createMaterial(orgId, matForm);
@@ -94,6 +116,10 @@ export default function DatabaseMaster() {
 
   const syncWithEstimatorPricelist = async () => {
     if (!orgId || syncingPricelist) return;
+    if (demoActive) {
+      showToast('Sinkronisasi pricelist tidak tersedia di mode demo', 'info');
+      return;
+    }
     setSyncingPricelist(true);
     try {
       const [master, plItems] = await Promise.all([
@@ -186,6 +212,10 @@ export default function DatabaseMaster() {
 
   const addWorker = async () => {
     if (!orgId || !workerForm.name.trim()) return;
+    if (demoActive) {
+      showToast('Database master tidak dapat diubah di mode demo', 'info');
+      return;
+    }
     setSaving(true);
     try {
       await createWorker(orgId, workerForm);
@@ -201,6 +231,10 @@ export default function DatabaseMaster() {
 
   const addMetaItem = async (kind: 'tools' | 'vendors' | 'clients', name: string) => {
     if (!name.trim()) return;
+    if (demoActive) {
+      showToast('Database master tidak dapat diubah di mode demo', 'info');
+      return;
+    }
     const id = Date.now();
     const next = { ...meta };
     if (kind === 'tools') {
@@ -219,6 +253,10 @@ export default function DatabaseMaster() {
   };
 
   const removeMetaItem = async (kind: 'tools' | 'vendors' | 'clients', id: number) => {
+    if (demoActive) {
+      showToast('Database master tidak dapat diubah di mode demo', 'info');
+      return;
+    }
     const next = { ...meta };
     if (kind === 'tools') next.tools = (next.tools || []).filter(t => t.id !== id);
     if (kind === 'vendors') next.vendors = (next.vendors || []).filter(v => v.id !== id);
@@ -252,15 +290,17 @@ export default function DatabaseMaster() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={syncWithEstimatorPricelist}
-              disabled={syncingPricelist}
-              className="min-h-11 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[#059669] text-xs font-bold hover:bg-emerald-100 disabled:opacity-50 transition-colors"
-            >
-              {syncingPricelist ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {syncingPricelist ? 'Menyinkronkan...' : 'Sinkron Pricelist Estimator'}
-            </button>
+            {hasEstimatorAccess && (
+              <button
+                type="button"
+                onClick={syncWithEstimatorPricelist}
+                disabled={syncingPricelist}
+                className="min-h-11 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[#059669] text-xs font-bold hover:bg-emerald-100 disabled:opacity-50 transition-colors"
+              >
+                {syncingPricelist ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {syncingPricelist ? 'Menyinkronkan...' : 'Sinkron Pricelist Estimator'}
+              </button>
+            )}
             <div className="relative flex-1 sm:w-56">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -305,7 +345,7 @@ export default function DatabaseMaster() {
                       m.category,
                       m.unit,
                       formatRupiah(m.price),
-                      <button key="d" type="button" aria-label="Hapus bahan" onClick={async () => { await deleteMaterial(orgId, m.id); await reload(); }} className="min-w-10 min-h-10 inline-flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>,
+                      <button key="d" type="button" aria-label="Hapus bahan" onClick={async () => { if (demoActive) { showToast('Database master tidak dapat diubah di mode demo', 'info'); return; } await deleteMaterial(orgId, m.id); await reload(); }} className="min-w-10 min-h-10 inline-flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>,
                     ])}
                   />
                 </>
@@ -329,7 +369,7 @@ export default function DatabaseMaster() {
                           <div className="font-bold text-sm text-[#0F172A] truncate">{w.name}</div>
                           <div className="text-xs text-[#5B6B7A]">{w.level} · {formatRupiah(w.rate)}/hari</div>
                         </div>
-                        <button type="button" aria-label="Hapus pekerja" onClick={async () => { await deleteWorker(orgId, w.id); await reload(); }} className="min-w-10 min-h-10 inline-flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                        <button type="button" aria-label="Hapus pekerja" onClick={async () => { if (demoActive) { showToast('Database master tidak dapat diubah di mode demo', 'info'); return; } await deleteWorker(orgId, w.id); await reload(); }} className="min-w-10 min-h-10 inline-flex items-center justify-center text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
                   </div>
@@ -404,7 +444,7 @@ export default function DatabaseMaster() {
                       </div>
                     );
                   })}
-                  <button type="button" onClick={async () => { setSaving(true); try { await upsertJobTemplates(orgId, templates); showToast('Template disimpan', 'success'); } finally { setSaving(false); } }} className="min-h-11 flex items-center gap-2 px-4 py-2.5 border border-[#E5EAE8] bg-white hover:bg-slate-50 rounded-xl text-sm font-bold text-[#0F172A] transition-colors">
+                  <button type="button" onClick={async () => { if (demoActive) { showToast('Database master tidak dapat diubah di mode demo', 'info'); return; } setSaving(true); try { await upsertJobTemplates(orgId, templates); showToast('Template disimpan', 'success'); } finally { setSaving(false); } }} className="min-h-11 flex items-center gap-2 px-4 py-2.5 border border-[#E5EAE8] bg-white hover:bg-slate-50 rounded-xl text-sm font-bold text-[#0F172A] transition-colors">
                     <Save className="w-4 h-4" /> Simpan Template ke DB
                   </button>
                 </>

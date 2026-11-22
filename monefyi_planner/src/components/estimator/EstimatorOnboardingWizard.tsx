@@ -118,7 +118,7 @@ export default function EstimatorOnboardingWizard({
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
         <div>
           <h1 className="font-black text-slate-900">
-            {step === 1 ? 'Selamat Datang di Monefyi Estimator! 🎉' : 'Setup Estimator'}
+            {step === 1 ? 'Selamat Datang di Froyek Estimator! 🎉' : 'Setup Estimator'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">Langkah {step} dari 3: {stepLabels[step - 1]}</p>
         </div>
@@ -228,7 +228,7 @@ export default function EstimatorOnboardingWizard({
                 <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> Export PDF dengan branding Anda</li>
                 <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> Kirim langsung via WhatsApp</li>
                 <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" /> Track pipeline estimasi</li>
-                <li className="flex gap-2"><span className="shrink-0">🎁</span> BONUS: 1 proyek gratis di Planner</li>
+                <li className="flex gap-2"><span className="shrink-0">🎁</span> BONUS: 1 proyek gratis di Froyek</li>
               </ul>
             </section>
           )}

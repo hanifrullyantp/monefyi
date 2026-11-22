@@ -194,7 +194,7 @@ export function ComparisonSection() {
           <div className="max-h-[min(70vh,640px)] overflow-y-auto overscroll-contain">
             <table className="w-full table-fixed border-collapse bg-white">
               <caption className="sr-only">
-                Perbandingan situasi kerja: cara lama versus Monefyi Estimator
+                Perbandingan situasi kerja: cara lama versus Froyek Estimator
               </caption>
               <colgroup>
                 <col style={{ width: "24%" }} />

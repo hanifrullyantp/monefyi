@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
           });
           if (r.ok) {
             await dispatchEngineNotification(
-              `[MONEFYI WINNING ENGINE - ROLLBACK]\nKampanye "${log.campaign_name}": ${judged.reason}\n${rollbackNote}`,
+              `[FROYEK WINNING ENGINE - ROLLBACK]\nKampanye "${log.campaign_name}": ${judged.reason}\n${rollbackNote}`,
               notifications as any
             ).catch(() => null);
           }

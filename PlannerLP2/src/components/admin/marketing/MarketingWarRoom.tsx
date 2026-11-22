@@ -240,7 +240,7 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
           <div className="min-w-0 truncate">
             <div className="flex items-center gap-2">
               <h2 className="text-xs font-black text-slate-900 dark:text-white tracking-wide uppercase truncate">
-                Monefyi Adspert
+                Froyek Adspert
               </h2>
               <span className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -457,7 +457,7 @@ export function MarketingWarRoom({ variant = "standalone", onClose }: MarketingW
             {isProcessing && (
               <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 italic py-2 px-3 bg-slate-100 dark:bg-slate-800/40 rounded-xl w-fit">
                 <Sparkles className="w-3.5 h-3.5 animate-spin text-emerald-500" />
-                Monefyi Adspert sedang menganalisa data live Meta Ads...
+                Froyek Adspert sedang menganalisa data live Meta Ads...
               </div>
             )}
 

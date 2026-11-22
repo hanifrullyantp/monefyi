@@ -49,10 +49,13 @@ export function usePaymentReturn() {
     navigate('/app/estimator/new');
   };
 
-  const goEstimator = () => {
+  const goDashboard = () => {
+    const target = modal?.kind === 'success' && modal.product === 'estimator'
+      ? '/app/estimator'
+      : '/app';
     dismiss();
-    navigate('/app/estimator');
+    navigate(target);
   };
 
-  return { modal, dismiss, goPricelist, goNewEstimation, goEstimator };
+  return { modal, dismiss, goPricelist, goNewEstimation, goDashboard, goEstimator: goDashboard };
 }

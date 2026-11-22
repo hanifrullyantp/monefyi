@@ -280,7 +280,7 @@ export default function MarketingAdminPage() {
             )}
           </div>
 
-          {/* Monefyi Adspert Bot Icon */}
+          {/* Froyek Adspert Bot Icon */}
           <button
             type="button"
             onClick={() => setIsAdspertOpen(!isAdspertOpen)}
@@ -290,7 +290,7 @@ export default function MarketingAdminPage() {
                 ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-900/20"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200"
             )}
-            title="Buka / Tutup Monefyi Adspert"
+            title="Buka / Tutup Froyek Adspert"
           >
             <Bot className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-pulse border-2 border-white dark:border-slate-900" />
@@ -376,7 +376,7 @@ export default function MarketingAdminPage() {
         </div>
       )}
 
-      {/* Monefyi Adspert: POPUP CHAT MENIMPA KONTEN DI KANAN BAWAH */}
+      {/* Froyek Adspert: POPUP CHAT MENIMPA KONTEN DI KANAN BAWAH */}
       {isAdspertOpen && (
         <div className="fixed bottom-6 right-6 z-50 w-[440px] max-w-[calc(100vw-32px)] h-[640px] max-h-[85vh] shadow-2xl rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-slide-up">
           <MarketingWarRoom

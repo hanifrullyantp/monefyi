@@ -85,12 +85,26 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    return legacyHostRedirects().map((rule) => ({
-      source: rule.source,
-      has: [{ type: "host" as const, value: rule.host }],
-      destination: rule.destination,
-      permanent: rule.permanent,
-    }));
+    return [
+      ...legacyHostRedirects().map((rule) => ({
+        source: rule.source,
+        has: [{ type: "host" as const, value: rule.host }],
+        destination: rule.destination,
+        permanent: rule.permanent,
+      })),
+      {
+        source: "/admin",
+        has: [{ type: "host" as const, value: "estimator.froyek.com" }],
+        destination: "https://froyek.com/admin",
+        permanent: false,
+      },
+      {
+        source: "/admin/:path*",
+        has: [{ type: "host" as const, value: "estimator.froyek.com" }],
+        destination: "https://froyek.com/admin/:path*",
+        permanent: false,
+      },
+    ];
   },
   async rewrites() {
     const lp = landingBasePath;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { sendResendEmail } from "@/lib/services/resendService";
+import { activateFroyekPurchase } from "@/lib/froyek/activatePurchase";
 import type { LeadEmailLog } from "@/lib/types/leads";
 
 function getSupabaseAdminClient() {
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
       if (matchedOrder) {
         updatedOrderId = matchedOrder.id;
         const currentRaw = matchedOrder.raw_payload || {};
+        const isFroyekOrder = currentRaw.brand === "froyek";
         const existingEmails: LeadEmailLog[] = Array.isArray(currentRaw.emails) ? currentRaw.emails : [];
 
         // Kirim Resend email otomatis jika belum pernah terkirim
@@ -118,14 +120,16 @@ export async function POST(req: NextRequest) {
         const recipientEmail = matchedOrder.email || customerEmail;
         const buyerName = matchedOrder.full_name || customerName;
         const finalAmount = matchedOrder.grand_total || amount || 93000;
-        const accountPassword = String(currentRaw.accountPassword || "Estimator2026!");
+        const accountPassword = isFroyekOrder
+          ? ""
+          : String(currentRaw.accountPassword || "Estimator2026!");
         const resolvedPlanTier: "free" | "standard" | "pro" =
           matchedOrder.plan_tier ||
           currentRaw.planTier ||
           (matchedOrder.product_title?.toLowerCase().includes("pro") ? "pro" : "standard");
 
         // Provisioning akun pembeli di Supabase Auth jika SUPABASE_SERVICE_ROLE_KEY tersedia
-        if (recipientEmail && recipientEmail.includes("@")) {
+        if (!isFroyekOrder && recipientEmail && recipientEmail.includes("@")) {
           const supabaseAdmin = getSupabaseAdminClient();
           if (supabaseAdmin) {
             try {
@@ -146,7 +150,46 @@ export async function POST(req: NextRequest) {
 
         const newEmailLogs: LeadEmailLog[] = [];
 
-        if (recipientEmail && recipientEmail.includes("@") && !hasSentPaymentEmail) {
+        if (isFroyekOrder && recipientEmail && !currentRaw.froyekActivated) {
+          const supabaseAdmin = getSupabaseAdminClient();
+          if (supabaseAdmin) {
+            try {
+              const activated = await activateFroyekPurchase(supabaseAdmin, {
+                email: recipientEmail,
+                name: buyerName,
+                phone: String(matchedOrder.phone || customerMobile || ""),
+                planId: String(currentRaw.froyekPlan || "pro"),
+                amount: Number(finalAmount) || 0,
+                paymentId: String(transactionId || currentRaw.paymentId || paymentId || updatedOrderId),
+              });
+              currentRaw.froyekActivated = true;
+              currentRaw.setupUrl = activated.setupUrl;
+              if (activated.setupUrl) {
+                const accessMail = await sendResendEmail({
+                  to: recipientEmail,
+                  name: buyerName,
+                  type: "froyek_access",
+                  resetLink: activated.setupUrl,
+                  amount: finalAmount,
+                });
+                newEmailLogs.push({
+                  id: `email_${Date.now()}_froyek`,
+                  resendId: accessMail.emailId,
+                  type: "account_access",
+                  subject: "Akses froyek",
+                  to: recipientEmail,
+                  status: accessMail.status,
+                  sentAt: accessMail.sentAt,
+                  error: accessMail.error,
+                });
+              }
+            } catch (activateErr) {
+              console.error("froyek activation", activateErr);
+            }
+          }
+        }
+
+        if (!isFroyekOrder && recipientEmail && recipientEmail.includes("@") && !hasSentPaymentEmail) {
           // 1. Email Konfirmasi Pembayaran
           const res1 = await sendResendEmail({
             to: recipientEmail,
@@ -169,7 +212,7 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        if (recipientEmail && recipientEmail.includes("@") && !hasSentWelcomeEmail) {
+        if (!isFroyekOrder && recipientEmail && recipientEmail.includes("@") && !hasSentWelcomeEmail) {
           // 2. Email Akun & Password
           const res2 = await sendResendEmail({
             to: recipientEmail,
@@ -184,7 +227,7 @@ export async function POST(req: NextRequest) {
             id: `email_${Date.now()}_2`,
             resendId: res2.emailId,
             type: "account_access",
-            subject: "Akses Akun & Password Monefyi Estimator Anda",
+            subject: "Akses Akun & Password Froyek Estimator Anda",
             to: recipientEmail,
             status: res2.status,
             sentAt: res2.sentAt,

@@ -71,7 +71,7 @@ export function LiveChatWidget() {
           actions.push({
             label: "📲 Chat WhatsApp Langsung",
             action: "link_whatsapp",
-            payload: buildWaUrl(`Halo ${agentName}, mau tanya seputar Monefyi Estimator`),
+            payload: buildWaUrl(`Halo ${agentName}, mau tanya seputar Froyek Estimator`),
           });
         }
         setMessages([
@@ -137,7 +137,7 @@ export function LiveChatWidget() {
         id: `cs_${Date.now()}`,
         sender: "cs",
         text: isComplexQuery
-          ? `${replyData.text}\n\n💡 *Catatan:* Karena ini menyangkut penawaran atau keputusan khusus, Mas/Mbak bisa klik tombol **"🚨 Teruskan Pertanyaan ke Telegram Owner"** di bawah agar pesan ini diteruskan ke Telegram Owner Monefyi ya!`
+          ? `${replyData.text}\n\n💡 *Catatan:* Karena ini menyangkut penawaran atau keputusan khusus, Mas/Mbak bisa klik tombol **"🚨 Teruskan Pertanyaan ke Telegram Owner"** di bawah agar pesan ini diteruskan ke Telegram Owner Froyek ya!`
           : replyData.text,
         timestamp: new Date(),
         suggestedActions: actions,
@@ -167,7 +167,7 @@ export function LiveChatWidget() {
         {
           id: `cs_${Date.now()}`,
           sender: "cs",
-          text: `✅ *Permintaan Anda sudah ${agentName} teruskan ke Owner Monefyi!* 🚀${
+          text: `✅ *Permintaan Anda sudah ${agentName} teruskan ke Owner Froyek!* 🚀${
             normalizedWaPhone
               ? `\n\nUntuk respon langsung detik ini, Mas/Mbak juga bisa langsung kirim via WhatsApp Owner melalui tombol di bawah:`
               : ""
@@ -179,7 +179,7 @@ export function LiveChatWidget() {
                   label: "💬 Hubungi Owner via WhatsApp",
                   action: "link_whatsapp",
                   payload: buildWaUrl(
-                    `Halo Owner Monefyi, saya dari web landing mau konfirmasi: "${action.payload}"`
+                    `Halo Owner Froyek, saya dari web landing mau konfirmasi: "${action.payload}"`
                   ),
                 },
               ]
@@ -350,7 +350,7 @@ export function LiveChatWidget() {
                     handleSendMessage();
                   }
                 }}
-                placeholder={`Tanya ${agentName} seputar Monefyi...`}
+                placeholder={`Tanya ${agentName} seputar Froyek...`}
                 className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-emerald-500"
               />
               <button

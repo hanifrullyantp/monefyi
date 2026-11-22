@@ -65,7 +65,7 @@ export function trackMetaInitiateCheckout(params: {
   if (typeof window === "undefined") return;
   try {
     window.fbq?.("track", "InitiateCheckout", {
-      content_name: params.content_name || "Monefyi Estimator",
+      content_name: params.content_name || "Froyek Estimator",
       content_category: params.content_category || "SaaS / Digital",
       content_ids: params.content_ids || ["estimator"],
       value: params.value ?? 149000,
@@ -92,7 +92,7 @@ export function trackMetaAddPaymentInfo(params: {
   if (typeof window === "undefined") return;
   try {
     window.fbq?.("track", "AddPaymentInfo", {
-      content_name: params.content_name || "Monefyi Estimator",
+      content_name: params.content_name || "Froyek Estimator",
       content_category: params.content_category || "SaaS / Digital",
       content_ids: params.content_ids || ["estimator"],
       value: params.value ?? 149000,
@@ -117,7 +117,7 @@ export function trackMetaCompleteRegistration(params?: {
   if (typeof window === "undefined") return;
   try {
     window.fbq?.("track", "CompleteRegistration", {
-      content_name: params?.content_name || "Monefyi Estimator Free Trial",
+      content_name: params?.content_name || "Froyek Estimator Free Trial",
       status: params?.status || "completed",
       currency: params?.currency || "IDR",
       value: params?.value ?? 0,
@@ -160,7 +160,7 @@ export function trackMetaPurchase(params: {
     const predictedLtv = params.predicted_ltv !== undefined ? params.predicted_ltv : ltvValue;
 
     window.fbq?.("track", "Purchase", {
-      content_name: params.content_name || "Monefyi Estimator",
+      content_name: params.content_name || "Froyek Estimator",
       content_category: params.content_category || "SaaS / Digital",
       content_ids: params.content_ids || ["estimator"],
       value: params.value,

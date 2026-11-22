@@ -73,7 +73,7 @@ export default function ErrorTraceDiagnosticsPanel() {
 
   const generateDiagnosticReport = () => {
     const report = {
-      app: 'Monefyi Planner',
+      app: 'Froyek',
       timestamp: new Date().toISOString(),
       tenant_id: tenant?.id || null,
       tenant_name: tenant?.name || null,
@@ -139,7 +139,7 @@ export default function ErrorTraceDiagnosticsPanel() {
     const report = generateDiagnosticReport();
     const truncated = report.length > 2500 ? report.slice(0, 2450) + '\n...[dipotong]' : report;
     const url = `https://wa.me/?text=${encodeURIComponent(
-      `*Laporan Diagnostik Error Monefyi Planner:*\n\`\`\`${truncated}\`\`\``,
+      `*Laporan Diagnostik Error Froyek:*\n\`\`\`${truncated}\`\`\``,
     )}`;
     window.open(url, '_blank');
   };

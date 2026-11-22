@@ -113,7 +113,7 @@ export default function CustomDomainPanel({ onUpgrade }: Props) {
         <div>
           <h3 className="font-bold text-slate-900">Custom Domain</h3>
           <p className="text-sm text-slate-500">
-            Arahkan subdomain perusahaan ke froyek. Rekomendasi: <code className="bg-slate-100 px-1 rounded">planner.domainanda.com</code>
+            Arahkan subdomain perusahaan ke Froyek. Rekomendasi: <code className="bg-slate-100 px-1 rounded">app.domainanda.com</code>
           </p>
         </div>
         <button type="button" onClick={load} className="ml-auto p-2 rounded-lg hover:bg-slate-100" aria-label="Refresh">
@@ -175,9 +175,12 @@ export default function CustomDomainPanel({ onUpgrade }: Props) {
               <div className="bg-slate-50 rounded-lg p-3">
                 <div className="text-xs font-bold text-slate-500 mb-1">TXT (verifikasi)</div>
                 <div className="font-mono text-xs break-all">
-                  _monefyi-verify.{active.hostname}
+                  _froyek-verify.{active.hostname}
                 </div>
-                <div className="flex items-center gap-2 mt-1">
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Catatan: domain lama yang sudah terpasang juga masih kompatibel dengan prefix <code className="bg-white px-1 rounded border">_monefyi-verify.{active.hostname}</code>.
+                </p>
+                <div className="flex items-center gap-2 mt-1.5">
                   <code className="text-xs bg-white border px-2 py-1 rounded flex-1 break-all">{active.verification_token}</code>
                   <button type="button" onClick={() => copy(active.verification_token)} className="p-1.5 hover:bg-slate-200 rounded">
                     <Copy className="w-3.5 h-3.5" />
@@ -187,7 +190,7 @@ export default function CustomDomainPanel({ onUpgrade }: Props) {
               <div className="bg-slate-50 rounded-lg p-3">
                 <div className="text-xs font-bold text-slate-500 mb-1">CNAME</div>
                 <p className="text-xs text-slate-600">
-                  Host <strong>planner</strong> (atau subdomain yang dipilih) → <code>{cnameTarget()}</code>
+                  Host <strong>app</strong> (atau subdomain yang dipilih) → <code>{cnameTarget()}</code>
                 </p>
                 <button type="button" onClick={() => copy(cnameTarget())} className="mt-1 text-xs text-emerald-600 font-semibold">
                   Salin target CNAME

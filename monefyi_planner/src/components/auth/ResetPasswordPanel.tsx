@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Mail } from 'lucide-react';
 import PasswordField, { isPasswordReady } from './PasswordField';
+import { EstimatorLogo } from '../EstimatorLogo';
 import { PlannerLogo } from '../MonefyiLogo';
 import { authUserMessage } from '../../lib/authMessages';
 import { isEstimatorBrandContext } from '../../lib/estimatorBrand';
@@ -12,7 +13,7 @@ import {
   readPasswordRecoveryError,
 } from '../../lib/passwordRecoveryIntent';
 import {
-  getSession,
+  getSessionSafe,
   onAuthStateChange,
   resetPasswordForEmail,
   updatePassword,
@@ -21,7 +22,7 @@ import { useAppStore } from '../../store/appStore';
 
 /** Saves the new password, then opens the app with the recovery session. */
 export async function finishPasswordReset(navigate: (path: string, opts?: { replace?: boolean }) => void): Promise<void> {
-  const session = await getSession();
+  const { session } = await getSessionSafe();
   if (session) await runBootstrap(session);
   clearPasswordRecoveryIntent();
   const dest = isEstimatorBrandContext() ? estimatorAppEntryPath() : '/app';
@@ -51,7 +52,7 @@ export default function ResetPasswordPanel({ onUpdated }: ResetPasswordPanelProp
     const subscription = onAuthStateChange((_event, session) => {
       if (!cancelled && session) setHasSession(true);
     });
-    void getSession().then((session) => {
+    void getSessionSafe().then(({ session }) => {
       if (cancelled) return;
       setHasSession(!!session);
       setReady(true);
@@ -75,7 +76,7 @@ export default function ResetPasswordPanel({ onUpdated }: ResetPasswordPanelProp
     }
     setLoading(true);
     try {
-      const session = await getSession();
+      const { session } = await getSessionSafe();
       if (!session) {
         setHasSession(false);
         setError('Sesi tautan tidak ditemukan. Minta tautan baru di bawah.');
@@ -125,11 +126,14 @@ export default function ResetPasswordPanel({ onUpdated }: ResetPasswordPanelProp
           Tautan reset tidak membuka sesi. Minta tautan baru, lalu buka email di perangkat ini dan isi password baru.
         </p>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+          <label htmlFor="reset-resend-email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
+              id="reset-resend-email"
+              name="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="kamu@bisnis.com"
@@ -167,6 +171,8 @@ export default function ResetPasswordPanel({ onUpdated }: ResetPasswordPanelProp
         <label className="block text-sm font-medium text-slate-700 mb-1.5" htmlFor="new-password">Password baru</label>
         <PasswordField
           id="new-password"
+          name="newPassword"
+          autoComplete="new-password"
           value={password}
           onChange={setPassword}
           placeholder="Password baru"
@@ -177,7 +183,9 @@ export default function ResetPasswordPanel({ onUpdated }: ResetPasswordPanelProp
         <label className="block text-sm font-medium text-slate-700 mb-1.5" htmlFor="confirm-password">Ulangi password</label>
         <input
           id="confirm-password"
+          name="confirmPassword"
           type="password"
+          autoComplete="new-password"
           value={confirm}
           onChange={e => setConfirm(e.target.value)}
           placeholder="Ulangi password baru"
@@ -217,12 +225,19 @@ export function ResetPasswordPage() {
         <Link
           to="/login"
           onClick={() => clearPasswordRecoveryIntent()}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 text-sm"
+          className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors mb-8 text-sm"
         >
           <ArrowLeft className="w-4 h-4" /> Kembali ke login
         </Link>
         <div className="bg-white rounded-3xl p-8 shadow-2xl">
-          <PlannerLogo className="w-10 h-10 rounded-xl object-contain" />
+          {isEstimatorBrandContext() ? (
+            <div className="flex items-center gap-2.5">
+              <EstimatorLogo />
+              <span className="text-lg font-extrabold text-slate-900">Froyek Estimator</span>
+            </div>
+          ) : (
+            <PlannerLogo variant="lockup" />
+          )}
           <p className="text-xs text-slate-500 mt-2 mb-6">Buat password baru</p>
           <ResetPasswordPanel onUpdated={handleUpdated} />
         </div>

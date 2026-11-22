@@ -325,7 +325,7 @@ function SettingsContent() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs">
             <h2 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Settings className="w-5 h-5 text-emerald-600" />
-              <span>Pusat Kendali Seluruh Fitur &amp; Halaman Monefyi</span>
+              <span>Pusat Kendali Seluruh Fitur &amp; Halaman Froyek</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Akses cepat ke seluruh modul landing page, bot komunikasi, integrasi gateway, dan konten.
@@ -405,7 +405,7 @@ function SettingsContent() {
                 },
                 {
                   title: "Fitur & Keunggulan",
-                  desc: "Daftar fitur estimator Monefyi di homepage",
+                  desc: "Daftar fitur estimator Froyek di homepage",
                   href: "/admin/features",
                   category: "Landing Page",
                   color: "indigo",
@@ -494,7 +494,7 @@ function SettingsContent() {
               </span>
             </div>
             <p className="text-xs text-slate-300 leading-relaxed">
-              API Key OpenRouter ini otomatis mengaktifkan seluruh model multi-LLM (Claude 3.7 Sonnet, GPT-6 Luna Pro, GPT-4o, DeepSeek V3, dan Gemini) untuk seluruh slot AI Monefyi tanpa perlu mengisi API key satu per satu.
+              API Key OpenRouter ini otomatis mengaktifkan seluruh model multi-LLM (Claude 3.7 Sonnet, GPT-6 Luna Pro, GPT-4o, DeepSeek V3, dan Gemini) untuk seluruh slot AI Froyek tanpa perlu mengisi API key satu per satu.
             </p>
             <div className="relative">
               <input

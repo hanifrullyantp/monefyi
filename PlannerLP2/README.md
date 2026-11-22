@@ -1,5 +1,7 @@
 # 🚀 Monefyi Planner — Premium Edition
 
+Landing publik `froyek.com` memakai narasi Froyek di kode yang sama. Host `estimator.froyek.com` tetap landing Estimator. Admin kanonis ada di `froyek.com/admin`. Catatan operasional: [`docs/landing/ADMIN.md`](../docs/landing/ADMIN.md).
+
 **Sistem All-in-One Premium untuk Pelaku Jasa Proyek Indonesia**
 
 Landing page & admin panel yang telah di-upgrade dengan fitur-fitur premium untuk memberikan pengalaman user yang luar biasa.

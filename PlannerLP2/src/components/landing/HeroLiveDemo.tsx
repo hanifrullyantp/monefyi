@@ -60,7 +60,7 @@ export function HeroLiveDemo({ pulseToken = 0 }: { pulseToken?: number }) {
           <div className="absolute inset-0 z-[1] bg-[#f4f6f5]">
             <Image
               src="/brand/estimator/demo-preview.png"
-              alt="Pratinjau aplikasi Monefyi Estimator"
+              alt="Pratinjau aplikasi Froyek Estimator"
               fill
               priority
               sizes="390px"
@@ -75,7 +75,7 @@ export function HeroLiveDemo({ pulseToken = 0 }: { pulseToken?: number }) {
         )}
         {shouldLoad && (
           <iframe
-            title="Demo Estimator Monefyi"
+            title="Demo Froyek Estimator"
             src={DEMO_SRC()}
             width={390}
             height={844}

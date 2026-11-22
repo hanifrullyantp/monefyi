@@ -272,7 +272,7 @@ export function buildProjectPopupConfig(
       list: [
         { title: 'Nilai Kontrak', meta: 'Total nilai proyek', value: formatRupiah(p.contractValue) },
         { title: 'Realisasi', meta: 'Biaya yang sudah keluar', value: formatRupiah(p.rap.realisasi), valueColor: '#e11d48' },
-        { title: 'Est. Laba', meta: 'Kontrak − Realisasi', value: formatRupiah(p.rap.estLaba), valueColor: '#059669' },
+        { title: 'Est. Laba', meta: 'Kontrak − Realisasi', value: formatRupiah(p.rap.estLaba), valueColor: p.rap.estLaba < 0 ? '#e11d48' : '#059669' },
       ],
     };
   }

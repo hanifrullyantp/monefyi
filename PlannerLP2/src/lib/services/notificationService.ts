@@ -1,5 +1,5 @@
 /**
- * Notification Service for Monefyi Admin (Desktop & Mobile)
+ * Notification Service for Froyek Admin (Desktop & Mobile)
  * Supports:
  * - Native Web Notifications (Desktop macOS/Windows, Android Chrome WebAPK, iOS 16.4+ PWA)
  * - Service Worker showNotification()

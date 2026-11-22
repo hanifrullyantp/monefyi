@@ -113,7 +113,7 @@ export async function recordDividendPayouts(input: {
   contractValue: number;
 }): Promise<DividendConfig> {
   const preview = await buildProjectDividendPreview(input);
-  if (preview.pctTotal <= 0) throw new Error('Atur persentase pihak deviden terlebih dahulu.');
+  if (preview.pctTotal <= 0) throw new Error('Atur persentase pihak dividen terlebih dahulu.');
   if (Math.abs(preview.pctTotal - 100) > 0.05) {
     throw new Error(`Total persentase harus 100% (sekarang ${preview.pctTotal}%).`);
   }
@@ -139,7 +139,7 @@ export async function recordDividendPayouts(input: {
           orgId: input.orgId,
           receivableId: rec.id,
           amount: take,
-          notes: `Offset deviden proyek`,
+          notes: `Offset dividen proyek`,
           createdBy: input.userId,
           withJournal: false,
         });
@@ -151,7 +151,7 @@ export async function recordDividendPayouts(input: {
       const { error } = await supabase.from('planner_cost_realizations').insert({
         project_id: input.projectId,
         date: today,
-        description: `Deviden: ${line.party.name}`,
+        description: `Dividen: ${line.party.name}`,
         total_amount: Math.round(line.remainingCash),
         supplier: line.party.name,
         status: 'dividend',

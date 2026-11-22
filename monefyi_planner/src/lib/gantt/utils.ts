@@ -1,5 +1,6 @@
 import type { Project } from '../../store/appStore';
 import type { WorkItem } from '../../services/workItemService';
+import type { CriticalPathResult } from './criticalPath';
 import type {
   FlatGanttRow,
   GanttAdvancedFilters,
@@ -69,21 +70,92 @@ export function projectToGanttTask(p: Project, sortOrder: number): GanttTask {
   };
 }
 
-export function workItemToGanttTask(wi: WorkItem, project: Project): GanttTask {
+export function workItemToGanttTask(
+  wi: WorkItem,
+  project: Project,
+  assigneeNameMap?: Map<string, string> | Record<string, string>,
+): GanttTask {
+  const assignedMemberId = wi.assigned_member_id ?? null;
+  const assigneeName = assignedMemberId
+    ? assigneeNameMap instanceof Map
+      ? assigneeNameMap.get(assignedMemberId)
+      : assigneeNameMap?.[assignedMemberId]
+    : undefined;
+  const notes = Array.isArray(wi.notes) ? wi.notes : undefined;
+  const attachments = Array.isArray(wi.attachments) ? wi.attachments : undefined;
+  const parentId = wi.parent_id && wi.parent_id !== wi.id ? wi.parent_id : project.id;
+
   return {
     id: wi.id,
     type: 'work_item',
     projectId: project.id,
-    parentId: project.id,
+    parentId,
     name: wi.name,
     startDate: wi.planned_start,
     endDate: wi.planned_end,
     progress: Number(wi.progress_pct) || 0,
     status: wi.status || 'pending',
     healthStatus: project.health_status,
-    priority: inferPriority(project),
+    priority: wi.priority ?? inferPriority(project),
+    assigneeId: assignedMemberId ?? undefined,
+    assignedMemberId,
+    assigneeName,
     sortOrder: wi.sort_order ?? 0,
+    updatedAt: wi.updated_at,
+    notes,
+    attachments,
+    notesCount: notes?.length ?? 0,
+    attachmentsCount: attachments?.length ?? 0,
   };
+}
+
+/**
+ * Returns true if task's endDate exceeds the parent project's endDate (F-28).
+ */
+export function isTaskOverProjectDeadline(
+  taskEndDate?: string | null,
+  projectEndDate?: string | null,
+): boolean {
+  if (!taskEndDate || !projectEndDate) return false;
+  return taskEndDate.slice(0, 10) > projectEndDate.slice(0, 10);
+}
+
+/**
+ * Returns how many days taskEndDate exceeds projectEndDate (0 if within deadline).
+ */
+export function getDeadlineOverrunDays(
+  taskEndDate?: string | null,
+  projectEndDate?: string | null,
+): number {
+  if (!isTaskOverProjectDeadline(taskEndDate, projectEndDate)) return 0;
+  return Math.max(
+    0,
+    Math.round(
+      (parseDate(taskEndDate!.slice(0, 10)) - parseDate(projectEndDate!.slice(0, 10))) / DAY_MS,
+    ),
+  );
+}
+
+/**
+ * Annotates work_item tasks with CPM results (`isCritical`, `totalFloatDays`).
+ */
+export function annotateTasksWithCriticalPath(
+  tasks: GanttTask[],
+  cpm: CriticalPathResult,
+): GanttTask[] {
+  return tasks.map(t => {
+    if (t.type === 'project') {
+      if (t.isCritical === undefined && t.totalFloatDays === undefined) return t;
+      return { ...t, isCritical: false, totalFloatDays: undefined };
+    }
+    const metric = cpm.tasksById.get(t.id);
+    if (!metric) return t;
+    return {
+      ...t,
+      isCritical: metric.isCritical,
+      totalFloatDays: metric.totalFloatDays,
+    };
+  });
 }
 
 export function computeTimelineRange(tasks: GanttTask[]): TimelineRange {

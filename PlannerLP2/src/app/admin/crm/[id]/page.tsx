@@ -196,7 +196,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     }
 
     const msg = `Halo Kak ${lead.name}! 🙌
-Terima kasih telah memesan ${lead.projectType || "Monefyi Estimator"}.
+Terima kasih telah memesan ${lead.projectType || "Froyek Estimator"}.
 
 Berikut adalah data akses login akun Estimator Kakak:
 👤 *Nama*: ${lead.name}
@@ -262,7 +262,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
             <span>KIRIM AKUN & PW (WA)</span>
           </button>
           <button
-            onClick={() => openWhatsApp(lead.phone, `Halo Kak ${lead.name}, salam dari tim Monefyi Estimator! 🙌`)}
+            onClick={() => openWhatsApp(lead.phone, `Halo Kak ${lead.name}, salam dari tim Froyek Estimator! 🙌`)}
             className="flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl px-4 py-2.5 text-xs sm:text-sm font-bold hover:bg-emerald-100 transition-all cursor-pointer"
           >
             <MessageCircle className="w-4 h-4 text-emerald-600" />
@@ -336,7 +336,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
             <h1 className="text-4xl md:text-5xl font-black mb-2">{lead.name}</h1>
             <p className="text-xl text-emerald-400 font-bold mb-6 flex items-center gap-2">
               <Hash className="w-5 h-5" />
-              {lead.projectType || "Monefyi Estimator"}
+              {lead.projectType || "Froyek Estimator"}
             </p>
             
             <div className="flex flex-wrap gap-6 text-slate-400">
@@ -675,7 +675,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
                     <input
                       value={form.projectType || ""}
                       onChange={(e) => setForm({ ...form, projectType: e.target.value })}
-                      placeholder="e.g. Monefyi Estimator Pro"
+                      placeholder="e.g. Froyek Estimator Pro"
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                     />
                   </div>

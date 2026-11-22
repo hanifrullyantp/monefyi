@@ -63,6 +63,7 @@ serve(async (req) => {
     if (target?.user?.email) {
       await sendEmailSafe({
         to: target.user.email,
+        product: "froyek",
         subject: "Peran diperbarui",
         html: roleChangedHtml({ orgName: org?.name || "", newRole }),
         text: `Peran Anda diubah menjadi ${newRole}.`,

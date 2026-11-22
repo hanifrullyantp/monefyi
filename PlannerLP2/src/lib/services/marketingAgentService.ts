@@ -38,15 +38,15 @@ export function generateWinningAdLocally(params: GenerateAdParams): WinningAdTem
     primaryTexts = [
       {
         framework: 'PAS',
-        text: `Bikin penawaran kitchen set butuh waktu 2 hari, pas dikirim klien bilang: "Kemahalan mas, saya bandingin sama sebelah dulu ya." 😭\n\nRugi waktu, bahan material naik diam-diam, tukang nuntut upah harian jalan terus.\n\nDengan Monefyi Estimator, Anda bisa hitung harga modal bahan + upah tukang langsung di HP saat survei lokasi. Klik 1 tombol, PDF penawaran profesional dengan merek Anda langsung meluncur ke WhatsApp klien sebelum Anda pulang. Lebih cepat, dipercaya, anti-boncos!\n\n👉 Amankan lisensinya sekarang dengan promo khusus hari ini.`,
+        text: `Bikin penawaran kitchen set butuh waktu 2 hari, pas dikirim klien bilang: "Kemahalan mas, saya bandingin sama sebelah dulu ya." 😭\n\nRugi waktu, bahan material naik diam-diam, tukang nuntut upah harian jalan terus.\n\nDengan Froyek Estimator, Anda bisa hitung harga modal bahan + upah tukang langsung di HP saat survei lokasi. Klik 1 tombol, PDF penawaran profesional dengan merek Anda langsung meluncur ke WhatsApp klien sebelum Anda pulang. Lebih cepat, dipercaya, anti-boncos!\n\n👉 Amankan lisensinya sekarang dengan promo khusus hari ini.`,
       },
       {
         framework: 'HSO',
-        text: `Tahun lalu workshop interior saya hampir kolaps. Orderan keliatan banyak, tapi tiap tutup buku saldo rekening kas selalu tipis.\n\nSetelah diaudit, ternyata bocor di sisa potongan multiplek, aksesoris lambat dihitung, dan biaya tukang lembur yang tidak tercatat di awal.\n\nSekarang pakai Monefyi: rumus meter lari, HPP bahan, upah borongan tukang sudah otomatis. Margin laba bersih terkunci 30%. Hasilnya? Klien kagum penawaran secepat kilat, omset naik tanpa pusing nomboki proyek.`,
+        text: `Tahun lalu workshop interior saya hampir kolaps. Orderan keliatan banyak, tapi tiap tutup buku saldo rekening kas selalu tipis.\n\nSetelah diaudit, ternyata bocor di sisa potongan multiplek, aksesoris lambat dihitung, dan biaya tukang lembur yang tidak tercatat di awal.\n\nSekarang pakai Froyek: rumus meter lari, HPP bahan, upah borongan tukang sudah otomatis. Margin laba bersih terkunci 30%. Hasilnya? Klien kagum penawaran secepat kilat, omset naik tanpa pusing nomboki proyek.`,
       },
       {
         framework: 'BAB',
-        text: `DULU: Pulang survei malam, masih lembur buka laptop ketik Excel sampai jam 1 pagi. Besoknya klien batalin sepihak.\n\nSEKARANG: Selesai ukur ruangan di lokasi, input ukuran di HP, PDF resmi terkirim saat itu juga di depan klien. DP masuk sebelum besok pagi!\n\nMonefyi Estimator dirancang khusus untuk pebisnis interior & furniture yang ingin kerja lebih santai tapi hasil maksimal.`,
+        text: `DULU: Pulang survei malam, masih lembur buka laptop ketik Excel sampai jam 1 pagi. Besoknya klien batalin sepihak.\n\nSEKARANG: Selesai ukur ruangan di lokasi, input ukuran di HP, PDF resmi terkirim saat itu juga di depan klien. DP masuk sebelum besok pagi!\n\nFroyek Estimator dirancang khusus untuk pebisnis interior & furniture yang ingin kerja lebih santai tapi hasil maksimal.`,
       },
     ];
     headlines = [
@@ -65,7 +65,7 @@ export function generateWinningAdLocally(params: GenerateAdParams): WinningAdTem
       },
       {
         time: '00:03 - 00:10',
-        visual: 'Beralih ke layar HP membuka aplikasi Monefyi. Memilih template Kitchen Set Atas & Bawah, input ukuran panjang.',
+        visual: 'Beralih ke layar HP membuka aplikasi Froyek. Memilih template Kitchen Set Atas & Bawah, input ukuran panjang.',
         voiceover: 'Tinggalkan cara lama. Sekarang cukup pilih template, ketik ukuran panjang, harga material dan upah tukang langsung keluar otomatis.',
         onScreenText: 'Hitung HPP & Margin di HP 📱',
       },
@@ -77,8 +77,8 @@ export function generateWinningAdLocally(params: GenerateAdParams): WinningAdTem
       },
       {
         time: '00:20 - 00:30',
-        visual: 'Klien tersenyum menyetujui, notifikasi transfer DP masuk ke layar HP. Logo Monefyi Estimator muncul.',
-        voiceover: 'Klien lebih percaya, closing lebih cepat, dan margin laba Anda terkunci aman. Coba Monefyi hari ini!',
+        visual: 'Klien tersenyum menyetujui, notifikasi transfer DP masuk ke layar HP. Logo Froyek Estimator muncul.',
+        voiceover: 'Klien lebih percaya, closing lebih cepat, dan margin laba Anda terkunci aman. Coba Froyek hari ini!',
         onScreenText: 'AMANKAN PROMO SEKARANG 👉',
       },
     ];
@@ -95,15 +95,15 @@ export function generateWinningAdLocally(params: GenerateAdParams): WinningAdTem
     primaryTexts = [
       {
         framework: 'PAS',
-        text: `Berapa kali Anda tekor di proyek karena harga besi dan semen naik, tapi Anda tidak sempat update perhitungan di penawaran lama?\n\nKlien tidak mau tahu kenaikan harga, upah tukang harian nuntut dibayar tiap Sabtu. Kalau terus begini, Anda kerja keras cuma buat nomboki kontraktor lain!\n\nMonefyi Planner & Estimator adalah senjata rahasia kontraktor modern: buat RAP otomatis, monitor progres lapangan, dan pantau arus kas proyek langsung dari smartphone Anda.\n\nKendalikan keuntungan proyek Anda sebelum terlambat. Klik link di bawah untuk akses langsung!`,
+        text: `Berapa kali Anda tekor di proyek karena harga besi dan semen naik, tapi Anda tidak sempat update perhitungan di penawaran lama?\n\nKlien tidak mau tahu kenaikan harga, upah tukang harian nuntut dibayar tiap Sabtu. Kalau terus begini, Anda kerja keras cuma buat nomboki kontraktor lain!\n\nFroyek & Estimator adalah senjata rahasia kontraktor modern: buat RAP otomatis, monitor progres lapangan, dan pantau arus kas proyek langsung dari smartphone Anda.\n\nKendalikan keuntungan proyek Anda sebelum terlambat. Klik link di bawah untuk akses langsung!`,
       },
       {
         framework: 'HSO',
-        text: `Dulu saya sering bangga menang proyek besar. Tapi pas proyek selesai 100%, sisa uang di rekening proyek cuma cukup buat bayar tukang terakhir. Untung saya ke mana?\n\nTernyata pengeluaran kecil tak terduga, sisa buangan material, dan kasbon tukang yang berceceran menghabiskan seluruh laba bersih.\n\nBegitu beralih ke Monefyi, setiap sak semen dan jam kerja tercatat rapi. Margin profit 18% terkunci dari awal sampai serah terima kunci. Kontraktor tenang, keluarga senang.`,
+        text: `Dulu saya sering bangga menang proyek besar. Tapi pas proyek selesai 100%, sisa uang di rekening proyek cuma cukup buat bayar tukang terakhir. Untung saya ke mana?\n\nTernyata pengeluaran kecil tak terduga, sisa buangan material, dan kasbon tukang yang berceceran menghabiskan seluruh laba bersih.\n\nBegitu beralih ke Froyek, setiap sak semen dan jam kerja tercatat rapi. Margin profit 18% terkunci dari awal sampai serah terima kunci. Kontraktor tenang, keluarga senang.`,
       },
       {
         framework: 'BAB',
-        text: `DULU: Setiap tender pusing kalkulasi rumus Excel berjam-jam, data harga material ketinggalan zaman, resiko salah hitung tinggi.\n\nSEKARANG: Database harga material terstandarisasi, tinggal klik tambah pekerjaan, PDF penawaran siap presentasi ke owner dalam hitungan menit.\n\nJadilah kontraktor profesional yang dipercaya klien kelas atas dengan Monefyi.`,
+        text: `DULU: Setiap tender pusing kalkulasi rumus Excel berjam-jam, data harga material ketinggalan zaman, resiko salah hitung tinggi.\n\nSEKARANG: Database harga material terstandarisasi, tinggal klik tambah pekerjaan, PDF penawaran siap presentasi ke owner dalam hitungan menit.\n\nJadilah kontraktor profesional yang dipercaya klien kelas atas dengan Froyek.`,
       },
     ];
     headlines = [
@@ -122,19 +122,19 @@ export function generateWinningAdLocally(params: GenerateAdParams): WinningAdTem
       },
       {
         time: '00:03 - 00:10',
-        visual: 'Beralih ke rekaman screen HP: membuka proyek di Monefyi, melihat dashboard progres, cashflow, dan RAB terhubung.',
+        visual: 'Beralih ke rekaman screen HP: membuka proyek di Froyek, melihat dashboard progres, cashflow, dan RAB terhubung.',
         voiceover: 'Semua kontraktor sukses punya satu kesamaan: mereka tahu persis ke mana perginya setiap rupiah di proyek mereka.',
         onScreenText: 'Kendalikan Proyek Real-Time 🏗️',
       },
       {
         time: '00:10 - 00:20',
         visual: 'Mengetuk fitur Estimator cepat: menghitung volume dinding, beton bertulang, langsung keluar kebutuhan sak semen dan besi.',
-        voiceover: 'Dengan Monefyi, estimasi harga modal, kasbon tukang, hingga laporan opname mingguan terkontrol rapi tanpa pusing buka Excel.',
+        voiceover: 'Dengan Froyek, estimasi harga modal, kasbon tukang, hingga laporan opname mingguan terkontrol rapi tanpa pusing buka Excel.',
         onScreenText: 'Hitung Volume & Kebutuhan Otomatis ⚡',
       },
       {
         time: '00:20 - 00:30',
-        visual: 'Bangunan rumah modern jadi rapi, pemilik proyek bersalaman dengan kontraktor, download Monefyi di App Store / Web.',
+        visual: 'Bangunan rumah modern jadi rapi, pemilik proyek bersalaman dengan kontraktor, download Froyek di App Store / Web.',
         voiceover: 'Tingkatkan reputasi Anda, menangkan tender bergengsi, dan amankan profit proyek Anda mulai sekarang!',
         onScreenText: 'DAPATKAN AKSES SEKARANG 👉',
       },
@@ -243,7 +243,7 @@ export function processAgentWarRoomMessage(
     responses.push({
       id: `msg_${Date.now()}_1`,
       sender: 'cmo',
-      text: `Ide bagus! Kunci menurunkan CPA di Meta Ads saat ini ada di 3-detik pertama (Thumbstop Rate). Saya serahkan ke Sinta (Creative Strategist) untuk meracik materi iklan winning spesifik audiens Monefyi.`,
+      text: `Ide bagus! Kunci menurunkan CPA di Meta Ads saat ini ada di 3-detik pertama (Thumbstop Rate). Saya serahkan ke Sinta (Creative Strategist) untuk meracik materi iklan winning spesifik audiens Froyek.`,
       timestamp: now,
     });
 
@@ -338,7 +338,7 @@ export function analyzeMarketingSystemIntegrations(
       severity: 'warning',
       agent: 'media_buyer',
       title: 'Meta Graph API Berjalan di Mode Simulator',
-      diagnosis: 'Access Token atau Ad Account ID belum diisi. Saat ini tabel menampilkan data benchmark sandbox Monefyi.',
+      diagnosis: 'Access Token atau Ad Account ID belum diisi. Saat ini tabel menampilkan data benchmark sandbox Froyek.',
       actionableFix: 'Buka menu Konfigurasi & Rules, masukkan Access Token dari Meta Business Developer dan Ad Account ID (format: act_xxxxxxxx).',
     });
   }
@@ -398,7 +398,7 @@ export function analyzeMarketingSystemIntegrations(
     metaStatus: {
       connected: hasMetaToken && hasAdAccount,
       label: hasMetaToken && hasAdAccount ? 'Meta API Terhubung (Live)' : 'Simulator Mode Aktif',
-      detail: hasMetaToken && hasAdAccount ? `Ad Account: ${apiConfig.adAccountId}` : 'Sandbox Benchmark Monefyi',
+      detail: hasMetaToken && hasAdAccount ? `Ad Account: ${apiConfig.adAccountId}` : 'Sandbox Benchmark Froyek',
     },
     aiStatus: {
       connected: true,
@@ -474,7 +474,7 @@ export function auditVideoAdContent(input: VideoAuditInput): VideoAuditReport {
       'Detik 06: Tangan mengetik ukuran di smartphone, angka HPP langsung terhitung otomatis.',
       'Detik 16: Notifikasi WhatsApp terkirim dan klien tersenyum melihat lembar penawaran rapi.',
     ];
-    revisedVoiceover = `Berapa kali Anda lembur semalaman bikin RAB kitchen set, tapi besoknya klien bilang "kemahalan ya mas"?\n\nTinggalkan cara lama. Dengan Monefyi Estimator, input ukuran ruangan di HP saat survei, hitung HPP bahan dan ongkos tukang langsung beres.\n\nKlik 1 tombol, PDF resmi berlogo workshop Anda langsung terkirim ke WA klien sebelum Anda pulang. Dapatkan promo lisensinya hari ini!`;
+    revisedVoiceover = `Berapa kali Anda lembur semalaman bikin RAB kitchen set, tapi besoknya klien bilang "kemahalan ya mas"?\n\nTinggalkan cara lama. Dengan Froyek Estimator, input ukuran ruangan di HP saat survei, hitung HPP bahan dan ongkos tukang langsung beres.\n\nKlik 1 tombol, PDF resmi berlogo workshop Anda langsung terkirim ke WA klien sebelum Anda pulang. Dapatkan promo lisensinya hari ini!`;
     onScreenTextFixes = [
       'Ubah teks pembuka jadi: "STOP LEMBUR BIKIN RAB KITCHEN SET! 🛑"',
       'Di detik 10 pasang teks: "Hitung HPP & Upah Tukang di HP 📱"',
@@ -488,14 +488,14 @@ export function auditVideoAdContent(input: VideoAuditInput): VideoAuditReport {
     ];
     bRollSuggestions = [
       'Detik 01: Raut muka kontraktor mengecek kertas nota berantakan di meja proyek.',
-      'Detik 07: Tampilan layar HP membuka dashboard proyek Monefyi (progres fisik vs pengeluaran kas).',
+      'Detik 07: Tampilan layar HP membuka dashboard proyek Froyek (progres fisik vs pengeluaran kas).',
       'Detik 20: Bangunan selesai rapi dan tanda tangan serah terima kunci.',
     ];
-    revisedVoiceover = `Pernah ngalamin proyek rame tapi pas tutup buku saldo kas habis buat nomboki semen dan besi?\n\nTernyata pengeluaran kecil tak terduga dan rumus Excel lama yang bikin margin profit Anda amblas!\n\nMonefyi Planner mengunci margin Anda dari awal: hitung RAP otomatis, pantau progres lapangan, dan kendalikan pengeluaran harian langsung di genggaman.\n\nCegah tekor di proyek berikutnya. Coba Monefyi sekarang!`;
+    revisedVoiceover = `Pernah ngalamin proyek rame tapi pas tutup buku saldo kas habis buat nomboki semen dan besi?\n\nTernyata pengeluaran kecil tak terduga dan rumus Excel lama yang bikin margin profit Anda amblas!\n\nFroyek mengunci margin Anda dari awal: hitung RAP otomatis, pantau progres lapangan, dan kendalikan pengeluaran harian langsung di genggaman.\n\nCegah tekor di proyek berikutnya. Coba Froyek sekarang!`;
     onScreenTextFixes = [
       'Ganti teks pembuka jadi: "PROYEK RAME TAPI KAS TEKOR? 📉"',
       'Di detik 08 sisipkan teks: "RAP & Arus Kas Terkunci Otomatis 🏗️"',
-      'Di detik akhir sisipkan teks: "AMANKAN AKSES MONEFYI HARI INI 👉"',
+      'Di detik akhir sisipkan teks: "AMANKAN AKSES FROYEK HARI INI 👉"',
     ];
   }
 

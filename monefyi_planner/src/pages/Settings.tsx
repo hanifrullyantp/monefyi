@@ -16,7 +16,6 @@ import {
   loadNotificationPrefs, saveNotificationPrefs, fetchNotificationPrefsFromSupabase, type NotificationPrefs,
 } from '../services/settingsPrefsService';
 import UserAccountPanel from '../components/account/UserAccountPanel';
-import AIProviderPanel from '../components/account/AIProviderPanel';
 import BrandIdentityPanel from '../components/branding/BrandIdentityPanel';
 import { syncPdfBrandFromOrg } from '../services/pdfSettingsService';
 import { isPlatformAdmin } from '../services/adminService';
@@ -33,12 +32,19 @@ import EstimatorSettingsPanel from '../components/estimator/settings/EstimatorSe
 import ErrorTraceDiagnosticsPanel from '../components/settings/ErrorTraceDiagnosticsPanel';
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { isAdminFullAccess } from '../lib/entitlement';
+import { hasEstimatorLicenseAccess } from '../lib/appProductBrand';
+import { canAccessManagerFeatures } from '../utils/platformUi';
 
 type SettingsTab = 'profil' | 'estimator' | 'akun' | 'koordinasi' | 'organisasi' | 'pricelist' | 'domain' | 'notifikasi' | 'keamanan' | 'diagnostik' | 'tentang' | 'developer';
 
 const VALID_SETTINGS_TABS: SettingsTab[] = [
   'profil', 'estimator', 'akun', 'koordinasi', 'organisasi', 'pricelist', 'domain', 'notifikasi', 'keamanan', 'diagnostik', 'tentang', 'developer',
 ];
+
+const OWNER_ONLY_TABS: SettingsTab[] = ['organisasi', 'pricelist', 'domain', 'developer'];
+const ADMIN_ONLY_TABS: SettingsTab[] = ['diagnostik', 'developer'];
 
 const TIMEZONES = [
   'Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura', 'Asia/Singapore', 'UTC',
@@ -96,12 +102,17 @@ export default function Settings() {
   const [searchParams] = useSearchParams();
   const {
     user, tenant, logout, setUser, setTenant, setActiveTab, setFinanceVersionPreference, platformRole,
-    syncStatus, isOnline, lastSynced, isDemoMode, projects,
+    uiViewMode, entitlementPreviewMode, syncStatus, isOnline, lastSynced, isDemoMode, projects,
   } = useAppStore();
 
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const isOwner = user?.role === 'owner';
   const canEditOrg = isOwner;
+  const canManageTeam = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const showAdminLink = isPlatformAdmin(platformRole, user?.email);
+  const entitlement = useEntitlement();
+  const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+  const hasEstimatorAccess = hasEstimatorLicenseAccess(entitlement, adminFullAccess);
 
   const [tab, setTab] = useState<SettingsTab>('profil');
   const [loading, setLoading] = useState(true);
@@ -141,17 +152,48 @@ export default function Settings() {
     navigate(`/app?tab=settings&st=${id}`, { replace: true });
   };
 
+  const isTabRestricted = useCallback((candidate: SettingsTab) => {
+    if (OWNER_ONLY_TABS.includes(candidate) && !isOwner) return true;
+    if (ADMIN_ONLY_TABS.includes(candidate) && !showAdminLink) return true;
+    if (candidate === 'koordinasi' && !canManageTeam) return true;
+    if (candidate === 'estimator' && !entitlement.isLoading && !hasEstimatorAccess) return true;
+    return false;
+  }, [isOwner, showAdminLink, canManageTeam, entitlement.isLoading, hasEstimatorAccess]);
+
   useEffect(() => {
     const rawSt = searchParams.get('st') || searchParams.get('tab');
+    let nextTab: SettingsTab | null = null;
     if (rawSt === 'telegram' || rawSt === 'bot') {
-      setTab('koordinasi');
+      nextTab = 'koordinasi';
     } else if (rawSt && VALID_SETTINGS_TABS.includes(rawSt as SettingsTab)) {
-      setTab(rawSt as SettingsTab);
+      nextTab = rawSt as SettingsTab;
     }
-  }, [searchParams]);
+    if (nextTab) {
+      setTab(isTabRestricted(nextTab) ? 'profil' : nextTab);
+    }
+  }, [searchParams, isTabRestricted]);
+
+  useEffect(() => {
+    if (isTabRestricted(tab)) {
+      setTab('profil');
+    }
+  }, [tab, isTabRestricted]);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
+    if (demoActive) {
+      // Mode demo melewati query Supabase (tenant.id = 'demo' memicu UUID 22P02).
+      setName(user.name || '');
+      setPosition(user.position || '');
+      setDepartment(user.department || '');
+      setOrgName(tenant?.name || '');
+      setTimezone(tenant?.timezone || 'Asia/Jakarta');
+      setCurrency(tenant?.currency || 'IDR');
+      setBusinessType(tenant?.business_type || 'construction');
+      setProjectsThisMonth(projects.length);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       fetchNotificationPrefsFromSupabase(user.id).then(remotePrefs => {
@@ -188,12 +230,24 @@ export default function Settings() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?.name, user?.position, user?.department, tenant?.id, canEditOrg, tenant?.currency, tenant?.business_type]);
+  }, [user?.id, user?.name, user?.position, user?.department, tenant?.id, tenant?.name, tenant?.timezone, canEditOrg, tenant?.currency, tenant?.business_type, demoActive, projects.length]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleFinanceVersionChange = async (version: FinanceVersion) => {
     if (!user?.id || version === financeVersion) return;
+    if (demoActive) {
+      setFinanceVersionState(version);
+      setFinanceVersionPreference(version);
+      showToast('Preferensi keuangan diubah sementara (mode demo)', 'info');
+      if (isSandboxFinance(version)) {
+        navigate('/app/finance-v2');
+      } else {
+        navigate('/app?tab=finance');
+        setActiveTab('finance');
+      }
+      return;
+    }
     setSavingFinanceVersion(true);
     try {
       await setFinanceVersion(user.id, version);
@@ -218,6 +272,17 @@ export default function Settings() {
 
   const handleSaveProfile = async () => {
     if (!user || !name.trim()) return;
+    if (demoActive) {
+      setUser({
+        ...user,
+        name: name.trim(),
+        position: position.trim() || undefined,
+        department: department.trim() || undefined,
+      });
+      setEditingProfile(false);
+      showToast('Profil diperbarui sementara (mode demo)', 'info');
+      return;
+    }
     setSavingProfile(true);
     try {
       await updateProfileName(user.id, name.trim());
@@ -244,6 +309,10 @@ export default function Settings() {
 
   const handleSaveOrg = async () => {
     if (!tenant?.id || !canEditOrg || !user?.id) return;
+    if (demoActive) {
+      showToast('Pengaturan organisasi tidak dapat disimpan di mode demo', 'info');
+      return;
+    }
     setSavingOrg(true);
     try {
       const before = await loadOrgDetails(tenant.id);
@@ -303,6 +372,12 @@ export default function Settings() {
   };
 
   const handleSaveNotif = async () => {
+    if (demoActive) {
+      await saveNotificationPrefs(notifPrefs);
+      setNotifSaved(true);
+      showToast('Preferensi notifikasi disimpan lokal (mode demo)', 'info');
+      return;
+    }
     await saveNotificationPrefs(notifPrefs, user?.id);
     setNotifSaved(true);
     showToast('Preferensi notifikasi disimpan ke Supabase Cloud', 'success');
@@ -314,6 +389,10 @@ export default function Settings() {
   };
 
   const handleChangePassword = async () => {
+    if (demoActive) {
+      showToast('Ubah password tidak tersedia di mode demo', 'info');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       showToast('Konfirmasi password tidak cocok', 'error');
       return;
@@ -343,7 +422,9 @@ export default function Settings() {
   };
 
   const handleLogoutAll = async () => {
-    await signOutGlobal();
+    if (!demoActive) {
+      await signOutGlobal();
+    }
     await logout();
     navigate('/login');
   };
@@ -355,16 +436,16 @@ export default function Settings() {
 
   const tabs: { id: SettingsTab; label: string; icon: typeof User; show: boolean }[] = [
     { id: 'profil', label: 'Profil', icon: User, show: true },
-    { id: 'estimator', label: 'Estimator & PDF', icon: FileSpreadsheet, show: true },
+    { id: 'estimator', label: 'Estimator', icon: FileSpreadsheet, show: hasEstimatorAccess },
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
-    { id: 'koordinasi', label: 'Koordinasi AI & Bot Telegram', icon: Bot, show: true },
+    { id: 'koordinasi', label: 'Koordinasi AI & Bot Telegram', icon: Bot, show: canManageTeam },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
     { id: 'pricelist', label: 'Pricelist', icon: CreditCard, show: canEditOrg },
     { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
-    { id: 'diagnostik', label: 'Trace & Error', icon: Bug, show: true },
-    { id: 'developer', label: 'Developer', icon: FlaskConical, show: isOwner },
+    { id: 'diagnostik', label: 'Trace & Error', icon: Bug, show: showAdminLink },
+    { id: 'developer', label: 'Developer', icon: FlaskConical, show: showAdminLink },
     { id: 'tentang', label: 'Tentang', icon: Info, show: true },
   ];
 
@@ -383,20 +464,26 @@ export default function Settings() {
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-[#0F172A]">Pengaturan</h1>
             <p className="text-xs sm:text-sm text-[#5B6B7A]">Kelola profil, organisasi, dan preferensi akun.</p>
-            <div className="flex items-center gap-3 mt-1.5">
-              {showAdminLink && (
+            {showAdminLink && (
+              <div className="flex items-center gap-3 mt-1.5">
                 <Link to="/admin" className="text-xs font-bold text-[#059669] hover:underline">
                   Buka Super Admin →
                 </Link>
-              )}
-              <Link to="/app/uji-agen" className="text-xs font-bold text-[#059669] hover:underline">
-                Uji agen →
-              </Link>
-            </div>
+                <Link to="/app/uji-agen" className="text-xs font-bold text-[#059669] hover:underline">
+                  Uji agen →
+                </Link>
+              </div>
+            )}
           </div>
-          <button type="button" onClick={load} className="min-h-11 min-w-11 flex items-center justify-center border border-[#E5EAE8] bg-white rounded-xl hover:bg-slate-50 self-start shadow-sm transition-colors" aria-label="Refresh">
-            <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2 self-start">
+            <button type="button" onClick={handleLogout} className="min-h-11 px-3.5 py-2 flex items-center gap-1.5 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-colors">
+              <LogOut className="w-4 h-4" />
+              Keluar
+            </button>
+            <button type="button" onClick={load} className="min-h-11 min-w-11 flex items-center justify-center border border-[#E5EAE8] bg-white rounded-xl hover:bg-slate-50 shadow-sm transition-colors" aria-label="Refresh">
+              <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -467,9 +554,16 @@ export default function Settings() {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Nama Lengkap" icon={User}>
+            <Field label="Nama Lengkap" icon={User} htmlFor={editingProfile ? 'settings-profile-name' : undefined}>
               {editingProfile ? (
-                <input value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+                <input
+                  id="settings-profile-name"
+                  name="name"
+                  autoComplete="name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                />
               ) : (
                 <span className="text-sm font-medium text-slate-800">{name || '—'}</span>
               )}
@@ -478,23 +572,48 @@ export default function Settings() {
               <span className="text-sm font-medium text-slate-800">{user?.email || '—'}</span>
               <p className="text-xs text-slate-600 mt-0.5">Email tidak dapat diubah di sini.</p>
             </Field>
-            <Field label="Jabatan / Posisi">
+            <Field label="Jabatan / Posisi" htmlFor={editingProfile ? 'settings-profile-position' : undefined}>
               {editingProfile ? (
-                <input value={position} onChange={e => setPosition(e.target.value)} placeholder="Site Manager" className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+                <input
+                  id="settings-profile-position"
+                  name="position"
+                  autoComplete="organization-title"
+                  value={position}
+                  onChange={e => setPosition(e.target.value)}
+                  placeholder="Site Manager"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                />
               ) : (
                 <span className="text-sm font-medium text-slate-800">{position || '—'}</span>
               )}
             </Field>
-            <Field label="Departemen">
+            <Field label="Departemen" htmlFor={editingProfile ? 'settings-profile-department' : undefined}>
               {editingProfile ? (
-                <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="Operasional" className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+                <input
+                  id="settings-profile-department"
+                  name="department"
+                  autoComplete="off"
+                  value={department}
+                  onChange={e => setDepartment(e.target.value)}
+                  placeholder="Operasional"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                />
               ) : (
                 <span className="text-sm font-medium text-slate-800">{department || '—'}</span>
               )}
             </Field>
-            <Field label="Telepon">
+            <Field label="Telepon" htmlFor={editingProfile ? 'settings-profile-phone' : undefined}>
               {editingProfile ? (
-                <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+62..." className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm" />
+                <input
+                  id="settings-profile-phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="+62..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                />
               ) : (
                 <span className="text-sm font-medium text-slate-800">{phone || '—'}</span>
               )}
@@ -540,31 +659,39 @@ export default function Settings() {
             </div>
           </div>
 
-          {tenant?.id && isSandboxFinance(financeVersion) && (
+          {!demoActive && tenant?.id && isSandboxFinance(financeVersion) && (
             <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} />
           )}
-
-          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-            <AIProviderPanel />
-          </div>
         </div>
       )}
 
-      {tab === 'estimator' && (
+      {tab === 'estimator' && hasEstimatorAccess && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <EstimatorSettingsPanel />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Pengaturan Estimator & PDF tidak tersedia di mode demo.</p>
+          ) : (
+            <EstimatorSettingsPanel />
+          )}
         </div>
       )}
 
       {tab === 'akun' && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <UserAccountPanel />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Pengaturan integrasi akun tidak tersedia di mode demo.</p>
+          ) : (
+            <UserAccountPanel />
+          )}
         </div>
       )}
 
-      {tab === 'koordinasi' && (
+      {tab === 'koordinasi' && canManageTeam && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <FieldCoordinationPanel />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Koordinasi AI & Bot Telegram tidak tersedia di mode demo.</p>
+          ) : (
+            <FieldCoordinationPanel />
+          )}
         </div>
       )}
 
@@ -573,45 +700,45 @@ export default function Settings() {
           <div>
             <h3 className="font-bold text-slate-800">Profil Organisasi</h3>
             <p className="text-sm text-slate-500">
-              Identitas perusahaan Anda. Warna brand diterapkan ke PDF customer, menu aktif, dan portal karyawan — tanpa mengubah logo Monefyi.
+              Identitas perusahaan Anda. Warna brand diterapkan ke PDF customer, menu aktif, dan portal karyawan — tanpa mengubah logo Froyek.
             </p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Nama Perusahaan</label>
-              <input value={orgName} onChange={e => setOrgName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              <label htmlFor="settings-org-name" className="text-xs font-semibold text-slate-600 mb-1 block">Nama Perusahaan</label>
+              <input id="settings-org-name" name="orgName" autoComplete="organization" value={orgName} onChange={e => setOrgName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Industri</label>
-              <select value={industry} onChange={e => setIndustry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+              <label htmlFor="settings-org-industry" className="text-xs font-semibold text-slate-600 mb-1 block">Industri</label>
+              <select id="settings-org-industry" name="industry" value={industry} onChange={e => setIndustry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 <option value="">Pilih industri</option>
                 {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Tipe Bisnis</label>
-              <select value={businessType} onChange={e => setBusinessType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+              <label htmlFor="settings-org-business-type" className="text-xs font-semibold text-slate-600 mb-1 block">Tipe Bisnis</label>
+              <select id="settings-org-business-type" name="businessType" value={businessType} onChange={e => setBusinessType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Zona Waktu</label>
-              <select value={timezone} onChange={e => setTimezone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+              <label htmlFor="settings-org-timezone" className="text-xs font-semibold text-slate-600 mb-1 block">Zona Waktu</label>
+              <select id="settings-org-timezone" name="timezone" value={timezone} onChange={e => setTimezone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Mata Uang Default</label>
-              <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+              <label htmlFor="settings-org-currency" className="text-xs font-semibold text-slate-600 mb-1 block">Mata Uang Default</label>
+              <select id="settings-org-currency" name="currency" value={currency} onChange={e => setCurrency(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
                 {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Warna Brand Organisasi</label>
+              <label htmlFor="settings-org-brand-color-hex" className="text-xs font-semibold text-slate-600 mb-1 block">Warna Brand Organisasi</label>
               <div className="flex items-center gap-3">
-                <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer" />
-                <input value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono" />
+                <input id="settings-org-brand-color-picker" name="brandColorPicker" aria-label="Pilih warna brand organisasi" type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer" />
+                <input id="settings-org-brand-color-hex" name="brandColor" autoComplete="off" spellCheck={false} value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono" />
               </div>
             </div>
           </div>
@@ -670,7 +797,11 @@ export default function Settings() {
 
       {tab === 'domain' && canEditOrg && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <CustomDomainPanel onUpgrade={() => selectTab('pricelist')} />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Custom Domain tidak tersedia di mode demo.</p>
+          ) : (
+            <CustomDomainPanel onUpgrade={() => selectTab('pricelist')} />
+          )}
         </div>
       )}
 
@@ -721,12 +852,12 @@ export default function Settings() {
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1 block">Password Baru</label>
-                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 karakter" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+                <label htmlFor="settings-new-password" className="text-xs font-semibold text-slate-600 mb-1 block">Password Baru</label>
+                <input id="settings-new-password" name="newPassword" autoComplete="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 karakter" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-slate-500 mb-1 block">Konfirmasi Password</label>
-                <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+                <label htmlFor="settings-confirm-password" className="text-xs font-semibold text-slate-600 mb-1 block">Konfirmasi Password</label>
+                <input id="settings-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
               </div>
             </div>
             <p className="text-xs text-slate-600">Minimal 8 karakter, huruf besar, angka, dan simbol.</p>
@@ -736,7 +867,7 @@ export default function Settings() {
             </button>
           </div>
 
-          {tenant?.id && <TelegramLinkPanel orgId={tenant.id} isOwner={isOwner} />}
+          {!demoActive && tenant?.id && <TelegramLinkPanel orgId={tenant.id} isOwner={isOwner} />}
 
           <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-2xl border border-rose-200 transition-colors">
             <LogOut className="w-4 h-4" /> Keluar dari perangkat ini
@@ -747,13 +878,23 @@ export default function Settings() {
         </div>
       )}
 
-      {tab === 'diagnostik' && (
-        <ErrorTraceDiagnosticsPanel />
+      {tab === 'diagnostik' && showAdminLink && (
+        demoActive ? (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm text-sm text-[#5B6B7A]">
+            Diagnostik sinkronisasi server tidak tersedia di mode demo.
+          </div>
+        ) : (
+          <ErrorTraceDiagnosticsPanel />
+        )
       )}
 
-      {tab === 'developer' && isOwner && user?.id && (
+      {tab === 'developer' && showAdminLink && user?.id && (
         <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <MigrationDeveloperPanel userId={user.id} />
+          {demoActive ? (
+            <p className="text-sm text-[#5B6B7A]">Panel developer tidak tersedia di mode demo.</p>
+          ) : (
+            <MigrationDeveloperPanel userId={user.id} />
+          )}
         </div>
       )}
 
@@ -762,7 +903,7 @@ export default function Settings() {
           <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-4">
             <h3 className="font-bold text-slate-800">Tentang Aplikasi</h3>
             <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <AboutRow label="Aplikasi" value="froyek" />
+              <AboutRow label="Aplikasi" value="Froyek" />
               <AboutRow label="Versi" value="0.1.0 MVP" />
               <AboutRow label="Mode" value={isDemoMode ? 'Demo' : 'Production'} />
               <AboutRow label="Paket" value={planLabel(tenant?.plan)} />
@@ -784,7 +925,10 @@ export default function Settings() {
 
           <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800">
             <p className="font-semibold mb-1">Butuh bantuan?</p>
-            <p className="text-emerald-700">Hubungi admin organisasi atau kunjungi dokumentasi onboarding di repo proyek.</p>
+            <p className="text-emerald-700">
+              Hubungi admin organisasi Anda atau email ke{' '}
+              <a href="mailto:support@froyek.com" className="font-semibold underline">support@froyek.com</a>.
+            </p>
           </div>
         </div>
       )}
@@ -793,12 +937,16 @@ export default function Settings() {
   );
 }
 
-function Field({ label, icon: Icon, children }: { label: string; icon?: typeof User; children: React.ReactNode }) {
+function Field({ label, icon: Icon, htmlFor, children }: { label: string; icon?: typeof User; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div className="py-3 border-b border-slate-50 last:border-0">
       <div className="flex items-center gap-2 mb-1">
         {Icon && <Icon className="w-3.5 h-3.5 text-slate-600" />}
-        <div className="text-xs font-semibold text-slate-500">{label}</div>
+        {htmlFor ? (
+          <label htmlFor={htmlFor} className="text-xs font-semibold text-slate-600">{label}</label>
+        ) : (
+          <div className="text-xs font-semibold text-slate-600">{label}</div>
+        )}
       </div>
       {children}
     </div>

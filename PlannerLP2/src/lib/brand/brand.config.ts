@@ -1,5 +1,5 @@
 /**
- * Dual-brand config: Estimator (product LP/app) vs Monefyi (multi-product).
+ * Dual-brand config: Estimator (product LP/app) vs Froyek (multi-product).
  * Single source for logos, theme-color, titles.
  */
 
@@ -35,7 +35,7 @@ const V = "2026-10-28";
 export const BRANDS: Record<BrandId, BrandDefinition> = {
   estimator: {
     id: "estimator",
-    name: "Monefyi Estimator",
+    name: "Froyek Estimator",
     shortName: "Estimator",
     titleSuffix: "Estimator",
     themeColor: "#157F5F",
@@ -58,19 +58,19 @@ export const BRANDS: Record<BrandId, BrandDefinition> = {
     name: "froyek",
     shortName: "froyek",
     titleSuffix: "froyek",
-    themeColor: "#0A3A2E",
+    themeColor: "#059669",
     backgroundColor: "#0f172a",
     assets: {
-      mark: `/icons/froyek/mark-dark.svg?v=${V}`,
-      lockupLight: `/icons/froyek/mark-dark.svg?v=${V}`,
-      lockupDark: `/icons/froyek/mark-dark.svg?v=${V}`,
-      faviconSvg: `/icons/froyek/mark-dark.svg?v=${V}`,
-      favicon32: `/icons/froyek/mark-dark.svg?v=${V}`,
-      appleTouchIcon: `/icons/froyek/mark-dark.svg?v=${V}`,
-      icon192: `/icons/froyek/mark-dark.svg?v=${V}`,
-      icon512: `/icons/froyek/mark-dark.svg?v=${V}`,
-      iconMaskable512: `/icons/froyek/mark-dark.svg?v=${V}`,
-      ogImage: `/icons/froyek/mark-dark.svg?v=${V}`,
+      mark: `/brand/planner/icon-192.png?v=${V}`,
+      lockupLight: `/brand/planner/icon-192.png?v=${V}`,
+      lockupDark: `/brand/planner/icon-192.png?v=${V}`,
+      faviconSvg: `/brand/planner/icon-192.png?v=${V}`,
+      favicon32: `/brand/planner/icon-192.png?v=${V}`,
+      appleTouchIcon: `/brand/planner/icon-192.png?v=${V}`,
+      icon192: `/brand/planner/icon-192.png?v=${V}`,
+      icon512: `/brand/planner/icon-192.png?v=${V}`,
+      iconMaskable512: `/brand/planner/icon-192.png?v=${V}`,
+      ogImage: `/brand/planner/icon-192.png?v=${V}`,
     },
   },
 };
@@ -107,7 +107,7 @@ export function resolveBrand(
 
   if (onEstimatorHost) return BRANDS.estimator;
 
-  return BRANDS.estimator;
+  return defaultBrandForHost(hostname);
 }
 
 /** First paint on estimator subdomain always Estimator (no flicker). */

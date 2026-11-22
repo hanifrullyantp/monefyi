@@ -91,14 +91,17 @@ export default function TabV2Overview({
   const p = normalized.project;
   const totalRap = p.rap?.totalRAP || 0;
   const nilaiProyek = p.contractValue;
-  const realisasiPct = Math.min(
-    nilaiProyek > 0 ? (normalized.totalRealisasi / nilaiProyek) * 100 : 0,
-    100,
-  );
-  const bahanPlan = p.budget.bahan.plan || 1;
-  const tukangPlan = p.budget.tukang.plan || 1;
-  const bahanPct = Math.min((p.budget.bahan.actual / bahanPlan) * 100, 100);
-  const tukangPct = Math.min((p.budget.tukang.actual / tukangPlan) * 100, 100);
+  const realisasiPct = nilaiProyek > 0
+    ? Math.min(Math.max((normalized.totalRealisasi / nilaiProyek) * 100, 0), 100)
+    : normalized.totalRealisasi > 0 ? 100 : 0;
+  const bahanPlan = p.budget.bahan.plan;
+  const tukangPlan = p.budget.tukang.plan;
+  const bahanPct = bahanPlan > 0
+    ? Math.min(Math.max((p.budget.bahan.actual / bahanPlan) * 100, 0), 100)
+    : p.budget.bahan.actual > 0 ? 100 : 0;
+  const tukangPct = tukangPlan > 0
+    ? Math.min(Math.max((p.budget.tukang.actual / tukangPlan) * 100, 0), 100)
+    : p.budget.tukang.actual > 0 ? 100 : 0;
   const contractCheck = checkContractComposition(normalized);
   const progressSummary = useMemo(
     () => computeProgressSummary(project, workItems),
@@ -205,12 +208,14 @@ export default function TabV2Overview({
           </button>
         )}
         <div className="h-7 bg-slate-100 rounded-lg overflow-hidden relative">
-          <div
-            className="h-full bg-rose-500 rounded-lg flex items-center justify-center text-white text-xs font-bold min-w-[5rem] transition-all"
-            style={{ width: `${Math.max(realisasiPct, realisasiPct > 0 ? 18 : 0)}%` }}
-          >
-            {normalized.totalRealisasi > 0 && formatRupiah(normalized.totalRealisasi)}
-          </div>
+          {normalized.totalRealisasi > 0 && realisasiPct > 0 && (
+            <div
+              className="h-full bg-rose-500 rounded-lg flex items-center justify-center text-white text-xs font-bold min-w-[5rem] transition-all"
+              style={{ width: `${Math.max(realisasiPct, 18)}%` }}
+            >
+              {formatRupiah(normalized.totalRealisasi)}
+            </div>
+          )}
         </div>
         <p className="text-center text-sm text-slate-500 mt-2">
           Total RAP: {formatRupiah(totalRap)} · Sisa RAP: {formatRupiah(Math.max(0, totalRap - normalized.totalRealisasi))}
@@ -414,10 +419,14 @@ function BudgetCard({ label, icon: Icon, iconBg, iconColor, plan, actual, pct, s
       </div>
       <div className="text-base font-bold text-slate-900 mb-2">{formatRupiah(plan)}</div>
       <div className="h-5 bg-slate-100 rounded-md overflow-hidden">
-        <div className={`h-full ${barColor} rounded-md flex items-center justify-center text-white text-[10px] font-bold min-w-[4rem]`}
-          style={{ width: `${Math.max(pct, actual > 0 ? 20 : 0)}%` }}>
-          {actual > 0 && formatRupiah(actual)}
-        </div>
+        {actual > 0 && (
+          <div
+            className={`h-full ${barColor} rounded-md flex items-center justify-center text-white text-[10px] font-bold min-w-[4rem]`}
+            style={{ width: `${Math.max(pct, 20)}%` }}
+          >
+            {formatRupiah(actual)}
+          </div>
+        )}
       </div>
       <p className="text-xs text-slate-500 mt-1.5">Sisa: {formatRupiah(sisa)}</p>
     </button>

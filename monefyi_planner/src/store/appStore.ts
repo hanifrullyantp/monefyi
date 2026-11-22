@@ -146,6 +146,7 @@ interface AppState {
   /** Panel kanan (aksi cepat) disembunyikan oleh user. */
   rightPanelHidden: boolean;
   commandModalOpen: boolean;
+  commandPrefill: string | null;
   selectedProjectId: string | null;
 
   projects: Project[];
@@ -183,6 +184,7 @@ interface AppState {
   setRightPanelHidden: (val: boolean) => void;
   toggleRightPanelHidden: () => void;
   setCommandModalOpen: (val: boolean) => void;
+  setCommandPrefill: (prefill: string | null) => void;
   setSelectedProjectId: (id: string | null) => void;
   setProjects: (projects: Project[]) => void;
   addProject: (project: Project) => void;
@@ -236,6 +238,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   rightPanelHidden: typeof localStorage !== 'undefined'
     && localStorage.getItem('monefyi_right_panel_hidden') === '1',
   commandModalOpen: false,
+  commandPrefill: null,
   selectedProjectId: null,
 
   projects: [],
@@ -306,6 +309,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ rightPanelHidden: next });
   },
   setCommandModalOpen: commandModalOpen => set({ commandModalOpen }),
+  setCommandPrefill: commandPrefill => set({ commandPrefill }),
   setSelectedProjectId: selectedProjectId => set({ selectedProjectId }),
   setProjects: projects => set({ projects }),
   addProject: project => set(state => ({ projects: [project, ...state.projects] })),
@@ -357,8 +361,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set(state => ({ commandLogs: [log, ...state.commandLogs].slice(0, 50) })),
 
   refreshData: async () => {
-    const { user, tenant } = get();
-    if (!user || !tenant) return;
+    const { user, tenant, isDemoMode } = get();
+    if (!user || !tenant || isDemoMode || tenant.id === 'demo') return;
     set({ syncStatus: 'syncing' });
     try {
       const [projects, notifications] = await Promise.all([
@@ -379,18 +383,42 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   logout: async () => {
-    const { isDemoMode } = get();
+    const { isDemoMode, user } = get();
+    try {
+      const { clearRuntimeTraceQueue } = await import('../services/runtimeTracer');
+      clearRuntimeTraceQueue(user?.id);
+    } catch { /* ignore */ }
+    try {
+      const { clearAIConfigLocal } = await import('../services/aiProviderService');
+      clearAIConfigLocal();
+    } catch { /* ignore */ }
+    try {
+      const { clearTelegramLocalCache } = await import('../services/telegramService');
+      clearTelegramLocalCache();
+    } catch { /* ignore */ }
     if (!isDemoMode) {
       try {
         sessionStorage.setItem('monefyi_manual_logout', '1');
       } catch { /* ignore */ }
-      await authSignOut();
+      try {
+        await authSignOut();
+      } catch {
+        try {
+          const { clearLocalAuthSession } = await import('../services/authService');
+          await clearLocalAuthSession();
+        } catch { /* ignore */ }
+      }
     }
+    try {
+      sessionStorage.removeItem('monefyi_ui_view_mode');
+    } catch { /* ignore */ }
     set({
       user: null,
       tenant: null,
       isAuthenticated: false,
       isDemoMode: false,
+      authInitializing: false,
+      projectsListFilter: 'all',
       projects: [],
       notifications: [],
       todos: [],
@@ -398,6 +426,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       commandLogs: [],
       unreadCount: 0,
       activeTab: 'home',
+      commandModalOpen: false,
+      commandPrefill: null,
       selectedProjectId: null,
       platformRole: 'user',
       uiViewMode: 'auto',
@@ -407,6 +437,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       signupIntent: null,
       onboardingCompleted: false,
       emailVerified: false,
+      lastSynced: null,
+      pendingSyncCount: 0,
+      syncStatus: 'synced',
     });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('monefyi:entitlement-invalidate'));
+    }
   },
 }));

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   MoreVertical,
@@ -19,10 +19,12 @@ import {
   Sparkles,
   X,
   ChevronDown,
+  AlertTriangle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../../store/appStore';
 import { useAppStore } from '../../../store/appStore';
+import { isDemoOrInvalidUuid } from '../../../lib/demo/demoMode';
 import { useShellStore } from '../../../store/shellStore';
 import {
   getProject,
@@ -31,7 +33,7 @@ import {
 } from '../../../services/projectService';
 import { showToast } from '../../../store/uiStore';
 import { loadRapItems } from '../../../services/rapService';
-import { loadWorkItems } from '../../../services/workItemService';
+import { loadDemoWorkItems, loadWorkItems } from '../../../services/workItemService';
 import { loadCostRealizations, aggregateCostByRapItem } from '../../../services/costService';
 import { loadProjectIncomes } from '../../../services/incomeService';
 import { loadReceivablesByProject } from '../../../services/financeV2/receivableService';
@@ -45,6 +47,7 @@ import { mapPlannerProject } from '../../../lib/migration/planner-mapper';
 import { normalizeProjectView } from '../../../lib/migration/project-normalize';
 import { validateProjectBalance } from '../../../lib/migration/balance-sheet';
 import { computeProgressSummary } from '../../../lib/progressMetrics';
+import { isTaskOverProjectDeadline } from '../../../lib/gantt/utils';
 import BalanceDiagnosisModal from '../../finance-v2/BalanceDiagnosisModal';
 import TabV2Overview from './TabV2Overview';
 import TabV2Keuangan from './TabV2Keuangan';
@@ -60,10 +63,27 @@ import { formatRupiah } from '../../../utils/projectUi';
 
 type TabId = 'overview' | 'keuangan' | 'deviden' | 'progress' | 'rap' | 'analisa' | 'laporan';
 
+const VALID_TABS: readonly TabId[] = [
+  'overview',
+  'keuangan',
+  'deviden',
+  'progress',
+  'rap',
+  'analisa',
+  'laporan',
+];
+
+function parseProjectTabParam(raw: string | null): TabId {
+  if (raw && (VALID_TABS as readonly string[]).includes(raw)) {
+    return raw as TabId;
+  }
+  return 'overview';
+}
+
 const TABS: { id: TabId; label: string; icon: typeof LayoutGrid }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutGrid },
   { id: 'keuangan', label: 'Keuangan', icon: Wallet },
-  { id: 'deviden', label: 'Deviden', icon: Coins },
+  { id: 'deviden', label: 'Dividen', icon: Coins },
   { id: 'progress', label: 'Progress', icon: BarChart3 },
   { id: 'rap', label: 'RAP', icon: FileSpreadsheet },
   { id: 'analisa', label: 'Analisa', icon: Brain },
@@ -85,7 +105,8 @@ type Props = {
 
 export default function ProjectDetailV2({ project: initialProject, onClose }: Props) {
   const navigate = useNavigate();
-  const { user, tenant, platformRole, updateProject, removeProject } = useAppStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user, tenant, platformRole, isDemoMode, updateProject, removeProject } = useAppStore();
   const canManage =
     user?.role === 'owner' ||
     user?.role === 'manager' ||
@@ -93,7 +114,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     platformRole === 'admin';
   const { setShellMeta, clearShellMeta } = useShellStore();
   const [project, setProject] = useState(initialProject);
-  const [tab, setTab] = useState<TabId>('overview');
+  const [tab, setTab] = useState<TabId>(() => parseProjectTabParam(searchParams.get('tab')));
   const [loading, setLoading] = useState(true);
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -105,6 +126,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const [rapActuals, setRapActuals] = useState<Record<string, { qty: number; amount: number }>>({});
   const [rapDraft, setRapDraft] = useState<RapDraftControls | null>(null);
   const [sourceEstimation, setSourceEstimation] = useState<SourceEstimationInfo | null>(null);
+  const [extendingEnd, setExtendingEnd] = useState(false);
 
   // Modals for mobile bottom actions
   const [txModal, setTxModal] = useState<{
@@ -117,30 +139,66 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
   const loadedOnceRef = useRef(false);
   const projectRef = useRef(project);
   projectRef.current = project;
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const rapDraftRef = useRef(rapDraft);
+  rapDraftRef.current = rapDraft;
+
+  useEffect(() => {
+    const urlTab = parseProjectTabParam(searchParams.get('tab'));
+    setTab(prev => (prev === urlTab ? prev : urlTab));
+  }, [searchParams]);
 
   const reload = useCallback(async () => {
     if (!loadedOnceRef.current) setLoading(true);
     try {
-      const fresh = await getProject(project.id, tenant?.currency);
-      const proj = fresh || projectRef.current;
-      if (fresh) setProject(fresh);
+      const isDemoProject = isDemoOrInvalidUuid(
+        project.id,
+        Boolean(isDemoMode || tenant?.id === 'demo'),
+      );
 
-      const orgId = tenant?.id;
-      const [rap, costs, incomes, wi, recs, pays, sourceEst, logs] = await Promise.all([
-        loadRapItems(proj.id),
-        loadCostRealizations(proj.id),
-        loadProjectIncomes(proj.id),
-        loadWorkItems(proj.id),
-        orgId ? loadReceivablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
-        orgId ? loadPayablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
-        loadSourceEstimationForProject(proj.id).catch(() => null),
-        loadDailyLogs(proj.id).catch(() => []),
-      ]);
+      let proj = projectRef.current;
+      let rap: Awaited<ReturnType<typeof loadRapItems>> = [];
+      let costs: Awaited<ReturnType<typeof loadCostRealizations>> = [];
+      let incomes: Awaited<ReturnType<typeof loadProjectIncomes>> = [];
+      let wi: Awaited<ReturnType<typeof loadWorkItems>> = [];
+      let recs: Awaited<ReturnType<typeof loadReceivablesByProject>> = [];
+      let pays: Awaited<ReturnType<typeof loadPayablesByProject>> = [];
+      let sourceEst: SourceEstimationInfo | null = null;
+      let logs: DailyLog[] = [];
+      let actuals: Record<string, { qty: number; amount: number }> = {};
+
+      if (isDemoProject) {
+        const storeProj = useAppStore.getState().projects.find(p => p.id === proj.id);
+        if (storeProj) {
+          proj = storeProj;
+          setProject(storeProj);
+        }
+        wi = loadDemoWorkItems(proj.id);
+      } else {
+        const fresh = await getProject(project.id, tenant?.currency);
+        proj = fresh || projectRef.current;
+        if (fresh) setProject(fresh);
+
+        const orgId = tenant?.id;
+        [rap, costs, incomes, wi, recs, pays, sourceEst, logs] = await Promise.all([
+          loadRapItems(proj.id),
+          loadCostRealizations(proj.id),
+          loadProjectIncomes(proj.id),
+          loadWorkItems(proj.id),
+          orgId ? loadReceivablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
+          orgId ? loadPayablesByProject(orgId, proj.id).catch(() => []) : Promise.resolve([]),
+          loadSourceEstimationForProject(proj.id).catch(() => null),
+          loadDailyLogs(proj.id).catch(() => []),
+        ]);
+        actuals = await aggregateCostByRapItem(proj.id);
+      }
+
       setRapItems(rap);
       setSourceEstimation(sourceEst);
       setWorkItems(wi);
       setProjectLogs(logs);
-      setRapActuals(await aggregateCostByRapItem(proj.id));
+      setRapActuals(actuals);
       const view = mapPlannerProject({
         project: {
           id: proj.id,
@@ -156,7 +214,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           total_received: proj.total_received,
           settings: {
             type: proj.type,
-            contract_value: proj.contract_value ?? proj.total_budget_planned ?? 0,
+            contract_value: proj.contract_value ?? 0,
           },
         },
         rapItems: rap.map(r => ({
@@ -228,11 +286,35 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     } finally {
       setLoading(false);
     }
-  }, [project.id, tenant?.currency, tenant?.id, showToast]);
+  }, [project.id, tenant?.currency, tenant?.id, isDemoMode, showToast]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  const confirmDiscardRapDraft = useCallback((): boolean => {
+    const activeDraft = rapDraftRef.current;
+    if (tabRef.current !== 'rap' || !activeDraft?.hasChanges) return true;
+    const ok = window.confirm(
+      'Ada perubahan RAP belum disimpan. Pindah halaman akan membuang perubahan. Lanjutkan?',
+    );
+    if (ok) activeDraft.discard();
+    return ok;
+  }, []);
+
+  const trySetTab = useCallback((next: TabId) => {
+    if (next === tabRef.current) return;
+    if (!confirmDiscardRapDraft()) return;
+    setTab(next);
+    setSearchParams(
+      prev => {
+        const updated = new URLSearchParams(prev);
+        updated.set('tab', next);
+        return updated;
+      },
+      { replace: true },
+    );
+  }, [confirmDiscardRapDraft, setSearchParams]);
 
   useEffect(() => {
     setShellMeta({
@@ -242,7 +324,7 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
       onOpenProgress: () => trySetTab('progress'),
     });
     return () => clearShellMeta();
-  }, [project.id, project.name, setShellMeta, clearShellMeta]);
+  }, [project.id, project.name, setShellMeta, clearShellMeta, trySetTab]);
 
   const normalized = useMemo(() => {
     if (!mapped) return null;
@@ -258,6 +340,48 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     () => computeProgressSummary(project, workItems),
     [project, workItems],
   );
+
+  const projectEndIso = (project.end_date || '').slice(0, 10);
+  const overdueWorkItems = useMemo(() => {
+    if (!projectEndIso) return [];
+    return workItems.filter(w => isTaskOverProjectDeadline(w.planned_end, projectEndIso));
+  }, [workItems, projectEndIso]);
+
+  const maxWorkItemEnd = useMemo(() => {
+    if (overdueWorkItems.length === 0) return '';
+    return overdueWorkItems.reduce((max, w) => {
+      const end = (w.planned_end || '').slice(0, 10);
+      return end > max ? end : max;
+    }, projectEndIso);
+  }, [overdueWorkItems, projectEndIso]);
+
+  const handleExtendProjectEnd = async () => {
+    if (!maxWorkItemEnd || extendingEnd) return;
+    const isDemoProject = isDemoOrInvalidUuid(
+      project.id,
+      Boolean(isDemoMode || tenant?.id === 'demo'),
+    );
+    setExtendingEnd(true);
+    try {
+      if (!isDemoProject) {
+        await updateProjectApi(project.id, { end_date: maxWorkItemEnd });
+      }
+      const nextProj = { ...project, end_date: maxWorkItemEnd };
+      projectRef.current = nextProj;
+      setProject(nextProj);
+      updateProject(project.id, { end_date: maxWorkItemEnd });
+      showToast(`Target selesai proyek diperpanjang ke ${maxWorkItemEnd}`, 'success');
+      if (!isDemoProject) {
+        await reload();
+      } else {
+        void reload();
+      }
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal memperpanjang target proyek', 'error');
+    } finally {
+      setExtendingEnd(false);
+    }
+  };
 
   const budgetPlanned = project.total_budget_planned || project.contract_value || 0;
   const budgetSpent = project.spent_amount || (normalized ? normalized.totalRealisasi : 0);
@@ -279,21 +403,6 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
     removeProject(project.id);
     showToast('Proyek diarsipkan', 'success');
     onClose();
-  };
-
-  const confirmDiscardRapDraft = (): boolean => {
-    if (tab !== 'rap' || !rapDraft?.hasChanges) return true;
-    const ok = window.confirm(
-      'Ada perubahan RAP belum disimpan. Pindah halaman akan membuang perubahan. Lanjutkan?',
-    );
-    if (ok) rapDraft.discard();
-    return ok;
-  };
-
-  const trySetTab = (next: TabId) => {
-    if (next === tab) return;
-    if (!confirmDiscardRapDraft()) return;
-    setTab(next);
   };
 
   const tryClose = () => {
@@ -395,13 +504,23 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
           <button
             type="button"
             onClick={() => trySetTab('progress')}
-            className={`hidden sm:inline-flex text-xs font-bold px-3 py-1.5 rounded-full ${progressSummary.deviation >= 0
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-amber-100 text-amber-700'
-              }`}
-            title="Buka tab Progress"
+            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${
+              overdueWorkItems.length > 0
+                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                : progressSummary.deviation >= 0
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-amber-100 text-amber-700'
+            }`}
+            title={
+              overdueWorkItems.length > 0
+                ? `${overdueWorkItems.length} item jadwal melewati target selesai proyek (${projectEndIso})`
+                : 'Buka tab Progress'
+            }
           >
-            Progress {progressSummary.actual}% / {progressSummary.plan}%
+            {overdueWorkItems.length > 0 && (
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            )}
+            <span>Progress {progressSummary.actual}% / {progressSummary.plan}%</span>
           </button>
           {tab === 'rap' && rapDraft && rapDraft.hasChanges && (
             <>
@@ -577,6 +696,19 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
             >
               <t.icon className="w-3.5 h-3.5 shrink-0" />
               <span>{t.label}</span>
+              {t.id === 'progress' && overdueWorkItems.length > 0 && (
+                <span
+                  className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                    isActive
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}
+                  title={`${overdueWorkItems.length} item jadwal melewati target selesai proyek (${projectEndIso})`}
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  {overdueWorkItems.length}
+                </span>
+              )}
             </button>
           );
         })}
@@ -584,6 +716,47 @@ export default function ProjectDetailV2({ project: initialProject, onClose }: Pr
 
       {/* ─── MAIN CONTENT ─── */}
       <main className="flex-1 overflow-y-auto px-4 py-2 md:p-5">
+        {!loading && overdueWorkItems.length > 0 && (
+          <div
+            role="alert"
+            className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-amber-950 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          >
+            <div className="flex items-start gap-2.5 min-w-0">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-amber-950 break-words [overflow-wrap:anywhere]">
+                  {overdueWorkItems.length} item jadwal melewati target selesai proyek ({projectEndIso})
+                </p>
+                <p className="text-xs text-amber-800 mt-0.5 break-words [overflow-wrap:anywhere]">
+                  Jadwal terjauh berakhir pada {maxWorkItemEnd}.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {tab !== 'progress' && (
+                <button
+                  type="button"
+                  onClick={() => trySetTab('progress')}
+                  className="px-3 py-1.5 rounded-xl border border-amber-300 bg-white text-amber-900 text-xs font-bold hover:bg-amber-100/60 transition-colors"
+                >
+                  Lihat Progress
+                </button>
+              )}
+              {canManage && maxWorkItemEnd > projectEndIso && (
+                <button
+                  type="button"
+                  disabled={extendingEnd}
+                  onClick={() => void handleExtendProjectEnd()}
+                  className="px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 disabled:opacity-60 transition-colors"
+                >
+                  {extendingEnd
+                    ? 'Memperpanjang...'
+                    : `Perpanjang Target Proyek ke ${maxWorkItemEnd}`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {loading || !normalized ? (
           <div className="text-center py-16 text-slate-500">Memuat...</div>
         ) : (

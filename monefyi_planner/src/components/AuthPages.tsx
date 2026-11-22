@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  Eye, EyeOff, ArrowLeft, ArrowRight, Mail, Lock, User, Building2, CheckCircle, AlertCircle,
+  Eye, EyeOff, ArrowLeft, ArrowRight, Mail, Lock, CheckCircle, AlertCircle,
 } from 'lucide-react';
 import { authUserMessage } from '../lib/authMessages';
 import { config } from '../lib/config';
@@ -22,15 +22,184 @@ import {
   readPasswordRecoveryError,
 } from '../lib/passwordRecoveryIntent';
 import { setActiveOrgTimeZone } from '../lib/adapters';
-import { useAppStore } from '../store/appStore';
+import {
+  useAppStore,
+  type Notification,
+  type Project,
+  type Tenant,
+  type Todo,
+  type Transaction,
+  type User,
+} from '../store/appStore';
 import { EstimatorLogo } from './EstimatorLogo';
 import { PlannerLogo } from './MonefyiLogo';
 import { PLANNER_BRAND_NAME, PLANNER_TAGLINE } from '../lib/plannerBrand';
 import { applyEstimatorDocumentBrand, isEstimatorBrandContext } from '../lib/estimatorBrand';
+import { estimatorAppEntryPath } from '../lib/pwaBrand';
 import { checkAndClearDeviceKickoutReason } from '../services/singleDeviceSessionService';
+
+export function resolvePostLoginDestination(
+  rawNext?: string | null,
+  fromPath?: string | null,
+  fallback = '/app',
+): string {
+  for (const candidate of [rawNext, fromPath]) {
+    if (
+      typeof candidate === 'string'
+      && candidate.startsWith('/')
+      && !candidate.startsWith('//')
+      && !candidate.startsWith('/login')
+    ) {
+      return candidate;
+    }
+  }
+  return fallback;
+}
+
+export function buildDemoSeedData(role: 'owner' | 'manager' | 'worker'): {
+  user: User;
+  tenant: Tenant;
+  projects: Project[];
+  notifications: Notification[];
+  transactions: Transaction[];
+  todos: Todo[];
+} {
+  const users: Record<'owner' | 'manager' | 'worker', User> = {
+    owner: { id: 'demo-u-1', name: 'Budi Santoso', email: 'demo@local', role: 'owner', tenant_id: 'demo' },
+    manager: { id: 'demo-u-2', name: 'Sari Dewi', email: 'demo@local', role: 'manager', tenant_id: 'demo' },
+    worker: { id: 'demo-u-3', name: 'Ahmad Rizky', email: 'demo@local', role: 'worker', tenant_id: 'demo' },
+  };
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+  const tenant: Tenant = {
+    id: 'demo',
+    name: 'CV Buana Konstruksi (Demo)',
+    slug: 'demo',
+    business_type: 'construction',
+    plan: 'pro',
+    currency: 'IDR',
+    timezone: 'Asia/Jakarta',
+  };
+  const projects: Project[] = [
+    {
+      id: 'demo-proj-1',
+      tenant_id: 'demo',
+      name: 'Renovasi Rumah Kemang',
+      code: 'PRJ-DEMO-01',
+      client_name: 'Ibu Rina Wijaya',
+      location: 'Jakarta Selatan',
+      type: 'construction',
+      status: 'active',
+      start_date: today,
+      end_date: '2027-02-28',
+      total_budget_planned: 185_000_000,
+      contract_value: 245_000_000,
+      currency: 'IDR',
+      progress_percentage: 62,
+      health_status: 'on_track',
+      planned_progress: 60,
+      spent_amount: 112_000_000,
+      total_received: 150_000_000,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: 'demo-proj-2',
+      tenant_id: 'demo',
+      name: 'Interior Kitchen Set BSD',
+      code: 'PRJ-DEMO-02',
+      client_name: 'Pak Hendra',
+      location: 'Tangerang Selatan',
+      type: 'construction',
+      status: 'active',
+      start_date: today,
+      end_date: '2027-01-31',
+      total_budget_planned: 64_000_000,
+      contract_value: 88_000_000,
+      currency: 'IDR',
+      progress_percentage: 38,
+      health_status: 'at_risk',
+      planned_progress: 52,
+      spent_amount: 34_500_000,
+      total_received: 44_000_000,
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+  const notifications: Notification[] = [
+    {
+      id: 'demo-notif-1',
+      type: 'alert',
+      title: 'Progress Interior BSD tertinggal',
+      message: 'Realisasi 38% dibanding target rencana 52%. Periksa jadwal tim lapangan.',
+      read: false,
+      created_at: now,
+      action_url: '/app?tab=projects',
+      priority: 'high',
+    },
+    {
+      id: 'demo-notif-2',
+      type: 'update',
+      title: 'Termin proyek Kemang diterima',
+      message: 'Pembayaran termin ke-2 sebesar Rp 75.000.000 tercatat pada proyek demo.',
+      read: false,
+      created_at: now,
+      action_url: '/app?tab=projects',
+      priority: 'medium',
+    },
+  ];
+  const transactions: Transaction[] = [
+    {
+      id: 'demo-tx-1',
+      type: 'income',
+      amount: 150_000_000,
+      description: 'Termin 1 & 2 Renovasi Rumah Kemang',
+      category: 'termin',
+      account: 'Bank BCA Operasional',
+      date: today,
+      project_id: 'demo-proj-1',
+      created_at: now,
+    },
+    {
+      id: 'demo-tx-2',
+      type: 'expense',
+      amount: 18_500_000,
+      description: 'Material semen & besi beton',
+      category: 'material',
+      account: 'Kas Proyek',
+      date: today,
+      project_id: 'demo-proj-1',
+      created_at: now,
+    },
+  ];
+  const todos: Todo[] = [
+    {
+      id: 'demo-todo-1',
+      title: 'Cek pemasangan keramik lantai 2',
+      priority: 'high',
+      status: 'in_progress',
+      due_date: today,
+      assigned_to: users[role].id,
+      project_id: 'demo-proj-1',
+      created_at: now,
+    },
+    {
+      id: 'demo-todo-2',
+      title: 'Konfirmasi pengiriman HPL kitchen set',
+      priority: 'medium',
+      status: 'pending',
+      due_date: today,
+      assigned_to: users[role].id,
+      project_id: 'demo-proj-2',
+      created_at: now,
+    },
+  ];
+  return { user: users[role], tenant, projects, notifications, transactions, todos };
+}
 
 export function LoginPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -40,9 +209,13 @@ export function LoginPage() {
   const [resetMode, setResetMode] = useState(
     () => hasPasswordRecoveryIntent() || Boolean(readPasswordRecoveryError()),
   );
-  const [loginSuccess, setLoginSuccess] = useState(false);
   const [deviceKickoutNotice, setDeviceKickoutNotice] = useState(false);
   const navigate = useNavigate();
+
+  const fromLocation = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from;
+  const fromPath = fromLocation?.pathname
+    ? `${fromLocation.pathname}${fromLocation.search || ''}${fromLocation.hash || ''}`
+    : null;
 
   useEffect(() => {
     if (searchParams.get('reason') === 'other_device' || checkAndClearDeviceKickoutReason()) {
@@ -58,9 +231,14 @@ export function LoginPage() {
     });
     return () => subscription.unsubscribe();
   }, []);
-  const { setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing, customDomainContext } = useAppStore();
+  const {
+    setUser, setTenant, setAuthenticated, setDemoMode, setAuthInitializing,
+    setHasMembership, setOnboardingCompleted, setEmailVerified, setAuthError,
+    setSyncStatus, setLastSynced, setProjects, setNotifications, setTransactions, setTodos,
+    customDomainContext,
+  } = useAppStore();
   const estimatorBrand = isEstimatorBrandContext();
-  const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Monefyi Estimator' : PLANNER_BRAND_NAME);
+  const loginTitle = customDomainContext?.org_name || (estimatorBrand ? 'Froyek Estimator' : PLANNER_BRAND_NAME);
   const loginSubtitle = customDomainContext
     ? 'Masuk ke workspace perusahaan Anda'
     : estimatorBrand
@@ -76,27 +254,26 @@ export function LoginPage() {
   const handleDemoLogin = async (role: 'owner' | 'manager' | 'worker') => {
     if (!config.devDemoAuth) return;
     setLoading(true);
-    const users = {
-      owner: { id: 'demo-u-1', name: 'Budi Santoso', email: 'demo@local', role: 'owner' as const, tenant_id: 'demo' },
-      manager: { id: 'demo-u-2', name: 'Sari Dewi', email: 'demo@local', role: 'manager' as const, tenant_id: 'demo' },
-      worker: { id: 'demo-u-3', name: 'Ahmad Rizky', email: 'demo@local', role: 'worker' as const, tenant_id: 'demo' },
-    };
-    setUser(users[role]);
+    const seed = buildDemoSeedData(role);
+    setUser(seed.user);
     setActiveOrgTimeZone('Asia/Jakarta');
-    setTenant({
-      id: 'demo',
-      name: 'CV Buana Konstruksi (Demo)',
-      slug: 'demo',
-      business_type: 'construction',
-      plan: 'pro',
-      currency: 'IDR',
-      timezone: 'Asia/Jakarta',
-    });
+    setTenant(seed.tenant);
+    setProjects(seed.projects);
+    setNotifications(seed.notifications);
+    setTransactions(seed.transactions);
+    setTodos(seed.todos);
+    setHasMembership(true);
+    setOnboardingCompleted(true);
+    setEmailVerified(true);
+    setAuthError(null);
+    setSyncStatus('synced');
+    setLastSynced(new Date());
     setDemoMode(true);
     setAuthenticated(true);
     setAuthInitializing(false);
     setLoading(false);
-    navigate('/app');
+    const dest = resolvePostLoginDestination(searchParams.get('next'), fromPath, '/app');
+    navigate(dest, { replace: true });
   };
 
   const handleLogin = async (e?: React.FormEvent) => {
@@ -120,7 +297,9 @@ export function LoginPage() {
         } finally {
           setAuthInitializing(false);
         }
-        setLoginSuccess(true);
+        const defaultDest = estimatorBrand ? estimatorAppEntryPath() : '/app';
+        const dest = resolvePostLoginDestination(searchParams.get('next'), fromPath, defaultDest);
+        navigate(dest, { replace: true });
       } else {
         setError('Login berhasil tetapi sesi tidak tersedia. Verifikasi email terlebih dahulu.');
       }
@@ -162,7 +341,7 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 text-sm">
+        <Link to="/" className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors mb-8 text-sm">
           <ArrowLeft className="w-4 h-4" /> Kembali ke beranda
         </Link>
 
@@ -171,40 +350,31 @@ export function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-3xl p-8 shadow-2xl"
         >
-          <div className="flex items-center gap-2 mb-8">
+          <div className="mb-8">
             {estimatorBrand ? (
-              <EstimatorLogo className="w-10 h-10 rounded-xl object-contain shadow-md" />
+              <div className="flex items-center gap-2">
+                <EstimatorLogo className="w-10 h-10 rounded-xl object-contain" />
+                <div>
+                  <div className="font-black text-slate-900">{loginTitle}</div>
+                  <div className="text-xs text-slate-500">{loginSubtitle}</div>
+                </div>
+              </div>
             ) : (
-              <PlannerLogo className="w-10 h-10 rounded-xl object-contain" />
+              <div>
+                <PlannerLogo variant="lockup" />
+                <div className="text-xs text-slate-500 mt-2">
+                  {resetMode ? 'Buat password baru' : (customDomainContext ? loginTitle : loginSubtitle)}
+                </div>
+              </div>
             )}
-            <div>
-              <div className="font-black text-slate-900">{loginTitle}</div>
-              <div className="text-xs text-slate-500">{resetMode ? 'Buat password baru' : loginSubtitle}</div>
-            </div>
           </div>
           {customDomainContext && (
             <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2 mb-4">
-              Powered by froyek
+              Powered by Froyek
             </p>
           )}
 
-          {loginSuccess ? (
-            <div className="space-y-4 text-center">
-              <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto" />
-              <div>
-                <h3 className="font-black text-xl text-slate-900">Login berhasil!</h3>
-                <p className="text-sm text-slate-500 mt-2">Klik tombol di bawah untuk masuk ke dashboard.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate('/app')}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
-              >
-                Masuk ke Dashboard
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          ) : config.devDemoAuth && (
+          {config.devDemoAuth && (
             <div className="mb-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
               <p className="text-xs text-emerald-700 font-semibold mb-3">Demo — Pilih role:</p>
               <div className="grid grid-cols-3 gap-2">
@@ -222,9 +392,9 @@ export function LoginPage() {
             </div>
           )}
 
-          {!loginSuccess && resetMode ? (
+          {resetMode ? (
             <ResetPasswordPanel onUpdated={handlePasswordUpdated} />
-          ) : !loginSuccess && (
+          ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             {deviceKickoutNotice && (
               <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in">
@@ -236,11 +406,14 @@ export function LoginPage() {
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+              <label htmlFor="login-email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
+                  id="login-email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="kamu@bisnis.com"
@@ -249,24 +422,32 @@ export function LoginPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <label htmlFor="login-password" className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
+                  id="login-password"
+                  name="password"
                   type={showPw ? 'text' : 'password'}
+                  autoComplete="current-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none text-sm"
                 />
-                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-800"
+                >
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
             <div className="flex justify-end">
-              <button type="button" onClick={handleForgotPassword} className="text-xs text-emerald-600 font-medium hover:underline">
+              <button type="button" onClick={handleForgotPassword} className="text-xs text-emerald-700 font-semibold hover:underline">
                 Lupa password?
               </button>
             </div>
@@ -298,16 +479,16 @@ export function LoginPage() {
           </form>
           )}
 
-          {!loginSuccess && !resetMode && (
+          {!resetMode && (
           <>
-          <p className="text-center text-sm text-slate-500 mt-4">
-            <Link to="/join" className="text-emerald-600 font-semibold hover:underline">
+          <p className="text-center text-sm text-slate-600 mt-4">
+            <Link to="/join-by-code" className="text-emerald-700 font-semibold hover:underline">
               Punya undangan? Klik di sini
             </Link>
           </p>
-          <p className="text-center text-sm text-slate-500 mt-2">
+          <p className="text-center text-sm text-slate-600 mt-2">
             Belum punya akun?{' '}
-            <Link to="/signup" className="text-emerald-600 font-semibold hover:underline">
+            <Link to="/signup" className="text-emerald-700 font-semibold hover:underline">
               Daftar gratis
             </Link>
           </p>
@@ -443,7 +624,7 @@ export function SignupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Link to="/" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 text-sm">
+        <Link to="/" className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors mb-8 text-sm">
           <ArrowLeft className="w-4 h-4" /> Kembali
         </Link>
 
@@ -457,32 +638,90 @@ export function SignupPage() {
           {step === 1 && (
             <div className="space-y-4 mt-6">
               <h3 className="font-bold text-slate-800">Info Akun</h3>
-              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nama lengkap" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" className={`w-full px-4 py-3 rounded-xl border text-sm ${form.email && !isValidEmail(form.email) ? 'border-rose-300' : 'border-slate-200'}`} />
+              <div>
+                <label htmlFor="signup-name" className="block text-sm font-medium text-slate-700 mb-1.5">Nama lengkap</label>
+                <input
+                  id="signup-name"
+                  name="name"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder="Nama lengkap"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="signup-email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                <input
+                  id="signup-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  placeholder="Email"
+                  className={`w-full px-4 py-3 rounded-xl border text-sm ${form.email && !isValidEmail(form.email) ? 'border-rose-300' : 'border-slate-200'}`}
+                />
+              </div>
               {form.email && !isValidEmail(form.email) && (
                 <p className="text-xs text-rose-600 -mt-2">Format email tidak valid</p>
               )}
-              <PasswordField
-                value={form.password}
-                onChange={password => setForm({ ...form, password })}
-                placeholder="Password (min 8, huruf besar, angka, simbol)"
-              />
+              <div>
+                <label htmlFor="signup-password" className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                <PasswordField
+                  id="signup-password"
+                  name="password"
+                  autoComplete="new-password"
+                  value={form.password}
+                  onChange={password => setForm({ ...form, password })}
+                  placeholder="Password (min 8, huruf besar, angka, simbol)"
+                />
+              </div>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4 mt-6">
               <h3 className="font-bold text-slate-800">Info Bisnis</h3>
-              <input value={form.businessName} onChange={e => setForm({ ...form, businessName: e.target.value })} placeholder="Nama bisnis / perusahaan" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <select value={form.businessType} onChange={e => setForm({ ...form, businessType: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm">
-                <option value="construction">Konstruksi</option>
-                <option value="service">Jasa</option>
-                <option value="other">Lainnya</option>
-              </select>
-              <select value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value })} className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm">
-                <option value="IDR">IDR — Rupiah</option>
-                <option value="USD">USD</option>
-              </select>
+              <div>
+                <label htmlFor="signup-business-name" className="block text-sm font-medium text-slate-700 mb-1.5">Nama bisnis / perusahaan</label>
+                <input
+                  id="signup-business-name"
+                  name="businessName"
+                  autoComplete="organization"
+                  value={form.businessName}
+                  onChange={e => setForm({ ...form, businessName: e.target.value })}
+                  placeholder="Nama bisnis / perusahaan"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="signup-business-type" className="block text-sm font-medium text-slate-700 mb-1.5">Tipe bisnis</label>
+                <select
+                  id="signup-business-type"
+                  name="businessType"
+                  value={form.businessType}
+                  onChange={e => setForm({ ...form, businessType: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                >
+                  <option value="construction">Konstruksi</option>
+                  <option value="service">Jasa</option>
+                  <option value="other">Lainnya</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="signup-currency" className="block text-sm font-medium text-slate-700 mb-1.5">Mata uang</label>
+                <select
+                  id="signup-currency"
+                  name="currency"
+                  value={form.currency}
+                  onChange={e => setForm({ ...form, currency: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                >
+                  <option value="IDR">IDR — Rupiah</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
             </div>
           )}
 
@@ -490,7 +729,7 @@ export function SignupPage() {
             <div className="text-center space-y-4 mt-6">
               <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
               <h3 className="font-black text-xl">Siap mulai!</h3>
-              <p className="text-sm text-slate-500">Organisasi <strong>{form.businessName}</strong> akan dibuat otomatis.</p>
+              <p className="text-sm text-slate-600">Organisasi <strong>{form.businessName}</strong> akan dibuat otomatis.</p>
             </div>
           )}
 
@@ -498,7 +737,7 @@ export function SignupPage() {
 
           <div className="flex gap-3 mt-8">
             {step > 1 && (
-              <button type="button" onClick={() => { setError(''); setStep((step - 1) as SignupStep); }} className="px-4 py-3 border border-slate-200 rounded-xl">
+              <button type="button" aria-label="Langkah sebelumnya" onClick={() => { setError(''); setStep((step - 1) as SignupStep); }} className="px-4 py-3 border border-slate-200 rounded-xl">
                 <ArrowLeft className="w-4 h-4" />
               </button>
             )}
@@ -519,7 +758,7 @@ export function SignupPage() {
           </div>
 
           {step === 1 && !canProceed && (
-            <p className="text-xs text-slate-400 text-center mt-3">Lengkapi semua field dan penuhi syarat password untuk melanjutkan.</p>
+            <p className="text-xs text-slate-600 text-center mt-3">Lengkapi semua field dan penuhi syarat password untuk melanjutkan.</p>
           )}
         </motion.div>
       </div>

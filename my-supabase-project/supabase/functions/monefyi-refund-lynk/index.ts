@@ -140,6 +140,7 @@ Deno.serve(async (req) => {
     if (userEmail?.includes("@")) {
       await sendEmailSafe({
         to: userEmail,
+        product: "finance",
         subject: `Monefyi — Refund ${body.reject ? "ditolak" : "disetujui"}`,
         html: `<p>Permintaan refund kamu ${body.reject ? "ditolak" : "disetujui"}.</p><p>${adminNotes}</p>`,
       });

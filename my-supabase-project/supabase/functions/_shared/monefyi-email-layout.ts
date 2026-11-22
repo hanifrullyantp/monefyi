@@ -26,24 +26,24 @@ export const EMAIL_BRANDS: Record<MonefyiEmailProduct, MonefyiEmailBrand> = {
   },
   planner: {
     product: "planner",
-    productName: "Monefyi Planner",
+    productName: "Froyek",
     accent: "#6366f1",
     accentMuted: "#4f46e5",
-    supportHint: "Butuh bantuan? Balas email ini atau hubungi admin organisasi Anda.",
+    supportHint: "Butuh bantuan? Balas email ini, hubungi admin organisasi Anda, atau email support@froyek.com.",
   },
   estimator: {
     product: "estimator",
-    productName: "Monefyi Estimator",
+    productName: "Froyek",
     accent: "#059669",
     accentMuted: "#047857",
-    supportHint: "Butuh bantuan? Balas email ini atau hubungi support via WhatsApp.",
+    supportHint: "Butuh bantuan? Balas email ini atau hubungi support@froyek.com.",
   },
 };
 
 export function resolveEmailBrandFromUrl(appUrl: string): MonefyiEmailBrand {
   const u = (appUrl || "").toLowerCase();
   if (u.includes("estimator")) return EMAIL_BRANDS.estimator;
-  if (u.includes("planner")) return EMAIL_BRANDS.planner;
+  if (u.includes("froyek") || u.includes("planner")) return EMAIL_BRANDS.planner;
   if (u.includes("app.monefyi") || u.includes("//app.")) return EMAIL_BRANDS.finance;
   return EMAIL_BRANDS.planner;
 }
@@ -121,7 +121,7 @@ export function monefyiEmailShell(params: EmailShellParams): string {
             <td style="padding:20px 8px 0;text-align:center;font-size:12px;line-height:1.5;color:#94a3b8;">
               <p style="margin:0 0 8px;">${escapeHtml(brand.supportHint || "")}</p>
               ${footerExtra ? `<p style="margin:0;">${footerExtra}</p>` : ""}
-              <p style="margin:12px 0 0;">© ${new Date().getUTCFullYear()} Monefyi · Email transaksional</p>
+              <p style="margin:12px 0 0;">© ${new Date().getUTCFullYear()} ${escapeHtml(brand.productName)} · Email transaksional</p>
             </td>
           </tr>
         </table>

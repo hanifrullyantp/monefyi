@@ -9,12 +9,14 @@ import {
 } from '../../services/invitationService';
 import { parseEmailList } from '../../lib/validators';
 import { showToast } from '../../store/uiStore';
-import { useEntitlement } from '../../hooks/useEntitlement';
+import { invalidateEntitlementCache, useEntitlement } from '../../hooks/useEntitlement';
+import { logAudit } from '../../services/auditService';
 import type { InvitationRecord, MemberRole } from '../../types/onboarding';
 
 interface Props {
   orgId: string;
   actorRole: string;
+  activeMemberCount?: number;
   onClose: () => void;
   onCreated?: () => void;
 }
@@ -41,11 +43,13 @@ type DirectResult = {
   password?: string;
 };
 
-export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated }: Props) {
+export default function InviteMemberModal({ orgId, actorRole, activeMemberCount, onClose, onCreated }: Props) {
   const entitlement = useEntitlement();
   const maxMembers = entitlement.maxMembers || 1;
-  const currentMembers = entitlement.currentMembers || 1;
-  const isSeatExceeded = !entitlement.canInviteMembers || currentMembers >= maxMembers;
+  const currentMembers = activeMemberCount ?? entitlement.currentMembers ?? 1;
+  const hasInviteTierOrBump =
+    entitlement.isPro || entitlement.isEnterprise || maxMembers > 1 || entitlement.canInviteMembers;
+  const isSeatExceeded = !hasInviteTierOrBump || currentMembers >= maxMembers;
 
   const [tab, setTab] = useState<Tab>('link');
   const [role, setRole] = useState<MemberRole>('worker');
@@ -96,7 +100,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
           </div>
           <div className="flex flex-col gap-2.5">
             <a
-              href="https://wa.me/6281214736340?text=Halo%20Admin%20Monefyi%2C%20saya%20ingin%20tambah%20lisensi%20karyawan%20untuk%20workspace%20saya"
+              href="https://wa.me/6281214736340?text=Halo%20Admin%20Froyek%2C%20saya%20ingin%20tambah%20lisensi%20karyawan%20untuk%20workspace%20saya"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs"
@@ -125,6 +129,13 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
     try {
       const res = await createInvitation({ org_id: orgId, type: 'link', role, expiry, max_uses: maxUses });
       setResult(res);
+      void logAudit({
+        orgId,
+        action: 'invitation.created',
+        targetType: 'invitation',
+        targetId: res.invitation?.id,
+        metadata: { invitation_id: res.invitation?.id, type: 'link', role },
+      });
       showToast('Link undangan dibuat', 'success');
       onCreated?.();
     } catch (e) {
@@ -145,6 +156,13 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
       const created = await createInvitation({ org_id: orgId, type: 'email', role, expiry, max_uses: '1', personal_message: message });
       const sendRes = await sendInvitationEmails(created.invitation.id, emails);
       const ok = sendRes.results.filter(r => r.ok).length;
+      void logAudit({
+        orgId,
+        action: 'invitation.created',
+        targetType: 'invitation',
+        targetId: created.invitation?.id,
+        metadata: { invitation_id: created.invitation?.id, type: 'email', role, count: emails.length },
+      });
       showToast(`${ok}/${emails.length} email terkirim`, ok ? 'success' : 'error');
       onCreated?.();
     } catch (e) {
@@ -160,6 +178,13 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
       const res = await createInvitation({ org_id: orgId, type: 'code', role, expiry, max_uses: maxUses });
       setResult(res);
       await loadCodes();
+      void logAudit({
+        orgId,
+        action: 'invitation.created',
+        targetType: 'invitation',
+        targetId: res.invitation?.id,
+        metadata: { invitation_id: res.invitation?.id, type: 'code', role, code: res.code },
+      });
       showToast('Kode dibuat', 'success');
       onCreated?.();
     } catch (e) {
@@ -184,7 +209,7 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
     [
       `Halo ${row.name || 'Tim'},`,
       '',
-      'Akun Anda sudah dibuat di froyek.',
+      'Akun Anda sudah dibuat di Froyek.',
       `Link login: ${window.location.origin}/login`,
       `Email: ${row.email || '-'}`,
       `Password: ${row.password || '-'}`,
@@ -235,6 +260,14 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
       }
     }
     showToast(`${ok}/${Math.min(csvPreview.length, 10)} terkirim`, ok ? 'success' : 'error');
+    if (ok > 0) {
+      void logAudit({
+        orgId,
+        action: 'invitation.created',
+        targetType: 'invitation',
+        metadata: { type: 'email_csv', count: ok },
+      });
+    }
     setLoading(false);
     onCreated?.();
   };
@@ -289,6 +322,15 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
         };
       });
       setDirectResults(merged);
+      if (res.created > 0) {
+        void logAudit({
+          orgId,
+          action: 'member.direct_created',
+          targetType: 'member',
+          metadata: { created: res.created, role },
+        });
+        invalidateEntitlementCache();
+      }
       showToast(`${res.created}/${directRows.length} akun berhasil dibuat`, res.created ? 'success' : 'error');
       onCreated?.();
     } catch (e) {
@@ -306,7 +348,12 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="flex items-center justify-between p-4 border-b border-slate-100">
-          <h2 className="font-bold text-slate-900">Undang Anggota</h2>
+          <div>
+            <h2 className="font-bold text-slate-900">Undang Anggota</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Kuota aktif: <strong>{currentMembers}/{maxMembers}</strong> anggota
+            </p>
+          </div>
           <button type="button" onClick={onClose} aria-label="Tutup"><X className="w-5 h-5 text-slate-600" /></button>
         </div>
 
@@ -410,7 +457,25 @@ export default function InviteMemberModal({ orgId, actorRole, onClose, onCreated
                   {codes.map(c => (
                     <div key={c.id} className="flex items-center justify-between py-2 border-b border-slate-50 text-sm">
                       <span className="font-mono font-bold">{c.code}</span>
-                      <button type="button" onClick={async () => { await revokeInvitation(c.id); loadCodes(); showToast('Dicabut', 'success'); }} className="text-rose-600 text-xs">Revoke</button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await revokeInvitation(c.id);
+                          void logAudit({
+                            orgId,
+                            action: 'invitation.revoked',
+                            targetType: 'invitation',
+                            targetId: c.id,
+                            metadata: { invitation_id: c.id, type: c.type, code: c.code },
+                          });
+                          await loadCodes();
+                          showToast('Dicabut', 'success');
+                          onCreated?.();
+                        }}
+                        className="text-rose-600 text-xs"
+                      >
+                        Revoke
+                      </button>
                     </div>
                   ))}
                 </div>

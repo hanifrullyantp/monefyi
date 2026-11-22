@@ -8,7 +8,11 @@ import AiHrdPayrollModal from '../components/hr/AiHrdPayrollModal';
 import { useAppStore } from '../store/appStore';
 import { listMembers, changeMemberRole, removeMember, transferOwnership, updateOrgAccessSettings } from '../services/memberService';
 import { listJoinRequests, approveJoinRequest, rejectJoinRequest } from '../services/joinRequestService';
-import { listAuditLogs, exportAuditCsv } from '../services/auditService';
+import { listInvitations, revokeInvitation } from '../services/invitationService';
+import {
+  listAuditLogs, exportAuditCsv, formatAuditTimestampId, formatAuditActionLabel, formatAuditSummary, logAudit,
+} from '../services/auditService';
+import { invalidateEntitlementCache } from '../hooks/useEntitlement';
 import { loadWorkerLogsForOrg } from '../services/dailyLogService';
 import { loadWorkItemsForOrg } from '../services/workItemService';
 import {
@@ -30,7 +34,7 @@ import EmployeeDetailSheet from '../components/hr/EmployeeDetailSheet';
 import { showToast, useUiStore } from '../store/uiStore';
 import { useUndoableAction } from '../hooks/useUndoableAction';
 import { listRecentUndoable, actionTypeLabel, undoReversibleAction, type ReversibleAction } from '../services/undoService';
-import type { OrgMember, JoinRequest, AuditLogEntry } from '../types/onboarding';
+import type { OrgMember, JoinRequest, AuditLogEntry, InvitationRecord, MemberRole } from '../types/onboarding';
 import type { DailyLog } from '../services/dailyLogService';
 
 type HrTab = 'overview' | 'karyawan' | 'absensi' | 'payroll' | 'laporan' | 'requests' | 'audit' | 'access';
@@ -55,10 +59,13 @@ function roleBadge(role: string) {
 }
 
 export default function HrEmployees() {
-  const { tenant, user, projects } = useAppStore();
+  const { tenant, user, projects, isDemoMode } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const [tab, setTab] = useState<HrTab>('overview');
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
+  const [invitations, setInvitations] = useState<InvitationRecord[]>([]);
+  const [revokingInviteId, setRevokingInviteId] = useState<string | null>(null);
   const [audit, setAudit] = useState<AuditLogEntry[]>([]);
   const [workerLogs, setWorkerLogs] = useState<DailyLog[]>([]);
   const [workItemCount, setWorkItemCount] = useState(0);
@@ -99,11 +106,35 @@ export default function HrEmployees() {
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
+    if (demoActive) {
+      // Mode demo memakai data anggota lokal tanpa query UUID ke Supabase ('demo' -> 22P02).
+      setMembers([
+        { id: 'demo-m-1', org_id: 'demo', user_id: 'demo-u-1', role: 'owner', status: 'active', position: 'Direktur Utama', department: 'Manajemen', profile: { name: 'Indra Pratama' } },
+        { id: 'demo-m-2', org_id: 'demo', user_id: 'demo-u-2', role: 'manager', status: 'active', position: 'Project Manager', department: 'Operasional', profile: { name: 'Budi Santoso' } },
+        { id: 'demo-m-3', org_id: 'demo', user_id: 'demo-u-3', role: 'worker', status: 'active', position: 'Pelaksana Lapangan', department: 'Lapangan', profile: { name: 'Andi Wijaya' } },
+      ]);
+      setRequests([]);
+      setInvitations([]);
+      setAudit(await listAuditLogs(tenant.id));
+      setWorkerLogs([]);
+      setWorkItemCount(0);
+      setTodayAttendance(new Map());
+      setRecentAttendance([]);
+      setMonthAttendanceRecords([]);
+      setMonthAttendanceStats(new Map());
+      setPayrollEntries([]);
+      setBonRequests([]);
+      setCompensation([]);
+      setUndoableActions([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const [m, r, a, logs, items, todayMap, attendance, payroll, bons, comp, orgDetails] = await Promise.all([
+      const [m, r, invs, a, logs, items, todayMap, attendance, payroll, bons, comp, orgDetails] = await Promise.all([
         listMembers(tenant.id),
         canInvite ? listJoinRequests(tenant.id) : Promise.resolve([]),
+        canInvite ? listInvitations(tenant.id).catch(() => []) : Promise.resolve([]),
         isOwner ? listAuditLogs(tenant.id) : Promise.resolve([]),
         loadWorkerLogsForOrg(tenant.id, 30),
         loadWorkItemsForOrg(tenant.id),
@@ -119,7 +150,9 @@ export default function HrEmployees() {
       setMonthAttendanceRecords(attendance);
       setMonthAttendanceStats(summarizeMonthlyByUser(attendance, attSettings.hours_per_day));
       setMembers(m);
+      setSelectedMember(prev => (prev ? m.find(item => item.id === prev.id) ?? null : null));
       setRequests(r);
+      setInvitations(invs);
       setAudit(a);
       setWorkerLogs(logs);
       setWorkItemCount(items.length);
@@ -136,7 +169,7 @@ export default function HrEmployees() {
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id, canInvite, isOwner]);
+  }, [tenant?.id, canInvite, isOwner, demoActive]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -164,13 +197,40 @@ export default function HrEmployees() {
     [projects],
   );
 
+  const memberNameByUserId = useMemo(
+    () =>
+      Object.fromEntries(
+        members
+          .filter(m => m.profile?.name)
+          .map(m => [m.user_id, m.profile!.name!]),
+      ),
+    [members],
+  );
+
+  const activeInvitations = useMemo(() => {
+    const now = Date.now();
+    return invitations.filter(inv => {
+      if (inv.revoked_at) return false;
+      if (inv.expires_at && new Date(inv.expires_at).getTime() <= now) return false;
+      if (inv.max_uses >= 0 && inv.used_count >= inv.max_uses) return false;
+      return true;
+    });
+  }, [invitations]);
+
   const handleRoleChange = async (memberId: string, role: string) => {
     if (!tenant?.id || !user?.id) return;
+    if (demoActive) {
+      showToast('Perubahan role tidak tersedia di mode demo', 'info');
+      return;
+    }
     try {
       const { undoActionId } = await changeMemberRole(memberId, role as 'manager' | 'worker', {
         orgId: tenant.id,
         actorId: user.id,
       });
+      setSelectedMember(prev =>
+        prev && prev.id === memberId ? { ...prev, role: role as MemberRole } : prev,
+      );
       showToast('Role diperbarui', 'success');
       notifyUndoable('Role karyawan diperbarui', undoActionId);
       load();
@@ -179,14 +239,50 @@ export default function HrEmployees() {
     }
   };
 
-  const handleRemove = async (memberId: string) => {
-    if (!confirm('Hapus anggota ini?')) return;
+  const handleRemove = async (memberId: string, skipConfirm = false): Promise<boolean> => {
+    if (demoActive) {
+      showToast('Hapus anggota tidak tersedia di mode demo', 'info');
+      return false;
+    }
+    if (!skipConfirm && !confirm('Hapus anggota ini?')) return false;
     try {
       await removeMember(memberId);
-      showToast('Anggota dihapus', 'success');
+      invalidateEntitlementCache();
+      setSelectedMember(prev => (prev?.id === memberId ? null : prev));
+      showToast('Anggota dinonaktifkan / dihapus', 'success');
       load();
+      return true;
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal', 'error');
+      return false;
+    }
+  };
+
+  const handleRevokeInvitation = async (inv: InvitationRecord) => {
+    if (!tenant?.id || demoActive) return;
+    setRevokingInviteId(inv.id);
+    try {
+      await revokeInvitation(inv.id);
+      void logAudit({
+        orgId: tenant.id,
+        actorId: user?.id ?? null,
+        actorName: user?.name ?? null,
+        action: 'invitation.revoked',
+        targetType: 'invitation',
+        targetId: inv.id,
+        metadata: {
+          invitation_id: inv.id,
+          type: inv.type,
+          email: inv.email,
+          code: inv.code,
+        },
+      });
+      showToast('Undangan dicabut', 'success');
+      load();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Gagal mencabut undangan', 'error');
+    } finally {
+      setRevokingInviteId(null);
     }
   };
 
@@ -224,7 +320,17 @@ export default function HrEmployees() {
               <RefreshCw className={`w-4 h-4 text-[#5B6B7A] ${loading ? 'animate-spin' : ''}`} />
             </button>
             {canInvite && (
-              <button type="button" onClick={() => setInviteOpen(true)} className="min-h-11 flex items-center gap-2 px-4 py-2.5 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors">
+              <button
+                type="button"
+                onClick={() => {
+                  if (demoActive) {
+                    showToast('Undang karyawan tidak tersedia di mode demo', 'info');
+                    return;
+                  }
+                  setInviteOpen(true);
+                }}
+                className="min-h-11 flex items-center gap-2 px-4 py-2.5 bg-[#059669] hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-sm transition-colors"
+              >
                 <UserPlus className="w-4 h-4" /> Undang Karyawan
               </button>
             )}
@@ -271,7 +377,7 @@ export default function HrEmployees() {
               ))}
             </div>
 
-            {tenant?.id && (
+            {!demoActive && tenant?.id && (
               <TeamTodoBoard orgId={tenant.id} members={members} title="Todo Tim (Semua Proyek)" />
             )}
 
@@ -284,7 +390,7 @@ export default function HrEmployees() {
                       <div key={a.id} className="flex items-center justify-between gap-2 text-sm border border-[#E5EAE8] rounded-xl px-3 py-2 bg-slate-50">
                         <div>
                           <div className="font-medium text-[#0F172A]">{actionTypeLabel(a.action_type)}</div>
-                          <div className="text-xs text-[#5B6B7A]">{new Date(a.created_at).toLocaleString('id-ID')}</div>
+                          <div className="text-xs text-[#5B6B7A]">{formatAuditTimestampId(a.created_at, tenant?.timezone)}</div>
                         </div>
                         <button
                           type="button"
@@ -384,7 +490,13 @@ export default function HrEmployees() {
                   <button
                     key={m.id}
                     type="button"
-                    onClick={() => setSelectedMember(m)}
+                    onClick={() => {
+                      if (demoActive) {
+                        showToast('Detail karyawan tidak tersedia di mode demo', 'info');
+                        return;
+                      }
+                      setSelectedMember(m);
+                    }}
                     className="bg-white rounded-2xl border border-[#E5EAE8] p-4 hover:border-[#059669] hover:shadow-md transition-all text-left w-full shadow-sm"
                   >
                     <div className="flex items-start gap-3">
@@ -527,7 +639,7 @@ export default function HrEmployees() {
 
         {tab === 'payroll' && (
           <div className="space-y-4">
-            {canInvite && tenant?.id && (
+            {!demoActive && canInvite && tenant?.id && (
               <AttendanceSettingsPanel orgId={tenant.id} canEdit={canInvite} actorId={user?.id} />
             )}
 
@@ -581,7 +693,13 @@ export default function HrEmployees() {
 
                   <button
                     type="button"
-                    onClick={() => setShowAiHrdModal(true)}
+                    onClick={() => {
+                      if (demoActive) {
+                        showToast('AI HRD tidak tersedia di mode demo', 'info');
+                        return;
+                      }
+                      setShowAiHrdModal(true);
+                    }}
                     className="px-5 py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-rose-950 flex items-center gap-2 shrink-0 transition-all cursor-pointer"
                   >
                     <Sparkles className="w-4 h-4" />
@@ -595,6 +713,10 @@ export default function HrEmployees() {
                     disabled={payrollBusy}
                     onClick={async () => {
                       if (!tenant?.id) return;
+                      if (demoActive) {
+                        showToast('Generate payroll tidak tersedia di mode demo', 'info');
+                        return;
+                      }
                       setPayrollBusy(true);
                       try {
                         await generatePayrollForOrg(
@@ -648,6 +770,10 @@ export default function HrEmployees() {
                           <button
                             type="button"
                             onClick={async () => {
+                              if (demoActive) {
+                                showToast('Simpan gaji tidak tersedia di mode demo', 'info');
+                                return;
+                              }
                               const raw = salaryDraft[w.id] ?? String(defaultAmount);
                               const amount = Number(raw.replace(/\D/g, ''));
                               if (!amount) {
@@ -782,35 +908,102 @@ export default function HrEmployees() {
         )}
 
         {tab === 'requests' && (
-          <div className="space-y-3">
-            {requests.map(r => (
-              <div key={r.id} className="bg-white p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="font-semibold">{r.profile?.name || r.user_id}</div>
-                  {r.message && <p className="text-sm text-slate-500">{r.message}</p>}
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-[#0F172A]">Permintaan Bergabung</h3>
+              {requests.map(r => (
+                <div key={r.id} className="bg-white p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold">{r.profile?.name || r.user_id}</div>
+                    {r.message && <p className="text-sm text-slate-500">{r.message}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={async () => { await approveJoinRequest(r.id); showToast('Disetujui', 'success'); load(); }} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                    </button>
+                    <button type="button" onClick={async () => { await rejectJoinRequest(r.id, 'Ditolak owner'); showToast('Ditolak', 'info'); load(); }} className="px-3 py-1.5 border rounded-lg text-xs flex items-center gap-1">
+                      <XCircle className="w-3.5 h-3.5" /> Reject
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button type="button" onClick={async () => { await approveJoinRequest(r.id); showToast('Disetujui', 'success'); load(); }} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Approve
-                  </button>
-                  <button type="button" onClick={async () => { await rejectJoinRequest(r.id, 'Ditolak owner'); showToast('Ditolak', 'info'); load(); }} className="px-3 py-1.5 border rounded-lg text-xs flex items-center gap-1">
-                    <XCircle className="w-3.5 h-3.5" /> Reject
-                  </button>
-                </div>
-              </div>
-            ))}
-            {requests.length === 0 && <p className="text-sm text-slate-500">Tidak ada permintaan pending.</p>}
+              ))}
+              {requests.length === 0 && <p className="text-sm text-slate-500">Tidak ada permintaan pending.</p>}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-[#0F172A]">Undangan Aktif ({activeInvitations.length})</h3>
+              {activeInvitations.length === 0 ? (
+                <p className="text-sm text-slate-500">Belum ada undangan aktif.</p>
+              ) : (
+                activeInvitations.map(inv => {
+                  const typeLabel =
+                    inv.type === 'link' ? 'Link Undangan' : inv.type === 'email' ? 'Undangan Email' : 'Kode Undangan';
+                  const identifier =
+                    inv.email || inv.code || (inv.token ? `Token …${inv.token.slice(-6)}` : inv.id.slice(0, 8));
+                  const usageLabel =
+                    inv.max_uses < 0 ? `${inv.used_count} dipakai (∞)` : `${inv.used_count}/${inv.max_uses} dipakai`;
+                  const expiryLabel = inv.expires_at
+                    ? `Berlaku s/d ${formatAuditTimestampId(inv.expires_at, tenant?.timezone)}`
+                    : 'Tanpa kedaluwarsa';
+
+                  return (
+                    <div
+                      key={inv.id}
+                      className="bg-white p-4 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-sm text-[#0F172A]">{typeLabel}</span>
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadge(inv.role)}`}>
+                            {inv.role}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1 truncate">
+                          {identifier} · {usageLabel} · {expiryLabel}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={revokingInviteId === inv.id}
+                        onClick={() => handleRevokeInvitation(inv)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                      >
+                        {revokingInviteId === inv.id ? 'Mencabut…' : 'Cabut'}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
 
         {tab === 'audit' && (
           <div className="space-y-3">
-            <button type="button" onClick={() => { const csv = exportAuditCsv(audit); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'audit.csv'; a.click(); }} className="text-sm text-emerald-600 font-semibold">Export CSV</button>
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-[#5B6B7A]">Menampilkan riwayat aktivitas organisasi</div>
+              <button
+                type="button"
+                onClick={() => {
+                  const csv = exportAuditCsv(audit);
+                  const blob = new Blob([csv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `audit_${tenant?.slug || 'org'}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="text-sm text-emerald-600 font-semibold hover:underline"
+              >
+                Export CSV
+              </button>
+            </div>
             {undoableActions.map(a => (
-              <div key={a.id} className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-sm flex justify-between gap-2">
+              <div key={a.id} className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-sm flex items-center justify-between gap-2">
                 <div>
-                  <div className="font-semibold">{actionTypeLabel(a.action_type)}</div>
-                  <div className="font-mono text-xs text-slate-600">{a.created_at}</div>
+                  <div className="font-semibold text-[#0F172A]">{actionTypeLabel(a.action_type)}</div>
+                  <div className="text-xs text-slate-600 mt-0.5">{formatAuditTimestampId(a.created_at, tenant?.timezone)}</div>
                 </div>
                 <button
                   type="button"
@@ -829,12 +1022,35 @@ export default function HrEmployees() {
                 </button>
               </div>
             ))}
-            {audit.map(l => (
-              <div key={l.id} className="bg-white p-3 rounded-xl border border-slate-100 text-sm">
-                <div className="font-mono text-xs text-slate-600">{l.created_at}</div>
-                <div className="font-semibold">{l.action}</div>
+            {audit.map(l => {
+              const actionLower = l.action.toLowerCase();
+              const badgeTone =
+                actionLower.includes('delete') || actionLower.includes('remove') || actionLower.includes('revoke') || actionLower.includes('reject') || actionLower.includes('archive')
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : actionLower.includes('update') || actionLower.includes('role') || actionLower.includes('transfer')
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+              return (
+                <div key={l.id} className="bg-white p-3.5 rounded-xl border border-slate-100 text-sm space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeTone}`}>
+                      {formatAuditActionLabel(l.action)}
+                    </span>
+                    <span className="text-xs text-[#5B6B7A]">
+                      {formatAuditTimestampId(l.created_at, tenant?.timezone)}
+                    </span>
+                  </div>
+                  <div className="text-xs sm:text-sm text-[#0F172A] font-medium">
+                    {formatAuditSummary(l, memberNameByUserId)}
+                  </div>
+                </div>
+              );
+            })}
+            {audit.length === 0 && undoableActions.length === 0 && (
+              <div className="bg-white p-8 rounded-2xl border border-slate-100 text-center text-sm text-[#5B6B7A]">
+                Belum ada aktivitas audit yang tercatat.
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -864,6 +1080,10 @@ export default function HrEmployees() {
             <button
               type="button"
               onClick={async () => {
+                if (demoActive) {
+                  showToast('Pengaturan akses tidak tersedia di mode demo', 'info');
+                  return;
+                }
                 const org = await loadOrgDetails(tenant!.id);
                 const before = {
                   allow_join_request: org.allow_join_request,
@@ -899,14 +1119,26 @@ export default function HrEmployees() {
           </div>
         )}
 
-        {inviteOpen && tenant && user && (
-          <InviteMemberModal orgId={tenant.id} actorRole={user.role} onClose={() => setInviteOpen(false)} onCreated={load} />
+        {!demoActive && inviteOpen && tenant && user && (
+          <InviteMemberModal
+            orgId={tenant.id}
+            actorRole={user.role}
+            activeMemberCount={members.length}
+            onClose={() => setInviteOpen(false)}
+            onCreated={load}
+          />
         )}
 
         {tab === 'karyawan' && canInvite && (
           <button
             type="button"
-            onClick={() => setInviteOpen(true)}
+            onClick={() => {
+              if (demoActive) {
+                showToast('Undang karyawan tidak tersedia di mode demo', 'info');
+                return;
+              }
+              setInviteOpen(true);
+            }}
             className="fixed bottom-24 md:bottom-8 right-6 z-40 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl flex items-center justify-center hover:bg-emerald-700"
             aria-label="Tambah karyawan"
           >
@@ -952,18 +1184,25 @@ export default function HrEmployees() {
           </div>
         )}
 
-        <EmployeeDetailSheet
-          member={selectedMember}
-          orgId={tenant?.id || ''}
-          open={!!selectedMember}
-          canManage={canInvite}
-          compensation={selectedMember ? compByUser[selectedMember.user_id] : undefined}
-          hoursPerDay={attendanceSettings?.hours_per_day ?? 8}
-          onClose={() => setSelectedMember(null)}
-          onUpdated={load}
-        />
+        {!demoActive && (
+          <EmployeeDetailSheet
+            member={selectedMember}
+            orgId={tenant?.id || ''}
+            open={!!selectedMember}
+            canManage={canInvite}
+            currentUserId={user?.id}
+            currentUserRole={user?.role}
+            canManageMembers={canInvite}
+            compensation={selectedMember ? compByUser[selectedMember.user_id] : undefined}
+            hoursPerDay={attendanceSettings?.hours_per_day ?? 8}
+            onClose={() => setSelectedMember(null)}
+            onUpdated={load}
+            onRoleChange={handleRoleChange}
+            onRemoveMember={memberId => handleRemove(memberId, true)}
+          />
+        )}
 
-        {showAiHrdModal && (
+        {!demoActive && showAiHrdModal && (
           <AiHrdPayrollModal
             open={showAiHrdModal}
             onClose={() => setShowAiHrdModal(false)}

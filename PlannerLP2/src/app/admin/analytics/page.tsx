@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { Sparkles, AlertTriangle, RefreshCw, Clock, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { FroyekBehaviorCard } from "@/components/froyek/FroyekBehaviorCard";
 
 const COLORS = ["#059669", "#3b82f6", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#10b981", "#6366f1"];
 const PLAN_COLORS: Record<string, string> = {
@@ -94,6 +95,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-6 md:p-10 bg-slate-50 min-h-screen font-sans">
+      <FroyekBehaviorCard />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-2.5">

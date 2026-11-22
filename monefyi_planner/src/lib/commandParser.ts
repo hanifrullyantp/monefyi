@@ -173,12 +173,12 @@ export function createAIFallbackParse(
   message?: string,
 ): ParsedCommand {
   return {
-    intent: 'record_cost',
+    intent: 'unknown',
     params: {},
-    confidence: 0.35,
+    confidence: 0,
     raw: input,
     source: 'fallback',
-    reasoning: message || 'AI tidak tersedia — silakan isi form manual di bawah.',
+    reasoning: message || 'Perintah tidak dipahami atau AI sedang tidak tersedia.',
   };
 }
 
@@ -187,6 +187,15 @@ export async function aiParseCommand(
   context: PipelineContext,
 ): Promise<ParsedCommand> {
   try {
+    const { useAppStore } = await import('../store/appStore');
+    const isDemo =
+      useAppStore.getState().isDemoMode === true ||
+      context.orgId === 'demo' ||
+      (typeof context.orgId === 'string' && context.orgId.startsWith('demo-'));
+    if (isDemo) {
+      return createAIFallbackParse(input, 'Mode demo menggunakan parser aturan lokal.');
+    }
+
     const { config } = await import('./config');
     const { supabase } = await import('./supabase');
 
@@ -200,9 +209,39 @@ export async function aiParseCommand(
       }
     }
 
-    const { data } = await supabase.functions.invoke(config.fnParseCommand, {
+    const { data, error } = await supabase.functions.invoke(config.fnParseCommand, {
       body: { input, context: { ...context, learned_examples } },
     });
+
+    if (error) {
+      console.warn('AI parser edge function error:', error);
+      return createAIFallbackParse(
+        input,
+        data?.explanation || data?.message || data?.error || undefined,
+      );
+    }
+
+    if (data?.error) {
+      return createAIFallbackParse(input, String(data.error));
+    }
+
+    if (data?.all_providers_failed || data?._meta?.all_providers_failed) {
+      return createAIFallbackParse(input, data.explanation || data.message);
+    }
+
+    // Edge Function lama kadang mengembalikan intent 'record_cost' confidence rendah saat provider belum aktif.
+    const noProviderFallback =
+      !data?._meta?.provider &&
+      data?.intent === 'record_cost' &&
+      Number(data?.confidence) <= 0.4 &&
+      (!data?.params || Object.keys(data.params).length === 0) &&
+      (Boolean(data?.quota) ||
+        /belum dikonfigurasi|kuota ai|isi form manual/i.test(
+          String(data?.explanation || data?.message || ''),
+        ));
+    if (noProviderFallback) {
+      return createAIFallbackParse(input, data?.explanation || data?.message);
+    }
 
     if (data?.intent && data.intent !== 'unknown') {
       return {
@@ -216,15 +255,8 @@ export async function aiParseCommand(
       };
     }
 
-    if (data?.intent === 'unknown' && data?.explanation) {
-      return {
-        intent: 'record_cost',
-        params: data.params || {},
-        confidence: 0.4,
-        raw: input,
-        source: 'ai',
-        reasoning: data.explanation || data.message,
-      };
+    if (data?.intent === 'unknown') {
+      return createAIFallbackParse(input, data.explanation || data.message);
     }
   } catch (e) {
     console.warn('AI parser fallback failed:', e);

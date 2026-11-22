@@ -16,6 +16,7 @@ import { AdminAuthGuard } from "@/components/admin/AdminAuthGuard";
 import { ContentHydrator } from "@/components/landing/ContentHydrator";
 import { AuthHydrator } from "@/components/landing/AuthHydrator";
 import { useUIStore } from "@/lib/store/uiStore";
+import { isEstimatorHost } from "@/lib/config/publicHosts";
 import { AdminPwaInstallPrompt } from "@/components/admin/AdminPwaInstallPrompt";
 import { MayarStatusBanner } from "@/components/admin/MayarStatusBanner";
 import { AdminInAppToast } from "@/components/admin/AdminInAppToast";
@@ -34,6 +35,10 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== "undefined" && isEstimatorHost(window.location.hostname)) {
+      const target = `https://froyek.com${window.location.pathname}${window.location.search}`;
+      window.location.replace(target);
+    }
 
     // Wire up accessTokenProvider untuk route engine & marketing
     setAccessTokenProvider(async () => {

@@ -1,5 +1,5 @@
 /**
- * Ajukan garansi refund 7 hari — Planner Estimator.
+ * Ajukan garansi refund 7 hari — Froyek Estimator.
  * Validasi pembelian lynk_orders + window 7 hari, insert refund_requests (service role).
  */
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
@@ -42,7 +42,7 @@ serve(async (req) => {
 
     if (!order?.created_at) {
       return jsonResponse({
-        error: "Tidak ditemukan pembelian Planner. Hubungi support@monefyi.com dengan bukti transfer.",
+        error: "Tidak ditemukan pembelian Froyek. Hubungi support@froyek.com dengan bukti transfer.",
       }, 400);
     }
 

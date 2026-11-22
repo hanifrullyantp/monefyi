@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
         if (email.includes("@")) {
           await sendEmailSafe({
             to: email,
+            product: "finance",
             subject: "Monefyi — Akun dihapus permanen",
             html: `<p>Akun Monefyi kamu telah dihapus permanen sesuai permintaan sebelumnya.</p>`,
             text: "Akun Monefyi dihapus permanen.",

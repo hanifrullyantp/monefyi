@@ -2,8 +2,14 @@ import { useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { buildUser, setActiveOrgTimeZone } from '../lib/adapters';
 import { config } from '../lib/config';
+import {
+  clearLocalAuthSession,
+  getSessionSafe,
+  isRefreshTokenError,
+  onAuthStateChange,
+  signOutGlobal,
+} from '../services/authService';
 import { hasPasswordRecoveryIntent, markPasswordRecoveryIntent } from '../lib/passwordRecoveryIntent';
-import { onAuthStateChange } from '../services/authService';
 import { loadOrg } from '../services/orgService';
 import { loadProfile } from '../services/profileService';
 import { loadProjects } from '../services/projectService';
@@ -25,12 +31,11 @@ import {
   subscribeProjects,
 } from '../services/notificationService';
 import { isPlatformAdmin } from '../services/adminService';
-import { logSessionExpired } from '../services/runtimeTracer';
+import { clearRuntimeTraceQueue, pruneTraceQueueForUser } from '../services/runtimeTracer';
 import { initAnalytics, resetAnalytics } from '../lib/analytics/client';
 import { useAppStore } from '../store/appStore';
 import { bootstrapCustomDomainContext } from '../services/customDomainService';
 import { userHasProduct, PRODUCT_NOT_REGISTERED } from '../services/productEntitlements';
-import { signOutGlobal } from '../services/authService';
 import {
   isExemptFromSingleDeviceSession,
   registerActiveDeviceSession,
@@ -80,6 +85,7 @@ async function applyOrgContext(
 async function bootstrapSession(session: Session) {
   const store = useAppStore.getState();
   const authUser = session.user;
+  pruneTraceQueueForUser(authUser.id);
   const metadata = authUser.user_metadata as Record<string, unknown>;
   const signupIntent = getSignupIntent(metadata) || null;
 
@@ -250,29 +256,37 @@ export function useBootstrap() {
       }
 
       if (event === 'SIGNED_OUT' || !session) {
-        if (useAppStore.getState().user?.id) {
-          let wasManual = false;
-          try {
-            wasManual = sessionStorage.getItem('monefyi_manual_logout') === '1';
-            sessionStorage.removeItem('monefyi_manual_logout');
-          } catch { /* ignore */ }
-          logSessionExpired(wasManual);
-        }
+        const prevUserId = useAppStore.getState().user?.id;
+        clearRuntimeTraceQueue(prevUserId);
+        try {
+          sessionStorage.removeItem('monefyi_manual_logout');
+        } catch { /* ignore */ }
         setActiveOrgTimeZone('Asia/Jakarta');
         setUser(null);
         setTenant(null);
         resetAnalytics();
         setAuthenticated(false);
+        useAppStore.getState().setHasMembership(false);
+        useAppStore.getState().setOnboardingCompleted(false);
         setProjects([]);
         setNotifications([]);
       }
       settleInit(`no-user:${event}`);
     };
 
-    void supabase.auth.getSession().then(({ data: { session } }) => {
+    void getSessionSafe().then(({ session, error, staleCleared }) => {
       getSessionHandled = true;
+      if (error) {
+        if (!staleCleared && isRefreshTokenError(error)) {
+          void clearLocalAuthSession();
+        }
+        useAppStore.getState().setAuthError(null);
+      }
       processAuth('GET_SESSION', session);
-    }).catch(() => settleInit('getSession-error'));
+    }).catch(() => {
+      getSessionHandled = true;
+      processAuth('GET_SESSION_ERROR', null);
+    });
 
     const subscription = onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION' && getSessionHandled) return;
@@ -293,7 +307,8 @@ export function useBootstrap() {
   ]);
 
   useEffect(() => {
-    if (!user?.id || !tenant?.id || useAppStore.getState().isDemoMode) return;
+    const state = useAppStore.getState();
+    if (!user?.id || !tenant?.id || state.isDemoMode || tenant.id === 'demo') return;
 
     let projectsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
     const scheduleProjectsRefresh = () => {
@@ -313,7 +328,8 @@ export function useBootstrap() {
 
   // Single Device Login Watcher: 1 perangkat per akun (kecuali super admin / multi-device)
   useEffect(() => {
-    if (!user?.id || useAppStore.getState().isDemoMode) return;
+    const state = useAppStore.getState();
+    if (!user?.id || state.isDemoMode || state.tenant?.id === 'demo') return;
     const profileSettings = (useAppStore.getState().user as any)?.settings;
     if (isExemptFromSingleDeviceSession(platformRole, user.email, profileSettings)) return;
 

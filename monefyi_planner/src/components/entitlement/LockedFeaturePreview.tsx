@@ -43,7 +43,7 @@ export default function LockedFeaturePreview({ featureName = 'Fitur ini', childr
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="max-w-sm w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-5 text-center">
           <Lock className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-          <h2 className="font-bold text-slate-900">{featureName} — Planner Pro</h2>
+          <h2 className="font-bold text-slate-900">{featureName} — Froyek Pro</h2>
           <p className="text-xs text-slate-500 mt-2">
             Keuangan bisnis, neraca otomatis, dan bridge biaya proyek.
           </p>

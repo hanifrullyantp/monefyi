@@ -5,6 +5,20 @@ import { useAppStore } from '../store/appStore';
 import { submitPlannerRefundRequest, REFUND_WINDOW_DAYS } from '../services/refundService';
 import { useUiStore } from '../store/uiStore';
 import { publicAppHomePath } from '../lib/publicEntry';
+import { useEntitlement } from '../hooks/useEntitlement';
+import { isAdminFullAccess } from '../lib/entitlement';
+import { hasEstimatorLicenseAccess } from '../lib/appProductBrand';
+import { isEstimatorBrandContext } from '../lib/estimatorBrand';
+
+function useIsEstimatorContext(): boolean {
+  const { isAuthenticated, isDemoMode, platformRole, user, entitlementPreviewMode } = useAppStore();
+  const entitlement = useEntitlement();
+  const isEstimatorHost = isEstimatorBrandContext();
+  const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+  const hasEstimatorAccess =
+    (isAuthenticated || isDemoMode) && hasEstimatorLicenseAccess(entitlement, adminFullAccess);
+  return isEstimatorHost || hasEstimatorAccess;
+}
 
 function LegalShell({ title, children }: { title: string; children: React.ReactNode }) {
   const isAuthenticated = useAppStore(s => s.isAuthenticated);
@@ -24,21 +38,22 @@ function LegalShell({ title, children }: { title: string; children: React.ReactN
 export function PrivacyPage() {
   return (
     <LegalShell title="Kebijakan Privasi">
-      <p>froyek mengumpulkan data akun (email, nama) dan data proyek yang Anda input untuk keperluan operasional aplikasi.</p>
+      <p>Froyek mengumpulkan data akun (email, nama) dan data proyek yang Anda input untuk keperluan operasional aplikasi.</p>
       <p>Data disimpan di Supabase dengan enkripsi transit. Kami tidak menjual data pribadi kepada pihak ketiga.</p>
-      <p>Hubungi tim Monefyi untuk permintaan penghapusan data akun.</p>
+      <p>Hubungi tim Froyek untuk permintaan penghapusan data akun.</p>
     </LegalShell>
   );
 }
 
 export function TermsPage() {
+  const isEstimator = useIsEstimatorContext();
   return (
     <LegalShell title="Syarat & Ketentuan">
-      <p>Dengan menggunakan froyek, Anda setuju menggunakan layanan secara legal dan bertanggung jawab atas data proyek yang dimasukkan.</p>
+      <p>Dengan menggunakan Froyek, Anda setuju menggunakan layanan secara legal dan bertanggung jawab atas data proyek yang dimasukkan.</p>
       <p>Layanan disediakan &quot;sebagaimana adanya&quot;. Fitur beta dapat berubah tanpa pemberitahuan sebelumnya.</p>
       <p className="font-semibold text-slate-800">Garansi uang kembali 7 hari</p>
       <p>
-        Pembelian Estimator dapat diajukan refund dalam {REFUND_WINDOW_DAYS} hari jika produk tidak sesuai harapan.
+        Pembelian {isEstimator ? 'Froyek Estimator' : 'Froyek'} dapat diajukan refund dalam {REFUND_WINDOW_DAYS} hari jika produk tidak sesuai harapan.
         Refund diproses manual ke metode pembayaran asal (Lynk) setelah review tim — bukan otomatis instan.
       </p>
     </LegalShell>
@@ -46,6 +61,7 @@ export function TermsPage() {
 }
 
 function RefundRequestForm() {
+  const isEstimator = useIsEstimatorContext();
   const { isAuthenticated } = useAppStore();
   const showToast = useUiStore(s => s.showToast);
   const [reason, setReason] = useState('');
@@ -92,8 +108,8 @@ function RefundRequestForm() {
         </Link>
         <p className="text-xs text-slate-500">
           Atau email{' '}
-          <a href="mailto:support@monefyi.com?subject=Garansi%20Refund%20Estimator" className="text-emerald-600 font-medium">
-            support@monefyi.com
+          <a href="mailto:support@froyek.com?subject=Garansi%20Refund%20Froyek" className="text-emerald-600 font-medium">
+            support@froyek.com
           </a>{' '}
           dengan bukti pembayaran & alasan.
         </p>
@@ -112,7 +128,7 @@ function RefundRequestForm() {
         rows={4}
         required
         minLength={10}
-        placeholder="Jelaskan mengapa Estimator tidak sesuai kebutuhan bisnis Anda..."
+        placeholder={`Jelaskan mengapa ${isEstimator ? 'Froyek Estimator' : 'Froyek'} tidak sesuai kebutuhan bisnis Anda...`}
         className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-emerald-400"
       />
       <button
@@ -128,6 +144,7 @@ function RefundRequestForm() {
 }
 
 export function ContactPage() {
+  const isEstimator = useIsEstimatorContext();
   const [params] = useSearchParams();
   const showRefund = params.get('refund') === '1';
 
@@ -136,14 +153,14 @@ export function ContactPage() {
       {showRefund ? (
         <>
           <p>
-            Ajukan garansi uang kembali 100% jika Monefyi Estimator tidak membantu bisnis Anda dalam{' '}
+            Ajukan garansi uang kembali 100% jika {isEstimator ? 'Froyek Estimator' : 'Froyek'} tidak membantu bisnis Anda dalam{' '}
             {REFUND_WINDOW_DAYS} hari pertama setelah pembelian.
           </p>
           <RefundRequestForm />
         </>
       ) : (
         <>
-          <p>Email: <a href="mailto:support@monefyi.com" className="text-emerald-600 font-medium">support@monefyi.com</a></p>
+          <p>Email: <a href="mailto:support@froyek.com" className="text-emerald-600 font-medium">support@froyek.com</a></p>
           <p>Untuk demo enterprise atau integrasi kustom, sertakan nama perusahaan dan jumlah proyek aktif.</p>
           <p>
             <Link to="/contact?refund=1" className="text-emerald-600 font-semibold hover:underline">

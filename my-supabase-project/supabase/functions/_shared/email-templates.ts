@@ -30,7 +30,7 @@ export function invitationEmailHtml(params: {
   return monefyiEmailShell({
     brand,
     title: params.orgName,
-    preheader: `Undangan ${params.role} · Monefyi Planner`,
+    preheader: `Undangan ${params.role} · Froyek`,
     bodyHtml,
   });
 }
@@ -142,7 +142,7 @@ export function welcomeMemberHtml(orgName: string, appUrl: string): string {
   const brand = EMAIL_BRANDS.planner;
   const bodyHtml = [
     emailParagraph(`Anda bergabung dengan <strong>${orgName}</strong>.`),
-    emailPrimaryButton("Masuk ke Monefyi Planner", `${appUrl.replace(/\/$/, "")}/login`, brand.accent),
+    emailPrimaryButton("Masuk ke Froyek", `${appUrl.replace(/\/$/, "")}/login`, brand.accent),
   ].join("");
   return monefyiEmailShell({
     brand,

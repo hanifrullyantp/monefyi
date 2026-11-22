@@ -33,9 +33,57 @@ export async function signOut() {
   return supabase.auth.signOut();
 }
 
+export function isRefreshTokenError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { message?: unknown; code?: unknown };
+  const code = String(err.code || '').toLowerCase();
+  const msg = String(err.message || '').toLowerCase();
+  return (
+    code === 'refresh_token_not_found'
+    || code === 'invalid_refresh_token'
+    || msg.includes('invalid refresh token')
+    || msg.includes('refresh token not found')
+    || msg.includes('refresh_token_not_found')
+  );
+}
+
+export async function clearLocalAuthSession(): Promise<void> {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    /* ignore */
+  }
+}
+
+export async function getSessionSafe(): Promise<{
+  session: Session | null;
+  error: unknown | null;
+  staleCleared: boolean;
+}> {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      let staleCleared = false;
+      if (isRefreshTokenError(error)) {
+        await clearLocalAuthSession();
+        staleCleared = true;
+      }
+      return { session: null, error, staleCleared };
+    }
+    return { session: data.session ?? null, error: null, staleCleared: false };
+  } catch (error) {
+    let staleCleared = false;
+    if (isRefreshTokenError(error)) {
+      await clearLocalAuthSession();
+      staleCleared = true;
+    }
+    return { session: null, error, staleCleared };
+  }
+}
+
 export async function getSession(): Promise<Session | null> {
-  const { data } = await supabase.auth.getSession();
-  return data.session;
+  const { session } = await getSessionSafe();
+  return session;
 }
 
 export function onAuthStateChange(

@@ -1,5 +1,5 @@
-import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Routes, Route, Navigate, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Layout from './Layout';
 import Dashboard from '../pages/Dashboard';
@@ -20,38 +20,59 @@ import { isAdminFullAccess, isEstimatorOnlyPlan } from '../lib/entitlement';
 import PlannerModuleGuard from './entitlement/PlannerModuleGuard';
 import AgentTrialPage from '../pages/AgentTrialPage';
 import { hydrateAIConfigFromAccount } from '../services/aiConfigSync';
-import { fetchTelegramConfigFromSupabase, fetchFieldMemberContactsFromSupabase } from '../services/telegramService';
+import {
+  clearTelegramLocalCache,
+  fetchFieldMemberContactsFromSupabase,
+  fetchTelegramConfigFromSupabase,
+} from '../services/telegramService';
 
 function AppContent() {
   const { id: projectIdParam } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, tenant, activeTab, setOnline, setSyncStatus, setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion, entitlementPreviewMode } = useAppStore();
+  const {
+    user, tenant, activeTab, isDemoMode, setOnline, setSyncStatus,
+    setSelectedProjectId, setActiveTab, platformRole, uiViewMode, financeVersion, entitlementPreviewMode,
+  } = useAppStore();
   const entitlement = useEntitlement();
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+  const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
+  const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
 
   useEffect(() => {
-    if (user?.id) void hydrateAIConfigFromAccount(user.id);
-  }, [user?.id]);
+    if (user?.id && !isDemoMode && tenant?.id !== 'demo') {
+      void hydrateAIConfigFromAccount(user.id);
+    }
+  }, [user?.id, isDemoMode, tenant?.id]);
 
   useEffect(() => {
-    if (tenant?.id) {
+    if (!tenant?.id || isDemoMode || tenant.id === 'demo') return;
+    if (canAccessHr) {
       void fetchTelegramConfigFromSupabase(tenant.id);
       void fetchFieldMemberContactsFromSupabase(tenant.id);
+    } else {
+      // Non-manager (worker/staff) tidak boleh membaca atau menyimpan cache bot/kontak Telegram di perangkat bersama
+      clearTelegramLocalCache();
     }
-  }, [tenant?.id]);
+  }, [tenant?.id, isDemoMode, canAccessHr]);
+
+  const urlSyncKey = projectIdParam
+    ? `project:${projectIdParam}`
+    : `tab:${searchParams.get('tab') ?? ''}`;
+  const urlTargetTab = projectIdParam ? 'projects' : (searchParams.get('tab') || 'home');
+  const syncedUrlKeyRef = useRef<string | null>(null);
+  const effectiveTab = syncedUrlKeyRef.current !== urlSyncKey ? urlTargetTab : activeTab;
 
   useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab) setActiveTab(tab);
-  }, [searchParams, setActiveTab]);
-
-  useEffect(() => {
+    syncedUrlKeyRef.current = urlSyncKey;
     if (projectIdParam) {
       setSelectedProjectId(projectIdParam);
       setActiveTab('projects');
+      return;
     }
-  }, [projectIdParam, setSelectedProjectId, setActiveTab]);
+    const tab = searchParams.get('tab');
+    setActiveTab(tab || 'home');
+  }, [urlSyncKey, projectIdParam, searchParams, setSelectedProjectId, setActiveTab]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -71,39 +92,36 @@ function AppContent() {
     };
   }, [setOnline, setSyncStatus]);
 
-  const isWorker = showWorkerShell(user?.role, platformRole, user?.email, uiViewMode);
-  const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
-
   useEffect(() => {
-    if (activeTab === 'estimator') {
+    if (effectiveTab === 'estimator') {
       navigate('/app/estimator', { replace: true });
       return;
     }
-    if (activeTab === 'database') {
+    if (effectiveTab === 'database') {
       navigate('/app/database', { replace: true });
       return;
     }
-    if (activeTab !== 'finance') return;
+    if (effectiveTab !== 'finance') return;
     if (isSandboxFinance(financeVersion)) {
       navigate('/app/finance-v2', { replace: true });
     }
-  }, [activeTab, financeVersion, navigate]);
+  }, [effectiveTab, financeVersion, navigate]);
 
   useEffect(() => {
     if (isWorker || entitlement.isLoading || adminFullAccess) return;
     if (!isEstimatorOnlyPlan(entitlement)) return;
     const blockedTabs = new Set(['home', 'database', 'finance', 'hr', 'team']);
     const onAllowedModule =
-      activeTab === 'projects'
-      || activeTab === 'estimator'
-      || activeTab === 'settings'
+      effectiveTab === 'projects'
+      || effectiveTab === 'estimator'
+      || effectiveTab === 'settings'
       || Boolean(projectIdParam);
-    if (!onAllowedModule || blockedTabs.has(activeTab)) {
+    if (!onAllowedModule || blockedTabs.has(effectiveTab)) {
       setActiveTab('projects');
       navigate('/app?tab=projects', { replace: true });
     }
   }, [
-    activeTab,
+    effectiveTab,
     projectIdParam,
     adminFullAccess,
     entitlement,
@@ -114,8 +132,9 @@ function AppContent() {
   ]);
 
   const renderPage = () => {
+    if (effectiveTab === 'settings') return <Settings />;
     if (isWorker) return <WorkerDashboard />;
-    switch (activeTab) {
+    switch (effectiveTab) {
       case 'home':
         return (
           <PlannerModuleGuard module="home">
@@ -143,8 +162,6 @@ function AppContent() {
             {canAccessHr ? <HrEmployees /> : null}
           </PlannerModuleGuard>
         );
-      case 'settings':
-        return <Settings />;
       case 'estimator':
       case 'database':
         return null;
@@ -161,7 +178,7 @@ function AppContent() {
       {showChecklist && <OnboardingChecklist />}
       <AnimatePresence mode="wait">
         <motion.div
-          key={activeTab + (projectIdParam || '')}
+          key={effectiveTab + (projectIdParam || '')}
           initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -10 }}
@@ -204,12 +221,21 @@ function DatabaseShell() {
   );
 }
 
+function SettingsShell() {
+  return (
+    <Layout>
+      <Settings />
+    </Layout>
+  );
+}
+
 export default function AppShell() {
   return (
     <Routes>
         <Route index element={<AppContent />} />
         <Route path="projects/:id" element={<AppContent />} />
         <Route path="database" element={<DatabaseShell />} />
+        <Route path="settings" element={<SettingsShell />} />
         <Route path="estimator/*" element={<EstimatorShell />} />
         <Route path="finance-v2/*" element={<FinanceV2Shell />} />
         <Route path="uji-agen" element={<Layout><AgentTrialPage /></Layout>} />

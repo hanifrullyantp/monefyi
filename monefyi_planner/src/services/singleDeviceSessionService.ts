@@ -12,6 +12,8 @@ export function isExemptFromSingleDeviceSession(
   if (settings?.exempt_single_device || settings?.allow_multi_device) return true;
   if (!email) return false;
   const lower = email.trim().toLowerCase();
+  // [F-25 / Product Decision #3 — BUKAN-BUG]: Pengecualian multi-device untuk akun Indra & tim QA internal
+  // sengaja dipertahankan agar pengujian lintas perangkat tim QA tetap berjalan tanpa saling memutus sesi.
   if (
     lower === 'indra@fdfd.com' ||
     lower === 'indragunawan.anzon93@gmail.com' ||

@@ -14,6 +14,7 @@ import {
   Sliders,
   BookOpen,
 } from 'lucide-react';
+import { PlannerLogo } from '../MonefyiLogo';
 
 export type AccountMenuTab =
   | 'home'
@@ -41,6 +42,7 @@ type Props = {
   onLogout?: () => void;
   isOnline?: boolean;
   isEstimator?: boolean;
+  showEstimator?: boolean;
 };
 
 export default function AccountMenu({
@@ -50,7 +52,7 @@ export default function AccountMenu({
   onSelectTab,
   userName = 'User',
   userRole = 'Pemilik',
-  tenantName = 'Monefyi',
+  tenantName = 'Froyek',
   isSuperAdmin = false,
   uiViewMode = 'auto',
   onOpenPreviewMode,
@@ -61,6 +63,7 @@ export default function AccountMenu({
   onLogout,
   isOnline = true,
   isEstimator = false,
+  showEstimator = false,
 }: Props) {
   const initial = userName.charAt(0).toLowerCase() || 'u';
 
@@ -68,7 +71,7 @@ export default function AccountMenu({
     { id: 'home' as const, label: 'Dashboard', icon: Home },
     { id: 'projects' as const, label: 'Proyek', icon: FolderOpen },
     { id: 'database' as const, label: 'Database', icon: Database },
-    { id: 'estimator' as const, label: 'Estimator', icon: Receipt },
+    ...(showEstimator ? [{ id: 'estimator' as const, label: 'Estimator', icon: Receipt }] : []),
     { id: 'finance' as const, label: 'Keuangan Bisnis', icon: Wallet },
     { id: 'hr' as const, label: 'HR & Karyawan', icon: Users },
   ];
@@ -98,13 +101,13 @@ export default function AccountMenu({
           >
             {/* Header */}
             <div className="p-4 sm:p-5 border-b border-[#E5EAE8] flex items-center gap-2.5">
-              <div
-                className={`w-10 h-10 rounded-xl text-white font-extrabold text-xl flex items-center justify-center shrink-0 ${
-                  isEstimator ? 'bg-[#157F5F]' : 'bg-[#059669]'
-                }`}
-              >
-                {isEstimator ? 'E' : 'M'}
-              </div>
+              {isEstimator ? (
+                <div className="w-10 h-10 rounded-xl text-white font-extrabold text-xl flex items-center justify-center shrink-0 bg-[#157F5F]">
+                  E
+                </div>
+              ) : (
+                <PlannerLogo className="w-10 h-10 object-contain shrink-0" />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="text-base font-extrabold text-[#0F172A] truncate">
                   {isEstimator ? 'Estimator' : 'froyek'}
@@ -212,42 +215,46 @@ export default function AccountMenu({
                     </div>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.location.href = '/app/estimator/guide';
-                      onClose();
-                    }}
-                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
-                  >
-                    <BookOpen className="w-5 h-5 shrink-0 text-emerald-600" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-sm text-[#0F172A] flex items-center gap-1.5">
-                        <span>Panduan Aplikasi</span>
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase">Resmi</span>
-                      </div>
-                      <div className="text-[11px] text-[#5B6B7A] truncate">
-                        Tutorial RAB, RAP, PDF &amp; rumus margin
-                      </div>
-                    </div>
-                  </button>
+                  {showEstimator && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.location.href = '/app/estimator/guide';
+                          onClose();
+                        }}
+                        className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                      >
+                        <BookOpen className="w-5 h-5 shrink-0 text-emerald-600" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm text-[#0F172A] flex items-center gap-1.5">
+                            <span>Panduan Aplikasi</span>
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 uppercase">Resmi</span>
+                          </div>
+                          <div className="text-[11px] text-[#5B6B7A] truncate">
+                            Tutorial RAB, RAP, PDF &amp; rumus margin
+                          </div>
+                        </div>
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenSettings?.();
-                      onClose();
-                    }}
-                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
-                  >
-                    <Settings className="w-5 h-5 shrink-0 text-emerald-600" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-sm text-[#0F172A]">Penawaran &amp; PDF</div>
-                      <div className="text-[11px] text-[#5B6B7A] truncate">
-                        Kop surat, logo, WA &amp; pembayaran
-                      </div>
-                    </div>
-                  </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOpenSettings?.();
+                          onClose();
+                        }}
+                        className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                      >
+                        <Settings className="w-5 h-5 shrink-0 text-emerald-600" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm text-[#0F172A]">Penawaran &amp; PDF</div>
+                          <div className="text-[11px] text-[#5B6B7A] truncate">
+                            Kop surat, logo, WA &amp; pembayaran
+                          </div>
+                        </div>
+                      </button>
+                    </>
+                  )}
 
                   <button
                     type="button"

@@ -4,6 +4,12 @@ import {
 } from 'lucide-react';
 import { analyzeProject, type AnalyzeResult } from '../../../services/analyzeService';
 import type { NormalizedProjectView } from '../../../lib/migration/project-normalize';
+import {
+  computeAnalisaHealthScore,
+  computeProjectedEndDate,
+  getAnalisaFinanceBadge,
+  getBehindScheduleAdvice,
+} from '../../../lib/projects/projectAnalysisMetrics';
 import { formatRupiah } from '../../../utils/projectUi';
 
 type Props = {
@@ -22,20 +28,38 @@ export default function TabV2Analisa({ projectId, normalized }: Props) {
   const isNearBudget = !isOverBudget && p.rap.totalRAP > 0 && rapPct >= 85;
   const dev = p.progress.deviation;
   const isBehindSchedule = p.progress.actual < 100 && dev < -5;
+  const evmTotalBudget = (result?.evm as { total_budget?: number } | undefined)?.total_budget;
 
-  const computedScore = (() => {
-    let score = 85;
-    if (isCashDeficit) score -= 25;
-    if (isOverBudget) score -= Math.min(25, Math.round(rapPct - 100));
-    else if (isNearBudget) score -= 8;
-    if (isBehindSchedule) score -= Math.min(25, Math.round(Math.abs(dev) * 0.6));
-    else if (dev >= 0) score += 5;
-    return Math.max(15, Math.min(100, score));
-  })();
+  const healthScore = computeAnalisaHealthScore({
+    totalRAP: p.rap.totalRAP,
+    realisasi: p.rap.realisasi,
+    saldo: p.saldo,
+    estLaba: p.rap.estLaba,
+    contractValue: p.contractValue,
+    actualProgress: p.progress.actual,
+    progressDeviation: dev,
+    evm: result?.evm
+      ? {
+          cpi: result.evm.cpi,
+          spi: result.evm.spi,
+          ac: result.evm.ac,
+          totalBudget: evmTotalBudget ?? p.rap.totalRAP,
+        }
+      : null,
+  });
 
-  const healthScore = result?.evm
-    ? Math.min(100, Math.max(10, Math.round(((result.evm.cpi + result.evm.spi) / 2) * 100)))
-    : computedScore;
+  const financeBadge = getAnalisaFinanceBadge({
+    isCashDeficit,
+    isOverBudget,
+    isNearBudget,
+    totalPemasukan: normalized.totalPemasukan,
+    estLaba: p.rap.estLaba,
+  });
+  const projectedEnd = computeProjectedEndDate({
+    startDate: p.startDate,
+    endDate: p.endDate,
+    actualProgress: p.progress.actual,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -76,15 +100,17 @@ export default function TabV2Analisa({ projectId, normalized }: Props) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 justify-center">
-          {isCashDeficit ? (
-            <Badge icon={AlertOctagon} color="rose" label="Keuangan: Defisit Kas" />
-          ) : isOverBudget ? (
-            <Badge icon={AlertOctagon} color="rose" label="Keuangan: Over Budget" />
-          ) : isNearBudget ? (
-            <Badge icon={AlertTriangle} color="amber" label="Keuangan: Mendekati Batas RAP" />
-          ) : (
-            <Badge icon={CheckCircle2} color="emerald" label="Keuangan: Sehat" />
-          )}
+          <Badge
+            icon={
+              financeBadge.color === 'rose'
+                ? AlertOctagon
+                : financeBadge.color === 'amber'
+                  ? AlertTriangle
+                  : CheckCircle2
+            }
+            color={financeBadge.color}
+            label={financeBadge.label}
+          />
 
           {p.progress.actual >= 100 ? (
             <Badge icon={CheckCircle2} color="emerald" label="Progress: Selesai 100%" />
@@ -161,7 +187,7 @@ export default function TabV2Analisa({ projectId, normalized }: Props) {
             variant="warning"
             icon={AlertTriangle}
             title={`Deviasi Jadwal ${dev}% (Realisasi ${p.progress.actual}% vs Rencana ${p.progress.plan}%)`}
-            desc="Beberapa item pekerjaan berada di bawah target jadwal rencana. Pertimbangkan lembur atau penambahan tukang."
+            desc={getBehindScheduleAdvice(p.type)}
           />
         ) : (
           <AlertCard
@@ -179,9 +205,10 @@ export default function TabV2Analisa({ projectId, normalized }: Props) {
         />
       </Section>
 
-      {result?.recommendations?.map((rec, i) => (
-        <AlertCard key={i} variant="info" icon={Info} title={rec.title} desc={rec.message} />
-      ))}
+      {result?.recommendations?.map((rec, i) => {
+        const desc = (rec as { description?: string; message?: string }).description || rec.message || '';
+        return <AlertCard key={i} variant="info" icon={Info} title={rec.title} desc={desc} />;
+      })}
 
       <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 font-bold text-slate-800 px-5 py-4 border-b">
@@ -190,11 +217,18 @@ export default function TabV2Analisa({ projectId, normalized }: Props) {
         <div className="p-5 grid sm:grid-cols-3 gap-4 text-center text-sm">
           <div className="p-4 bg-slate-50 rounded-xl">
             <div className="text-xs text-slate-500">Est. Selesai</div>
-            <div className="font-black text-slate-900 mt-1">{p.endDate}</div>
+            <div className={`font-black mt-1 ${projectedEnd.isOverdue ? 'text-rose-600' : 'text-slate-900'}`}>
+              {projectedEnd.label}
+            </div>
+            {projectedEnd.isOverdue && projectedEnd.projectedDate && p.endDate && (
+              <div className="text-[11px] text-slate-500 mt-0.5">Target awal: {p.endDate}</div>
+            )}
           </div>
           <div className="p-4 bg-slate-50 rounded-xl">
             <div className="text-xs text-slate-500">Est. Laba</div>
-            <div className="font-black text-emerald-600 mt-1">{formatRupiah(p.rap.estLaba)}</div>
+            <div className={`font-black mt-1 ${p.rap.estLaba < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {formatRupiah(p.rap.estLaba)}
+            </div>
           </div>
           <div className="p-4 bg-slate-50 rounded-xl">
             <div className="text-xs text-slate-500">Sisa Kontrak</div>

@@ -36,7 +36,8 @@ function formatHeroKas(amount: number): string {
 
 export default function FinanceSandboxOverview() {
   const navigate = useNavigate();
-  const { tenant, projects, user, platformRole } = useAppStore();
+  const { tenant, projects, user, platformRole, isDemoMode } = useAppStore();
+  const demoActive = isDemoMode || tenant?.id === 'demo';
   const canManage =
     user?.role === 'owner' ||
     user?.role === 'manager' ||
@@ -78,6 +79,27 @@ export default function FinanceSandboxOverview() {
 
   const load = useCallback(async () => {
     if (!tenant?.id) return;
+    if (demoActive) {
+      // Mode demo menampilkan snapshot lokal dari daftar proyek tanpa query UUID ke Supabase ('demo' -> 22P02).
+      setOrgName(tenant.name);
+      setTotalKas(0);
+      setTotalHutang(0);
+      setPiutang(0);
+      setPersediaan(0);
+      setAsetTetap(0);
+      setPrabayar(0);
+      setModal(0);
+      setLabaDitahan(0);
+      setCashflow([]);
+      setMtdLaba(0);
+      setPayrollOutstanding(0);
+      setProjectsReadyClose(
+        projects.filter(p => p.status === 'completed' && p.finance_status !== 'finance_closed')
+          .length,
+      );
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [snap, payables, cf, orgTotals, reportBundle, payroll] = await Promise.all([
@@ -127,7 +149,7 @@ export default function FinanceSandboxOverview() {
     } finally {
       setLoading(false);
     }
-  }, [tenant?.id, tenant?.name, monthRange.from, monthRange.to, projects]);
+  }, [tenant?.id, tenant?.name, monthRange.from, monthRange.to, projects, demoActive]);
 
   useEffect(() => {
     void load();
@@ -313,7 +335,7 @@ export default function FinanceSandboxOverview() {
         </div>
 
         {/* Integrasi Jurnal Panel */}
-        {tenant?.id && (
+        {!demoActive && tenant?.id && (
           <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} compact />
         )}
 
@@ -542,6 +564,10 @@ export default function FinanceSandboxOverview() {
                         type="button"
                         onClick={e => {
                           e.stopPropagation();
+                          if (demoActive) {
+                            showToast('Catat transaksi tidak tersedia di mode demo', 'info');
+                            return;
+                          }
                           setTxModal({ open: true, kind: 'cost', project: p });
                         }}
                         className="flex-1 h-11 rounded-xl border border-[#D5DDDA] bg-white text-[#0F172A] font-semibold text-xs flex items-center justify-center active:scale-95 transition-transform"
@@ -588,7 +614,7 @@ export default function FinanceSandboxOverview() {
           </button>
         </div>
 
-        {tenant?.id && (
+        {!demoActive && tenant?.id && (
           <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} compact />
         )}
 
@@ -742,7 +768,7 @@ export default function FinanceSandboxOverview() {
       />
 
       {/* Transaction Modal */}
-      {txModal.open && txModal.project && tenant?.id && user?.id && (
+      {!demoActive && txModal.open && txModal.project && tenant?.id && user?.id && (
         <ProjectTransactionModals
           open={txModal.open}
           kind={txModal.kind}

@@ -9,13 +9,21 @@ export async function getTodayAttendanceSummary(orgId: string) {
   ]);
   const memberIds = new Set(members.map(m => m.user_id));
   let present = 0;
+  let working = 0;
+  let checkedOut = 0;
   let absent = 0;
   for (const id of memberIds) {
     const g = grouped.get(id);
-    if (g?.checkIn && !g?.checkOut) present += 1;
-    else if (!g?.checkIn) absent += 1;
+    if (g?.checkIn) {
+      present += 1;
+      const isStillWorking = g.status === 'in' || (!g.status && !g.checkOut);
+      if (isStillWorking) working += 1;
+      else checkedOut += 1;
+    } else {
+      absent += 1;
+    }
   }
-  return { present, absent, total: memberIds.size, grouped, members };
+  return { present, working, checkedOut, absent, total: memberIds.size, grouped, members };
 }
 
 export function buildAttentionItems(projects: Project[]) {

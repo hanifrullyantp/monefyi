@@ -10,7 +10,11 @@ function paramsFrom(raw: string): URLSearchParams {
   return new URLSearchParams(raw.replace(/^[#?]/, ''));
 }
 
-/** Reads a Supabase recovery redirect without touching storage. */
+/**
+ * Reads a Supabase recovery redirect without touching storage.
+ * Hash and query are both checked because implicit flow uses the hash
+ * and some error redirects arrive on the query string.
+ */
 export function recoverySignalFromLocation(hash: string, search: string): RecoveryLocationSignal {
   const hashParams = paramsFrom(hash);
   const searchParams = paramsFrom(search);

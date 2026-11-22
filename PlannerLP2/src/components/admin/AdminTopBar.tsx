@@ -152,7 +152,7 @@ export function AdminTopBar({
                 {pageTitle}
               </h1>
               <span className="hidden md:inline-block text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                Monefyi Enterprise
+                Froyek Enterprise
               </span>
             </div>
           </div>

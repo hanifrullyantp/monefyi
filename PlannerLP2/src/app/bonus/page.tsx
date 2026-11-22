@@ -43,7 +43,7 @@ export default function BonusPage() {
             onClick={() => router.push("/")}
             className="mb-8 inline-flex items-center gap-2 text-sm font-semibold text-slate-300 transition hover:text-white"
           >
-            <ArrowLeft className="h-4 w-4" /> Kembali ke Monefyi
+            <ArrowLeft className="h-4 w-4" /> Kembali ke Froyek
           </button>
 
           <header className="mb-10 rounded-[2rem] border border-emerald-400/20 bg-gradient-to-br from-emerald-500/15 via-slate-900 to-slate-900 p-7 sm:p-10">
@@ -53,7 +53,7 @@ export default function BonusPage() {
             <h1 className="max-w-3xl text-3xl font-black tracking-tight sm:text-5xl">Etalase Aplikasi Bonus</h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
               Koleksi lengkap mini app Lite (Budget Planner, Debt Free, Bagi Hasil, Kalkulator Gaji, Zakat, Cicilan, &amp;
-              Hitung Waris) untuk pembeli Estimator Standard/Pro atau Planner. Login dengan akun yang sama saat checkout.
+              Hitung Waris) untuk pembeli Froyek Estimator Standard/Pro atau Froyek Pro. Login dengan akun yang sama saat checkout.
             </p>
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
               <span className="inline-flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2 text-slate-200">
@@ -76,7 +76,7 @@ export default function BonusPage() {
               </button>
             ) : !canClaim ? (
               <p className="mt-6 text-sm text-slate-400">
-                Bonus ini tersedia setelah pembelian Estimator atau Planner. Pastikan Anda login dengan email yang sama
+                Bonus ini tersedia setelah pembelian Froyek atau Froyek Estimator. Pastikan Anda login dengan email yang sama
                 saat pembayaran.
               </p>
             ) : null}
@@ -132,7 +132,7 @@ export default function BonusPage() {
               <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 sm:px-6">
                 <div className="min-w-0">
                   <h2 className="truncate font-bold">{selectedApp.name}</h2>
-                  <p className="text-xs text-slate-400">Mini app bonus · by Monefyi Lite</p>
+                  <p className="text-xs text-slate-400">Mini app bonus · by Froyek Lite</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <a

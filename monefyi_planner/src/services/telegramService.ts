@@ -6,6 +6,8 @@
 
 import { supabase } from '../lib/supabase';
 import { logTrace } from './runtimeTracer';
+import { useAppStore, type UserRole } from '../store/appStore';
+import { canAccessManagerFeatures } from '../utils/platformUi';
 
 export interface TelegramConfig {
   botToken: string;
@@ -47,23 +49,75 @@ const STORAGE_TELEGRAM_CFG = 'monefyi_telegram_config_v1';
 const STORAGE_FIELD_CONTACTS = 'monefyi_field_member_contacts_v1';
 const STORAGE_PROACTIVE_LOGS = 'monefyi_proactive_triggers_v1';
 
+const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
+  botToken: '',
+  botUsername: '',
+  enabled: false,
+  defaultChannelChatId: '',
+  ownerChatId: '',
+};
+
+function removeLocalStorageKey(key: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Menghapus seluruh cache Telegram & kontak lapangan dari localStorage (logout / downgrade role).
+ */
+export function clearTelegramLocalCache(): void {
+  removeLocalStorageKey(STORAGE_TELEGRAM_CFG);
+  removeLocalStorageKey(STORAGE_FIELD_CONTACTS);
+  removeLocalStorageKey(STORAGE_PROACTIVE_LOGS);
+}
+
+/**
+ * Hanya Owner dan Manager (menghormati preview worker super-admin) yang boleh mengakses/men-cache
+ * botToken dan kontak Telegram anggota lapangan di localStorage.
+ */
+export function canAccessTelegramSensitiveCache(
+  role?: UserRole,
+  platformRole?: string,
+  email?: string,
+): boolean {
+  const state = useAppStore.getState();
+  if (role === undefined && !state.user) return false;
+  const effectiveRole = role ?? state.user?.role;
+  const effectivePlatformRole = platformRole ?? state.platformRole ?? 'user';
+  const effectiveEmail = email ?? state.user?.email;
+  const uiViewMode = role !== undefined ? 'auto' : (state.uiViewMode ?? 'auto');
+  return canAccessManagerFeatures(
+    effectiveRole,
+    effectivePlatformRole,
+    effectiveEmail,
+    uiViewMode,
+  );
+}
+
 export function loadTelegramConfig(): TelegramConfig {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return { ...DEFAULT_TELEGRAM_CONFIG };
+  }
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_TELEGRAM_CFG) : null;
     if (raw) return JSON.parse(raw);
   } catch {
     /* fallback */
   }
-  return {
-    botToken: '',
-    botUsername: '',
-    enabled: false,
-    defaultChannelChatId: '',
-    ownerChatId: '',
-  };
+  return { ...DEFAULT_TELEGRAM_CONFIG };
 }
 
 export async function saveTelegramConfig(config: TelegramConfig, orgId?: string): Promise<void> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return;
+  }
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_TELEGRAM_CFG, JSON.stringify(config));
@@ -96,6 +150,10 @@ export async function saveTelegramConfig(config: TelegramConfig, orgId?: string)
 }
 
 export async function fetchTelegramConfigFromSupabase(orgId: string): Promise<TelegramConfig | null> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return null;
+  }
   if (!orgId) return null;
   try {
     const { data: org, error } = await supabase
@@ -124,6 +182,10 @@ export async function fetchTelegramConfigFromSupabase(orgId: string): Promise<Te
 }
 
 export function loadFieldMemberContacts(): Record<string, FieldMemberContact> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return {};
+  }
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_FIELD_CONTACTS) : null;
     if (raw) return JSON.parse(raw);
@@ -137,6 +199,10 @@ export async function saveFieldMemberContacts(
   contacts: Record<string, FieldMemberContact>,
   orgId?: string,
 ): Promise<void> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return;
+  }
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_FIELD_CONTACTS, JSON.stringify(contacts));
@@ -171,6 +237,10 @@ export async function saveFieldMemberContacts(
 export async function fetchFieldMemberContactsFromSupabase(
   orgId: string,
 ): Promise<Record<string, FieldMemberContact> | null> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return null;
+  }
   if (!orgId) return null;
   try {
     const { data: org, error } = await supabase
@@ -199,6 +269,10 @@ export async function fetchFieldMemberContactsFromSupabase(
 }
 
 export function loadProactiveTriggers(): ProactiveTriggerRecord[] {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return [];
+  }
   try {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_PROACTIVE_LOGS) : null;
     if (raw) return JSON.parse(raw);
@@ -211,6 +285,10 @@ export function loadProactiveTriggers(): ProactiveTriggerRecord[] {
 export async function fetchProactiveTriggersFromSupabase(
   orgId: string,
 ): Promise<ProactiveTriggerRecord[] | null> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return null;
+  }
   if (!orgId) return null;
   try {
     const { data: org, error } = await supabase
@@ -247,6 +325,10 @@ export function addProactiveTriggerLog(
     id: `pt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     timestamp: new Date().toISOString(),
   };
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return item;
+  }
   const list = [item, ...loadProactiveTriggers()].slice(0, 50);
   try {
     if (typeof localStorage !== 'undefined') {
@@ -355,6 +437,13 @@ export async function dispatchProactiveAIOutreach(params: {
   projectName?: string;
   customNote?: string;
 }): Promise<{ ok: boolean; summary: string }> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return {
+      ok: false,
+      summary: 'Koordinasi bot Telegram hanya tersedia untuk Owner/Manager.',
+    };
+  }
   const cfg = loadTelegramConfig();
   const { member, category, projectName = 'Proyek Aktif', customNote } = params;
 
@@ -426,9 +515,13 @@ export async function dispatchProactiveAIOutreach(params: {
  */
 export async function escalateQuestionToOwnerTelegram(
   userQuestion: string,
-  userIdentifier: string = 'User Aplikasi Monefyi',
+  userIdentifier: string = 'User Aplikasi Froyek',
   contextNotes?: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return { ok: false, error: 'Telegram bot tidak tersedia untuk akun worker' };
+  }
   const config = loadTelegramConfig();
   if (!config.enabled || !config.botToken.trim()) {
     return { ok: false, error: 'Telegram bot belum diaktifkan di Pengaturan' };
@@ -439,7 +532,7 @@ export async function escalateQuestionToOwnerTelegram(
   }
 
   const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-  const text = `🚨 *[ESKALASI PERTANYAAN USER - MONEFYI]*\n\n👤 *Dari:* ${userIdentifier}\n🕒 *Waktu:* ${timeStr} WIB\n\n❓ *Pertanyaan User:*\n"${userQuestion}"\n\n💡 *Catatan AI:* Pertanyaan ini membutuhkan keputusan Owner (misal: negosiasi diskon khusus, kustomisasi fitur, atau persetujuan tender).\n${contextNotes ? `📌 *Detail Tambahan:* ${contextNotes}\n` : ''}\n👉 Mohon berikan arahan atau hubungi user langsung.`;
+  const text = `🚨 *[ESKALASI PERTANYAAN USER - FROYEK]*\n\n👤 *Dari:* ${userIdentifier}\n🕒 *Waktu:* ${timeStr} WIB\n\n❓ *Pertanyaan User:*\n"${userQuestion}"\n\n💡 *Catatan AI:* Pertanyaan ini membutuhkan keputusan Owner (misal: negosiasi diskon khusus, kustomisasi fitur, atau persetujuan tender).\n${contextNotes ? `📌 *Detail Tambahan:* ${contextNotes}\n` : ''}\n👉 Mohon berikan arahan atau hubungi user langsung.`;
 
   return sendTelegramMessage(config.botToken, targetChatId, text);
 }

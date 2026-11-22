@@ -702,7 +702,7 @@ export function runFivePillarDiagnostics(params: {
       evidenceWindow: `${config.analysisWindowDays} hari terakhir`,
       actionType: "update_offer_pricing",
       actionPayload: {
-        productContext: "Monefyi Estimator (estimator.froyek.com)",
+        productContext: "Froyek Estimator (estimator.froyek.com)",
         recommendedEntryPrice: `Rp ${MONEFYI_PRICING.standardPrice.toLocaleString("id-ID")}`,
         recommendedProPrice: `Rp ${MONEFYI_PRICING.proPrice.toLocaleString("id-ID")}`,
         anchorOriginalPrice: `Rp ${MONEFYI_PRICING.proRegularPrice.toLocaleString("id-ID")}`,
@@ -1104,7 +1104,7 @@ export function runFivePillarDiagnostics(params: {
         ? `Checkout selesai: ${checkoutToPurchaseRate.toFixed(1)}%${bumpTakeRate !== null ? ` | Bump (perkiraan): ${bumpTakeRate}%` : ""}${upsellTakeRate !== null ? ` | Upsell (perkiraan): ${upsellTakeRate}%` : ""}`
         : "Data belum cukup",
       honestDiagnosis: checkoutDataAvailable
-        ? `${totalIc} checkout dimulai, ${totalPurchases} selesai (${checkoutToPurchaseRate.toFixed(1)}%) dalam ${config.analysisWindowDays} hari. Skor memakai ambang heuristik engine, belum dikalibrasi ke data historis Monefyi.`
+        ? `${totalIc} checkout dimulai, ${totalPurchases} selesai (${checkoutToPurchaseRate.toFixed(1)}%) dalam ${config.analysisWindowDays} hari. Skor memakai ambang heuristik engine, belum dikalibrasi ke data historis Froyek.`
         : `Baru ${totalIc} checkout tercatat (minimal ${MIN_CHECKOUTS_FOR_CHECKOUT}). Checkout belum bisa dinilai.`,
       keyRecommendation: checkoutDataAvailable
         ? "Tawarkan upgrade ke PRO di checkout dan tindak lanjuti yang berhenti di pembayaran lewat WhatsApp."

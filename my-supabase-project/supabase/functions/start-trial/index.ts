@@ -222,6 +222,7 @@ serve(async (req) => {
 
     await sendEmail({
       to: email,
+      product: "finance",
       subject: "Selamat datang di Monefyi!",
       html: `
         <div style="font-family:system-ui,sans-serif;color:#0f172a">

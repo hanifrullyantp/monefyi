@@ -206,7 +206,7 @@ export function downloadRapTemplate(projectName: string) {
   const safeName = (projectName || 'Proyek').replace(/[/\\?%*:|"<>]/g, '').trim() || 'Proyek';
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['Template RAP Monefyi — isi data mulai baris 5'],
+    ['Template RAP Froyek — isi data mulai baris 5'],
     ['Kategori: Material, Tenaga, Alat, Overhead'],
     ['Vol dan harga harus angka positif'],
     ['No', 'Kategori', 'Item', 'Spesifikasi', 'Satuan', 'Vol RAP', 'Harga Satuan', 'Total RAP', 'Realisasi Vol', 'Realisasi Biaya'],

@@ -4,6 +4,13 @@
   font-family: 'Inter', sans-serif;
 }
 
+.froyek-wordmark {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #0A3A2E;
+}
+
 :root {
   --brand-primary: #10B981;
   --brand-accent: #34D399;

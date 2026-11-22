@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { AdminLayoutClient } from "@/components/admin/AdminLayoutClient";
 
 export const metadata: Metadata = {
-  title: "Admin & CRM - Monefyi",
-  description: "Panel Admin & CRM Monefyi untuk kelola leads, transaksi Mayar, dan landing page langsung dari HP.",
+  title: "Admin & CRM - Froyek",
+  description: "Panel Admin & CRM Froyek untuk kelola leads, transaksi Mayar, dan landing page langsung dari HP.",
   manifest: "/admin-manifest.webmanifest",
   appleWebApp: {
     capable: true,

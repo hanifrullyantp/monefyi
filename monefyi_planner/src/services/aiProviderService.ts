@@ -1,6 +1,7 @@
 /**
  * Multi-provider AI client (BYOK): OpenRouter, Gemini, Groq, Anthropic (Claude), OpenAI.
- * API key disimpan lokal di browser pengguna dan dipanggil langsung ke provider.
+ * API key diisolasi di memori sesi (sessionStorage) atau melalui Supabase Edge Function proxy
+ * terenkripsi (jika VITE_AI_PROXY_ENABLED=true) — tidak pernah disimpan mentah di localStorage.
  */
 
 export type AIProviderId = 'openrouter' | 'gemini' | 'groq' | 'anthropic' | 'openai';
@@ -78,9 +79,17 @@ export interface AIConfig {
   executionMode: 'auto' | 'review';
   /** Batas nominal (Rp) aksi keuangan yang boleh auto-eksekusi pada mode auto. */
   autoLimit: number;
+  /** Daftar provider yang memiliki key aktif (proxy terenkripsi atau sesi aman). */
+  configuredProviders?: AIProviderId[];
+  /** Hint key ter-mask (mis. sk-or-...wxyz); tidak pernah menyimpan secret mentah. */
+  keyHints?: Partial<Record<AIProviderId, string>>;
 }
 
 const STORAGE_KEY = 'monefyi_planner_ai_config_v1';
+const SESSION_KEYS_STORAGE_KEY = 'monefyi_planner_ai_keys_session_v1';
+const OWNER_STORAGE_KEY = 'monefyi_planner_ai_owner_v1';
+
+const VALID_PROVIDER_IDS = new Set<AIProviderId>(AI_PROVIDERS.map(p => p.id));
 
 /** Model yang sudah dihapus Google / OpenRouter — dipetakan saat baca konfigurasi. */
 const DEPRECATED_MODEL_ALIASES: Record<string, string> = {
@@ -98,7 +107,7 @@ const DEFAULT_CONFIG: AIConfig = {
   activeProvider: 'openrouter',
   keys: {},
   models: {},
-  executionMode: 'auto',
+  executionMode: 'review',
   autoLimit: 5_000_000,
 };
 
@@ -106,36 +115,133 @@ export function getProviderMeta(id: AIProviderId): AIProviderMeta {
   return AI_PROVIDERS.find(p => p.id === id) ?? AI_PROVIDERS[0];
 }
 
-let memoryFallbackRaw: string | null = null;
-
-export function loadAIConfig(): AIConfig {
+/** Cek apakah mode Edge Function proxy terenkripsi diaktifkan via env VITE_AI_PROXY_ENABLED. */
+export function isAIProxyEnabled(): boolean {
   try {
-    const raw =
-      typeof localStorage !== 'undefined'
-        ? localStorage.getItem(STORAGE_KEY)
-        : memoryFallbackRaw;
-    if (!raw) return { ...DEFAULT_CONFIG, keys: {}, models: {} };
-    const parsed = JSON.parse(raw) as Partial<AIConfig>;
-    const models = { ...(parsed.models || {}) };
-    for (const [provider, modelId] of Object.entries(models)) {
-      if (typeof modelId === 'string') {
-        const next = migrateModelId(modelId);
-        if (next !== modelId) models[provider as AIProviderId] = next;
+    const env = import.meta.env as Record<string, string | undefined> | undefined;
+    if (env?.VITE_AI_PROXY_ENABLED === 'true') return true;
+  } catch {
+    // ignore
+  }
+  return typeof process !== 'undefined' && process.env?.VITE_AI_PROXY_ENABLED === 'true';
+}
+
+/** Mask API key agar aman ditampilkan di UI / metadata tanpa membocorkan secret penuh. */
+export function maskApiKey(key: string): string {
+  const trimmed = key.trim();
+  if (!trimmed) return '';
+  if (trimmed.length <= 8) return '****';
+  if (trimmed.length < 14) {
+    return `${trimmed.slice(0, 3)}...${trimmed.slice(-2)}`;
+  }
+  return `${trimmed.slice(0, 6)}...${trimmed.slice(-4)}`;
+}
+
+function isValidProviderId(id: unknown): id is AIProviderId {
+  return typeof id === 'string' && VALID_PROVIDER_IDS.has(id as AIProviderId);
+}
+
+function sanitizeKeys(raw: unknown): Partial<Record<AIProviderId, string>> {
+  if (!raw || typeof raw !== 'object') return {};
+  const result: Partial<Record<AIProviderId, string>> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (isValidProviderId(k) && typeof v === 'string' && v.trim()) {
+      result[k] = v.trim();
+    }
+  }
+  return result;
+}
+
+function sanitizeModels(raw: unknown): Partial<Record<AIProviderId, string>> {
+  if (!raw || typeof raw !== 'object') return {};
+  const result: Partial<Record<AIProviderId, string>> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (isValidProviderId(k) && typeof v === 'string' && v.trim()) {
+      result[k] = migrateModelId(v.trim());
+    }
+  }
+  return result;
+}
+
+function sanitizeKeyHints(raw: unknown): Partial<Record<AIProviderId, string>> {
+  if (!raw || typeof raw !== 'object') return {};
+  const result: Partial<Record<AIProviderId, string>> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (isValidProviderId(k) && typeof v === 'string' && v.trim()) {
+      result[k] = v.trim();
+    }
+  }
+  return result;
+}
+
+function sanitizeConfiguredProviders(raw: unknown): AIProviderId[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<AIProviderId>();
+  for (const item of raw) {
+    if (isValidProviderId(item)) seen.add(item);
+  }
+  return Array.from(seen);
+}
+
+let memoryFallbackRaw: string | null = null;
+let memoryFallbackKeys: Partial<Record<AIProviderId, string>> = {};
+
+function readSessionKeys(): Partial<Record<AIProviderId, string>> {
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      const raw = sessionStorage.getItem(SESSION_KEYS_STORAGE_KEY);
+      if (!raw) {
+        memoryFallbackKeys = {};
+        return {};
+      }
+      const parsed = sanitizeKeys(JSON.parse(raw));
+      memoryFallbackKeys = { ...parsed };
+      return parsed;
+    }
+  } catch {
+    // fallback ke memory bila sessionStorage diblokir
+  }
+  return { ...memoryFallbackKeys };
+}
+
+function writeSessionKeys(keys: Partial<Record<AIProviderId, string>>): void {
+  const clean = sanitizeKeys(keys);
+  memoryFallbackKeys = { ...clean };
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      if (Object.keys(clean).length > 0) {
+        sessionStorage.setItem(SESSION_KEYS_STORAGE_KEY, JSON.stringify(clean));
+      } else {
+        sessionStorage.removeItem(SESSION_KEYS_STORAGE_KEY);
       }
     }
-    return {
-      ...DEFAULT_CONFIG,
-      ...parsed,
-      keys: { ...(parsed.keys || {}) },
-      models,
-    };
   } catch {
-    return { ...DEFAULT_CONFIG, keys: {}, models: {} };
+    // ignore storage quota errors
   }
 }
 
-export function saveAIConfig(config: AIConfig): void {
-  const serialized = JSON.stringify(config);
+function buildPublicConfigPayload(config: {
+  activeProvider: AIProviderId;
+  models: Partial<Record<AIProviderId, string>>;
+  executionMode: 'auto' | 'review';
+  autoLimit: number;
+  configuredProviders?: AIProviderId[];
+  keyHints?: Partial<Record<AIProviderId, string>>;
+}): Omit<AIConfig, 'keys'> {
+  const configuredProviders = config.configuredProviders?.length ? config.configuredProviders : undefined;
+  const keyHints = config.keyHints && Object.keys(config.keyHints).length > 0 ? config.keyHints : undefined;
+  return {
+    activeProvider: config.activeProvider,
+    models: config.models,
+    executionMode: config.executionMode,
+    autoLimit: config.autoLimit,
+    ...(configuredProviders ? { configuredProviders } : {}),
+    ...(keyHints ? { keyHints } : {}),
+  };
+}
+
+function writePublicConfigRaw(payload: Omit<AIConfig, 'keys'>): void {
+  const serialized = JSON.stringify(payload);
   memoryFallbackRaw = serialized;
   try {
     if (typeof localStorage !== 'undefined') {
@@ -146,25 +252,171 @@ export function saveAIConfig(config: AIConfig): void {
   }
 }
 
+export function clearAIConfigLocal(): void {
+  memoryFallbackKeys = {};
+  memoryFallbackRaw = null;
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(SESSION_KEYS_STORAGE_KEY);
+      sessionStorage.removeItem(OWNER_STORAGE_KEY);
+    }
+  } catch {
+    // ignore
+  }
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(OWNER_STORAGE_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function loadAIConfig(): AIConfig {
+  let sessionKeys = readSessionKeys();
+  try {
+    let raw: string | null = null;
+    if (typeof localStorage !== 'undefined') {
+      raw = localStorage.getItem(STORAGE_KEY);
+    } else {
+      raw = memoryFallbackRaw;
+    }
+    if (!raw) {
+      return { ...DEFAULT_CONFIG, keys: sessionKeys, models: {} };
+    }
+
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const models = sanitizeModels(parsed.models);
+    const activeProvider = isValidProviderId(parsed.activeProvider)
+      ? parsed.activeProvider
+      : DEFAULT_CONFIG.activeProvider;
+    const executionMode: 'auto' | 'review' = parsed.executionMode === 'auto' ? 'auto' : 'review';
+    const autoLimit =
+      typeof parsed.autoLimit === 'number' && Number.isFinite(parsed.autoLimit) && parsed.autoLimit >= 0
+        ? parsed.autoLimit
+        : DEFAULT_CONFIG.autoLimit;
+
+    // Migrasi & scrub otomatis bila ada legacy plaintext keys tertinggal di localStorage
+    const hasLegacyKeysField = Object.prototype.hasOwnProperty.call(parsed, 'keys');
+    const legacyKeys = hasLegacyKeysField ? sanitizeKeys(parsed.keys) : {};
+    if (Object.keys(legacyKeys).length > 0) {
+      sessionKeys = { ...legacyKeys, ...sessionKeys };
+      writeSessionKeys(sessionKeys);
+    }
+
+    const storedConfigured = sanitizeConfiguredProviders(parsed.configuredProviders);
+    const storedHints = sanitizeKeyHints(parsed.keyHints);
+
+    const configuredSet = new Set<AIProviderId>(
+      isAIProxyEnabled()
+        ? storedConfigured
+        : Object.keys(sessionKeys) as AIProviderId[],
+    );
+    const keyHints: Partial<Record<AIProviderId, string>> = isAIProxyEnabled()
+      ? { ...storedHints }
+      : {};
+
+    for (const [id, key] of Object.entries(sessionKeys) as [AIProviderId, string][]) {
+      configuredSet.add(id);
+      keyHints[id] = maskApiKey(key);
+    }
+
+    const configuredProviders = Array.from(configuredSet);
+
+    if (hasLegacyKeysField) {
+      // Hapus key mentah dari localStorage segera saat dibaca
+      writePublicConfigRaw(
+        buildPublicConfigPayload({
+          activeProvider,
+          models,
+          executionMode,
+          autoLimit,
+          configuredProviders,
+          keyHints,
+        }),
+      );
+    }
+
+    return {
+      activeProvider,
+      keys: sessionKeys,
+      models,
+      executionMode,
+      autoLimit,
+      ...(configuredProviders.length > 0 ? { configuredProviders } : {}),
+      ...(Object.keys(keyHints).length > 0 ? { keyHints } : {}),
+    };
+  } catch {
+    return { ...DEFAULT_CONFIG, keys: sessionKeys, models: {} };
+  }
+}
+
+export function saveAIConfig(config: AIConfig): void {
+  const cleanKeys = sanitizeKeys(config.keys);
+  writeSessionKeys(cleanKeys);
+
+  const activeProvider = isValidProviderId(config.activeProvider)
+    ? config.activeProvider
+    : DEFAULT_CONFIG.activeProvider;
+  const models = sanitizeModels(config.models);
+  const executionMode: 'auto' | 'review' = config.executionMode === 'auto' ? 'auto' : 'review';
+  const autoLimit =
+    typeof config.autoLimit === 'number' && Number.isFinite(config.autoLimit) && config.autoLimit >= 0
+      ? config.autoLimit
+      : DEFAULT_CONFIG.autoLimit;
+
+  const configuredSet = new Set<AIProviderId>(
+    isAIProxyEnabled() ? sanitizeConfiguredProviders(config.configuredProviders) : [],
+  );
+  const keyHints: Partial<Record<AIProviderId, string>> = isAIProxyEnabled()
+    ? sanitizeKeyHints(config.keyHints)
+    : {};
+
+  for (const [id, key] of Object.entries(cleanKeys) as [AIProviderId, string][]) {
+    configuredSet.add(id);
+    keyHints[id] = maskApiKey(key);
+  }
+
+  const configuredProviders = Array.from(configuredSet);
+
+  // Jangan pernah menulis raw keys ke localStorage
+  writePublicConfigRaw(
+    buildPublicConfigPayload({
+      activeProvider,
+      models,
+      executionMode,
+      autoLimit,
+      configuredProviders,
+      keyHints,
+    }),
+  );
+}
+
 export function getActiveModel(config: AIConfig, provider = config.activeProvider): string {
   const stored = config.models[provider]?.trim();
   const resolved = migrateModelId(stored || getProviderMeta(provider).models[0].id);
   return resolved;
 }
 
+function hasProviderCredential(config: AIConfig, id: AIProviderId): boolean {
+  if (config.keys[id]?.trim()) return true;
+  return isAIProxyEnabled() && Boolean(config.configuredProviders?.includes(id));
+}
+
 export function resolveWorkingProvider(config = loadAIConfig()): AIProviderId {
-  if (config.keys[config.activeProvider]?.trim()) {
+  if (hasProviderCredential(config, config.activeProvider)) {
     return config.activeProvider;
   }
   for (const p of AI_PROVIDERS) {
-    if (config.keys[p.id]?.trim()) return p.id;
+    if (hasProviderCredential(config, p.id)) return p.id;
   }
   return config.activeProvider;
 }
 
 export function hasActiveKey(config = loadAIConfig()): boolean {
   const provider = resolveWorkingProvider(config);
-  return Boolean(config.keys[provider]?.trim());
+  return hasProviderCredential(config, provider);
 }
 
 export interface ChatMessage {
@@ -232,7 +484,7 @@ function openAICompatible(
 }
 
 const callOpenRouter = openAICompatible('https://openrouter.ai/api/v1/chat/completions', {
-  'X-Title': 'Monefyi Planner',
+  'X-Title': 'Froyek',
 });
 const callGroq = openAICompatible('https://api.groq.com/openai/v1/chat/completions');
 const callOpenAI = openAICompatible('https://api.openai.com/v1/chat/completions');
@@ -340,6 +592,33 @@ export class MissingAIKeyError extends Error {
   }
 }
 
+async function callViaProxy(
+  provider: AIProviderId,
+  model: string,
+  messages: ChatMessage[],
+  opts: CallOptions,
+): Promise<string> {
+  const { supabase } = await import('../lib/supabase');
+  const { data, error } = await supabase.functions.invoke('planner-ai-proxy', {
+    body: {
+      action: 'chat',
+      provider,
+      model,
+      messages,
+      temperature: opts.temperature ?? 0.35,
+      maxTokens: opts.maxTokens ?? 4096,
+      json: Boolean(opts.json),
+    },
+  });
+  if (error) throw new Error(error.message || 'Gagal menghubungi proxy AI');
+  if (data?.error) throw new Error(String(data.error));
+  const text = data?.text ?? data?.reply ?? data?.content;
+  if (typeof text !== 'string' || !text) {
+    throw new Error('Respons AI proxy kosong');
+  }
+  return text;
+}
+
 /** Panggil provider aktif (atau provider lain yang sudah memiliki key) dengan key milik pengguna. */
 export async function callUnifiedAI(
   messages: ChatMessage[],
@@ -347,9 +626,18 @@ export async function callUnifiedAI(
   config: AIConfig = loadAIConfig(),
 ): Promise<string> {
   const provider = resolveWorkingProvider(config);
-  const key = config.keys[provider]?.trim();
-  if (!key) throw new MissingAIKeyError(provider);
   const model = getActiveModel(config, provider);
+  const key = config.keys[provider]?.trim();
+
+  if (isAIProxyEnabled()) {
+    const hasProxyKey = Boolean(config.configuredProviders?.includes(provider));
+    if (hasProxyKey || !key) {
+      if (!hasProxyKey && !key) throw new MissingAIKeyError(provider);
+      return callViaProxy(provider, model, messages, opts);
+    }
+  }
+
+  if (!key) throw new MissingAIKeyError(provider);
   switch (provider) {
     case 'openrouter': return callOpenRouter(key, model, messages, opts);
     case 'groq': return callGroq(key, model, messages, opts);
@@ -361,12 +649,13 @@ export async function callUnifiedAI(
 
 export async function testAIConnection(config: AIConfig): Promise<{ ok: boolean; message: string }> {
   try {
+    const provider = resolveWorkingProvider(config);
     const reply = await callUnifiedAI(
       [{ role: 'user', content: 'Balas singkat dengan kata: OK' }],
       { maxTokens: 20, temperature: 0 },
       config,
     );
-    return { ok: true, message: `Terhubung (${getActiveModel(config)}): ${reply.trim().slice(0, 40)}` };
+    return { ok: true, message: `Terhubung (${getActiveModel(config, provider)}): ${reply.trim().slice(0, 40)}` };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : 'Gagal terhubung' };
   }

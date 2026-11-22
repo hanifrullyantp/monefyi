@@ -1,4 +1,4 @@
-/** Warna identitas platform Monefyi — tidak boleh di-override owner */
+/** Warna identitas platform Froyek — tidak boleh di-override owner */
 export const MONEFYI_BRAND = {
   primary: '#10b981',
   accent: '#34d399',
@@ -115,10 +115,10 @@ export const ORG_BRAND_SURFACES = [
   { id: 'finance-pdf', label: 'Laporan keuangan PDF (mengikuti brand)', customizable: true },
 ] as const;
 
-/** Area yang tetap identitas Monefyi */
+/** Area yang tetap identitas Froyek */
 export const MONEFYI_ONLY_SURFACES = [
-  { id: 'logo', label: 'Logo & tulisan "Monefyi Planner" di sidebar' },
-  { id: 'ai', label: 'Tombol Monefyi AI (assistant platform)' },
+  { id: 'logo', label: 'Logo & tulisan "froyek" di sidebar' },
+  { id: 'ai', label: 'Tombol Froyek AI (assistant platform)' },
   { id: 'sync', label: 'Indikator status sinkronisasi (hijau/amber/merah sistem)' },
   { id: 'auth', label: 'Halaman login & landing sebelum masuk organisasi' },
 ] as const;

@@ -93,7 +93,7 @@ export default function UserAccountPanel() {
           <h3 className="font-bold text-slate-800">Akun & Langganan</h3>
           <p className="text-sm text-slate-500">Statistik, API key Gemini, dan preferensi.</p>
         </div>
-        <button type="button" onClick={load} className="p-2 border rounded-xl hover:bg-slate-50">
+        <button type="button" onClick={load} aria-label="Muat ulang data akun" className="p-2 border rounded-xl hover:bg-slate-50">
           <RefreshCw className="w-4 h-4 text-slate-500" />
         </button>
       </div>
@@ -123,33 +123,54 @@ export default function UserAccountPanel() {
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="text-xs font-semibold text-slate-500">Nama</label>
-          <input value={name} onChange={e => setName(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border text-sm" />
+          <label htmlFor="user-account-name" className="text-xs font-semibold text-slate-600">Nama</label>
+          <input
+            id="user-account-name"
+            name="name"
+            autoComplete="name"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            className="w-full mt-1 px-3 py-2 rounded-xl border text-sm"
+          />
         </div>
         <div>
-          <label className="text-xs font-semibold text-slate-500">Telepon</label>
-          <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full mt-1 px-3 py-2 rounded-xl border text-sm" />
+          <label htmlFor="user-account-phone" className="text-xs font-semibold text-slate-600">Telepon</label>
+          <input
+            id="user-account-phone"
+            name="phone"
+            type="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            className="w-full mt-1 px-3 py-2 rounded-xl border text-sm"
+          />
         </div>
         <div className="sm:col-span-2">
-          <label className="text-xs font-semibold text-slate-500">Gemini API Key (opsional)</label>
+          <label htmlFor="user-gemini-key" className="text-xs font-semibold text-slate-600">Gemini API Key (opsional)</label>
           <input
+            id="user-gemini-key"
+            name="geminiApiKey"
             type="password"
+            autoComplete="off"
+            spellCheck={false}
             value={geminiKey}
             onChange={e => setGeminiKey(e.target.value)}
             placeholder={account.has_gemini_key ? 'Kosongkan jika tidak ingin mengubah' : 'AIza...'}
             className="w-full mt-1 px-3 py-2 rounded-xl border text-sm font-mono"
           />
-          <p className="text-xs text-slate-600 mt-1">Key Anda dipakai untuk parsing perintah AI. Tanpa key, sistem memakai key platform dengan batas harian.</p>
+          <p className="text-xs text-slate-600 mt-1">
+            Key Gemini akun ini dipakai untuk parsing perintah AI di server (tanpa key, sistem memakai kuota platform harian). Untuk memilih provider BYOK lain atau mengatur model &amp; batas auto-eksekusi, buka panel <strong>Pengaturan Lanjutan AI (BYOK Provider)</strong> di bawah.
+          </p>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-4 text-sm">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={emailNotif} onChange={e => setEmailNotif(e.target.checked)} />
+        <label htmlFor="user-email-notif" className="flex items-center gap-2">
+          <input id="user-email-notif" name="emailNotifications" type="checkbox" checked={emailNotif} onChange={e => setEmailNotif(e.target.checked)} />
           Notifikasi email
         </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={pushNotif} onChange={e => setPushNotif(e.target.checked)} />
+        <label htmlFor="user-push-notif" className="flex items-center gap-2">
+          <input id="user-push-notif" name="pushNotifications" type="checkbox" checked={pushNotif} onChange={e => setPushNotif(e.target.checked)} />
           Push / in-app
         </label>
       </div>
@@ -158,13 +179,49 @@ export default function UserAccountPanel() {
         Simpan Profil Akun
       </button>
 
-      <AIProviderPanel />
+      <details className="group border-t pt-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-700 flex items-center justify-between list-none">
+          <span>Pengaturan Lanjutan AI (BYOK Provider)</span>
+          <span className="text-xs font-semibold text-emerald-700 group-open:hidden">Buka ▾</span>
+          <span className="text-xs font-semibold text-slate-600 hidden group-open:inline">Tutup ▴</span>
+        </summary>
+        <div className="mt-2 space-y-2">
+          <p className="text-xs text-slate-600">
+            Konfigurasi BYOK (Bring Your Own Key) tersinkron ke akun Anda dan dipakai langsung saat menjalankan AI Manager di workspace.
+          </p>
+          <AIProviderPanel />
+        </div>
+      </details>
 
       <div className="border-t pt-6 space-y-3">
         <h4 className="font-semibold text-slate-800">Ubah Password</h4>
         <div className="grid sm:grid-cols-2 gap-3">
-          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Password baru" className="px-3 py-2 rounded-xl border text-sm" />
-          <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Konfirmasi" className="px-3 py-2 rounded-xl border text-sm" />
+          <div>
+            <label htmlFor="user-new-password" className="block text-xs font-semibold text-slate-600 mb-1">Password baru</label>
+            <input
+              id="user-new-password"
+              name="newPassword"
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="Password baru"
+              className="w-full px-3 py-2 rounded-xl border text-sm"
+            />
+          </div>
+          <div>
+            <label htmlFor="user-confirm-password" className="block text-xs font-semibold text-slate-600 mb-1">Konfirmasi password</label>
+            <input
+              id="user-confirm-password"
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              placeholder="Konfirmasi"
+              className="w-full px-3 py-2 rounded-xl border text-sm"
+            />
+          </div>
         </div>
         <button type="button" onClick={handlePassword} disabled={saving || !newPassword} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold">
           Update Password

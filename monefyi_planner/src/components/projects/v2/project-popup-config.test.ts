@@ -136,3 +136,27 @@ describe('buildProjectPopupConfig hutang/piutang grouping', () => {
     expect(cfg?.cards[0].value).toBe('2 subjek');
   });
 });
+
+describe('buildProjectPopupConfig laba styling (F-06)', () => {
+  it('uses rose valueColor (#e11d48) when estLaba is negative', () => {
+    const lossProject = baseProject({
+      contractValue: 10_000_000,
+      rap: {
+        totalRAP: 10_000_000,
+        realisasi: 15_000_000,
+        estLaba: -5_000_000,
+        materials: [],
+        workers: [],
+      },
+    });
+    const cfg = buildProjectPopupConfig('laba', baseNormalized(lossProject));
+    const labaRow = cfg?.list.find(item => item.title === 'Est. Laba');
+    expect(labaRow?.valueColor).toBe('#e11d48');
+  });
+
+  it('uses emerald valueColor (#059669) when estLaba is non-negative', () => {
+    const cfg = buildProjectPopupConfig('laba', baseNormalized());
+    const labaRow = cfg?.list.find(item => item.title === 'Est. Laba');
+    expect(labaRow?.valueColor).toBe('#059669');
+  });
+});

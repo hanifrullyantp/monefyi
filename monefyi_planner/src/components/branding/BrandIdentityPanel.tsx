@@ -54,7 +54,7 @@ export default function BrandIdentityPanel({ brandColor, syncPdf, onSyncPdfChang
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Shield className="w-4 h-4 text-slate-500" />
-            <h4 className="text-sm font-bold text-slate-800">Tetap identitas Monefyi</h4>
+            <h4 className="text-sm font-bold text-slate-800">Tetap identitas Froyek</h4>
           </div>
           <ul className="space-y-2">
             {MONEFYI_ONLY_SURFACES.map(s => (
@@ -81,7 +81,7 @@ export default function BrandIdentityPanel({ brandColor, syncPdf, onSyncPdfChang
             Sinkronkan ke PDF estimasi default
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Warna utama PDF penawaran mengikuti brand. Anda masih bisa ubah per-estimasi di Estimator → Pengaturan PDF.
+            Warna utama PDF penawaran mengikuti brand. Anda masih bisa menyesuaikan pada pengaturan PDF.
           </p>
         </div>
       </label>

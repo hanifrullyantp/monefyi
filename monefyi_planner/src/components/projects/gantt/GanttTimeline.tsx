@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useGanttStore } from '../../../store/ganttStore';
 import {
-  computeTimelineRange, generateTimelineDays, getBarStyle, isWeekend, wouldCreateCycle,
+  computeTimelineRange, generateTimelineDays, getBarStyle, isWeekend,
 } from '../../../lib/gantt/utils';
-import type { FlatGanttRow, GanttDependency } from '../../../lib/gantt/types';
+import { computeCriticalPath, wouldCreateDependencyCycle } from '../../../lib/gantt/criticalPath';
+import type { FlatGanttRow, GanttTask } from '../../../lib/gantt/types';
 import { GANTT_COLORS, ROW_HEIGHT, getEffectivePxPerDay } from '../../../lib/gantt/constants';
 import TimelineHeader from './TimelineHeader';
 import GanttTaskBar from './GanttTaskBar';
@@ -19,6 +20,9 @@ interface GanttTimelineProps {
   scrollToTaskRef?: React.MutableRefObject<((id: string) => void) | null>;
   onEditTask?: (taskId: string) => void;
   onOpenProjectDetail?: (projectId: string) => void;
+  onAddSubTask?: (task: GanttTask) => void;
+  onDuplicateTask?: (taskId: string) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
 export default function GanttTimeline({
@@ -28,12 +32,27 @@ export default function GanttTimeline({
   scrollToTaskRef,
   onEditTask,
   onOpenProjectDetail,
+  onAddSubTask,
+  onDuplicateTask,
+  onDeleteTask,
 }: GanttTimelineProps) {
   const {
     tasks, viewMode, zoomScale, scrollLeft, setScrollLeft,
     addDependency, removeDependency, dependencies,
     scrollToTaskId, setScrollToTaskId, pushHistory, zoomIn, zoomOut,
+    showCriticalPath,
   } = useGanttStore();
+
+  const cpm = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
+  const projectEndDateMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const t of tasks) {
+      if (t.type === 'project') {
+        map.set(t.id, t.endDate);
+      }
+    }
+    return map;
+  }, [tasks]);
 
   const showToast = useUiStore(s => s.showToast);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -211,7 +230,7 @@ export default function GanttTimeline({
       const targetRow = activeRows[rowIdx];
 
       if (targetRow && targetRow.task.id !== depDrag.fromId) {
-        if (wouldCreateCycle(depDrag.fromId, targetRow.task.id, dependencies)) {
+        if (wouldCreateDependencyCycle(depDrag.fromId, targetRow.task.id, dependencies)) {
           showToast('Dependency circular tidak diizinkan', 'error');
         } else {
           pushHistory();
@@ -285,12 +304,20 @@ export default function GanttTimeline({
             style={{ left: todayOffset }}
           />
 
-          <DependencyOverlay rows={activeRows} range={range} scrollTop={scrollTop} onRemove={handleRemoveDep} />
+          <DependencyOverlay
+            rows={activeRows}
+            range={range}
+            scrollTop={scrollTop}
+            onRemove={handleRemoveDep}
+            criticalDependencyIds={cpm.criticalDependencyIds}
+            showCriticalPath={showCriticalPath}
+          />
 
           <div className="absolute left-0 right-0" style={{ top: virtual.offsetY }}>
             {virtual.visibleRows.map(i => {
               const row = activeRows[i];
               if (!row) return null;
+              const taskMetrics = cpm.metrics[row.task.id];
               return (
                 <div key={row.task.id} className="relative border-b border-slate-100/80" style={{ height: ROW_HEIGHT }}>
                   <GanttTaskBar
@@ -300,6 +327,12 @@ export default function GanttTimeline({
                     onStartDependency={handleStartDependency}
                     onOpenEdit={onEditTask}
                     onOpenProjectDetail={onOpenProjectDetail}
+                    isCriticalOverride={taskMetrics?.isCritical}
+                    totalFloatDaysOverride={taskMetrics?.totalFloatDays}
+                    projectEndDate={projectEndDateMap.get(row.task.projectId)}
+                    onAddSubTask={onAddSubTask}
+                    onDuplicateTask={onDuplicateTask}
+                    onDeleteTask={onDeleteTask}
                   />
                 </div>
               );

@@ -75,14 +75,19 @@ export function FindCompanyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl">
-        <Link to="/signup" className="text-sm text-slate-500 mb-4 inline-block">← Kembali</Link>
+        <Link to="/signup" className="text-sm text-slate-600 hover:text-slate-900 mb-4 inline-block">← Kembali</Link>
 
         {step === 'search' && (
           <>
-            <h1 className="font-black text-xl mb-4">Cari perusahaan</h1>
+            <h1 className="font-black text-xl mb-4 text-slate-900">Cari perusahaan</h1>
+            <label htmlFor="find-company-search" className="block text-sm font-medium text-slate-700 mb-1.5">Nama perusahaan</label>
             <div className="relative mb-4">
               <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-600" />
               <input
+                id="find-company-search"
+                name="companyQuery"
+                type="search"
+                autoComplete="organization"
                 value={query}
                 onChange={e => {
                   setQuery(e.target.value);
@@ -103,12 +108,12 @@ export function FindCompanyPage() {
                   <Building2 className="w-5 h-5 text-emerald-600" />
                   <div>
                     <div className="font-semibold text-sm">{c.name}</div>
-                    <div className="text-xs text-slate-500">{c.industry} · {c.team_size}</div>
+                    <div className="text-xs text-slate-600">{c.industry} · {c.team_size}</div>
                   </div>
                 </button>
               ))}
               {query.length >= 2 && results.length === 0 && (
-                <p className="text-sm text-slate-500 text-center py-4">Tidak ditemukan</p>
+                <p className="text-sm text-slate-600 text-center py-4">Tidak ditemukan</p>
               )}
             </div>
           </>
@@ -116,22 +121,59 @@ export function FindCompanyPage() {
 
         {step === 'auth' && selected && (
           <>
-            <h2 className="font-bold mb-1">Request join: {selected.name}</h2>
-            <p className="text-sm text-slate-500 mb-4">Owner akan review permintaan Anda</p>
-            <textarea
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              placeholder="Pesan (opsional)"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm mb-3 h-20"
-            />
+            <h2 className="font-bold mb-1 text-slate-900">Request join: {selected.name}</h2>
+            <p className="text-sm text-slate-600 mb-4">Owner akan review permintaan Anda</p>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nama" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm" />
-              <PasswordField
-                value={form.password}
-                onChange={password => setForm({ ...form, password })}
-                placeholder="Password (min 8, huruf besar, angka, simbol)"
-              />
+              <div>
+                <label htmlFor="find-company-message" className="block text-sm font-medium text-slate-700 mb-1">Pesan untuk Owner (opsional)</label>
+                <textarea
+                  id="find-company-message"
+                  name="joinMessage"
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  placeholder="Pesan (opsional)"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm h-20"
+                />
+              </div>
+              <div>
+                <label htmlFor="find-company-name" className="block text-sm font-medium text-slate-700 mb-1">Nama lengkap</label>
+                <input
+                  id="find-company-name"
+                  name="name"
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder="Nama"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="find-company-email" className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <input
+                  id="find-company-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  placeholder="Email"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="find-company-password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <PasswordField
+                  id="find-company-password"
+                  name="password"
+                  autoComplete="new-password"
+                  required
+                  value={form.password}
+                  onChange={password => setForm({ ...form, password })}
+                  placeholder="Password (min 8, huruf besar, angka, simbol)"
+                />
+              </div>
               {error && <p className="text-sm text-rose-600">{error}</p>}
               <button type="submit" disabled={loading || !form.name.trim() || !form.email.trim() || !isPasswordReady(form.password)} className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed">Kirim permintaan</button>
             </form>
