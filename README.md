@@ -1,164 +1,101 @@
-# Monefyi
+# Froyek & Monefyi Workspace
 
-Aplikasi keuangan pribadi (PWA) — HTML + CSS + JavaScript, backend Supabase.
+Repositori ini menaungi produk **froyek** (*Agent for your project*) beserta aplikasi legacy **Monefyi**. Pemisahan struktur monorepo ini memungkinkan pengembangan independen antara web application Froyek, landing page & marketing engine, core agent autonomous, serta layanan perbankan/pembukuan personal Monefyi.
 
-## Dokumentasi
+---
 
-| Dokumen | Isi |
-|---------|-----|
-| **[`docs/APA_ITU_MONEFYI.md`](docs/APA_ITU_MONEFYI.md)** | Penjelasan produk — untuk perkenalan & presentasi |
-| **[`docs/MONEFYI_MASTER.md`](docs/MONEFYI_MASTER.md)** | Referensi teknis lengkap (dev & arsitektur) |
-| **[`docs/README.md`](docs/README.md)** | Indeks navigasi semua dokumen |
+## 1. Struktur Monorepo
 
-## Cabang Git & produksi
+| Direktori | Deskripsi | Stack Utama | Target Domain / Deploy |
+|---|---|---|---|
+| **[`apps/web`](apps/web/)** | Aplikasi utama Froyek (dulu `monefyi_planner`). Antarmuka agentik, task flow, estimasi & project management. | React 18, Vite, Tailwind CSS, Zustand | `froyek.com` (Vercel) |
+| **[`apps/landing`](apps/landing/)** | Landing page Froyek & Estimator Proyek (dulu `PlannerLP2`). Memuat winning ads engine, CRM, dynamic pricing. | Next.js 15 (App Router), Tailwind CSS, Lucide | `estimator.froyek.com` / `froyek.com` (Vercel) |
+| **[`packages/domain`](packages/domain/)** | Domain core types, business logic, entitas kalkulasi biaya & durasi proyek. | TypeScript | Shared package |
+| **[`agent-core`](agent-core/)** | Otomasi agen AI, context builder, prompt management, dan multi-provider orchestration. | TypeScript | Shared core |
+| **[`evals`](evals/)** | Rangkaian skenario evaluasi kualitas & akurasi keluaran agen AI. | TypeScript, Vitest | CI / Test bench |
+| **[`remotion`](remotion/)** | Generator motion graphic video promosi otomatis berbasis script dan audio. | Remotion, React | Video renderer |
+| **[`config/brand`](config/brand/)** | Single Source of Truth (SSOT) identitas merek Froyek: token warna (`#0A3A2E`, `#FFFFFF`), SVG/PNG logo, favicon, og-image. | TypeScript, Assets | Shared config ([Panduan Brand](config/brand/BRAND.md)) |
+| **[`docs/migration`](docs/migration/)** | Dokumentasi lengkap proses audit, baseline keamanan, verifikasi, dan prosedur cutover rilis. | Markdown | Dokumentasi migrasi |
 
-- **`main`** adalah **cabang default** repository (setelah Anda mengaturnya di GitHub). Push ke `main` memicu deploy **production** pada project Vercel yang mengaitkan branch production ke `main` (termasuk domain utama yang Anda pasang di Vercel).
-- **Pemilik repo:** cabang `main` sudah didorong ke GitHub. Jika default masih `migration-vercel-prep`, ubah di **Settings → General → Default branch** lalu pilih **`main`** dan konfirmasi.
-- **`migration-vercel-prep`** dan cabang `cursor/*` dipakai untuk pekerjaan migrasi atau fitur; gabungkan ke `main` bila siap rilis.
+### Aplikasi Monefyi (Legacy / Shared Core)
+- **`app/`**: PWA Monefyi Personal Finance (HTML/CSS/JS).
+- **`landing/`**: Landing page utama `monefyi.com`.
+- **`STAY/`**: Modul manajemen penginapan Monefyi STAY.
+- **`Mini App Monefyi/`**: Kumpulan mini-app Telegram/Web pendukung.
+- **`my-supabase-project/`**: Database migrations, policies, dan Supabase Edge Functions.
 
-**Monefyi Planner** ada dua frontend terpisah:
+---
 
-| Folder | Stack | Deploy Vercel |
-|--------|-------|---------------|
-| [`planner/`](planner/README.md) | Vite + HTML/CSS/JS (PWA) | Root Directory: **`planner`** |
-| [`monefyi_planner/`](monefyi_planner/README.md) | React + Vite + Tailwind | Root Directory: **`monefyi_planner`** |
+## 2. Brand Guidelines Froyek
 
-## Struktur deploy (monefyi.com)
+Pedoman visual dan identitas merek Froyek didefinisikan secara terpusat di **[`config/brand/BRAND.md`](config/brand/BRAND.md)**:
 
-| URL | Folder | Isi |
-|-----|--------|-----|
-| `monefyi.com/` | [`landing/`](landing/) | Landing page marketing |
-| `monefyi.com/app/` | [`app/`](app/) | Aplikasi PWA utama |
-| `monefyi.com/stay/` | [`STAY/`](STAY/) | STAY — manajemen penginapan |
+- **Nama Produk:** `froyek` (huruf kecil)
+- **Tagline:** *"Agent for your project"*
+- **Warna Utama:**
+  - Dark Slate / Forest: `#0A3A2E`
+  - Crisp White: `#FFFFFF`
+  - Deep Dark (Surface): `#081C15`
+  - Soft Neutral (Light Surface): `#F7F9F8`
+- **Aset Logo:**
+  - Origami Mark (`config/brand/froyek-mark.svg`)
+  - Full Wordmark (`config/brand/froyek-logo.svg`)
+  - Icon PWA & Favicon (`apps/web/public/` & `apps/landing/public/`)
 
-Detail build & Vercel: [`docs/DEPLOY_STRUCTURE.md`](docs/DEPLOY_STRUCTURE.md).
+---
 
-## Struktur kode aplikasi (`app/`)
+## 3. Menjalankan Secara Lokal (Quickstart)
 
-| File / folder | Isi |
-|---------------|-----|
-| `app/index.html` | Shell halaman, CDN library + referensi aset |
-| `app/js/config.js` | **Sesuaikan di sini:** URL Supabase, anon key, checkout, admin, `basePath` |
-| `app/js/app.js` | Logika aplikasi |
-| `app/css/app.css` | Gaya antarmuka |
-| `shared/tokens.css` | Design tokens (warna, spacing, radius) — SSOT |
-| `app/js/theme-manager.js` | Theme switcher (`MonefyiTheme`) |
-
-## Design System
-
-Monefyi memakai **design token system** untuk konsistensi UI light/dark.
-
-- Token: [`shared/tokens.css`](shared/tokens.css) → disalin ke `app/css/` via `npm run sync:brand`
-- Panduan: [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md)
-- Audit: [`docs/AUDIT_REPORT.md`](docs/AUDIT_REPORT.md)
-
-**Aturan:** zero hardcoded colors di komponen baru — pakai `var(--text-primary)`, `var(--card-bg)`, dll.
-
-Toggle theme: Settings → Mode terang, atau `MonefyiTheme.setTheme('light'|'dark'|'auto')` di console.
-
-
-## Menjalankan lokal
-
-Buka lewat **HTTP** (bukan `file://`), agar service worker / fetch normal:
+Pastikan dependensi telah terinstal:
 
 ```bash
 npm install
-npm run dev          # aplikasi → http://localhost:5173/app/
-npm run dev:landing  # landing → http://localhost:5174/
-npm run dev:stay     # STAY → http://localhost:5173/stay/
-npm run build        # dist/ (landing + app + stay)
 ```
 
-Lalu buka `http://localhost:5173/app/` untuk aplikasi, `http://localhost:5174/` untuk landing, atau `http://localhost:5173/stay/` untuk STAY.
-
-Alternatif tanpa Vite:
+### Script Utama Froyek:
 
 ```bash
-npx --yes serve . -p 5173
+# Menjalankan aplikasi web Froyek (port 5173)
+npm run dev:web
+
+# Menjalankan landing page & Estimator Froyek (port 3000)
+npm run dev:landing-froyek
+
+# Build bundle aplikasi web Froyek
+npm run build:web
+
+# Menjalankan unit test aplikasi web Froyek (Vitest)
+npm run test:web
+
+# Menjalankan pengujian & skenario engine landing Froyek
+npm run test:landing
+
+# Menjalankan gerbang verifikasi rebrand & deteksi pelanggaran teks
+npm run gate:rebrand
 ```
 
-## Deploy & `basePath`
-
-- `link rel="manifest"` dan ikon kini memakai path relatif (`./manifest.webmanifest`, `./icons/...`) agar lebih aman saat deploy di subfolder.
-- Jika deploy di **subfolder** (mis. `https://domain.com/monefyi/`):
-  1. Set `basePath: "/monefyi"` di `js/config.js` (tanpa slash di akhir).
-  2. Service worker akan terdaftar di `/monefyi/sw.js`.
-  3. Jika ada aset lain yang masih absolut (`/...`), ubah ke relatif atau prefiks dengan subfolder.
-
-## Deploy ke Vercel (frontend)
-
-Frontend ini di-build dengan **Vite** menjadi aset statis di `dist/`. Di Vercel, **Node.js hanya dipakai saat build** (`npm run build`).
-
-**Catatan penting:** repo ini juga memiliki **Supabase Edge Functions** di `my-supabase-project/supabase/functions/*`. Fungsi tersebut tetap berjalan di Supabase (bukan Vercel). Panduan deploy (CLI, secrets, migrasi) ada di **[`my-supabase-project/README.md`](my-supabase-project/README.md)** — **satu-satunya lokasi** kode function & migrasi; jangan menaruh salinan di folder lain.
-
-**Catatan stack:** kode UI saat ini adalah HTML + JavaScript (bukan React). Jika nanti migrasi ke React, tetap bisa memakai preset Vite + React di Vercel dengan pola serupa.
-
-### Langkah singkat
-
-1. Push repo ke GitHub/GitLab/Bitbucket (folder root proyek = folder yang memuat `package.json` ini).
-2. Di [Vercel](https://vercel.com): **Add New Project** → import repo → deteksi **Vite** (atau set manual: Build `npm run build`, Output `dist`). File `vercel.json` sudah mengisi hal itu.
-3. **Environment variables:** tidak wajib untuk build default; URL Supabase dan anon key tetap di `js/config.js` (atau kelola lewat injeksi build jika nanti Anda memindah config).
-4. Deploy pertama, lalu uji URL preview `.vercel.app`.
-5. **DNS dari Rumahweb:** arahkan domain (A/ALIAS/CNAME sesuai panduan Vercel) ke project; di Vercel tambahkan domain production.
-6. **Supabase (Auth / redirect):** di dashboard Supabase → Authentication → URL Configuration, tambahkan URL production (dan preview bila perlu) ke **Redirect URLs** / **Site URL** agar login tidak ditolak setelah pindah host.
-7. Backend **Edge Function yang ada di folder `my-supabase-project/` tetap di Supabase**, bukan di Vercel — migrasi hosting frontend tidak memindahkan fungsi tersebut.
-
-### PWA / service worker
-
-`vercel.json` memberi header `Cache-Control` ringan pada `sw.js` agar setelah deploy versi baru lebih cepat terambil klien (kurangi stale SW).
-
-## Keamanan Supabase
-
-- **Anon key** di klien adalah pola normal; yang melindungi data adalah **Row Level Security (RLS)** di setiap tabel.
-- Jangan pernah memasukkan **service_role** ke file yang di-serve ke browser.
-- Untuk CORS Edge Functions, gunakan env `APP_CORS_ORIGIN` (mis. `https://app.monefyi.com`) agar origin tidak wildcard.
-
-### Env yang direkomendasikan (Edge Functions)
-
-- `APP_CORS_ORIGIN=https://app.monefyi.com`
-- `SUPABASE_URL=...`
-- `SUPABASE_ANON_KEY=...`
-- `SUPABASE_SERVICE_ROLE_KEY=...`
-
-## Smoke Test
-
-Jalankan verifikasi cepat:
+### Script Aplikasi Monefyi:
 
 ```bash
-npm run smoke
+npm run dev          # Aplikasi PWA Monefyi
+npm run dev:landing  # Landing page Monefyi
+npm run dev:stay     # Aplikasi STAY
 ```
 
-Script ini akan:
+---
 
-1. Build frontend (`npm run build`).
-2. Menjalankan static guard checks untuk konfigurasi prioritas (CORS env, admin auth, config function).
-3. Cek Docker daemon.
-4. Jika Docker aktif, cek startup local serve untuk Edge Function.
+## 4. Keamanan & Kredensial
 
-Jika Docker belum aktif, script tetap sukses dengan status **skip runtime check** dan menampilkan instruksi lanjut.
+- **Jangan pernah melakukan commit API Key / Secret ke repositori.**
+- Seluruh kredensial Supabase (`SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) dikonfigurasikan melalui Environment Variables atau GitHub Secrets.
+- Sebelum melakukan merge atau deployment ke produksi, ikuti panduan **[`docs/migration/04-cutover.md`](docs/migration/04-cutover.md)** untuk rotasi kredensial.
 
-## Subresource Integrity (SRI)
+---
 
-Script CDN di `index.html` memakai `integrity="sha384-..."`. Jika jsDelivr memperbarui file di tag versi mengambang (`@2`, `@5`), browser bisa menolak load — **pin versi** di URL atau perbarui hash:
+## 5. Dokumentasi Terkait
 
-```bash
-curl -fsSL 'URL_CDN' | openssl dgst -sha384 -binary | openssl base64 -A
-```
-
-## Checkout
-
-URL default checkout memakai **HTTPS** (`https://lynk.id/...`), bisa diubah di `js/config.js`.
-
-## Opsional: bundler (Vite)
-
-Saat ini tidak wajib. Untuk modularisasi lebih lanjut (banyak file + tree-shaking), Anda bisa memindahkan `js/app.js` ke proyek Vite/Rollup; `scripts/refactor.cjs` hanya dipakai sekali saat migrasi awal.
-
-## Mengulangi ekstraksi (jarang perlu)
-
-Jika Anda menyalin `index.html` monolit lama lagi dan ingin menjalankan pipeline yang sama:
-
-```bash
-node scripts/refactor.cjs
-```
-
-Pastikan isi `index.html` masih memuat pola lama yang skrip ini harapkan (lihat sumber `scripts/refactor.cjs`).
+- [Inventaris Pemisahan (00-inventory.md)](docs/migration/00-inventory.md)
+- [Audit Rebrand & Lokasi Rahasia (01-rebrand-audit.md)](docs/migration/01-rebrand-audit.md)
+- [Baseline Supabase Advisor (02-supabase-advisor-baseline.md)](docs/migration/02-supabase-advisor-baseline.md)
+- [Laporan Verifikasi Tahap 5 (03-verification.md)](docs/migration/03-verification.md)
+- [Panduan Cutover Produksi (04-cutover.md)](docs/migration/04-cutover.md)
