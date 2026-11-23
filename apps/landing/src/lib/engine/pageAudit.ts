@@ -271,7 +271,7 @@ export async function fetchPageSignals(
   const started = Date.now();
   try {
     const res = await fetchImpl(url.toString(), {
-      headers: { "User-Agent": "MonefyiEngine/1.0 (page audit)", Accept: "text/html" },
+      headers: { "User-Agent": "FroyekEngine/1.0 (page audit)", Accept: "text/html" },
       signal: AbortSignal.timeout(8000),
     });
     const responseTimeMs = Date.now() - started;

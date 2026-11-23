@@ -43,7 +43,7 @@ test("sendResendEmail preserves default sender and Froyek copy across templates"
 
     assert.equal(sentPayloads.length, types.length);
     for (const payload of sentPayloads) {
-      assert.equal(payload.from, "Froyek <noreply@support.monefyi.com>");
+      assert.equal(payload.from, "froyek <noreply@froyek.com>");
       assert.equal(/monefyi/i.test(payload.subject), false, `Subject leaked Monefyi: ${payload.subject}`);
       assert.equal(/monefyi/i.test(payload.html), false, `HTML leaked Monefyi for subject: ${payload.subject}`);
     }

@@ -1,5 +1,5 @@
-// Service Worker for Monefyi Admin CRM PWA (Scoped to /admin/)
-const CACHE_NAME = 'monefyi-admin-crm-v3';
+// Service Worker for Froyek Admin CRM PWA (Scoped to /admin/)
+const CACHE_NAME = 'froyek-admin-crm-v1';
 const PRECACHE_URLS = [
   '/admin',
   '/brand/admin/icon-192.png',
@@ -23,7 +23,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME && key.startsWith('monefyi-admin'))
+          .filter((key) => key !== CACHE_NAME && (key.startsWith('froyek-admin') || key.startsWith('monefyi-admin')))
           .map((key) => caches.delete(key))
       );
     }).then(() => self.clients.claim())

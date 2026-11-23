@@ -308,7 +308,7 @@ export function OwnerSignupPage() {
               <Mail className="w-12 h-12 text-emerald-500 mx-auto" />
               <h3 className="font-black text-xl">Verifikasi email</h3>
               <p className="text-sm text-slate-600">Kami mengirim link verifikasi ke <strong>{form.email}</strong>. Setelah verifikasi, masuk dan lanjutkan setup.</p>
-              <p className="text-xs text-slate-600">Cek juga folder spam. Pengirim: <strong>Froyek (noreply@support.monefyi.com)</strong></p>
+              <p className="text-xs text-slate-600">Cek juga folder spam. Pengirim: <strong>froyek (noreply@froyek.com)</strong></p>
               <button
                 type="button"
                 onClick={handleResendVerification}

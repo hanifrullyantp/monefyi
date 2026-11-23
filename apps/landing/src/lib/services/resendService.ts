@@ -288,7 +288,7 @@ export async function sendResendEmail(opts: SendEmailOptions): Promise<SendEmail
   const now = new Date().toISOString();
   const apiKey = (process.env.RESEND_API_KEY || "").trim();
   const fromEmail =
-    (process.env.RESEND_FROM_EMAIL || "").trim() || "Froyek <noreply@support.monefyi.com>";
+    (process.env.RESEND_FROM_EMAIL || "").trim() || "froyek <noreply@froyek.com>";
 
   let subject = opts.subject;
   let html = "";

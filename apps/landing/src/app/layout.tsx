@@ -59,16 +59,16 @@ export async function generateMetadata(): Promise<Metadata> {
   if (!isFroyekMarketingHost(host)) return estimatorMetadata;
   return {
     title: {
-      default: "froyek — proyek lebih terbaca",
+      default: "froyek — Agent for your project",
       template: "%s — froyek",
     },
     description:
-      "Kelola proyek berbayar, catat biaya, dan kirim laporan. Lisensi Estimator hanya untuk penawaran.",
+      "froyek — Agent for your project. Manajemen proyek dan estimasi untuk jasa.",
     openGraph: {
       title: "froyek",
-      description: "Proyek, biaya, dan laporan dalam satu tempat.",
+      description: "Agent for your project.",
       type: "website",
-      images: [{ url: "/brand/planner/icon-512.png", width: 512, height: 512, alt: "froyek" }],
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "froyek" }],
     },
   };
 }
@@ -77,7 +77,7 @@ export async function generateViewport(): Promise<Viewport> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
   return {
-    themeColor: isFroyekMarketingHost(host) ? "#059669" : brand.themeColor,
+    themeColor: isFroyekMarketingHost(host) ? "#0A3A2E" : brand.themeColor,
     width: "device-width",
     initialScale: 1,
   };

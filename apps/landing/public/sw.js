@@ -1,5 +1,5 @@
-// Service Worker for Monefyi Estimator PWA (Scoped to /)
-const CACHE_NAME = 'monefyi-estimator-v2';
+// Service Worker for Froyek Estimator PWA (Scoped to /)
+const CACHE_NAME = 'froyek-estimator-v1';
 const PRECACHE_URLS = [
   '/',
   '/manifest.webmanifest',
@@ -20,7 +20,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME && key.startsWith('monefyi-estimator')).map((key) => caches.delete(key))
+        keys.filter((key) => key !== CACHE_NAME && (key.startsWith('froyek-estimator') || key.startsWith('monefyi-estimator'))).map((key) => caches.delete(key))
       );
     }).then(() => self.clients.claim())
   );

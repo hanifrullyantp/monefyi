@@ -15,7 +15,7 @@ function serverClient() {
 async function sendBillingEmail(to: string, subject: string, text: string) {
   const apiKey = (process.env.RESEND_API_KEY || "").trim();
   const from =
-    (process.env.RESEND_FROM_EMAIL || "").trim() || "Froyek <noreply@support.monefyi.com>";
+    (process.env.RESEND_FROM_EMAIL || "").trim() || "froyek <noreply@froyek.com>";
   if (!apiKey) return { sent: false, message: "RESEND_API_KEY belum diisi." };
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
