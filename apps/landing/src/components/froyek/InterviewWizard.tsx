@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import type { FroyekContent, FroyekPlanId } from "@/lib/froyek/schema";
 import { isPlaceholder } from "@/lib/froyek/schema";
@@ -194,7 +195,7 @@ export function InterviewWizard({ content }: { content: FroyekContent }) {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col px-5 py-8">
-      <a href="/" className="text-sm font-semibold text-emerald-700">Kembali ke beranda</a>
+      <Link href="/" className="text-sm font-semibold text-emerald-700">Kembali ke beranda</Link>
       <p className="mt-6 text-sm text-slate-500">Langkah {draft.step + 1} dari {STEPS.length}</p>
       <div className="mt-2 h-2 rounded-full bg-slate-100" aria-hidden>
         <div className="h-2 rounded-full bg-emerald-600" style={{ width: `${progress}%` }} />

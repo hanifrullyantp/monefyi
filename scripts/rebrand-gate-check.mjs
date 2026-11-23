@@ -107,3 +107,4 @@ if (violations.length > 0) {
   console.log('\nPASS: All legacy brand strings match approved compatibility allowlist.');
   process.exit(0);
 }
+

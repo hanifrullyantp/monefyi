@@ -93,3 +93,4 @@ Dilakukan pemindaian terhadap seluruh secret dan fallback service role key:
 5. `.github/workflows/planner-lp2-deploy.yml`: Service role key, anon key, dan Supabase URL diganti menggunakan `${{ secrets.* }}`.
 6. `.github/workflows/estimator-lp-deploy.yml`: Service role key, anon key, dan Supabase URL diganti menggunakan `${{ secrets.* }}`.
 7. Verifikasi grep: Nilai service role key tidak lagi ditemukan pada direktori mana pun di luar git commit history masa lalu (kredensial lama wajib dirotasi di dashboard Supabase sebelum rilis).
+

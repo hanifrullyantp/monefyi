@@ -81,6 +81,25 @@ Jalankan verifikasi fungsionalitas langsung di produksi:
 
 ---
 
+## 2.1 Urutan Final Eksekusi Produksi (Release Runbook)
+
+Saat rilis dilakukan, urutan eksekusi wajib mengikuti tahapan berurutan berikut:
+
+1. **(a) Merge PR #16 ke `main`**:
+   - Dilakukan oleh pemilik setelah seluruh secret baru siap.
+   - **Perhatian:** Begitu di-merge, ini adalah pemicu deploy produksi resmi (*Merge = Deploy Production*).
+2. **(b) Workflow Production Berjalan**:
+   - GitHub Actions (`planner-spa-deploy.yml`, `estimator-lp-deploy.yml`) dan Vercel Git integration akan otomatis melakukan build dan deploy produksi untuk `apps/web` dan `apps/landing`.
+3. **(c) Cek Fungsionalitas Produksi**:
+   - Periksa langsung `https://froyek.com`, `https://estimator.froyek.com`, dan web app `/app`.
+   - Pastikan login Supabase Auth, form estimator, dan responsivitas antarmuka beroperasi 100% normal.
+4. **(d) Nonaktifkan Key Lama**:
+   - Di Supabase Dashboard, pastikan API key dan service role key lama yang telah dirotasi dinonaktifkan/di-revoke sepenuhnya.
+5. **(e) Hapus Alias Lama Setelah 2 Minggu**:
+   - Setelah grace period 2 minggu (14 hari) berjalan lancar dan trafik termonitor bermigrasi penuh ke `froyek.com`, hapus alias domain legacy (`planner.monefyi.com`, `estimator.monefyi.com`) dan binding Vercel lama.
+
+---
+
 ## 3. Rencana Rollback (Contingency & Rollback Plan)
 
 Jika ditemukan masalah kritis (misalnya kegagalan auth fatal pada domain baru atau anomali jaringan):
@@ -125,3 +144,4 @@ Lapisan kompatibilitas ganda (*dual-read/write*) dirancang untuk melindungi peng
 - **Status Suite Pengujian:** LULUS (75 test file web + 93 engine scenarios landing + 10 host/pricing tests)
 - **Status Gate Rebrand:** LULUS (1,158 file dipindai, 0 pelanggaran unlisted)
 - **Kondisi Produksi Monefyi:** Tidak tersentuh, beroperasi 100% normal.
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { AuthHydrator } from "@/components/landing/AuthHydrator";
 import { useLandingAdmin } from "@/lib/hooks/useLandingAdmin";
 import { useAuthStore } from "@/lib/store/authStore";
@@ -368,10 +369,10 @@ export function FroyekExperience({ initial }: { initial: FroyekContent }) {
         </a>
       ) : null}
       <nav className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
-        <a href="/" className="flex items-center gap-2 font-bold text-slate-900">
+        <Link href="/" className="flex items-center gap-2 font-bold text-slate-900">
           <img src={content.branding.logoSrc} alt="" width={32} height={32} className="h-8 w-8 rounded-lg" />
           {content.branding.name}
-        </a>
+        </Link>
         <div className="flex items-center gap-2">
           <a className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700" href={loggedIn ? "/app" : "/login"} onClick={() => trackFroyek("cta_click", { section: "navbar", target: loggedIn ? "app" : "login" })}>
             {loggedIn ? content.navbar.openAppLabel : content.navbar.loginLabel}
