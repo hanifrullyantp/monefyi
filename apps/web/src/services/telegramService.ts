@@ -1,0 +1,549 @@
+/**
+ * Layanan integrasi komunikasi Telegram & koordinasi proaktif tim lapangan oleh AI.
+ * Memungkinkan AI General Manager dan Site Manager menghubungi mandor / tukang / staf
+ * lapangan secara proaktif berdasarkan peran/jabatan mereka.
+ */
+
+import { supabase } from '../lib/supabase';
+import { logTrace } from './runtimeTracer';
+import { useAppStore, type UserRole } from '../store/appStore';
+import { canAccessManagerFeatures } from '../utils/platformUi';
+
+export interface TelegramConfig {
+  botToken: string;
+  botUsername?: string;
+  enabled: boolean;
+  defaultChannelChatId?: string;
+  ownerChatId?: string; // Chat ID pribadi Owner untuk menerima eskalasi pertanyaan sulit
+}
+
+export interface FieldMemberContact {
+  memberId: string;
+  userId: string;
+  name: string;
+  role: string;
+  position: string;
+  phone?: string;
+  telegramChatId?: string;
+  telegramUsername?: string;
+  proactiveReminders: {
+    dailyLog: boolean; // Pengingat isi progres fisik harian (mandor/site manager)
+    attendance: boolean; // Pengingat absensi pagi & pulang (tukang/staf)
+    cashbonNotice: boolean; // Notifikasi status kasbon
+    urgentTasks: boolean; // Tugas kritis mendekati tenggat
+  };
+}
+
+export interface ProactiveTriggerRecord {
+  id: string;
+  timestamp: string;
+  targetMemberName: string;
+  targetRole: string;
+  category: 'dailyLog' | 'attendance' | 'cashbonNotice' | 'urgentTasks';
+  message: string;
+  status: 'sent' | 'simulated' | 'failed';
+  error?: string;
+}
+
+const STORAGE_TELEGRAM_CFG = 'froyek_telegram_config_v1';
+const LEGACY_STORAGE_TELEGRAM_CFG = 'monefyi_telegram_config_v1';
+const STORAGE_FIELD_CONTACTS = 'froyek_field_member_contacts_v1';
+const LEGACY_STORAGE_FIELD_CONTACTS = 'monefyi_field_member_contacts_v1';
+const STORAGE_PROACTIVE_LOGS = 'froyek_proactive_triggers_v1';
+const LEGACY_STORAGE_PROACTIVE_LOGS = 'monefyi_proactive_triggers_v1';
+
+const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
+  botToken: '',
+  botUsername: '',
+  enabled: false,
+  defaultChannelChatId: '',
+  ownerChatId: '',
+};
+
+function removeLocalStorageKey(key: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearTelegramLocalCache(): void {
+  removeLocalStorageKey(STORAGE_TELEGRAM_CFG);
+  removeLocalStorageKey(LEGACY_STORAGE_TELEGRAM_CFG);
+  removeLocalStorageKey(STORAGE_FIELD_CONTACTS);
+  removeLocalStorageKey(LEGACY_STORAGE_FIELD_CONTACTS);
+  removeLocalStorageKey(STORAGE_PROACTIVE_LOGS);
+  removeLocalStorageKey(LEGACY_STORAGE_PROACTIVE_LOGS);
+}
+
+/**
+ * Hanya Owner dan Manager (menghormati preview worker super-admin) yang boleh mengakses/men-cache
+ * botToken dan kontak Telegram anggota lapangan di localStorage.
+ */
+export function canAccessTelegramSensitiveCache(
+  role?: UserRole,
+  platformRole?: string,
+  email?: string,
+): boolean {
+  const state = useAppStore.getState();
+  if (role === undefined && !state.user) return false;
+  const effectiveRole = role ?? state.user?.role;
+  const effectivePlatformRole = platformRole ?? state.platformRole ?? 'user';
+  const effectiveEmail = email ?? state.user?.email;
+  const uiViewMode = role !== undefined ? 'auto' : (state.uiViewMode ?? 'auto');
+  return canAccessManagerFeatures(
+    effectiveRole,
+    effectivePlatformRole,
+    effectiveEmail,
+    uiViewMode,
+  );
+}
+
+export function loadTelegramConfig(): TelegramConfig {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return { ...DEFAULT_TELEGRAM_CONFIG };
+  }
+  try {
+    let raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_TELEGRAM_CFG) : null;
+    if (!raw && typeof localStorage !== 'undefined') {
+      raw = localStorage.getItem(LEGACY_STORAGE_TELEGRAM_CFG);
+      if (raw) localStorage.setItem(STORAGE_TELEGRAM_CFG, raw);
+    }
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* fallback */
+  }
+  return { ...DEFAULT_TELEGRAM_CONFIG };
+}
+
+export async function saveTelegramConfig(config: TelegramConfig, orgId?: string): Promise<void> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return;
+  }
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const val = JSON.stringify(config);
+      localStorage.setItem(STORAGE_TELEGRAM_CFG, val);
+      localStorage.setItem(LEGACY_STORAGE_TELEGRAM_CFG, val);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  if (!orgId) return;
+
+  try {
+    const { data: org } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+    const existing = (org?.settings as Record<string, unknown>) || {};
+    await supabase
+      .from('planner_organizations')
+      .update({
+        settings: {
+          ...existing,
+          telegram_config: config,
+        },
+      })
+      .eq('id', orgId);
+  } catch (err) {
+    console.warn('Failed to sync telegram config to Supabase:', err);
+  }
+}
+
+export async function fetchTelegramConfigFromSupabase(orgId: string): Promise<TelegramConfig | null> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return null;
+  }
+  if (!orgId) return null;
+  try {
+    const { data: org, error } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+
+    if (error || !org?.settings) return null;
+    const settings = org.settings as Record<string, unknown>;
+    if (settings.telegram_config) {
+      const config = settings.telegram_config as TelegramConfig;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_TELEGRAM_CFG, JSON.stringify(config));
+        }
+      } catch {
+        /* ignore */
+      }
+      return config;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch telegram config from Supabase:', err);
+  }
+  return null;
+}
+
+export function loadFieldMemberContacts(): Record<string, FieldMemberContact> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return {};
+  }
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_FIELD_CONTACTS) : null;
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* fallback */
+  }
+  return {};
+}
+
+export async function saveFieldMemberContacts(
+  contacts: Record<string, FieldMemberContact>,
+  orgId?: string,
+): Promise<void> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return;
+  }
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_FIELD_CONTACTS, JSON.stringify(contacts));
+    }
+  } catch {
+    /* ignore */
+  }
+
+  if (!orgId) return;
+
+  try {
+    const { data: org } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+    const existing = (org?.settings as Record<string, unknown>) || {};
+    await supabase
+      .from('planner_organizations')
+      .update({
+        settings: {
+          ...existing,
+          field_member_contacts: contacts,
+        },
+      })
+      .eq('id', orgId);
+  } catch (err) {
+    console.warn('Failed to sync field member contacts to Supabase:', err);
+  }
+}
+
+export async function fetchFieldMemberContactsFromSupabase(
+  orgId: string,
+): Promise<Record<string, FieldMemberContact> | null> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return null;
+  }
+  if (!orgId) return null;
+  try {
+    const { data: org, error } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+
+    if (error || !org?.settings) return null;
+    const settings = org.settings as Record<string, unknown>;
+    if (settings.field_member_contacts) {
+      const contacts = settings.field_member_contacts as Record<string, FieldMemberContact>;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_FIELD_CONTACTS, JSON.stringify(contacts));
+        }
+      } catch {
+        /* ignore */
+      }
+      return contacts;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch field member contacts from Supabase:', err);
+  }
+  return null;
+}
+
+export function loadProactiveTriggers(): ProactiveTriggerRecord[] {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return [];
+  }
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_PROACTIVE_LOGS) : null;
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* fallback */
+  }
+  return [];
+}
+
+export async function fetchProactiveTriggersFromSupabase(
+  orgId: string,
+): Promise<ProactiveTriggerRecord[] | null> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return null;
+  }
+  if (!orgId) return null;
+  try {
+    const { data: org, error } = await supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle();
+
+    if (error || !org?.settings) return null;
+    const settings = org.settings as Record<string, unknown>;
+    if (settings.proactive_triggers) {
+      const logs = settings.proactive_triggers as ProactiveTriggerRecord[];
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_PROACTIVE_LOGS, JSON.stringify(logs));
+        }
+      } catch {
+        /* ignore */
+      }
+      return logs;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch proactive triggers from Supabase:', err);
+  }
+  return null;
+}
+
+export function addProactiveTriggerLog(
+  log: Omit<ProactiveTriggerRecord, 'id' | 'timestamp'>,
+  orgId?: string,
+): ProactiveTriggerRecord {
+  const item: ProactiveTriggerRecord = {
+    ...log,
+    id: `pt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    timestamp: new Date().toISOString(),
+  };
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return item;
+  }
+  const list = [item, ...loadProactiveTriggers()].slice(0, 50);
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_PROACTIVE_LOGS, JSON.stringify(list));
+    }
+  } catch {
+    /* ignore */
+  }
+
+  if (orgId) {
+    void supabase
+      .from('planner_organizations')
+      .select('settings')
+      .eq('id', orgId)
+      .maybeSingle()
+      .then(({ data: org }) => {
+        const existing = (org?.settings as Record<string, unknown>) || {};
+        return supabase
+          .from('planner_organizations')
+          .update({
+            settings: {
+              ...existing,
+              proactive_triggers: list,
+            },
+          })
+          .eq('id', orgId);
+      });
+  }
+
+  return item;
+}
+
+/**
+ * Mengirim pesan ke Telegram Bot API
+ */
+export async function sendTelegramMessage(
+  token: string,
+  chatId: string,
+  text: string,
+): Promise<{ ok: boolean; messageId?: number; error?: string }> {
+  const cleanToken = token.trim();
+  const cleanChatId = chatId.trim();
+  if (!cleanToken || !cleanChatId) {
+    return { ok: false, error: 'Token Bot dan Chat ID wajib diisi' };
+  }
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${cleanToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: cleanChatId,
+        text,
+        parse_mode: 'HTML',
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      const err = data.description || `HTTP ${res.status}`;
+      logTrace('telegram_send_fail', { component: 'telegramService', message: err, metadata: { chatId: cleanChatId } }, 'warning');
+      return { ok: false, error: err };
+    }
+
+    logTrace('telegram_send_ok', { component: 'telegramService', message: 'Message delivered', metadata: { chatId: cleanChatId } }, 'info');
+    return { ok: true, messageId: data.result?.message_id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logTrace('telegram_network_error', { component: 'telegramService', message: msg }, 'error');
+    return { ok: false, error: msg };
+  }
+}
+
+/**
+ * Tes koneksi bot Telegram dengan membaca profil bot (getMe)
+ */
+export async function testTelegramBot(token: string): Promise<{ ok: boolean; username?: string; name?: string; error?: string }> {
+  const cleanToken = token.trim();
+  if (!cleanToken) return { ok: false, error: 'Token bot belum diisi' };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${cleanToken}/getMe`);
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      return { ok: false, error: data.description || 'Gagal membaca info bot dari Telegram API' };
+    }
+    return {
+      ok: true,
+      username: data.result?.username,
+      name: data.result?.first_name,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Koneksi ke api.telegram.org gagal' };
+  }
+}
+
+/**
+ * Pemicu proaktif AI: Memilih karyawan relevan sesuai jabatannya lalu mengirim pesan proaktif.
+ * - Mandor / Site Manager: Diminta laporkan progres harian & pekerja hadir
+ * - Tukang: Pengingat absensi & checklist kerja
+ * - Keuangan: Konfirmasi nota pengeluaran / kasbon
+ */
+export async function dispatchProactiveAIOutreach(params: {
+  member: FieldMemberContact;
+  category: ProactiveTriggerRecord['category'];
+  projectName?: string;
+  customNote?: string;
+}): Promise<{ ok: boolean; summary: string }> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return {
+      ok: false,
+      summary: 'Koordinasi bot Telegram hanya tersedia untuk Owner/Manager.',
+    };
+  }
+  const cfg = loadTelegramConfig();
+  const { member, category, projectName = 'Proyek Aktif', customNote } = params;
+
+  let message = '';
+  switch (category) {
+    case 'dailyLog':
+      message = `Halo <b>${member.name}</b> (${member.position || member.role})!\n` +
+        `👔 <i>Pesan Otomatis dari General Manager AI:</i>\n` +
+        `Mohon update opname progres pekerjaan & jumlah tukang yang hadir di lapangan hari ini untuk <b>${projectName}</b>.\n` +
+        (customNote ? `Catatan: ${customNote}\n` : '') +
+        `Ketik atau balas pesan ini agar laporan harian langsung tercatat ke sistem.`;
+      break;
+    case 'attendance':
+      message = `Halo <b>${member.name}</b>!\n` +
+        `👥 <i>Pesan AI HRD:</i>\n` +
+        `Jangan lupa konfirmasi absensi kehadiran kerja Anda hari ini di proyek <b>${projectName}</b>.\n` +
+        (customNote ? `Catatan: ${customNote}\n` : '') +
+        `Semoga pekerjaan hari ini berjalan lancar dan aman!`;
+      break;
+    case 'cashbonNotice':
+      message = `Halo <b>${member.name}</b>!\n` +
+        `💰 <i>Pesan AI Keuangan & HRD:</i>\n` +
+        (customNote || `Pengajuan kasbon Anda telah diperbarui statusnya di sistem perusahaan.`);
+      break;
+    case 'urgentTasks':
+      message = `⚠️ <b>PERINGATAN TUGAS TIM</b> — Halo <b>${member.name}</b>!\n` +
+        `Ada pekerjaan penting di <b>${projectName}</b> yang mendekati batas waktu penyerahan:\n` +
+        `<b>${customNote || 'Pemeriksaan pekerjaan di lapangan'}</b>\n` +
+        `Mohon segera selesaikan atau laporkan kendala ke Site Manager.`;
+      break;
+  }
+
+  if (cfg.enabled && cfg.botToken && member.telegramChatId) {
+    const res = await sendTelegramMessage(cfg.botToken, member.telegramChatId, message);
+    addProactiveTriggerLog({
+      targetMemberName: member.name,
+      targetRole: member.position || member.role,
+      category,
+      message,
+      status: res.ok ? 'sent' : 'failed',
+      error: res.error,
+    });
+    return {
+      ok: res.ok,
+      summary: res.ok
+        ? `Terkirim ke Telegram ${member.name} (ID: ${member.telegramChatId})`
+        : `Gagal kirim ke Telegram: ${res.error}`,
+    };
+  }
+
+  // Jika Telegram belum tersambung atau Chat ID belum ada, simulasikan & catat ke log proaktif AI
+  addProactiveTriggerLog({
+    targetMemberName: member.name,
+    targetRole: member.position || member.role,
+    category,
+    message,
+    status: 'simulated',
+    error: !member.telegramChatId ? 'Chat ID Telegram belum diatur' : 'Bot Telegram belum diaktifkan',
+  });
+
+  return {
+    ok: true,
+    summary: `Pesan koordinasi AI disimulasikan & dicatat di antrean sistem (${member.name} - ${member.position || member.role}).`,
+  };
+}
+
+/**
+ * Mengirimkan pesan eskalasi pertanyaan sulit / permintaan khusus user langsung ke Telegram Owner.
+ */
+export async function escalateQuestionToOwnerTelegram(
+  userQuestion: string,
+  userIdentifier: string = 'User Aplikasi Froyek',
+  contextNotes?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!canAccessTelegramSensitiveCache()) {
+    clearTelegramLocalCache();
+    return { ok: false, error: 'Telegram bot tidak tersedia untuk akun worker' };
+  }
+  const config = loadTelegramConfig();
+  if (!config.enabled || !config.botToken.trim()) {
+    return { ok: false, error: 'Telegram bot belum diaktifkan di Pengaturan' };
+  }
+  const targetChatId = (config.ownerChatId || config.defaultChannelChatId || '').trim();
+  if (!targetChatId) {
+    return { ok: false, error: 'Chat ID Owner Telegram belum diatur di Pengaturan' };
+  }
+
+  const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const text = `🚨 *[ESKALASI PERTANYAAN USER - FROYEK]*\n\n👤 *Dari:* ${userIdentifier}\n🕒 *Waktu:* ${timeStr} WIB\n\n❓ *Pertanyaan User:*\n"${userQuestion}"\n\n💡 *Catatan AI:* Pertanyaan ini membutuhkan keputusan Owner (misal: negosiasi diskon khusus, kustomisasi fitur, atau persetujuan tender).\n${contextNotes ? `📌 *Detail Tambahan:* ${contextNotes}\n` : ''}\n👉 Mohon berikan arahan atau hubungi user langsung.`;
+
+  return sendTelegramMessage(config.botToken, targetChatId, text);
+}
+
+

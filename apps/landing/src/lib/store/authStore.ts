@@ -1,0 +1,183 @@
+"use client";
+
+import { create } from "zustand";
+import type { Session } from "@supabase/supabase-js";
+import { getStorage, setStorage, removeStorage } from "@/lib/utils/storage";
+import type { AppUser } from "@/lib/accounts";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  signInWithPassword as sbSignIn,
+  signOutGlobal,
+} from "@/lib/services/authService";
+import { loadUserSubscriptionContext } from "@/lib/services/subscriptionService";
+import { resolveAdminAccess } from "@/lib/services/adminAuth";
+
+export type { ProductId, AppUser as User } from "@/lib/accounts";
+
+const AUTH_STORAGE_KEY = "froyek_user_auth";
+const TRIAL_USES_KEY = "froyek_trial_uses";
+
+interface AuthState {
+  user: AppUser | null;
+  isAuthenticated: boolean;
+  hydrated: boolean;
+  orgId: string | null;
+  hydrate: () => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AppUser }>;
+  refreshUser: () => Promise<void>;
+  logout: () => Promise<void>;
+  consumePlannerTrialSlot: () => boolean;
+}
+
+function persistUser(user: AppUser | null) {
+  if (user) setStorage(AUTH_STORAGE_KEY, user);
+  else removeStorage(AUTH_STORAGE_KEY);
+}
+
+function readTrialUsesOverride(userId: string): number | null {
+  const map = getStorage<Record<string, number>>(TRIAL_USES_KEY, {});
+  const n = map[userId];
+  return typeof n === "number" ? n : null;
+}
+
+function writeTrialUsesOverride(userId: string, uses: number) {
+  const map = getStorage<Record<string, number>>(TRIAL_USES_KEY, {});
+  map[userId] = uses;
+  setStorage(TRIAL_USES_KEY, map);
+}
+
+async function buildUserFromSession(session: Session): Promise<AppUser> {
+  const ctx = await loadUserSubscriptionContext(session.user.id);
+  const trialOverride = readTrialUsesOverride(session.user.id);
+  const email = session.user.email || "";
+  const name =
+    (session.user.user_metadata?.name as string | undefined) ||
+    email.split("@")[0] ||
+    "User";
+  const isAdmin = await resolveAdminAccess(session.user.id, email);
+
+  return {
+    id: session.user.id,
+    name,
+    email,
+    orgId: ctx.orgId,
+    subscriptionTier: ctx.subscriptionTier,
+    estimatorVariant: ctx.estimatorVariant,
+    ownedProducts: ctx.ownedProducts,
+    plannerTrialUses: trialOverride ?? ctx.plannerTrialUses,
+    isAdmin,
+  };
+}
+
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null,
+  isAuthenticated: false,
+  hydrated: false,
+  orgId: null,
+
+  hydrate: async () => {
+    if (!isSupabaseConfigured()) {
+      set({ user: null, isAuthenticated: false, orgId: null, hydrated: true });
+      return;
+    }
+
+    // Fast-path untuk pengunjung baru (99% trafik iklan Meta):
+    // Jika tidak ada token sesi Supabase atau cache user di localStorage, tidak perlu inisialisasi Supabase Auth
+    if (typeof window !== "undefined") {
+      try {
+        let hasSessionToken = Boolean(window.localStorage.getItem(AUTH_STORAGE_KEY));
+        if (!hasSessionToken) {
+          for (let i = 0; i < window.localStorage.length; i++) {
+            const k = window.localStorage.key(i);
+            if (k && k.startsWith("sb-") && k.endsWith("-auth-token")) {
+              hasSessionToken = true;
+              break;
+            }
+          }
+        }
+        if (
+          !hasSessionToken &&
+          !window.location.hash.includes("access_token") &&
+          !window.location.search.includes("code=")
+        ) {
+          set({ user: null, isAuthenticated: false, orgId: null, hydrated: true });
+          return;
+        }
+      } catch {
+        // Lanjut normal jika localStorage diblokir
+      }
+    }
+
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      set({ hydrated: true });
+      return;
+    }
+
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      const user = await buildUserFromSession(data.session);
+      persistUser(user);
+      set({ user, isAuthenticated: true, orgId: user.orgId, hydrated: true });
+      return;
+    }
+
+    persistUser(null);
+    set({ user: null, isAuthenticated: false, orgId: null, hydrated: true });
+  },
+
+  login: async (email, password) => {
+    if (!isSupabaseConfigured()) {
+      return {
+        success: false,
+        error: "Supabase belum dikonfigurasi. Hubungi administrator.",
+      };
+    }
+
+    const { data, error } = await sbSignIn(email, password);
+    if (error || !data.session) {
+      return { success: false, error: error?.message ?? "Login gagal." };
+    }
+
+    const user = await buildUserFromSession(data.session);
+    persistUser(user);
+    set({ user, isAuthenticated: true, orgId: user.orgId });
+    return { success: true, user };
+  },
+
+  refreshUser: async () => {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    const user = await buildUserFromSession(data.session);
+    persistUser(user);
+    set({ user, isAuthenticated: true, orgId: user.orgId });
+  },
+
+  logout: async () => {
+    if (isSupabaseConfigured()) {
+      await signOutGlobal();
+    }
+    persistUser(null);
+    set({ user: null, isAuthenticated: false, orgId: null });
+  },
+
+  consumePlannerTrialSlot: () => {
+    const { user } = get();
+    if (!user) return false;
+    if (user.ownedProducts.includes("planner")) return true;
+    if (user.plannerTrialUses <= 0) return false;
+    const nextUses = user.plannerTrialUses - 1;
+    writeTrialUsesOverride(user.id, nextUses);
+    const next: AppUser = { ...user, plannerTrialUses: nextUses };
+    persistUser(next);
+    set({ user: next });
+    return true;
+  },
+}));
+
+export function hasOwnedProduct(user: AppUser | null, product: import("@/lib/accounts").ProductId): boolean {
+  return Boolean(user?.ownedProducts.includes(product));
+}

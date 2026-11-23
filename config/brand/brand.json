@@ -1,0 +1,5 @@
+{"name":"froyek","tagline":"Agent for your project","case":"lowercase",
+ "colors":{"forest":"#0A3A2E","white":"#FFFFFF","fold":"white 30% over forest"},
+ "fonts":{"wordmark":"Montserrat 700","tagline":"Montserrat 500, uppercase, tracking 0.067em"},
+ "logo":{"on_dark":"svg/*-white.svg","on_light":"svg/*-forest.svg","clear_space":"25% of mark width","min_px":{"mark":16,"horizontal":96,"stacked":160}},
+ "favicon":"favicon/","theme_color":"#0A3A2E"}
