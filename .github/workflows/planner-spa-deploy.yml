@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "monefyi_planner/**"
+      - "apps/web/**"
       - ".github/workflows/planner-spa-deploy.yml"
   workflow_dispatch:
 
@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: monefyi_planner
+        working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
 
@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: monefyi_planner/package-lock.json
+          cache-dependency-path: apps/web/package-lock.json
 
       - name: Install
         run: npm ci
