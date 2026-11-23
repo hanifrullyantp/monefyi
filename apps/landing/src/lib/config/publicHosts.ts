@@ -5,7 +5,7 @@ export const ESTIMATOR_HOST = "estimator.froyek.com";
 export const PLANNER_ORIGIN = `https://${PLANNER_HOST}`;
 export const ESTIMATOR_ORIGIN = `https://${ESTIMATOR_HOST}`;
 
-export const LEGACY_PLANNER_HOSTS = ["planner.monefyi.com"] as const;
+export const LEGACY_PLANNER_HOSTS = ["planner.monefyi.com", "monefyi-planner.vercel.app"] as const;
 export const LEGACY_ESTIMATOR_HOSTS = ["estimator.monefyi.com"] as const;
 
 const ESTIMATOR_HOSTS = new Set<string>([ESTIMATOR_HOST, ...LEGACY_ESTIMATOR_HOSTS]);
@@ -31,8 +31,8 @@ export function legacyHostRedirects(): {
   permanent: true;
 }[] {
   const rules = [
-    { host: LEGACY_PLANNER_HOSTS[0], origin: PLANNER_ORIGIN },
-    { host: LEGACY_ESTIMATOR_HOSTS[0], origin: ESTIMATOR_ORIGIN },
+    ...LEGACY_PLANNER_HOSTS.map((host) => ({ host, origin: PLANNER_ORIGIN })),
+    ...LEGACY_ESTIMATOR_HOSTS.map((host) => ({ host, origin: ESTIMATOR_ORIGIN })),
   ];
   return rules.flatMap(({ host, origin }) => [
     { source: "/", host, destination: `${origin}/`, permanent: true as const },

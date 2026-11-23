@@ -85,9 +85,12 @@ export interface AIConfig {
   keyHints?: Partial<Record<AIProviderId, string>>;
 }
 
-const STORAGE_KEY = 'monefyi_planner_ai_config_v1';
-const SESSION_KEYS_STORAGE_KEY = 'monefyi_planner_ai_keys_session_v1';
-const OWNER_STORAGE_KEY = 'monefyi_planner_ai_owner_v1';
+const STORAGE_KEY = 'froyek_ai_config_v1';
+const LEGACY_STORAGE_KEY = 'monefyi_planner_ai_config_v1';
+const SESSION_KEYS_STORAGE_KEY = 'froyek_ai_keys_session_v1';
+const LEGACY_SESSION_KEYS_STORAGE_KEY = 'monefyi_planner_ai_keys_session_v1';
+const OWNER_STORAGE_KEY = 'froyek_ai_owner_v1';
+const LEGACY_OWNER_STORAGE_KEY = 'monefyi_planner_ai_owner_v1';
 
 const VALID_PROVIDER_IDS = new Set<AIProviderId>(AI_PROVIDERS.map(p => p.id));
 
@@ -189,7 +192,11 @@ let memoryFallbackKeys: Partial<Record<AIProviderId, string>> = {};
 function readSessionKeys(): Partial<Record<AIProviderId, string>> {
   try {
     if (typeof sessionStorage !== 'undefined') {
-      const raw = sessionStorage.getItem(SESSION_KEYS_STORAGE_KEY);
+      let raw = sessionStorage.getItem(SESSION_KEYS_STORAGE_KEY);
+      if (!raw) {
+        raw = sessionStorage.getItem(LEGACY_SESSION_KEYS_STORAGE_KEY);
+        if (raw) sessionStorage.setItem(SESSION_KEYS_STORAGE_KEY, raw);
+      }
       if (!raw) {
         memoryFallbackKeys = {};
         return {};
@@ -210,9 +217,12 @@ function writeSessionKeys(keys: Partial<Record<AIProviderId, string>>): void {
   try {
     if (typeof sessionStorage !== 'undefined') {
       if (Object.keys(clean).length > 0) {
-        sessionStorage.setItem(SESSION_KEYS_STORAGE_KEY, JSON.stringify(clean));
+        const val = JSON.stringify(clean);
+        sessionStorage.setItem(SESSION_KEYS_STORAGE_KEY, val);
+        sessionStorage.setItem(LEGACY_SESSION_KEYS_STORAGE_KEY, val);
       } else {
         sessionStorage.removeItem(SESSION_KEYS_STORAGE_KEY);
+        sessionStorage.removeItem(LEGACY_SESSION_KEYS_STORAGE_KEY);
       }
     }
   } catch {
@@ -246,6 +256,7 @@ function writePublicConfigRaw(payload: Omit<AIConfig, 'keys'>): void {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, serialized);
+      localStorage.setItem(LEGACY_STORAGE_KEY, serialized);
     }
   } catch {
     // ignore storage quota errors
@@ -258,7 +269,9 @@ export function clearAIConfigLocal(): void {
   try {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.removeItem(SESSION_KEYS_STORAGE_KEY);
+      sessionStorage.removeItem(LEGACY_SESSION_KEYS_STORAGE_KEY);
       sessionStorage.removeItem(OWNER_STORAGE_KEY);
+      sessionStorage.removeItem(LEGACY_OWNER_STORAGE_KEY);
     }
   } catch {
     // ignore
@@ -266,7 +279,9 @@ export function clearAIConfigLocal(): void {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
       localStorage.removeItem(OWNER_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_OWNER_STORAGE_KEY);
     }
   } catch {
     // ignore
@@ -279,6 +294,10 @@ export function loadAIConfig(): AIConfig {
     let raw: string | null = null;
     if (typeof localStorage !== 'undefined') {
       raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+        if (raw) localStorage.setItem(STORAGE_KEY, raw);
+      }
     } else {
       raw = memoryFallbackRaw;
     }

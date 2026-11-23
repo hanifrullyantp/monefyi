@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createCompatStorage } from "@/lib/store/compatStorage";
 import type { SiteContent } from "@/lib/types/content";
 import { defaultContent } from "@/data/defaultContent";
 import {
@@ -193,7 +194,8 @@ export const useContentStore = create<ContentStore>()(
       },
     }),
     {
-      name: "monefyi_content_lp3",
+      name: "froyek_content_lp3",
+      storage: createCompatStorage(),
       partialize: (state) => ({
         content: state.content,
         isDirty: state.isDirty,

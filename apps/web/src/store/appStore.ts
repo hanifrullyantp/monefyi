@@ -219,7 +219,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   emailVerified: false,
   platformRole: 'user',
   uiViewMode: (typeof sessionStorage !== 'undefined'
-    ? (sessionStorage.getItem('monefyi_ui_view_mode') as 'auto' | 'owner' | 'worker') || 'auto'
+    ? ((sessionStorage.getItem('froyek_ui_view_mode') || sessionStorage.getItem('monefyi_ui_view_mode')) as 'auto' | 'owner' | 'worker') || 'auto'
     : 'auto'),
   entitlementPreviewMode: getStoredEntitlementPreview(),
 
@@ -262,6 +262,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPlatformRole: platformRole => set({ platformRole }),
   setUiViewMode: uiViewMode => {
     if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('froyek_ui_view_mode', uiViewMode);
       sessionStorage.setItem('monefyi_ui_view_mode', uiViewMode);
     }
     set({ uiViewMode });
@@ -270,6 +271,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     persistEntitlementPreview(entitlementPreviewMode);
     set({ entitlementPreviewMode });
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('froyek:entitlement-invalidate'));
       window.dispatchEvent(new Event('monefyi:entitlement-invalidate'));
     }
   },
@@ -410,6 +412,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     }
     try {
+      sessionStorage.removeItem('froyek_ui_view_mode');
       sessionStorage.removeItem('monefyi_ui_view_mode');
     } catch { /* ignore */ }
     set({
@@ -442,6 +445,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       syncStatus: 'synced',
     });
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('froyek:entitlement-invalidate'));
       window.dispatchEvent(new Event('monefyi:entitlement-invalidate'));
     }
   },

@@ -18,6 +18,7 @@ const CACHE_MS = 60_000;
 export function invalidateEntitlementCache(): void {
   cache = null;
   if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('froyek:entitlement-invalidate'));
     window.dispatchEvent(new Event('monefyi:entitlement-invalidate'));
   }
 }
@@ -103,9 +104,11 @@ export function useEntitlement() {
       void refresh();
     };
     window.addEventListener('focus', onRefresh);
+    window.addEventListener('froyek:entitlement-invalidate', onInvalidate);
     window.addEventListener('monefyi:entitlement-invalidate', onInvalidate);
     return () => {
       window.removeEventListener('focus', onRefresh);
+      window.removeEventListener('froyek:entitlement-invalidate', onInvalidate);
       window.removeEventListener('monefyi:entitlement-invalidate', onInvalidate);
     };
   }, [refresh]);

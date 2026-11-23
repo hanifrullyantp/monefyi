@@ -69,12 +69,17 @@ export const DEFAULT_WA_BOT_CONFIG: WABotConfig = {
   },
 };
 
-const WA_CONFIG_STORAGE_KEY = 'monefyi_wa_bot_config_v1';
+const WA_CONFIG_STORAGE_KEY = 'froyek_wa_bot_config_v1';
+const LEGACY_WA_CONFIG_STORAGE_KEY = 'monefyi_wa_bot_config_v1';
 
 export function loadWABotConfig(): WABotConfig {
   if (typeof window === 'undefined') return DEFAULT_WA_BOT_CONFIG;
   try {
-    const raw = localStorage.getItem(WA_CONFIG_STORAGE_KEY);
+    let raw = localStorage.getItem(WA_CONFIG_STORAGE_KEY);
+    if (!raw) {
+      raw = localStorage.getItem(LEGACY_WA_CONFIG_STORAGE_KEY);
+      if (raw) localStorage.setItem(WA_CONFIG_STORAGE_KEY, raw);
+    }
     if (!raw) return DEFAULT_WA_BOT_CONFIG;
     return { ...DEFAULT_WA_BOT_CONFIG, ...JSON.parse(raw) };
   } catch {
@@ -85,7 +90,9 @@ export function loadWABotConfig(): WABotConfig {
 export function saveWABotConfig(config: WABotConfig): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(WA_CONFIG_STORAGE_KEY, JSON.stringify(config));
+    const val = JSON.stringify(config);
+    localStorage.setItem(WA_CONFIG_STORAGE_KEY, val);
+    localStorage.setItem(LEGACY_WA_CONFIG_STORAGE_KEY, val);
   } catch (e) {
     console.error('Gagal menyimpan konfigurasi WhatsApp bot:', e);
   }

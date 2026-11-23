@@ -80,8 +80,12 @@ export default function Layout({ children }: LayoutProps) {
       const detail = (e as CustomEvent).detail;
       if (detail) setMigrationFlags(detail);
     };
+    window.addEventListener('froyek:migration-flags-changed', handler);
     window.addEventListener('monefyi:migration-flags-changed', handler);
-    return () => window.removeEventListener('monefyi:migration-flags-changed', handler);
+    return () => {
+      window.removeEventListener('froyek:migration-flags-changed', handler);
+      window.removeEventListener('monefyi:migration-flags-changed', handler);
+    };
   }, [setMigrationFlags]);
 
   const { style: orgBrandStyle } = useOrgBrand(tenant?.brandColor);
@@ -189,8 +193,12 @@ export default function Layout({ children }: LayoutProps) {
       const detail = (e as CustomEvent<{ trigger?: UpgradeModalTrigger; featureName?: string }>).detail;
       openUpgrade(detail?.trigger ?? 'pro_feature', detail?.featureName);
     };
+    window.addEventListener('froyek:open-upgrade', handler);
     window.addEventListener('monefyi:open-upgrade', handler);
-    return () => window.removeEventListener('monefyi:open-upgrade', handler);
+    return () => {
+      window.removeEventListener('froyek:open-upgrade', handler);
+      window.removeEventListener('monefyi:open-upgrade', handler);
+    };
   }, []);
 
   const isNavLocked = (tabId: string) => {

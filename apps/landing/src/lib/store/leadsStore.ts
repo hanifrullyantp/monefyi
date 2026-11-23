@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createCompatStorage } from "@/lib/store/compatStorage";
 import type { Lead, LeadStatus } from "@/lib/types/leads";
 
 export const generateUniqueId = (): string => {
@@ -163,7 +164,8 @@ export const useLeadsStore = create<LeadsStore>()(
       getLeadsByStatus: (status) => get().leads.filter((lead) => lead.status === status),
     }),
     {
-      name: "monefyi-leads",
+      name: "froyek-leads",
+      storage: createCompatStorage(),
       onRehydrateStorage: () => (state) => {
         if (state && Array.isArray(state.leads)) {
           state.leads = sanitizeAndEnsureUniqueLeads(state.leads);

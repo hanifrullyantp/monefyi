@@ -103,7 +103,10 @@ export default function AgentHomePanel({ orgId }: { orgId: string }) {
         <button
           type="button"
           onClick={() => {
-            try { localStorage.setItem('monefyi_ai_mode', 'manager'); } catch { /* ignore */ }
+            try {
+              localStorage.setItem('froyek_ai_mode', 'manager');
+              localStorage.setItem('monefyi_ai_mode', 'manager');
+            } catch { /* ignore */ }
             setCommandModalOpen(true);
           }}
           className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors"

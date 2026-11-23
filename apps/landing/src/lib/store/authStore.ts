@@ -15,8 +15,8 @@ import { resolveAdminAccess } from "@/lib/services/adminAuth";
 
 export type { ProductId, AppUser as User } from "@/lib/accounts";
 
-const AUTH_STORAGE_KEY = "monefyi_user_auth";
-const TRIAL_USES_KEY = "monefyi_planner_trial_uses";
+const AUTH_STORAGE_KEY = "froyek_user_auth";
+const TRIAL_USES_KEY = "froyek_trial_uses";
 
 interface AuthState {
   user: AppUser | null;

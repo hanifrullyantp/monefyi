@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createCompatStorage } from "@/lib/store/compatStorage";
 
 export interface MediaFile {
   id: string;
@@ -27,6 +28,9 @@ export const useMediaStore = create<MediaStore>()(
       addFile: (file) => set((state) => ({ files: [file, ...state.files] })),
       removeFile: (id) => set((state) => ({ files: state.files.filter((f) => f.id !== id) })),
     }),
-    { name: "monefyi-media" }
+    {
+      name: "froyek-media",
+      storage: createCompatStorage(),
+    }
   )
 );

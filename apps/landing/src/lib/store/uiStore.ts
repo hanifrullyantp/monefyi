@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createCompatStorage } from "@/lib/store/compatStorage";
 import type { LynkProduct } from "@/lib/checkout/products";
 
 interface UIStore {
@@ -52,7 +53,8 @@ export const useUIStore = create<UIStore>()(
       setSaveNotice: (saveNotice) => set({ saveNotice }),
     }),
     {
-      name: "monefyi-ui-prefs",
+      name: "froyek-ui-prefs",
+      storage: createCompatStorage(),
       partialize: (state) => ({
         isAdminSidebarOpen: state.isAdminSidebarOpen,
         adminTheme: state.adminTheme,

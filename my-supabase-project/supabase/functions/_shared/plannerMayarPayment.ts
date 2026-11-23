@@ -16,16 +16,24 @@ function pickEnv(name: string, fallback = "") {
 }
 
 const MONEFYI_DESC_PREFIX = "monefyi:";
+const FROYEK_DESC_PREFIX = "froyek:";
 
 export function buildMonefyiCheckoutDescription(meta: Record<string, string>): string {
-  return `${MONEFYI_DESC_PREFIX}${JSON.stringify(meta)}`;
+  return `${FROYEK_DESC_PREFIX}${JSON.stringify(meta)}`;
 }
+
+export const buildFroyekCheckoutDescription = buildMonefyiCheckoutDescription;
 
 export function parseMonefyiCheckoutDescription(raw: unknown): Record<string, string> {
   const text = String(raw ?? "");
-  const idx = text.indexOf(MONEFYI_DESC_PREFIX);
+  let idx = text.indexOf(FROYEK_DESC_PREFIX);
+  let prefixLen = FROYEK_DESC_PREFIX.length;
+  if (idx < 0) {
+    idx = text.indexOf(MONEFYI_DESC_PREFIX);
+    prefixLen = MONEFYI_DESC_PREFIX.length;
+  }
   if (idx < 0) return {};
-  const jsonPart = text.slice(idx + MONEFYI_DESC_PREFIX.length).trim();
+  const jsonPart = text.slice(idx + prefixLen).trim();
   try {
     const parsed = JSON.parse(jsonPart) as Record<string, unknown>;
     const out: Record<string, string> = {};
@@ -37,6 +45,8 @@ export function parseMonefyiCheckoutDescription(raw: unknown): Record<string, st
     return {};
   }
 }
+
+export const parseFroyekCheckoutDescription = parseMonefyiCheckoutDescription;
 
 function appendPaymentReturnUrl(returnUrl: string, status: "success" | "failed" | "cancelled"): string {
   const url = new URL(returnUrl);

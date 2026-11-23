@@ -59,6 +59,7 @@ export default function MigrationDeveloperPanel({ userId }: Props) {
       setFlags(next);
       setMigrationFlagsStore(next);
       showToast(`${FLAG_LABELS[key].title} ${next[key] ? 'aktif' : 'nonaktif'}`, 'success');
+      window.dispatchEvent(new CustomEvent('froyek:migration-flags-changed', { detail: next }));
       window.dispatchEvent(new CustomEvent('monefyi:migration-flags-changed', { detail: next }));
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal menyimpan', 'error');

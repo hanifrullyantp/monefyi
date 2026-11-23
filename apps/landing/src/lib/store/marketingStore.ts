@@ -2,6 +2,7 @@ import { authedFetch } from "@/lib/auth/authedFetch";
 import type { CampaignWindowAuditEntry } from "@/lib/engine/winningEngine";
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { createCompatStorage } from "@/lib/store/compatStorage";
 import {
   MetaCampaign,
   MetaAdSet,
@@ -1156,7 +1157,8 @@ export const useMarketingStore = create<MarketingStore>()(
         })),
     }),
     {
-      name: 'monefyi_marketing_store',
+      name: 'froyek_marketing_store',
+      storage: createCompatStorage<any>(),
       partialize: (state: any) =>
       ({
         rules: state.rules,

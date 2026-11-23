@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createCompatStorage } from "@/lib/store/compatStorage";
 import { SiteSettings, defaultSettings } from "@/lib/types/settings";
 
 interface SettingsStore {
@@ -18,7 +19,8 @@ export const useSettingsStore = create<SettingsStore>()(
         })),
     }),
     {
-      name: "monefyi-settings",
+      name: "froyek-settings",
+      storage: createCompatStorage(),
       merge: (persisted, current) => ({
         ...current,
         settings: {

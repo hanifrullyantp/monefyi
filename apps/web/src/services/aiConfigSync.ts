@@ -14,7 +14,8 @@ import {
 } from './aiProviderService';
 
 const SETTINGS_KEY = 'planner_ai_config';
-const OWNER_STORAGE_KEY = 'monefyi_planner_ai_owner_v1';
+const OWNER_STORAGE_KEY = 'froyek_ai_owner_v1';
+const LEGACY_OWNER_STORAGE_KEY = 'monefyi_planner_ai_owner_v1';
 const PROVIDERS: AIProviderId[] = ['openrouter', 'gemini', 'groq', 'anthropic', 'openai'];
 
 let lastHydratedUserId: string | null = null;
@@ -22,13 +23,13 @@ let lastHydratedUserId: string | null = null;
 function getLocalOwnerUserId(): string | null {
   try {
     if (typeof sessionStorage !== 'undefined') {
-      const fromSession = sessionStorage.getItem(OWNER_STORAGE_KEY);
+      const fromSession = sessionStorage.getItem(OWNER_STORAGE_KEY) || sessionStorage.getItem(LEGACY_OWNER_STORAGE_KEY);
       if (fromSession) return fromSession;
     }
   } catch { /* ignore */ }
   try {
     if (typeof localStorage !== 'undefined') {
-      const fromLocal = localStorage.getItem(OWNER_STORAGE_KEY);
+      const fromLocal = localStorage.getItem(OWNER_STORAGE_KEY) || localStorage.getItem(LEGACY_OWNER_STORAGE_KEY);
       if (fromLocal) return fromLocal;
     }
   } catch { /* ignore */ }
@@ -39,11 +40,13 @@ function setLocalOwnerUserId(userId: string): void {
   try {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem(OWNER_STORAGE_KEY, userId);
+      sessionStorage.setItem(LEGACY_OWNER_STORAGE_KEY, userId);
     }
   } catch { /* ignore */ }
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(OWNER_STORAGE_KEY, userId);
+      localStorage.setItem(LEGACY_OWNER_STORAGE_KEY, userId);
     }
   } catch { /* ignore */ }
 }

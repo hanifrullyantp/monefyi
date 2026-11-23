@@ -45,9 +45,12 @@ export interface ProactiveTriggerRecord {
   error?: string;
 }
 
-const STORAGE_TELEGRAM_CFG = 'monefyi_telegram_config_v1';
-const STORAGE_FIELD_CONTACTS = 'monefyi_field_member_contacts_v1';
-const STORAGE_PROACTIVE_LOGS = 'monefyi_proactive_triggers_v1';
+const STORAGE_TELEGRAM_CFG = 'froyek_telegram_config_v1';
+const LEGACY_STORAGE_TELEGRAM_CFG = 'monefyi_telegram_config_v1';
+const STORAGE_FIELD_CONTACTS = 'froyek_field_member_contacts_v1';
+const LEGACY_STORAGE_FIELD_CONTACTS = 'monefyi_field_member_contacts_v1';
+const STORAGE_PROACTIVE_LOGS = 'froyek_proactive_triggers_v1';
+const LEGACY_STORAGE_PROACTIVE_LOGS = 'monefyi_proactive_triggers_v1';
 
 const DEFAULT_TELEGRAM_CONFIG: TelegramConfig = {
   botToken: '',
@@ -67,13 +70,13 @@ function removeLocalStorageKey(key: string): void {
   }
 }
 
-/**
- * Menghapus seluruh cache Telegram & kontak lapangan dari localStorage (logout / downgrade role).
- */
 export function clearTelegramLocalCache(): void {
   removeLocalStorageKey(STORAGE_TELEGRAM_CFG);
+  removeLocalStorageKey(LEGACY_STORAGE_TELEGRAM_CFG);
   removeLocalStorageKey(STORAGE_FIELD_CONTACTS);
+  removeLocalStorageKey(LEGACY_STORAGE_FIELD_CONTACTS);
   removeLocalStorageKey(STORAGE_PROACTIVE_LOGS);
+  removeLocalStorageKey(LEGACY_STORAGE_PROACTIVE_LOGS);
 }
 
 /**
@@ -105,7 +108,11 @@ export function loadTelegramConfig(): TelegramConfig {
     return { ...DEFAULT_TELEGRAM_CONFIG };
   }
   try {
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_TELEGRAM_CFG) : null;
+    let raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_TELEGRAM_CFG) : null;
+    if (!raw && typeof localStorage !== 'undefined') {
+      raw = localStorage.getItem(LEGACY_STORAGE_TELEGRAM_CFG);
+      if (raw) localStorage.setItem(STORAGE_TELEGRAM_CFG, raw);
+    }
     if (raw) return JSON.parse(raw);
   } catch {
     /* fallback */
@@ -120,7 +127,9 @@ export async function saveTelegramConfig(config: TelegramConfig, orgId?: string)
   }
   try {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STORAGE_TELEGRAM_CFG, JSON.stringify(config));
+      const val = JSON.stringify(config);
+      localStorage.setItem(STORAGE_TELEGRAM_CFG, val);
+      localStorage.setItem(LEGACY_STORAGE_TELEGRAM_CFG, val);
     }
   } catch {
     /* ignore */

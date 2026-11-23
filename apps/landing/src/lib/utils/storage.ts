@@ -1,9 +1,24 @@
-// Local storage utilities dengan error handling
+// Local storage utilities dengan error handling dan migrasi fallback froyek <-> monefyi
+
+function getLegacyKey(key: string): string | null {
+  if (key.startsWith("froyek_")) return key.replace(/^froyek_/, "monefyi_");
+  if (key.startsWith("froyek-")) return key.replace(/^froyek-/, "monefyi-");
+  return null;
+}
 
 export function getStorage<T>(key: string, defaultValue: T): T {
   if (typeof window === "undefined") return defaultValue;
   try {
-    const item = localStorage.getItem(key);
+    let item = localStorage.getItem(key);
+    if (!item) {
+      const legacy = getLegacyKey(key);
+      if (legacy) {
+        item = localStorage.getItem(legacy);
+        if (item) {
+          try { localStorage.setItem(key, item); } catch {}
+        }
+      }
+    }
     if (!item) return defaultValue;
     return JSON.parse(item) as T;
   } catch {
@@ -14,7 +29,12 @@ export function getStorage<T>(key: string, defaultValue: T): T {
 export function setStorage<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    const serialized = JSON.stringify(value);
+    localStorage.setItem(key, serialized);
+    const legacy = getLegacyKey(key);
+    if (legacy) {
+      try { localStorage.setItem(legacy, serialized); } catch {}
+    }
   } catch (e) {
     console.error("Failed to save to localStorage:", e);
   }
@@ -24,6 +44,10 @@ export function removeStorage(key: string): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(key);
+    const legacy = getLegacyKey(key);
+    if (legacy) {
+      try { localStorage.removeItem(legacy); } catch {}
+    }
   } catch (e) {
     console.error("Failed to remove from localStorage:", e);
   }

@@ -26,18 +26,21 @@ export function isExemptFromSingleDeviceSession(
   return false;
 }
 
-const SESSION_TOKEN_KEY = 'monefyi_active_device_session_v1';
-const KICKOUT_REASON_KEY = 'monefyi_logout_reason';
+const SESSION_TOKEN_KEY = 'froyek_active_device_session_v1';
+const LEGACY_SESSION_TOKEN_KEY = 'monefyi_active_device_session_v1';
+const KICKOUT_REASON_KEY = 'froyek_logout_reason';
+const LEGACY_KICKOUT_REASON_KEY = 'monefyi_logout_reason';
 
 /**
  * Mendapatkan atau membuat token sesi unik untuk perangkat saat ini di browser ini.
  */
 export function getLocalDeviceSessionToken(): string {
-  let token = localStorage.getItem(SESSION_TOKEN_KEY);
+  let token = localStorage.getItem(SESSION_TOKEN_KEY) || localStorage.getItem(LEGACY_SESSION_TOKEN_KEY);
   if (!token) {
     token = 'dev_' + Math.random().toString(36).substring(2, 12) + '_' + Date.now();
-    localStorage.setItem(SESSION_TOKEN_KEY, token);
   }
+  localStorage.setItem(SESSION_TOKEN_KEY, token);
+  localStorage.setItem(LEGACY_SESSION_TOKEN_KEY, token);
   return token;
 }
 
@@ -119,6 +122,7 @@ export function startSingleDeviceWatcher(
     // Simpan tanda bahwa logout terjadi karena perangkat lain login
     try {
       sessionStorage.setItem(KICKOUT_REASON_KEY, 'single_device_conflict');
+      sessionStorage.setItem(LEGACY_KICKOUT_REASON_KEY, 'single_device_conflict');
     } catch {
       // Ignore storage error
     }
@@ -184,9 +188,10 @@ export function startSingleDeviceWatcher(
  */
 export function checkAndClearDeviceKickoutReason(): boolean {
   if (typeof window === 'undefined') return false;
-  const reason = sessionStorage.getItem(KICKOUT_REASON_KEY);
+  const reason = sessionStorage.getItem(KICKOUT_REASON_KEY) || sessionStorage.getItem(LEGACY_KICKOUT_REASON_KEY);
   if (reason === 'single_device_conflict') {
     sessionStorage.removeItem(KICKOUT_REASON_KEY);
+    sessionStorage.removeItem(LEGACY_KICKOUT_REASON_KEY);
     return true;
   }
   return false;

@@ -8,5 +8,6 @@ export type UpgradePromptDetail = {
 /** Buka modal upgrade dari luar Layout (mis. route guard). */
 export function promptPlannerUpgrade(detail: UpgradePromptDetail = {}): void {
   if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('froyek:open-upgrade', { detail }));
   window.dispatchEvent(new CustomEvent('monefyi:open-upgrade', { detail }));
 }

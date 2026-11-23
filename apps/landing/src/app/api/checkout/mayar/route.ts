@@ -253,7 +253,7 @@ export async function POST(req: NextRequest) {
         email: email.trim().toLowerCase(),
         mobile: formattedMobile || "081234567890",
         amount: Math.round(amount),
-        description: `monefyi:${JSON.stringify(descriptionMeta)}`,
+        description: `froyek:${JSON.stringify(descriptionMeta)}`,
         redirectUrl: returnUrl,
         expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         ...(chosenMethod ? { paymentMethod: chosenMethod } : {}),

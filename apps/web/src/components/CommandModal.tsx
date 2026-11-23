@@ -195,7 +195,8 @@ export default function CommandModal() {
   const [managerMode, setManagerMode] = useState<boolean>(() => {
     if (isWorker) return false;
     try {
-      return localStorage.getItem('monefyi_ai_mode') !== 'quick';
+      const mode = localStorage.getItem('froyek_ai_mode') ?? localStorage.getItem('monefyi_ai_mode');
+      return mode !== 'quick';
     } catch {
       return true;
     }
@@ -830,7 +831,10 @@ export default function CommandModal() {
           <ManagerWorkspaceModal
             onClose={() => setCommandModalOpen(false)}
             onSwitchToQuick={() => {
-              try { localStorage.setItem('monefyi_ai_mode', 'quick'); } catch { /* ignore */ }
+              try {
+                localStorage.setItem('froyek_ai_mode', 'quick');
+                localStorage.setItem('monefyi_ai_mode', 'quick');
+              } catch { /* ignore */ }
               setManagerMode(false);
             }}
           />
@@ -871,7 +875,10 @@ export default function CommandModal() {
               <button
                 type="button"
                 onClick={() => {
-                  try { localStorage.setItem('monefyi_ai_mode', 'manager'); } catch { /* ignore */ }
+                  try {
+                    localStorage.setItem('froyek_ai_mode', 'manager');
+                    localStorage.setItem('monefyi_ai_mode', 'manager');
+                  } catch { /* ignore */ }
                   setManagerMode(true);
                 }}
                 className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-colors"

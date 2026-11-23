@@ -34,10 +34,13 @@ test("legacy hosts redirect to froyek and skip /api", () => {
   const rules = legacyHostRedirects();
   const planner = rules.filter((rule) => rule.host === "planner.monefyi.com");
   const estimator = rules.filter((rule) => rule.host === "estimator.monefyi.com");
+  const vercelPlanner = rules.filter((rule) => rule.host === "monefyi-planner.vercel.app");
   assert.equal(planner.length, 2);
   assert.equal(estimator.length, 2);
+  assert.equal(vercelPlanner.length, 2);
   assert.ok(planner.every((rule) => rule.destination.startsWith("https://froyek.com")));
   assert.ok(estimator.every((rule) => rule.destination.startsWith("https://estimator.froyek.com")));
+  assert.ok(vercelPlanner.every((rule) => rule.destination.startsWith("https://froyek.com")));
   assert.ok(rules.every((rule) => rule.permanent));
   assert.ok(rules.some((rule) => rule.source.includes("(?!api/)")));
   assert.ok(rules.every((rule) => !rule.source.startsWith("/api")));
