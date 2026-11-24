@@ -51,6 +51,30 @@ export async function loadJournalLines(journalId: string): Promise<JournalLine[]
   return (data || []).map(mapLine);
 }
 
+export async function assertPeriodNotLocked(
+  orgId: string,
+  entryDate: string,
+  referenceType?: CreateJournalInput['referenceType'],
+): Promise<void> {
+  if (referenceType === 'period_close') return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) return;
+  const periodMonth = `${entryDate.slice(0, 7)}-01`;
+  const { data, error } = await supabase
+    .from('planner_finance_period_snapshots')
+    .select('id, period_month')
+    .eq('org_id', orgId)
+    .eq('period_month', periodMonth)
+    .maybeSingle();
+  if (error) {
+    // Jika tabel belum ada di mock/skema lama tertentu, jangan telan error tak terduga selain missing relation.
+    if (/does not exist|PGRST/i.test(error.message)) return;
+    throw new Error(error.message);
+  }
+  if (data?.id) {
+    throw new Error(`periode_terkunci: Periode ${entryDate.slice(0, 7)} sudah ditutup dan dikunci.`);
+  }
+}
+
 /**
  * Creates a balanced journal entry and updates account balances.
  * Rolls back inserted rows on failure.
@@ -64,9 +88,12 @@ export async function createJournalEntry(input: CreateJournalInput): Promise<Jou
   const check = validateBalancedEntry(lines);
   if (!check.ok) throw new Error(check.message);
 
+  const effectiveDate = input.entryDate || orgToday();
+  await assertPeriodNotLocked(input.orgId, effectiveDate, input.referenceType);
+
   const { data: journalId, error } = await supabase.rpc('planner_post_journal', {
     p_org_id: input.orgId,
-    p_entry_date: input.entryDate || orgToday(),
+    p_entry_date: effectiveDate,
     p_description: input.description?.trim() || null,
     p_reference_type: input.referenceType || 'manual',
     p_reference_id: input.referenceId || null,

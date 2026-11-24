@@ -55,16 +55,43 @@ export async function transferKas(input: {
   });
 }
 
+export type OwnerWriteOffApproval = {
+  approvedByOwner: boolean;
+  actorRole?: string;
+  reason: string;
+};
+
 export async function closeProjectFinance(input: {
   orgId: string;
   projectId: string;
   createdBy?: string;
   force?: boolean;
+  ownerWriteOff?: OwnerWriteOffApproval;
 }) {
   const preview = await buildProjectClosePreview(input.orgId, input.projectId);
   if (!preview.canClose) throw new Error('Keuangan proyek sudah ditutup.');
-  if (!input.force && preview.interProjectDebt > 0) {
-    throw new Error('Selesaikan hutang antar-proyek sebelum menutup keuangan.');
+
+  const hasOpenItems =
+    preview.interProjectDebt > 0
+    || preview.openReceivables > 0
+    || preview.openPayables > 0
+    || preview.openRetention > 0;
+
+  if (hasOpenItems) {
+    const validOwnerWriteOff =
+      input.ownerWriteOff?.approvedByOwner === true
+      && (!input.ownerWriteOff.actorRole || input.ownerWriteOff.actorRole === 'owner')
+      && Boolean(input.ownerWriteOff.reason?.trim());
+    if (!validOwnerWriteOff) {
+      const reasons: string[] = [];
+      if (preview.openReceivables > 0) reasons.push(`piutang terbuka Rp ${preview.openReceivables.toLocaleString('id-ID')}`);
+      if (preview.openRetention > 0) reasons.push(`retensi belum cair Rp ${preview.openRetention.toLocaleString('id-ID')}`);
+      if (preview.openPayables > 0) reasons.push(`hutang proyek terbuka Rp ${preview.openPayables.toLocaleString('id-ID')}`);
+      if (preview.interProjectDebt > 0) reasons.push(`hutang antar-proyek Rp ${preview.interProjectDebt.toLocaleString('id-ID')}`);
+      throw new Error(
+        `Tidak bisa menutup proyek karena masih ada ${reasons.join(', ')}. Selesaikan terlebih dahulu atau sertakan write-off eksplisit bertanda pemilik.`,
+      );
+    }
   }
 
   await ensureChartOfAccounts(input.orgId);

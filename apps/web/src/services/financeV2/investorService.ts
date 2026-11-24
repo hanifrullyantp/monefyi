@@ -1,6 +1,8 @@
 import { supabase } from '../../lib/supabase';
 import { calcDividend } from '../../lib/financeV2AdvancedCalc';
-import { findSystemAccount } from './accountService';
+import { toRupiah } from '../../../../../packages/domain/src/journal';
+import { orgToday } from '../../../../../packages/domain/src/dates';
+import { ensureChartOfAccounts, findSystemAccount } from './accountService';
 import { createJournalEntry } from './journalService';
 import type { InvestmentType, Investor, InvestorTransaction, InvestorTransactionType } from '../../types/financeV2';
 
@@ -100,6 +102,16 @@ export async function loadInvestorTransactions(investorId: string): Promise<Inve
   return (data || []).map(mapTransaction);
 }
 
+export async function computeInvestorTotalFromTransactions(investorId: string): Promise<number> {
+  const txs = await loadInvestorTransactions(investorId);
+  const net = txs.reduce((sum, tx) => {
+    if (tx.type === 'invest') return sum + toRupiah(tx.amount);
+    if (tx.type === 'withdraw') return sum - toRupiah(tx.amount);
+    return sum;
+  }, 0);
+  return Math.max(0, net);
+}
+
 export async function recordInvestorTransaction(input: {
   orgId: string;
   investorId: string;
@@ -111,15 +123,53 @@ export async function recordInvestorTransaction(input: {
   createdBy?: string;
   withJournal?: boolean;
 }): Promise<InvestorTransaction> {
-  if (input.amount <= 0) throw new Error('Nominal harus lebih dari 0.');
+  const amount = toRupiah(input.amount);
+  if (amount <= 0) throw new Error('Nominal harus lebih dari 0.');
 
+  const { data: investorRow } = await supabase
+    .from('planner_investors')
+    .select('id, name')
+    .eq('id', input.investorId)
+    .single();
+
+  let kasAccountId: string | null = null;
+  let modalAccountId: string | null = null;
+  let labaDitahanAccountId: string | null = null;
+
+  if (input.withJournal !== false || input.type === 'dividend') {
+    await ensureChartOfAccounts(input.orgId);
+    const kas = await findSystemAccount(input.orgId, 'kas', 'bisnis');
+    const modal = await findSystemAccount(input.orgId, 'modal_disetor');
+    const labaDitahan = await findSystemAccount(input.orgId, 'laba_ditahan');
+
+    if (input.type === 'dividend') {
+      if (!kas) throw new Error('Akun Kas Bisnis tidak ditemukan.');
+      if (!labaDitahan) throw new Error('Akun Laba Ditahan tidak ditemukan.');
+      if (amount > Math.round(kas.current_balance)) {
+        throw new Error(
+          `Kas tersedia tidak mencukupi untuk dividen (tersedia Rp ${Math.round(kas.current_balance).toLocaleString('id-ID')}).`,
+        );
+      }
+      if (amount > Math.round(labaDitahan.current_balance)) {
+        throw new Error(
+          `Saldo Laba Ditahan tidak mencukupi untuk dividen (tersedia Rp ${Math.round(labaDitahan.current_balance).toLocaleString('id-ID')}).`,
+        );
+      }
+    }
+
+    kasAccountId = kas?.id ?? null;
+    modalAccountId = modal?.id ?? null;
+    labaDitahanAccountId = labaDitahan?.id ?? null;
+  }
+
+  const effectiveDate = input.transDate || orgToday();
   const { data, error } = await supabase
     .from('planner_investor_transactions')
     .insert({
       investor_id: input.investorId,
       type: input.type,
-      amount: input.amount,
-      trans_date: input.transDate || new Date().toISOString().slice(0, 10),
+      amount,
+      trans_date: effectiveDate,
       project_id: input.projectId || null,
       notes: input.notes?.trim() || null,
     })
@@ -129,59 +179,65 @@ export async function recordInvestorTransaction(input: {
   if (error) throw new Error(error.message);
   const tx = mapTransaction(data);
 
-  const investor = await supabase.from('planner_investors').select('total_invested, name').eq('id', input.investorId).single();
-  if (investor.data) {
-    let newTotal = Number(investor.data.total_invested) || 0;
-    if (input.type === 'invest') newTotal += input.amount;
-    else if (input.type === 'withdraw') newTotal = Math.max(0, newTotal - input.amount);
-    await supabase.from('planner_investors').update({ total_invested: newTotal }).eq('id', input.investorId);
-  }
+  try {
+    // Turunkan total_invested langsung dari agregasi transaksi untuk menghindari race condition baca-ubah-tulis.
+    const derivedTotal = await computeInvestorTotalFromTransactions(input.investorId);
+    const { error: updErr } = await supabase
+      .from('planner_investors')
+      .update({ total_invested: derivedTotal })
+      .eq('id', input.investorId);
+    if (updErr) throw new Error(updErr.message);
 
-  if (input.withJournal !== false) {
-    const kas = await findSystemAccount(input.orgId, 'kas', 'bisnis');
-    const modal = await findSystemAccount(input.orgId, 'modal_disetor');
-    const laba = await findSystemAccount(input.orgId, 'laba_ditahan')
-      || await findSystemAccount(input.orgId, 'laba', 'periode');
-
-    if (kas && modal && laba) {
-      if (input.type === 'invest') {
+    if (input.withJournal !== false) {
+      if (input.type === 'invest' && kasAccountId && modalAccountId) {
         await createJournalEntry({
           orgId: input.orgId,
-          description: `Investasi: ${investor.data?.name}`,
+          entryDate: effectiveDate,
+          description: `Investasi: ${investorRow?.name || input.investorId}`,
           referenceType: 'manual',
           referenceId: tx.id,
           createdBy: input.createdBy,
           lines: [
-            { accountId: kas.id, debit: input.amount, credit: 0 },
-            { accountId: modal.id, debit: 0, credit: input.amount },
+            { accountId: kasAccountId, debit: amount, credit: 0 },
+            { accountId: modalAccountId, debit: 0, credit: amount },
           ],
         });
-      } else if (input.type === 'withdraw') {
+      } else if (input.type === 'withdraw' && kasAccountId && modalAccountId) {
         await createJournalEntry({
           orgId: input.orgId,
-          description: `Penarikan modal: ${investor.data?.name}`,
+          entryDate: effectiveDate,
+          description: `Penarikan modal: ${investorRow?.name || input.investorId}`,
           referenceType: 'manual',
           referenceId: tx.id,
           createdBy: input.createdBy,
           lines: [
-            { accountId: modal.id, debit: input.amount, credit: 0 },
-            { accountId: kas.id, debit: 0, credit: input.amount },
+            { accountId: modalAccountId, debit: amount, credit: 0 },
+            { accountId: kasAccountId, debit: 0, credit: amount },
           ],
         });
-      } else if (input.type === 'dividend') {
+      } else if (input.type === 'dividend' && kasAccountId && labaDitahanAccountId) {
         await createJournalEntry({
           orgId: input.orgId,
-          description: `Dividen: ${investor.data?.name}`,
-          referenceType: 'manual',
+          entryDate: effectiveDate,
+          description: `Dividen: ${investorRow?.name || input.investorId}`,
+          referenceType: 'dividend',
           referenceId: tx.id,
           createdBy: input.createdBy,
           lines: [
-            { accountId: laba.id, debit: input.amount, credit: 0 },
-            { accountId: kas.id, debit: 0, credit: input.amount },
+            { accountId: labaDitahanAccountId, debit: amount, credit: 0 },
+            { accountId: kasAccountId, debit: 0, credit: amount },
           ],
         });
       }
     }
+  } catch (err) {
+    // Kompensasi rollback transaksi bila posting jurnal gagal
+    await supabase.from('planner_investor_transactions').delete().eq('id', tx.id);
+    const restoredTotal = await computeInvestorTotalFromTransactions(input.investorId).catch(() => null);
+    if (restoredTotal !== null) {
+      await supabase.from('planner_investors').update({ total_invested: restoredTotal }).eq('id', input.investorId);
+    }
+    throw err instanceof Error ? err : new Error(String(err));
   }
 
   return tx;

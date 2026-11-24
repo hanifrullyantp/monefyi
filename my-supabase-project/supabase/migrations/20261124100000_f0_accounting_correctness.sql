@@ -190,6 +190,16 @@ BEGIN
     RAISE EXCEPTION 'jurnal_kosong';
   END IF;
 
+  -- T6: Tolak jurnal pada periode yang sudah ditutup di planner_finance_period_snapshots
+  IF p_reference_type IS DISTINCT FROM 'period_close' AND EXISTS (
+    SELECT 1
+    FROM planner_finance_period_snapshots s
+    WHERE s.org_id = p_org_id
+      AND s.period_month = date_trunc('month', COALESCE(p_entry_date, CURRENT_DATE))::date
+  ) THEN
+    RAISE EXCEPTION 'periode_terkunci';
+  END IF;
+
   IF p_reference_id IS NOT NULL THEN
     SELECT e.id INTO v_existing
     FROM planner_journal_entries e
@@ -437,4 +447,46 @@ REVOKE ALL ON FUNCTION public.planner_create_project_income_atomic(uuid, date, b
 GRANT EXECUTE ON FUNCTION public.planner_create_project_income_atomic(uuid, date, bigint, text, text, text, text, text, text, uuid) TO authenticated;
 REVOKE ALL ON FUNCTION public.planner_create_cost_realization_atomic(uuid, uuid, date, text, numeric, numeric, bigint, text, text, text, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.planner_create_cost_realization_atomic(uuid, uuid, date, text, numeric, numeric, bigint, text, text, text, uuid) TO authenticated;
+
+-- 8. Trigger atomik untuk total_invested pada planner_investors diturunkan dari transaksi
+CREATE OR REPLACE FUNCTION public.planner_sync_investor_total_invested()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_investor_id uuid;
+  v_total numeric(15,2);
+BEGIN
+  v_investor_id := COALESCE(NEW.investor_id, OLD.investor_id);
+  IF v_investor_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT GREATEST(
+    0,
+    COALESCE(SUM(
+      CASE
+        WHEN t.type = 'invest' THEN t.amount
+        WHEN t.type = 'withdraw' THEN -t.amount
+        ELSE 0
+      END
+    ), 0)
+  ) INTO v_total
+  FROM planner_investor_transactions t
+  WHERE t.investor_id = v_investor_id;
+
+  UPDATE planner_investors
+  SET total_invested = v_total
+  WHERE id = v_investor_id;
+
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS planner_investor_tx_sync_total ON planner_investor_transactions;
+CREATE TRIGGER planner_investor_tx_sync_total
+  AFTER INSERT OR UPDATE OR DELETE ON planner_investor_transactions
+  FOR EACH ROW EXECUTE FUNCTION public.planner_sync_investor_total_invested();
 
