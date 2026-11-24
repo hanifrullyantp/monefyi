@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G0-1] 2026-11-24 — Perbaikan Rekonsiliasi Migrasi F1 Nyata (Append-Only & Dry-Run Rollback)
+- **Branch / PR:** `feat/g0-1-real-migration-reconciliation`
+- **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-1)
+- **Perubahan & Alasan:**
+  - Memperbaiki `apps/web/src/lib/financeV2/reconciliation.ts` yang sebelumnya menyalin `after = { ...before }` secara hardcode: kini membentuk jurnal reklasifikasi append-only yang seimbang (`Dr hpp_<rapType> / Cr laba` untuk biaya lama, `Dr laba / Cr pendapatan_proyek` untuk pemasukan non-DP, dan `Dr laba / Cr uang_muka_klien` untuk DP dengan pelacakan `dpReclassified` eksplisit), menerapkannya pada salinan saldo akun (`applyReclassificationJournalsToAccounts`), menghitung `after` secara independen dari buku besar pasca-posting (`summarizeAccounts`), dan membandingkan `before` vs `after` secara nyata (`compareF1Reconciliation`) sehingga ketidaksesuaian menghasilkan `matched = false` dan `mismatches` terisi. Menambahkan dukungan idempotensi via `alreadyMigratedReferenceIds`.
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124140000_g0_1_real_f1_migration.sql` (status `BLOCKED remote`): menambah `'f1_migration'` pada `planner_journal_entries_reference_type_check` dan mengganti `planner_migrate_f1_ledger(p_org_id, p_dry_run)` agar tidak lagi melakukan mutasi pada `planner_journal_lines`, menyisipkan jurnal reklasifikasi append-only secara idempoten, menghitung ulang `v_kas_after`/`v_piutang_after`/`v_hutang_after`/`v_uang_muka_after`/`v_laba_after` secara nyata, melakukan rollback subtransaksi (`SQLSTATE 'P0001'`) pada mode dry-run, dan melempar `migrasi_f1_tidak_cocok` apabila mode non-dry-run tidak cocok.
+  - Memperluas `apps/web/src/lib/financeV2/__tests__/reconciliation.test.ts` dengan tes jurnal reklasifikasi seimbang, perhitungan `after` independen, injeksi ketidaksesuaian (`matched=false`), non-mutasi dry-run, idempotensi, serta verifikasi struktural file SQL `20261124140000_g0_1_real_f1_migration.sql`.
+  - Memperbarui `docs/finance/PROGRESS.md` dengan papan kerja Program G0–G6 (`G0-1` selesai).
+- **Akun / Template Jurnal Tersentuh:** `laba`, `hpp_material`, `hpp_labor`, `hpp_equipment`, `hpp_overhead`, `hpp_other`, `hpp_uncategorized`, `pendapatan_proyek`, `uang_muka_klien` (`reference_type = 'f1_migration'`).
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124140000_g0_1_real_f1_migration.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** 4 kasus uji baru di `apps/web/src/lib/financeV2/__tests__/reconciliation.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool agent; konsistensi saldo COA F1 pasca-migrasi kini terverifikasi nyata.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F4-T2] 2026-11-24 — Uji E2E Siklus Bisnis Penuh, DEPLOY-RUNBOOK, & FINAL-REPORT
 - **Branch / PR:** `finance/F4-T2-e2e-full-business-cycle-and-final-report`
 - **Fase:** F4 (AI Belajar RAP & E2E) — Penutupan Program F0–F4

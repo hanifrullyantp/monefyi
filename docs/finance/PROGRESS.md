@@ -40,4 +40,15 @@
 ### Langkah Berikutnya (Eksekusi Pemilik / Operator)
 1. Rotate token yang pernah berada di `apps/web/.env.local`.
 2. Tinjau `docs/finance/OPEN-QUESTIONS.md` & `docs/finance/DECISIONS.md`.
-3. Jalankan migrasi SQL F0 & F1 sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
+3. Jalankan migrasi SQL F0, F1, & G0-1 sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
+
+---
+
+## Program G0–G6 — Penguatan Kebenaran & Eksekusi Nyata
+
+| Fase / Tugas | Nama | Status | Branch / PR | Catatan |
+|---|---|---|---|---|
+| **G0-1** | Perbaikan Rekonsiliasi Migrasi F1 Nyata | `DONE` | `feat/g0-1-real-migration-reconciliation` | Jurnal reklasifikasi append-only seimbang & idempoten, perhitungan `after` independen di `reconciliation.ts` + SQL lokal `20261124140000_g0_1_real_f1_migration.sql` (`BLOCKED remote`, dry-run rollback subtransaksi, tanpa mutasi `planner_journal_lines`). |
+
+### Daftar Tugas Program G0–G6
+- [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
