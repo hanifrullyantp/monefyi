@@ -294,6 +294,31 @@
           "message_id"
         ]
       }
+    },
+    {
+      "name": "get_advisor_brief",
+      "description": "Ringkasan advisor deterministik: proyeksi kas 13 minggu, margin proyek, prioritas hutang, asumsi, dan risiko.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "focus": {
+            "type": "string",
+            "description": "Fokus ringkasan advisor, default ringkasan.",
+            "enum": [
+              "ringkasan",
+              "kas_13_minggu",
+              "margin_proyek",
+              "prioritas_hutang"
+            ]
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Id proyek dari find_project bila fokus margin."
+          }
+        },
+        "required": []
+      }
     }
   ]
 }

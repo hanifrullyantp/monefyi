@@ -4,6 +4,23 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G3-2] 2026-11-24 — Penjaga Angka & Provenance Narasi Advisor, Backtest Forecast 13 Minggu, Tool `get_advisor_brief`, & Laporan Gerbang G3
+- **Branch / PR:** `feat/g3-2-advisor-tools-narration-guard-backtest`
+- **Fase:** G3 (Financial Advisor Deterministik, Penjaga Narasi, & Gerbang G3 — G3-2)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/advisorNarrationGuard.ts`:
+    - `formatAdvisorMobileAnswer(input)`: menyusun jawaban ringkas layar ponsel 5 bagian terstruktur (kesimpulan 1 kalimat -> angka kunci + sumber -> asumsi -> risiko -> langkah disarankan + disclaimer `"Bukan nasihat hukum/pajak berlisensi"`) dengan anggaran `<= 400` estimasi token.
+    - `extractNumbersFromNarrative(text, opts?)` & `verifyNarrativeNumbersMatchSource(narrativeText, allowedNumbers, opts?)`: mengekstrak seluruh angka nominal rupiah (`Rp 15.000.000`, `-Rp 24.000.000`, `15jt`, `500rb`), persentase (`12,5%`), dan angka berdiri sendiri (mengecualikan nomor urut daftar `1.`/`2.`, tanggal ISO `YYYY-MM-DD`, pengenal alfanumerik, dan `allowedLiteralTokens` seperti `"13 minggu"`). Bila ada satu saja angka tanpa sumber di `allowedNumbers`, mengembalikan `{ ok: false, unsourcedNumbers, reason: 'unsourced_numbers_detected' }` (tolak jawaban).
+    - `runCashFlowForecastBacktest(cases)`: menjalankan `forecastCashFlow13Weeks` (skenario `base`) terhadap realisasi kas mingguan aktual (`actualEndingCashByWeek`), menghitung MAPE per kasus, `overallMapePct`, `normalMapePct`, `shockMapePct`, dan `failedMapePct`, serta menandai kasus dengan `mapePct > 20` atau kas negatif tak terprediksi sebagai `failedCase: true` beserta `failureCause` secara jujur tanpa menyembunyikan kasus gagal (`datasetKind: 'synthetic'`).
+  - Menambahkan tool agent deterministik `buildAdvisorBriefTool(input)` di `agent-core/src/advisorTools.ts` (`<= 400` token JSON, `summary`, `metrics` ber-`source`/`period`, `assumptions`, `risks`, `nextSteps`, `disclaimer`) dan mendaftarkan `get_advisor_brief` di `agent-core/src/registry.ts` pada domain spesialis `'advisor'` (menjaga batas `toolsFor('finance', 'manager').length <= 8` dan `toolsFor('manager', 'manager').length <= 8` tetap terpenuhi) beserta regenerasi `docs/agent/AGENT_MANUAL.md`, `agent-core/functions.json`, `agent-core/mcp.json`, dan `agent-core/fixtures.json`.
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/advisorGuardAndBacktest.test.ts` (uji format ponsel `<= 400` token, penolakan halusinasi angka palsu, backtest 5 jendela sintetis 3 normal + 2 shock/gagal, serta `buildAdvisorBriefTool` `<= 400` token & 100% angka lolos penjaga narasi).
+  - Memperbarui `docs/finance/AGENT-GUIDE.md` (tetap `<= 1.500` token), `docs/finance/PROGRESS.md` (Fase `G3` `DONE`, menyiapkan `G4`), `docs/finance/CHANGELOG.md`, dan menerbitkan laporan gerbang `docs/finance/PHASES/G3-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template atau mutasi tabel jurnal.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada PR ini.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/advisorGuardAndBacktest.test.ts`.
+- **Dampak ke Tool Agent:** Menambah tool read-only `get_advisor_brief` untuk spesialis `'advisor'` (`minRole: 'manager'`); `finance/manager` tetap 8 tool; output dibatasi `<= 400` token dan seluruh angka narasi dijaga oleh `verifyNarrativeNumbersMatchSource`.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G3-1] 2026-11-24 — Mesin Analisis Deterministik Financial Advisor (Forecast 13 Minggu, Analisis Margin Proyek, Rekomendasi Harga, What-If, & Prioritas Bayar)
 - **Branch / PR:** `feat/g3-1-forecast-margin-pricing-whatif`
 - **Fase:** G3 (Financial Advisor Deterministik & Simulasi — G3-1)

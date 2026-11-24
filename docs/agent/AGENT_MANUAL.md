@@ -109,3 +109,12 @@ Risiko: prepare. Peran minimum: manager.
 - `project_id` (string, wajib): Id proyek dari find_project.
 - `audience` (string, wajib): Penerima. Pilihan: owner, manager, project_workers.
 - `message_id` (string, wajib): Kode pesan, bukan kalimat bebas.
+
+## get_advisor_brief
+
+Ringkasan advisor deterministik: proyeksi kas 13 minggu, margin proyek, prioritas hutang, asumsi, dan risiko.
+
+Risiko: read. Peran minimum: manager.
+
+- `focus` (string): Fokus ringkasan advisor, default ringkasan. Pilihan: ringkasan, kas_13_minggu, margin_proyek, prioritas_hutang.
+- `project_id` (string): Id proyek dari find_project bila fokus margin.
