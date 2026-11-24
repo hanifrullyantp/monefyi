@@ -4,6 +4,22 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G1-1] 2026-11-24 — Ekstraksi Nota/Struk/Invoice -> Draf `prepare_entry` & Lampiran Bukti Terikat ke Jurnal
+- **Branch / PR:** `feat/g1-1-receipt-extraction-attachment`
+- **Fase:** G1 (Alur Bukti, Nota OCR, & Review Terstruktur — G1-1)
+- **Perubahan & Alasan:**
+  - Menambahkan parser & normalizer deterministik `packages/domain/src/receiptExtraction.ts` (`extractReceiptFields`, `buildPrepareEntryFromReceipt`, `computeDeterministicSha256`) untuk teks OCR nota/struk/invoice Indonesia: mengekstrak `entryDate` (via `parseTanggal`), `supplierName`, `invoiceNumber`, `items`, `subtotalAmount`, `taxAmount` (PPN/pajak), `totalAmount` (integer rupiah via `parseRupiah`), dan `contentHash` SHA-256 deterministik untuk deteksi duplikat.
+  - Menghitung skor keyakinan per-field (`fieldConfidence`) & `overallConfidence` (`0..1`), menyusun flag `warnings` (`sum_items_mismatch_total`, `missing_date`, `low_confidence_total`, `prompt_injection_detected`, dll.), serta membersihkan segmen prompt injection sebelum membangun teks slot `prepare_entry`. Seluruh hasil ekstraksi **selalu berstatus `draft` (`requiresReview: true`)**, tidak pernah auto-commit dan tidak pernah memilih debit/kredit.
+  - Menambahkan adapter `apps/web/src/lib/financeEntryEngine.ts` (`prepareFinanceEntry` yang mendelegasikan ke `agent-core/src/financeEntryEngine.ts`) dan layanan `apps/web/src/services/financeV2/receiptAttachmentService.ts` (`extractReceiptToDraft`, `saveReceiptDraftAttachment`, `findDuplicateAttachmentByHash`, `bindAttachmentToJournal`, `loadAttachmentsForJournal`) agar nota selalu menghasilkan draf ber-token dengan `attachmentMeta` (`attachmentHash`, `provenance`) terikat dan lampiran diikat ke `journal_entry_id` saat `commit_entry`.
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124150000_g1_1_journal_attachments.sql` (`BLOCKED remote`): tabel `planner_journal_attachments` (`journal_entry_id REFERENCES planner_journal_entries(id) ON DELETE RESTRICT`), indeks `(org_id, sha256_hash)` & `(journal_entry_id)`, RLS `is_org_member` (`worker` SELECT, `manager` INSERT & UPDATE pengikatan `NULL -> UUID` saja), serta trigger `planner_guard_journal_attachment_binding()` penolak hapus/ubah bukti yang sudah terikat jurnal.
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/receiptExtraction.test.ts` (nota toko bangunan PPN 11%, struk SPBU, invoice vendor, nota buram/mismatch, prompt injection, non-auto-commit `extractReceiptToDraft`, pengikatan `bindAttachmentToJournal`, dan uji struktural SQL).
+  - Memperbarui `docs/finance/AGENT-GUIDE.md`, `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 9), `docs/finance/PROGRESS.md`, dan `docs/finance/CHANGELOG.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru; memakai template tertutup `prepare_entry` yang sudah ada dan mengikat lampiran bukti via `planner_journal_attachments.journal_entry_id`.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124150000_g1_1_journal_attachments.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/receiptExtraction.test.ts`.
+- **Dampak ke Tool Agent:** Alur OCR nota selalu masuk melalui `prepare_entry` sebagai draf (`requiresReview: true`, tanpa auto-commit) dan mengikat `attachmentHash` + `provenance`.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G0-7/G0-8] 2026-11-24 — Uji Migrasi Sintetis Skala Besar, Paritas Lokal Offline Owner, & Laporan Gerbang G0
 - **Branch / PR:** `feat/g0-7-8-staging-parity-report`
 - **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-7, G0-8, & Penutupan Gerbang G0)
