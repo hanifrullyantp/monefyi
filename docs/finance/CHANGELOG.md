@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F4-T2] 2026-11-24 — Uji E2E Siklus Bisnis Penuh, DEPLOY-RUNBOOK, & FINAL-REPORT
+- **Branch / PR:** `finance/F4-T2-e2e-full-business-cycle-and-final-report`
+- **Fase:** F4 (AI Belajar RAP & E2E) — Penutupan Program F0–F4
+- **Perubahan & Alasan:**
+  - Menambahkan `apps/web/src/lib/financeV2/__tests__/fullBusinessCycleE2E.test.ts` untuk memverifikasi siklus bisnis lengkap dari awal sampai tutup periode, dividen dua mode, eksekusi agent 3 contoh wajib + aset vs opex, serta kesamaan angka `businessReportFromLedger` == buku besar.
+  - Menambahkan `rapLearningEval.test.ts` & `fullBusinessCycleE2E.test.ts` ke `.github/workflows/agent-eval.yml`.
+  - Menerbitkan `docs/finance/DEPLOY-RUNBOOK.md` (prosedur aman migrasi SQL F0/F1 yang `BLOCKED remote`) dan `docs/finance/FINAL-REPORT.md` (rangkuman F0–F4 + bagian TINDAKAN PEMILIK).
+  - Menutup `PHASES/F4-report.md` & memperbarui `PROGRESS.md` (seluruh fase F0–F4 `DONE`).
+- **Akun / Template Jurnal Tersentuh:** Seluruh siklus COA F1 dan template domain pada uji E2E in-memory.
+- **Migrasi SQL:** Tidak ada migrasi baru (`F0` & `F1` tetap lokal `BLOCKED remote`, didokumentasikan di `DEPLOY-RUNBOOK.md`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/fullBusinessCycleE2E.test.ts`.
+- **Dampak ke Tool Agent:** Validasi end-to-end otomatis di CI bersama gold eval F3 & MAPE eval F4.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F4-T1] 2026-11-24 — AI Belajar RAP dari Proyek Selesai, Fallback Katalog, & Evaluasi MAPE
 - **Branch / PR:** `finance/F4-T1-rap-learning-and-eval`
 - **Fase:** F4 (AI Belajar RAP & E2E)

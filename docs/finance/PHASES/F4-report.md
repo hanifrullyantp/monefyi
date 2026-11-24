@@ -2,7 +2,7 @@
 
 **Tanggal Selesai:** 2026-11-24  
 **Orkestrator:** Argon  
-**Status Fase:** `IN_PROGRESS` (`F4-T1` selesai, berlanjut ke `F4-T2` E2E & Penutupan Program)
+**Status Fase:** `COMPLETED` (F4-T1 AI Belajar RAP & F4-T2 E2E Siklus Penuh selesai)
 
 ---
 
@@ -31,5 +31,5 @@ Evaluasi dijalankan pada 6 proyek selesai historis (`renovasi_rumah` & `bangun_r
 
 ## 3. Verifikasi & Langkah Berikutnya
 - **4/4 tes di `apps/web/src/lib/rapLearningEval.test.ts` lulus:** *provenance* `"Berdasarkan N proyek serupa"` ($N \ge 3$), fallback katalog Estimator ($N < 3$), kewajiban `requiresOwnerApproval: true`, feedback loop tutup proyek, dan evaluasi MAPE.
-- **Lanjut otomatis:** PR `F4-T2` untuk uji E2E siklus bisnis penuh (`fullBusinessCycleE2E.test.ts`), `DEPLOY-RUNBOOK.md`, dan `FINAL-REPORT.md`.
+- **E2E Siklus Penuh (`fullBusinessCycleE2E.test.ts`):** Seluruh siklus bisnis (modal $\rightarrow$ draf RAP AI $\rightarrow$ DP $\rightarrow$ belanja via agent $\rightarrow$ hutang & pelunasan $\rightarrow$ termin & retensi $\rightarrow$ tutup proyek $\rightarrow$ dividen 2 mode $\rightarrow$ tutup periode) teruji dengan $\sum \text{Dr} = \sum \text{Cr}$, neraca seimbang, kas buku = arus kas, dan `businessReportFromLedger` == buku besar.
 
