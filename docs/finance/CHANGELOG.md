@@ -4,6 +4,29 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G7] 2026-11-24 — Sistem Umpan Balik Terpadu, Observabilitas Lintas Aplikasi, Anonimisasi PII, Penggabungan Laporan Otomatis, Dasbor Mutu, & Laporan Gerbang `G7-report.md`
+- **Branch / PR:** `feat/g7-unified-feedback-observability`
+- **Fase:** G7 (Sistem Umpan Balik Terpadu & Observabilitas Lintas Aplikasi)
+- **Perubahan & Alasan:**
+  - **Domain Umpan Balik & Observabilitas (`packages/domain/src/feedbackObservability.ts`):**
+    - Mendefinisikan tipe terpadu `FeedbackModule` (`'keuangan' | 'proyek' | 'sdm' | 'ui' | 'agent'`), `FeedbackSeverity` (`'kritis' | 'sedang' | 'ringan'`), dan **seluruh 8 kategori sinyal** `FeedbackSignalCategory` (`user_bug_report`, `agent_rating`, `ui_confused`, `runtime_error`, `behavior_friction`, `silent_correction`, `data_invariant_failure`, `agent_unanswered_or_tool_fail`).
+    - `anonymizeFeedbackPayload(payload)` & `anonymizeString`: menyapu & menyensor secara rekursif seluruh email (`[REDACTED_EMAIL]`), nomor HP Indonesia `+62`/`08...` (`[REDACTED_PHONE]`), NIK 16 digit (`[REDACTED_NIK]`), nomor rekening bank (`[REDACTED_BANK_ACCOUNT]`), token/kredensial (`Bearer ...`, `eyJ...`, `sk-...`, `sb_...`, `apikey`, `password`, `secret` -> `[REDACTED_SECRET]`), serta nilai pada kunci sensitif (`email`, `phone`, `bankAccount`, `token`, `password`, `apiKey`, `authorization`, `cookie`, dll.) sebelum masuk antrean.
+    - `ingestFeedbackSignal(signal, orgConsent)`: menolak sinyal `behavior_friction` dengan alasan `'behavior_telemetry_opted_out'` saat `orgConsent.behaviorTelemetryOptOut === true`, selalu menjalankan `anonymizeFeedbackPayload`, men-hash `reporterId`, dan mengunci `autoModifyCodeOrPromptAllowed: false`.
+    - `aggregateFeedbackQueue(events)`: menggabungkan laporan serupa secara deterministik menggunakan `fingerprint` (`module + category + normalizedErrorOrScreenKey`) menjadi 1 isu terpadu dengan `reporterCount` unik dan `priorityScore = baseSeverityWeight + Math.min(50, reporterCount * 5)`.
+    - `buildEvalCandidateFromFailedAgent(input)`: menghasilkan `EvalCaseCandidate` teranonimisasi dengan status **wajib `'pending_human_review'`** (`requiresHumanReview: true`, `autoAddedToEvalSet: false`, `autoModifyCodeOrPromptAllowed: false`).
+    - `computeQualityDashboard(metrics, policy)`: menghitung akurasi per modul & per intent, tren salah-posting, peringatan penurunan akurasi, serta sinyal rekomendasi penurunan otonomi `L2 -> L1` (`autonomyDemotionRecommended: true`, `recommendedAutonomyTransition: 'L2 -> L1'`) saat melampaui ambang kesalahan kritis atau penurunan akurasi.
+  - **Migrasi SQL Lokal (`my-supabase-project/supabase/migrations/20261124193000_g7_unified_feedback_events.sql`, `BLOCKED remote`):**
+    - Membuat tabel `planner_feedback_events` (beserta indeks `(org_id, fingerprint)` dan `(status, priority_score DESC)`) dan `planner_org_telemetry_settings` (`org_id UNIQUE`, `behavior_telemetry_opt_out boolean DEFAULT false`, `updated_by`, `updated_at`) dengan RLS ketat `is_org_member(org_id, ...)` tanpa menyentuh maupun memutasi tabel jurnal.
+  - **Layanan Klien Pelacak Error & Umpan Balik (`apps/web/src/services/feedbackObservabilityService.ts`):**
+    - Menyediakan `reportUserFeedback`, `reportRuntimeError` (pengganti `console.error` diam-diam), `reportBehaviorFriction` (mematuhi opt-out), `reportSilentCorrection`, `reportDataInvariantFailure`, dan `reportAgentUnansweredOrToolFail`.
+  - **Tes Gerbang G7 & Dokumentasi (`apps/web/src/lib/financeV2/__tests__/g7FeedbackObservability.test.ts`, `docs/finance/DECISIONS.md` `D-G7-01`, `docs/finance/DEPLOY-RUNBOOK.md` Langkah 15, `docs/finance/PROGRESS.md`, `docs/finance/PHASES/G7-report.md`):**
+    - Memverifikasi penggabungan 20 laporan serupa menjadi 1 issue, 0 kebocoran PII/kredensial, seluruh 8 kategori sinyal end-to-end, opt-out perilaku, `autoModifyCodeOrPromptAllowed: false`, status eval `'pending_human_review'`, penurunan `L2 -> L1` dasbor mutu, dan struktur SQL migrasi G7.
+- **Akun / Template Jurnal Tersentuh:** Tidak ada; sistem observabilitas dan umpan balik tidak memutasi tabel jurnal maupun menambah akun/template.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124193000_g7_unified_feedback_events.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g7FeedbackObservability.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah kontrak tool agent; menambahkan sinyal observabilitas jawaban/tool agent gagal dan kandidat eval berstatus `'pending_human_review'` tanpa pernah memodifikasi kode atau prompt secara otomatis.
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [G8-3] 2026-11-24 — Anti-Kecurangan Kehadiran, Hak Akses (RBAC) 4 Peran HRD, Uji Gerbang Penuh G8, & Laporan Gerbang `G8-report.md`
 - **Branch / PR:** `feat/g8-3-antifraud-rbac-g8-report`
 - **Fase:** G8 (Hardening HRD, Payroll Jujur, & Kebenaran Buku Besar Gaji — G8-3 & Gerbang G8)
