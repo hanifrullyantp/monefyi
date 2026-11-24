@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F3-T2] 2026-11-24 — Gold Set Evaluasi 218 Kalimat Indonesia pada 2 Model Kecil & Integrasi CI
+- **Branch / PR:** `finance/F3-T2-gold-eval-200-two-models`
+- **Fase:** F3 (AI Pencatat)
+- **Perubahan & Alasan:**
+  - Menerbitkan dataset gold `evals/finance/gold_200_id.yaml` (**218** kalimat nyata bahasa Indonesia mencakup 9 intent, singkatan, typo, variasi rupiah/tanggal, 3 kalimat contoh wajib, kasus pengaman periode terkunci, pengeluaran pribadi, proyek ambigu, & ambang aset tetap $\ge \text{Rp }5.000.000$).
+  - Menambahkan `agent-core/src/financeEvalRunner.ts` dan `apps/web/src/lib/financeAgentEval.test.ts` yang mengevaluasi 2 profil model kecil (`tier-small-flash-lite` dan `tier-small-haiku-mini`).
+  - Memperketat urutan intent & resolusi entitas di `financeEntryEngine.ts` berdasarkan temuan iterasi evaluasi pertama (`pelunasan hutang/piutang` vs `catat_pemasukan`, urutan RAP `overhead -> equipment -> labor -> material`, proyek eksplisit dengan kata `listrik`/`kebersihan`, transfer `dari X ke Y` & `top up Y dari X`, serta isolasi substring nama proyek saat mencocokkan pihak).
+  - Menambahkan tes F2 & F3 ke `.github/workflows/agent-eval.yml`, memperbarui `PROGRESS.md`, dan menerbitkan `PHASES/F3-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Semua 24 template F1 (via `financeEntryEngine.ts`).
+- **Migrasi SQL:** Tidak ada.
+- **Tes Ditambah:** `apps/web/src/lib/financeAgentEval.test.ts`, `evals/finance/gold_200_id.yaml`.
+- **Dampak ke Tool Agent:** Verifikasi akurasi & anggaran token 2 model kecil berjalan otomatis di CI.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F3-T1] 2026-11-24 — Engine AI Pencatat 9 Intent (`prepare_entry` / `commit_entry`), Klasifikasi 3 Lapis, & Memori Koreksi
 - **Branch / PR:** `finance/F3-T1-prepare-commit-classifier-intents`
 - **Fase:** F3 (AI Pencatat)

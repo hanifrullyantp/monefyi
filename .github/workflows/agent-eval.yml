@@ -8,6 +8,8 @@ on:
       - "evals/**"
       - "packages/domain/**"
       - "apps/web/src/lib/agentEval.test.ts"
+      - "apps/web/src/lib/financeAgentEval.test.ts"
+      - "apps/web/src/lib/financeEntryEngine.test.ts"
       - ".github/workflows/agent-eval.yml"
 
 jobs:
@@ -29,4 +31,4 @@ jobs:
         working-directory: .
         run: node scripts/docs-gate-check.mjs
       - name: Gerbang tier rendah
-        run: npx vitest run src/lib/agentEval.test.ts src/lib/agentRuntime.test.ts
+        run: npx vitest run src/lib/agentEval.test.ts src/lib/agentRuntime.test.ts src/lib/agentTools.test.ts src/lib/financeEntryEngine.test.ts src/lib/financeAgentEval.test.ts

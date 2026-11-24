@@ -1,6 +1,6 @@
 # PROGRESS — Papan Kerja Keuangan Froyek (F0–F4)
 
-**Fase Aktif:** `F3` (AI Pencatat)  
+**Fase Aktif:** `F4` (AI Belajar RAP & E2E Siklus Penuh)  
 **Orkestrator:** Argon (Mode Otonom)  
 **Terakhir Diperbarui:** 2026-11-24
 
@@ -13,8 +13,8 @@
 | **F0** | Kebenaran Akuntansi (`T0`–`T9`) | `DONE` | `F0-T0`, `F0-T8`, `F0-T1`, `F0-T2/T5`, `F0-T3/T4`, `F0-T6/T7`, `F0-T9` | Semua tes invarian & T1–T8 hijau; `F0-report.md` terbit; migrasi SQL lokal `BLOCKED remote`. |
 | **F1** | Akun Baru & Dimensi Proyek | `DONE` | `F1-T1`, `F1-T2` | COA F1 lengkap, 24 template kejadian tertutup, migrasi+dry-run+rekonsiliasi (`BLOCKED remote`), pensiun penghitung `financeV1`, `F1-report.md`. |
 | **F2** | Tampilan & Snapshot | `DONE` | `F2-T1`, `F2-T2` | 3 kartu depan, laporan V1 buku besar, dividen 2 mode (`D-F2-01`), `get_finance_snapshot` (~278 token), `F2-report.md`. |
-| **F3** | AI Pencatat | `DOING` | `F3-T1`, `F3-T2` | 9 intent, `prepare_entry`/`commit_entry`, memori koreksi, gold set $\ge 200$ kalimat pada $\ge 2$ model kecil. |
-| **F4** | AI Belajar RAP & E2E | `TODO` | `F4-T1`, `F4-T2` | Dataset proyek selesai, draf rentang+provenance, MAPE eval, uji E2E siklus penuh, `FINAL-REPORT.md`. |
+| **F3** | AI Pencatat | `DONE` | `F3-T1`, `F3-T2` | 9 intent, `prepare_entry`/`commit_entry`, memori koreksi, gold set 218 kalimat pada 2 model kecil (218/218), `F3-report.md`. |
+| **F4** | AI Belajar RAP & E2E | `DOING` | `F4-T1`, `F4-T2` | Dataset proyek selesai, draf rentang+provenance, MAPE eval, uji E2E siklus penuh, `FINAL-REPORT.md`. |
 
 ---
 
@@ -31,8 +31,8 @@
 
 ### Fase F3
 - [x] `F3-1`: Engine `prepare_entry` & `commit_entry` (`financeEntryEngine.ts`, 9 intent, 3-tier klasifikasi, 3 pita keyakinan, memori koreksi, token budget `AGENT-GUIDE.md`).
-- [ ] `F3-2`: Gold set $\ge 200$ kalimat (`evals/finance/gold_200_id.yaml`) pada $\ge 2$ model kecil + CI + `F3-report.md`.
+- [x] `F3-2`: Gold set **218 kalimat** (`evals/finance/gold_200_id.yaml`) pada 2 model kecil (`tier-small-flash-lite` & `tier-small-haiku-mini`) + CI + `F3-report.md`.
 
-### Langkah Berikutnya (Fase F3 -> F4)
-1. Kerjakan `F3-2`: Gold set $\ge 200$ kalimat Indonesia pada $\ge 2$ model kecil + CI + `F3-report.md`.
-2. Lanjut otomatis ke Fase F4 (`F4-1` AI Belajar RAP + `F4-2` E2E siklus bisnis penuh & laporan akhir).
+### Langkah Berikutnya (Fase F4)
+1. Kerjakan `F4-1`: AI Belajar RAP (`rapLearning.ts`, `rapLearningService.ts`, MAPE eval `rap_historical_eval.yaml`, `F4-report.md`).
+2. Kerjakan `F4-2`: Uji E2E siklus bisnis penuh + `DEPLOY-RUNBOOK.md` + `FINAL-REPORT.md`.
