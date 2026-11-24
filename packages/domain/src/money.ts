@@ -224,4 +224,4 @@ export function parseCostCommand(input: string): CostCommand | null {
   };
 }
 
-export { orgToday } from './dates';
+export { orgToday, parseTanggal, type TanggalResult } from './dates';
