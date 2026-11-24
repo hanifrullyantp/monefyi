@@ -1,10 +1,40 @@
 import { type DbCostRealization } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
-import { assertNoDbError } from '../lib/supabaseErrors';
+import { toRupiah } from '../../../../packages/domain/src/journal';
 import { logProjectAudit } from './auditService';
 import { loadRapItems } from './rapService';
 
 export type CostRealization = DbCostRealization;
+
+function isRpcMissing(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === 'PGRST202' || error.code === '42883' || /does not exist|not found/i.test(error.message || '');
+}
+
+function isColumnOrConstraintMissing(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === '42703' || error.code === 'PGRST204' || error.code === '23514'
+    || /column .* does not exist|check constraint/i.test(error.message || '');
+}
+
+function isActiveCostRow(row: CostRealization): boolean {
+  return row.deleted_at == null && row.status !== 'cancelled' && row.status !== 'dividend';
+}
+
+async function softDeleteCostRow(id: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from('planner_cost_realizations')
+    .update({ status: 'cancelled', deleted_at: now, updated_at: now })
+    .eq('id', id);
+  if (!error) return;
+  if (isColumnOrConstraintMissing(error)) {
+    const { error: delErr } = await supabase.from('planner_cost_realizations').delete().eq('id', id);
+    if (delErr) throw new Error(delErr.message);
+    return;
+  }
+  throw new Error(error.message);
+}
 
 export interface RapActualAgg {
   qty: number;
@@ -26,14 +56,24 @@ export async function recalculateProjectSpent(projectId: string) {
 }
 
 export async function deleteAllCosts(projectId: string) {
-  const { data: existing } = await supabase
+  const { data: existing, error: selErr } = await supabase
     .from('planner_cost_realizations')
-    .select('journal_entry_id, description')
-    .eq('project_id', projectId)
-    .not('journal_entry_id', 'is', null);
+    .select('id, journal_entry_id, description, status, deleted_at')
+    .eq('project_id', projectId);
+  if (selErr) throw new Error(selErr.message);
 
-  const { error } = await supabase.from('planner_cost_realizations').delete().eq('project_id', projectId);
-  if (error) throw new Error(error.message);
+  const activeRows = ((existing || []) as CostRealization[]).filter(isActiveCostRow);
+  const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
+  for (const row of activeRows) {
+    if (row.journal_entry_id) {
+      await reverseProjectJournal(
+        row.journal_entry_id,
+        `Batal biaya proyek: ${row.description || ''}`.trim(),
+      );
+    }
+    await softDeleteCostRow(row.id);
+  }
+
   await recalculateProjectSpent(projectId);
   void logProjectAudit({
     projectId,
@@ -41,20 +81,6 @@ export async function deleteAllCosts(projectId: string) {
     targetType: 'project',
     targetId: projectId,
   });
-
-  if (existing && existing.length > 0) {
-    try {
-      const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
-      for (const row of existing) {
-        await reverseProjectJournal(
-          row.journal_entry_id as string | null,
-          `Batal biaya proyek: ${(row.description as string) || ''}`.trim(),
-        );
-      }
-    } catch (e) {
-      console.error('Journal reversal on deleteAllCosts failed:', e);
-    }
-  }
 }
 
 export async function loadCostRealizations(projectId: string): Promise<CostRealization[]> {
@@ -65,7 +91,7 @@ export async function loadCostRealizations(projectId: string): Promise<CostReali
     .order('date', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data || []) as CostRealization[];
+  return ((data || []) as CostRealization[]).filter(isActiveCostRow);
 }
 
 export async function loadAllCosts(orgId: string): Promise<CostRealization[]> {
@@ -85,19 +111,70 @@ export async function loadAllCosts(orgId: string): Promise<CostRealization[]> {
     .order('date', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data || []) as CostRealization[];
+  return ((data || []) as CostRealization[]).filter(isActiveCostRow);
 }
 
 export async function createCostRealization(
   item: Omit<CostRealization, 'id' | 'created_at' | 'updated_at'>,
 ) {
-  const { data, error } = await supabase
-    .from('planner_cost_realizations')
-    .insert(item)
-    .select()
-    .single();
+  const amount = toRupiah(Number(item.total_amount) || 0);
+  const status = item.status || 'recorded';
 
-  if (error) throw new Error(error.message);
+  let savedRow: Record<string, unknown> | null = null;
+  const { data: rpcRow, error: rpcErr } = await supabase.rpc('planner_create_cost_realization_atomic', {
+    p_project_id: item.project_id,
+    p_rap_item_id: item.rap_item_id ?? null,
+    p_date: item.date,
+    p_description: item.description,
+    p_quantity: item.quantity ?? null,
+    p_unit_price: item.unit_price ?? null,
+    p_total_amount: amount,
+    p_payment_method: item.payment_method ?? null,
+    p_supplier: item.supplier ?? null,
+    p_status: status,
+    p_recorded_by: item.recorded_by,
+  });
+
+  if (!rpcErr && rpcRow) {
+    savedRow = rpcRow as Record<string, unknown>;
+  } else if (rpcErr && !isRpcMissing(rpcErr)) {
+    throw new Error(rpcErr.message);
+  } else {
+    // Fallback atomik kompensasi bila RPC belum ter-deploy di remote.
+    const { data, error } = await supabase
+      .from('planner_cost_realizations')
+      .insert({ ...item, total_amount: amount, status })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    savedRow = data as Record<string, unknown>;
+
+    if (amount > 0 && status !== 'dividend' && status !== 'cancelled') {
+      try {
+        const { postProjectExpenseJournal } = await import('./financeV2/projectJournalBridge');
+        const journalId = await postProjectExpenseJournal({
+          projectId: item.project_id,
+          amount,
+          description: `Biaya proyek: ${item.description || ''}`,
+          referenceId: savedRow.id as string,
+          entryDate: item.date,
+          createdBy: item.recorded_by,
+        });
+        if (!journalId) {
+          throw new Error('Jurnal biaya proyek gagal dibuat.');
+        }
+        const { error: linkErr } = await supabase
+          .from('planner_cost_realizations')
+          .update({ journal_entry_id: journalId, synced_at: new Date().toISOString() })
+          .eq('id', savedRow.id);
+        if (linkErr) throw new Error(linkErr.message);
+        savedRow = { ...savedRow, journal_entry_id: journalId };
+      } catch (err) {
+        await supabase.from('planner_cost_realizations').delete().eq('id', savedRow.id);
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+    }
+  }
 
   await recalculateProjectSpent(item.project_id);
 
@@ -106,51 +183,36 @@ export async function createCostRealization(
     actorId: item.recorded_by,
     action: 'cost.created',
     targetType: 'cost',
-    targetId: data.id as string,
+    targetId: savedRow.id as string,
     metadata: {
       description: item.description,
-      total_amount: Number(data.total_amount) || 0,
+      total_amount: Number(savedRow.total_amount) || 0,
       date: item.date,
       rap_item_id: item.rap_item_id ?? null,
     },
   });
 
-  const amount = Number(data.total_amount) || 0;
-  if (amount > 0) {
-    try {
-      const { postProjectExpenseJournal } = await import('./financeV2/projectJournalBridge');
-      const journalId = await postProjectExpenseJournal({
-        projectId: item.project_id,
-        amount,
-        description: `Biaya proyek: ${item.description || ''}`,
-        referenceId: data.id,
-        entryDate: item.date,
-        createdBy: item.recorded_by,
-      });
-      if (journalId) {
-        await supabase
-          .from('planner_cost_realizations')
-          .update({ journal_entry_id: journalId, synced_at: new Date().toISOString() })
-          .eq('id', data.id);
-      }
-    } catch (e) {
-      console.error('Journal expense post failed:', e);
-    }
-  }
-
-  return data as CostRealization;
+  return savedRow as unknown as CostRealization;
 }
 
 export async function deleteCostRealization(id: string, projectId: string) {
-  const { data: existing } = await supabase
+  const { data: existing, error: selErr } = await supabase
     .from('planner_cost_realizations')
-    .select('journal_entry_id, description, total_amount')
+    .select('id, journal_entry_id, description, total_amount')
     .eq('id', id)
     .maybeSingle();
+  if (selErr) throw new Error(selErr.message);
+  if (!existing) return;
 
-  const { error } = await supabase.from('planner_cost_realizations').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  if (existing.journal_entry_id) {
+    const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
+    await reverseProjectJournal(
+      existing.journal_entry_id as string,
+      `Batal biaya proyek: ${(existing.description as string) || ''}`.trim(),
+    );
+  }
 
+  await softDeleteCostRow(id);
   await recalculateProjectSpent(projectId);
 
   void logProjectAudit({
@@ -159,53 +221,33 @@ export async function deleteCostRealization(id: string, projectId: string) {
     targetType: 'cost',
     targetId: id,
     metadata: {
-      description: (existing?.description as string | undefined) ?? undefined,
-      total_amount: existing?.total_amount != null ? Number(existing.total_amount) : undefined,
+      description: (existing.description as string | undefined) ?? undefined,
+      total_amount: existing.total_amount != null ? Number(existing.total_amount) : undefined,
     },
   });
-
-  if (existing?.journal_entry_id) {
-    try {
-      const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
-      await reverseProjectJournal(
-        existing.journal_entry_id as string,
-        `Batal biaya proyek: ${(existing.description as string) || ''}`.trim(),
-      );
-    } catch (e) {
-      console.error('Journal reversal on deleteCostRealization failed:', e);
-    }
-  }
 }
 
 export async function deleteCostsByRapItemId(projectId: string, rapItemId: string) {
-  const { data: existing } = await supabase
+  const { data: existing, error: selErr } = await supabase
     .from('planner_cost_realizations')
-    .select('journal_entry_id, description')
-    .eq('project_id', projectId)
-    .eq('rap_item_id', rapItemId)
-    .not('journal_entry_id', 'is', null);
-
-  const { error } = await supabase
-    .from('planner_cost_realizations')
-    .delete()
+    .select('id, journal_entry_id, description, status, deleted_at')
     .eq('project_id', projectId)
     .eq('rap_item_id', rapItemId);
-  if (error) throw new Error(error.message);
-  await recalculateProjectSpent(projectId);
+  if (selErr) throw new Error(selErr.message);
 
-  if (existing && existing.length > 0) {
-    try {
-      const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
-      for (const row of existing) {
-        await reverseProjectJournal(
-          row.journal_entry_id as string | null,
-          `Batal realisasi RAP: ${(row.description as string) || ''}`.trim(),
-        );
-      }
-    } catch (e) {
-      console.error('Journal reversal on deleteCostsByRapItemId failed:', e);
+  const activeRows = ((existing || []) as CostRealization[]).filter(isActiveCostRow);
+  const { reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
+  for (const row of activeRows) {
+    if (row.journal_entry_id) {
+      await reverseProjectJournal(
+        row.journal_entry_id,
+        `Batal realisasi RAP: ${row.description || ''}`.trim(),
+      );
     }
+    await softDeleteCostRow(row.id);
   }
+
+  await recalculateProjectSpent(projectId);
 }
 
 /** Toggle checklist realisasi: satu baris konsolidasi per item RAP. */
@@ -278,7 +320,49 @@ export async function updateCostRealization(
   projectId: string,
   patch: Partial<Pick<CostRealization, 'date' | 'description' | 'quantity' | 'unit_price' | 'total_amount'>>,
 ) {
-  const { error } = await supabase.from('planner_cost_realizations').update(patch).eq('id', id);
+  const { data: existing, error: selErr } = await supabase
+    .from('planner_cost_realizations')
+    .select('id, date, description, total_amount, journal_entry_id, recorded_by')
+    .eq('id', id)
+    .single();
+  if (selErr || !existing) throw new Error(selErr?.message || 'Realisasi biaya tidak ditemukan.');
+
+  const { postProjectExpenseJournal, reverseProjectJournal } = await import('./financeV2/projectJournalBridge');
+
+  if (existing.journal_entry_id) {
+    await reverseProjectJournal(
+      existing.journal_entry_id as string,
+      `Koreksi biaya proyek: ${(existing.description as string) || ''}`.trim(),
+    );
+  }
+
+  const nextAmount = toRupiah(
+    Number(patch.total_amount !== undefined ? patch.total_amount : existing.total_amount) || 0,
+  );
+  const nextDate = patch.date ?? (existing.date as string);
+  const nextDesc = patch.description ?? (existing.description as string);
+
+  let nextJournalId: string | null = null;
+  if (nextAmount > 0) {
+    nextJournalId = await postProjectExpenseJournal({
+      projectId,
+      amount: nextAmount,
+      description: `Biaya proyek: ${nextDesc || ''}`,
+      referenceId: id,
+      entryDate: nextDate,
+      createdBy: (existing.recorded_by as string) || undefined,
+    });
+  }
+
+  const updatePayload: Record<string, unknown> = {
+    ...patch,
+    ...(patch.total_amount !== undefined ? { total_amount: nextAmount } : {}),
+    journal_entry_id: nextJournalId,
+    synced_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from('planner_cost_realizations').update(updatePayload).eq('id', id);
   if (error) throw new Error(error.message);
   await recalculateProjectSpent(projectId);
   void logProjectAudit({
@@ -289,7 +373,7 @@ export async function updateCostRealization(
     metadata: {
       fields: Object.keys(patch),
       ...(patch.description !== undefined ? { description: patch.description } : {}),
-      ...(patch.total_amount !== undefined ? { total_amount: Number(patch.total_amount) } : {}),
+      ...(patch.total_amount !== undefined ? { total_amount: nextAmount } : {}),
     },
   });
 }

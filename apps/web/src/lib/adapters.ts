@@ -117,6 +117,9 @@ export interface DbCostRealization {
   supplier?: string | null;
   status?: string | null;
   recorded_by: string;
+  journal_entry_id?: string | null;
+  synced_at?: string | null;
+  deleted_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

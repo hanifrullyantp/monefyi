@@ -25,12 +25,14 @@ export async function postProjectIncomeJournal(input: {
   entryDate?: string;
   createdBy?: string;
 }): Promise<string | null> {
-  if (input.amount <= 0) return null;
+  const amount = toRupiah(input.amount);
+  if (amount <= 0) return null;
 
   const { orgId, name } = await resolveProjectOrg(input.projectId);
+  await ensureChartOfAccounts(orgId);
   const projectKas = await getOrCreateProjectKasAccount(orgId, input.projectId, name);
   const laba = await findSystemAccount(orgId, 'laba', 'periode');
-  if (!laba) return null;
+  if (!laba) throw new Error('Akun Laba Periode tidak ditemukan untuk mencatat pemasukan proyek.');
 
   const entry = await createJournalEntry({
     orgId,
@@ -40,8 +42,8 @@ export async function postProjectIncomeJournal(input: {
     referenceId: input.referenceId,
     createdBy: input.createdBy,
     lines: [
-      { accountId: projectKas.id, debit: input.amount, credit: 0 },
-      { accountId: laba.id, debit: 0, credit: input.amount },
+      { accountId: projectKas.id, debit: amount, credit: 0, projectId: input.projectId },
+      { accountId: laba.id, debit: 0, credit: amount, projectId: input.projectId },
     ],
   });
 
@@ -59,12 +61,14 @@ export async function postProjectExpenseJournal(input: {
   entryDate?: string;
   createdBy?: string;
 }): Promise<string | null> {
-  if (input.amount <= 0) return null;
+  const amount = toRupiah(input.amount);
+  if (amount <= 0) return null;
 
   const { orgId, name } = await resolveProjectOrg(input.projectId);
+  await ensureChartOfAccounts(orgId);
   const projectKas = await getOrCreateProjectKasAccount(orgId, input.projectId, name);
   const laba = await findSystemAccount(orgId, 'laba', 'periode');
-  if (!laba) return null;
+  if (!laba) throw new Error('Akun Laba Periode tidak ditemukan untuk mencatat biaya proyek.');
 
   const entry = await createJournalEntry({
     orgId,
@@ -74,8 +78,8 @@ export async function postProjectExpenseJournal(input: {
     referenceId: input.referenceId,
     createdBy: input.createdBy,
     lines: [
-      { accountId: laba.id, debit: input.amount, credit: 0 },
-      { accountId: projectKas.id, debit: 0, credit: input.amount },
+      { accountId: laba.id, debit: amount, credit: 0, projectId: input.projectId },
+      { accountId: projectKas.id, debit: 0, credit: amount, projectId: input.projectId },
     ],
   });
 

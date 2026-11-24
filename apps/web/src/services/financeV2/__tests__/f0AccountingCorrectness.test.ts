@@ -84,6 +84,7 @@ function createInitialDb(): MockDbState {
 
 let db: MockDbState;
 let seq = 1;
+let forceJournalFailure = false;
 
 function nextId(prefix: string) {
   seq += 1;
@@ -256,10 +257,23 @@ function createQueryBuilder(table: string) {
 const mockRpc = vi.fn(async (fn: string, params: Record<string, unknown>) => {
   if (fn === 'seed_default_chart_of_accounts') return { data: null, error: null };
   if (fn === 'planner_post_journal') {
+    if (forceJournalFailure) {
+      return { data: null, error: { message: 'simulasi_gagal_jurnal' } };
+    }
     const lines = (params.p_lines as Array<{ account_id: string; debit: number; credit: number; notes?: string }>) || [];
     const sumD = lines.reduce((s, l) => s + Number(l.debit || 0), 0);
     const sumC = lines.reduce((s, l) => s + Number(l.credit || 0), 0);
     if (sumD !== sumC || sumD <= 0) return { data: null, error: { message: 'jurnal_tidak_seimbang' } };
+    if (params.p_reference_id) {
+      const existing = db.journalEntries.find(
+        (e) =>
+          e.org_id === params.p_org_id
+          && e.reference_type === params.p_reference_type
+          && e.reference_id === params.p_reference_id
+          && !db.journalEntries.some((rev) => rev.reference_type === 'reversal' && rev.reference_id === e.id),
+      );
+      if (existing) return { data: existing.id, error: null };
+    }
     const id = nextId('jrn');
     db.journalEntries.push({
       id,
@@ -306,6 +320,13 @@ import { closeProjectFinance } from '../kasService';
 import { closeFinancePeriod } from '../periodCloseService';
 import { buildProfitLossReport } from '../../../lib/financeV2/reports/profitLossReport';
 import { createJournalEntry } from '../journalService';
+import { createProjectIncome, deleteProjectIncome, loadProjectIncomes } from '../../incomeService';
+import {
+  createCostRealization,
+  deleteCostRealization,
+  loadCostRealizations,
+  updateCostRealization,
+} from '../../costService';
 
 describe('F0-T1: Dividen proyek sebagai jurnal ekuitas, bukan biaya proyek', () => {
   beforeEach(() => {
@@ -499,6 +520,128 @@ describe('F0-T2 & F0-T5: Laba tidak terhitung dua kali & HPP berbasis akun/jenis
     expect(labaDitahan).toBe(40_000_000);
     // Saldo Laba Periode setelah tutup periode = 0
     expect(labaPeriode).toBe(0);
+  });
+});
+
+describe('F0-T3 & F0-T4: Posting atomik, tanpa penelan error, edit=pembalik+baru, hapus=soft-delete+pembalik', () => {
+  beforeEach(() => {
+    seq = 1;
+    forceJournalFailure = false;
+    db = createInitialDb();
+    db.accounts.find((a) => a.id === 'acc-kas-proj')!.current_balance = 0;
+    db.accounts.find((a) => a.id === 'acc-laba')!.current_balance = 0;
+    mockRpc.mockClear();
+  });
+
+  it('T3: createProjectIncome melempar error dan membatalkan baris sumber jika posting jurnal gagal', async () => {
+    forceJournalFailure = true;
+
+    await expect(
+      createProjectIncome({
+        project_id: 'proj-1',
+        date: '2026-11-24',
+        amount: 10_000_000,
+        category: 'dp',
+        description: 'DP Proyek',
+        status: 'received',
+        recorded_by: 'user-1',
+      }),
+    ).rejects.toThrow();
+
+    expect(db.projectIncomes).toHaveLength(0);
+    expect(db.journalEntries).toHaveLength(0);
+  });
+
+  it('T3: createCostRealization melempar error dan membatalkan baris sumber jika posting jurnal gagal', async () => {
+    forceJournalFailure = true;
+
+    await expect(
+      createCostRealization({
+        project_id: 'proj-1',
+        date: '2026-11-24',
+        description: 'Beli semen',
+        total_amount: 500_000,
+        recorded_by: 'user-1',
+        status: 'recorded',
+      }),
+    ).rejects.toThrow();
+
+    expect(db.costRealizations).toHaveLength(0);
+    expect(db.journalEntries).toHaveLength(0);
+  });
+
+  it('T4: updateCostRealization membalik jurnal lama dan memposting jurnal baru dengan nominal baru', async () => {
+    const created = await createCostRealization({
+      project_id: 'proj-1',
+      date: '2026-11-24',
+      description: 'Beli pasir',
+      total_amount: 500_000,
+      recorded_by: 'user-1',
+      status: 'recorded',
+    });
+
+    const firstJournalId = db.costRealizations[0].journal_entry_id as string;
+    expect(firstJournalId).toBeTruthy();
+
+    await updateCostRealization(created.id, 'proj-1', {
+      total_amount: 750_000,
+      description: 'Beli pasir (koreksi)',
+    });
+
+    const reversals = db.journalEntries.filter(
+      (j) => j.reference_type === 'reversal' && j.reference_id === firstJournalId,
+    );
+    expect(reversals).toHaveLength(1);
+    expect(reversals[0].total_amount).toBe(500_000);
+
+    const updatedJournalId = db.costRealizations[0].journal_entry_id as string;
+    expect(updatedJournalId).toBeTruthy();
+    expect(updatedJournalId).not.toBe(firstJournalId);
+
+    // Saldo Kas Proyek neto harus -750.000 (bukan -500.000)
+    const kasProj = Number(db.accounts.find((a) => a.id === 'acc-kas-proj')!.current_balance);
+    expect(kasProj).toBe(-750_000);
+  });
+
+  it('T4: deleteCostRealization dan deleteProjectIncome melakukan soft-delete + jurnal pembalik', async () => {
+    const { income } = await createProjectIncome({
+      project_id: 'proj-1',
+      date: '2026-11-24',
+      amount: 2_000_000,
+      category: 'dp',
+      description: 'DP 1',
+      status: 'received',
+      recorded_by: 'user-1',
+    });
+    const cost = await createCostRealization({
+      project_id: 'proj-1',
+      date: '2026-11-24',
+      description: 'Beli cat',
+      total_amount: 300_000,
+      recorded_by: 'user-1',
+      status: 'recorded',
+    });
+
+    await deleteCostRealization(cost.id, 'proj-1');
+    await deleteProjectIncome(income.id, 'proj-1');
+
+    // Baris sumber tetap ada sebagai soft-delete (status='cancelled' & deleted_at terisi)
+    expect(db.costRealizations).toHaveLength(1);
+    expect(db.costRealizations[0].status).toBe('cancelled');
+    expect(db.costRealizations[0].deleted_at).toBeTruthy();
+
+    expect(db.projectIncomes).toHaveLength(1);
+    expect(db.projectIncomes[0].status).toBe('cancelled');
+    expect(db.projectIncomes[0].deleted_at).toBeTruthy();
+
+    // Load aktif mengembalikan array kosong
+    expect(await loadCostRealizations('proj-1')).toHaveLength(0);
+    expect(await loadProjectIncomes('proj-1')).toHaveLength(0);
+
+    // Kedua jurnal asli punya reversal sehingga kas dan laba kembali ke 0
+    expect(db.journalEntries.filter((j) => j.reference_type === 'reversal')).toHaveLength(2);
+    expect(Number(db.accounts.find((a) => a.id === 'acc-kas-proj')!.current_balance)).toBe(0);
+    expect(Number(db.accounts.find((a) => a.id === 'acc-laba')!.current_balance)).toBe(0);
   });
 });
 
