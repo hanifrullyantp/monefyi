@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   MapPin, Clock, CheckCircle, Circle, Wallet, TrendingUp,
-  Calendar, RefreshCw, Loader2, LogOut, ClipboardList, AlertTriangle, Check,
+  Calendar, RefreshCw, Loader2, LogOut, ClipboardList, AlertTriangle, Check, Camera,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
@@ -37,6 +37,7 @@ import WorkerWorkTimer from '../components/worker/WorkerWorkTimer';
 import TeamTodoBoard from '../components/team/TeamTodoBoard';
 import { listMembers } from '../services/memberService';
 import type { OrgMember } from '../types/onboarding';
+import { validateWorkerProgressUpdate } from '../lib/workerProgressGuard';
 
 export const MIN_BON_AMOUNT = 1000;
 
@@ -177,6 +178,11 @@ export default function WorkerDashboard() {
   const [partialDays, setPartialDays] = useState<ReturnType<typeof getPartialDays>>([]);
   const [monthDaysPresent, setMonthDaysPresent] = useState(0);
   const [chosenProjectId, setChosenProjectId] = useState<string>('');
+  const [proofModalWorkItemId, setProofModalWorkItemId] = useState<string | null>(null);
+  const [proofPhotoUrl, setProofPhotoUrl] = useState('');
+  const [proofPhotoHash, setProofPhotoHash] = useState('');
+  const [proofPhotoFileName, setProofPhotoFileName] = useState('');
+  const [proofError, setProofError] = useState<string | null>(null);
 
   const workerTab = (['home', 'attendance', 'payroll', 'todos'] as const).includes(
     activeTab as 'home' | 'attendance' | 'payroll' | 'todos',
@@ -466,32 +472,96 @@ export default function WorkerDashboard() {
     onNotify: (message, type) => showToast(message, type),
   });
 
-  const handleProgressChange = async (wi: WorkItem, rawPct: number) => {
-    const pct = Math.min(100, Math.max(0, Math.round(rawPct)));
-    const nextStatus = pct >= 100 ? 'completed' : pct > 0 ? 'in_progress' : 'pending';
+  const handleProgressChange = async (
+    wi: WorkItem,
+    rawPct: number,
+    proof?: {
+      photoAttachmentHash?: string | null;
+      photoUrl?: string | null;
+      photoFileName?: string | null;
+    },
+  ) => {
+    const decision = validateWorkerProgressUpdate({
+      workItem: wi,
+      requestedProgressPct: rawPct,
+      actorId: user?.id || 'worker',
+      actorRole: user?.role || 'worker',
+      photoAttachmentHash: proof?.photoAttachmentHash,
+      photoUrl: proof?.photoUrl,
+      photoFileName: proof?.photoFileName,
+      asOfDate: todayIso,
+    });
+
+    if (!decision.allowedToPersist) {
+      if (decision.requiresPhotoModal) {
+        setProofModalWorkItemId(wi.id);
+        setProofError(decision.evaluation.message);
+      }
+      showToast(decision.evaluation.message, 'error');
+      return;
+    }
+
     setUpdatingId(wi.id);
     try {
       let nextUpdatedAt = wi.updated_at;
+      const patch: Partial<WorkItem> = {
+        progress_pct: decision.nextProgressPct,
+        status: decision.nextStatus,
+        ...(decision.nextAttachments ? { attachments: decision.nextAttachments } : {}),
+        ...(decision.nextNotes ? { notes: decision.nextNotes } : {}),
+      };
       if (!isDemo && tenant?.id !== 'demo' && !isDemoOrInvalidUuid(wi.id)) {
-        const updated = await updateWorkItem(wi.id, {
-          progress_pct: pct,
-          status: nextStatus,
-        });
+        const updated = await updateWorkItem(wi.id, patch);
         if (updated?.updated_at) nextUpdatedAt = updated.updated_at;
       }
       setWorkItems(prev =>
         prev.map(w =>
           w.id === wi.id
-            ? { ...w, progress_pct: pct, status: nextStatus, updated_at: nextUpdatedAt }
+            ? {
+                ...w,
+                ...patch,
+                updated_at: nextUpdatedAt,
+              }
             : w,
         ),
       );
-      showToast(`Progress ${wi.name}: ${pct}%`, 'success');
+      if (proofModalWorkItemId === wi.id) {
+        setProofModalWorkItemId(null);
+        setProofPhotoUrl('');
+        setProofPhotoHash('');
+        setProofPhotoFileName('');
+        setProofError(null);
+      }
+      if (decision.evaluation.status === 'pending_supervisor_verification') {
+        showToast(decision.evaluation.message, 'info');
+      } else {
+        showToast(`Progress ${wi.name}: ${decision.nextProgressPct}%`, 'success');
+      }
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal update', 'error');
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  const handleProofFileSelect = async (file: File | null) => {
+    if (!file) return;
+    setProofPhotoFileName(file.name);
+    setProofError(null);
+    try {
+      const buf = await file.arrayBuffer();
+      if (typeof crypto !== 'undefined' && crypto.subtle) {
+        const digest = await crypto.subtle.digest('SHA-256', buf);
+        const hex = Array.from(new Uint8Array(digest))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        setProofPhotoHash(`sha256-${hex}`);
+        return;
+      }
+    } catch {
+      // Fallback deterministik berbasis metadata file bila SubtleCrypto tidak tersedia
+    }
+    setProofPhotoHash(`file-${file.name}-${file.size}-${file.lastModified}`);
   };
 
   const handleBonRequest = async () => {
@@ -569,6 +639,68 @@ export default function WorkerDashboard() {
   const handleWorkerLogout = async () => {
     await logout();
     navigate('/login', { replace: true });
+  };
+
+  const renderProofPanel = (wi: WorkItem, isBusy: boolean) => {
+    if (proofModalWorkItemId !== wi.id) return null;
+    return (
+      <div className="mt-2 p-3 rounded-xl border border-amber-200 bg-amber-50/70 space-y-2.5">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+          <Camera className="w-4 h-4 shrink-0" />
+          <span>Bukti Foto Wajib untuk Ajukan Selesai 100%</span>
+        </div>
+        {proofError && (
+          <p className="text-[11px] text-rose-700 font-medium">{proofError}</p>
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={e => void handleProofFileSelect(e.target.files?.[0] || null)}
+          className="block w-full text-xs text-slate-700 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white"
+        />
+        <input
+          type="url"
+          value={proofPhotoUrl}
+          onChange={e => {
+            setProofPhotoUrl(e.target.value);
+            if (proofError) setProofError(null);
+          }}
+          placeholder="Atau tempel URL foto bukti (https://...)"
+          className="w-full h-9 px-3 rounded-lg border border-amber-300 bg-white text-xs text-[#0F172A] focus:border-[#059669] focus:outline-none"
+        />
+        {proofPhotoHash && (
+          <div className="text-[11px] text-emerald-800 font-medium truncate">
+            Hash bukti siap: {proofPhotoHash}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={() =>
+              void handleProgressChange(wi, 100, {
+                photoAttachmentHash: proofPhotoHash || null,
+                photoUrl: proofPhotoUrl || null,
+                photoFileName: proofPhotoFileName || null,
+              })
+            }
+            className="flex-1 min-h-10 px-3 py-1.5 rounded-lg bg-[#059669] hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-50"
+          >
+            Kirim Bukti & Ajukan 100%
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setProofModalWorkItemId(null);
+              setProofError(null);
+            }}
+            className="min-h-10 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700"
+          >
+            Batal
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const pendingBon = bonRequests.filter(b => b.status === 'pending').length;
@@ -769,6 +901,13 @@ export default function WorkerDashboard() {
                               Selesai
                             </span>
                           )}
+                          {!isDone &&
+                            wi.notes?.some(n => n.text.includes('[MENUNGGU VERIFIKASI MANDOR/PM]')) && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                                <Camera className="w-3 h-3" />
+                                Menunggu Verifikasi Mandor/PM
+                              </span>
+                            )}
                         </div>
 
                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -799,6 +938,8 @@ export default function WorkerDashboard() {
                             <span>Selesai 100%</span>
                           </button>
                         </div>
+
+                        {renderProofPanel(wi, isBusy)}
                       </div>
                     );
                   })}
@@ -852,6 +993,7 @@ export default function WorkerDashboard() {
                     >
                       <TrendingUp className="w-4 h-4" /> Update Progres via Asisten
                     </button>
+                    {renderProofPanel(wi, updatingId === wi.id)}
                   </div>
                 ))
               )}
