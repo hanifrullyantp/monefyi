@@ -4,6 +4,26 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G6] 2026-11-24 — Penutupan Program G0–G6, Hardening Minor G5, Uji E2E Siklus Penuh, Panduan Pengguna, & Laporan Akhir Jujur
+- **Branch / PR:** `feat/g6-program-closure-e2e-docs`
+- **Fase:** G6 (Program Closure, Hardening, Full-Program E2E, & Documentation Gate — G6)
+- **Perubahan & Alasan:**
+  - **Hardening Minor G5 (`packages/domain/src/autonomyGovernance.ts`):**
+    - Memperbaiki penentuan `requiresApproval` pada `authorizeAgentAction` menjadi `isHighRisk || (request.requiresApproval ?? orgPolicy.autonomyLevel !== 'L2')` agar `request.requiresApproval: false` tidak pernah bisa menonaktifkan kewajiban persetujuan manusia pada aksi berisiko tinggi (`dividen`, `tutup_proyek`, `tutup_periode`, `write_off`, `pinjaman_antar_proyek`, `pembayaran_keluar` pita `large` / di atas ambang).
+    - Menambahkan uji regresi pada `apps/web/src/lib/financeV2/__tests__/g5TrustAndAttackSim.test.ts` (memastikan bypass `requiresApproval: false` pada `dividen` ditolak dengan `approval_required` dan `requiresApproval: true`).
+  - **Uji E2E Siklus Bisnis Penuh Terpadu G0–G5 (`apps/web/src/lib/financeV2/__tests__/g6FullProgramE2E.test.ts`):**
+    - Menjalankan satu simulasi siklus bisnis jasa/kontraktor terpadu (`PT Karya Konstruksi Nusantara`) yang merangkai modul nyata lintas G0 (COA 4-kategori, DP `uang_muka_klien`, pengakuan pendapatan progres, pinjaman antar proyek 4-baris, Neraca seimbang, penjaga imutabilitas), G1 (ekstraksi nota OCR -> `prepareEntry` -> `commitEntry`, penolakan prompt injection, impor mutasi bank CSV BCA + pencocokan + rekonsiliasi kas, deteksi duplikat & nominal janggal), G2 (aging 5 bucket, skor risiko klien, peringatan proyek, cron multitenant, draf penagihan WA L1 + SoD + audit log, checklist tutup bulan 6 butir), G3 (forecast 13 minggu, margin + EAC, rekomendasi harga, what-if, prioritas hutang, penjaga narasi menolak halusinasi, `buildAdvisorBriefTool <= 400` token), G4 (budget vs actual, KPI CFO, simulasi dividen 2 mode, laporan direksi PDF deterministik ber-SHA-256 identik, pajak konfigurabel berlabel draf konsultan pajak, penyusutan menolak `periode_terkunci`, amortisasi & skenario tahunan), dan G5 (shadow mode, promosi L2 & larangan L2 berisiko tinggi, auto-demote L2->L1, hardening `requiresApproval: false`, kill switch/SoD/cap/lintas-tenant, memori koreksi, prosedur insiden jurnal pembalik seimbang + post-mortem, dan ekspor audit JSON/CSV ber-SHA-256).
+  - **Dokumentasi Penutupan Program:**
+    - Memperbarui `docs/finance/DEPLOY-RUNBOOK.md` (tabel ringkasan lengkap Langkah 1 s.d. 13 `F0`–`G5`, aktivasi awal `L1` + Mode Bayangan).
+    - Memperbarui `docs/finance/FINAL-REPORT.md` (laporan jujur F0–F4 & G0–G6: bukti deterministik vs pengujian sintetis/in-memory, status `BLOCKED remote`, sisa risiko, rekomendasi `L1` + Mode Bayangan, dan syarat objektif `L2`).
+    - Menerbitkan `docs/finance/USER-GUIDE-ROLES.md` (panduan praktis Bahasa Indonesia untuk 3 peran: Asisten Keuangan, Financial Advisor, CFO).
+    - Menerbitkan `docs/finance/PHASES/G6-report.md` dan memperbarui `docs/finance/PROGRESS.md` (`COMPLETED` / `DONE`) serta `docs/finance/CHANGELOG.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru maupun mutasi tabel jurnal; memakai seluruh template `FINANCE_EVENT_CODES` eksisting dalam uji E2E terpadu.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada G6 (total tetap 13 file migrasi lokal `F0`–`G5` berstatus `BLOCKED remote`).
+- **Tes Ditambah / Diperbarui:** `apps/web/src/lib/financeV2/__tests__/g6FullProgramE2E.test.ts` & `apps/web/src/lib/financeV2/__tests__/g5TrustAndAttackSim.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah signature tool agent; memperketat penjaga otorisasi aksi berisiko tinggi pada `authorizeAgentAction`.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G5] 2026-11-24 — Kepercayaan, Otonomi Berbasis Bukti, SoD, Ekspor Audit, Prosedur Insiden, Simulasi Serangan, & Laporan Gerbang G5
 - **Branch / PR:** `feat/g5-trust-autonomy-governance-security`
 - **Fase:** G5 (Trust, Evidence-Based Autonomy, Governance, & Security Gate — G5)

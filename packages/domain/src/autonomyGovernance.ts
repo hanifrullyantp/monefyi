@@ -652,7 +652,8 @@ export function authorizeAgentAction(
     amountRupiah,
     orgPolicy.outboundHighRiskThresholdRupiah ?? DEFAULT_AUTONOMY_POLICY.outboundHighRiskThresholdRupiah,
   );
-  const requiresApproval = request.requiresApproval ?? (isHighRisk || orgPolicy.autonomyLevel !== 'L2');
+  // Aksi berisiko tinggi selalu mewajibkan persetujuan manusia dan tidak boleh dimatikan oleh request.requiresApproval = false.
+  const requiresApproval = isHighRisk || (request.requiresApproval ?? orgPolicy.autonomyLevel !== 'L2');
 
   const reject = (code: AuthorizeRejectCode, reason: string): AuthorizeAgentActionResult => ({
     allowed: false,

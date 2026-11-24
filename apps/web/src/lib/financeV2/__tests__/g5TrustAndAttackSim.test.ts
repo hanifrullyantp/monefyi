@@ -580,6 +580,25 @@ describe('G5: Kepercayaan, Otonomi Berbasis Bukti, SoD, Simulasi Serangan, & Pro
       );
       expect(validAction.allowed).toBe(true);
       expect(validAction.code).toBe('authorized');
+
+      // Hardening G5->G6: request.requiresApproval: false tidak boleh menonaktifkan approval pada aksi berisiko tinggi
+      const bypassHighRiskApproval = authorizeAgentAction(
+        {
+          orgId: 'org-A',
+          actionType: 'dividen',
+          intent: 'dividen',
+          amountRupiah: 5_000_000,
+          actorId: 'usr-owner',
+          actorRole: 'owner',
+          createdBy: 'agent-1',
+          requiresApproval: false,
+        },
+        { ...basePolicy, autonomyLevel: 'L2' },
+        baseUsage,
+      );
+      expect(bypassHighRiskApproval.allowed).toBe(false);
+      expect(bypassHighRiskApproval.requiresApproval).toBe(true);
+      expect(bypassHighRiskApproval.code).toBe('approval_required');
     });
   });
 
