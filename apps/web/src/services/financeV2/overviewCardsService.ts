@@ -36,6 +36,7 @@ export async function loadOverviewThreeCards(
   projects: { id: string; name: string }[],
 ): Promise<FinanceOverviewThreeCardsData> {
   const range = currentMonthRange();
+  const projectIds = projects.map((p) => p.id).filter(Boolean);
   const [
     accounts,
     monthLines,
@@ -54,7 +55,9 @@ export async function loadOverviewThreeCards(
     loadPayables(orgId),
     loadOpexCategories(orgId),
     loadOpexBudgets(orgId, range.month, range.year),
-    supabase.from('planner_rap_items').select('project_id, planned_amount').eq('org_id', orgId),
+    projectIds.length
+      ? supabase.from('planner_rap_items').select('project_id, quantity, unit_price').in('project_id', projectIds)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     supabase.from('planner_opex_realizations').select('id, category_id').eq('org_id', orgId),
   ]);
 
@@ -67,7 +70,8 @@ export async function loadOverviewThreeCards(
   for (const row of rapRes.data || []) {
     const pid = row.project_id as string;
     if (!pid) continue;
-    rapPlannedByProject[pid] = (rapPlannedByProject[pid] || 0) + (Number(row.planned_amount) || 0);
+    const amt = (Number(row.quantity) || 0) * (Number(row.unit_price) || 0);
+    rapPlannedByProject[pid] = (rapPlannedByProject[pid] || 0) + amt;
   }
 
   const opexCategoryNames: Record<string, string> = {};

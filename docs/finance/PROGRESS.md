@@ -33,6 +33,9 @@
 - [x] `F3-1`: Engine `prepare_entry` & `commit_entry` (`financeEntryEngine.ts`, 9 intent, 3-tier klasifikasi, 3 pita keyakinan, memori koreksi, token budget `AGENT-GUIDE.md`).
 - [x] `F3-2`: Gold set **218 kalimat** (`evals/finance/gold_200_id.yaml`) pada 2 model kecil (`tier-small-flash-lite` & `tier-small-haiku-mini`) + CI + `F3-report.md`.
 
-### Langkah Berikutnya (Fase F4)
-1. Kerjakan `F4-1`: AI Belajar RAP (`rapLearning.ts`, `rapLearningService.ts`, MAPE eval `rap_historical_eval.yaml`, `F4-report.md`).
-2. Kerjakan `F4-2`: Uji E2E siklus bisnis penuh + `DEPLOY-RUNBOOK.md` + `FINAL-REPORT.md`.
+### Fase F4
+- [x] `F4-1`: AI Belajar RAP (`packages/domain/src/rapLearning.ts`, `rapLearningService.ts`, `evals/finance/rap_historical_eval.yaml`, `rapLearningEval.test.ts`, `PHASES/F4-report.md`).
+- [ ] `F4-2`: Uji E2E siklus bisnis penuh (`fullBusinessCycleE2E.test.ts`), `DEPLOY-RUNBOOK.md`, & `FINAL-REPORT.md`.
+
+### Langkah Berikutnya (Penutupan Program)
+1. Kerjakan `F4-2`: Uji E2E siklus penuh + `DEPLOY-RUNBOOK.md` + `FINAL-REPORT.md`.
