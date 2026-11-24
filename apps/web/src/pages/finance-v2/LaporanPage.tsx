@@ -293,18 +293,47 @@ function ReportContent({ tab, bundle }: { tab: ReportKind; bundle: FinanceReport
   const cf = bundle.cashFlow;
 
   if (tab === 'pl') {
+    const grossMarginPct = pl.revenue > 0 ? Math.round((pl.grossProfit / pl.revenue) * 1000) / 10 : 0;
+    const netMarginPct = pl.revenue > 0 ? Math.round((pl.netProfit / pl.revenue) * 1000) / 10 : 0;
     return (
-      <div className="bg-white rounded-2xl border p-5 space-y-1">
-        <h3 className="font-black text-lg mb-3">Laba Rugi</h3>
-        <Row label="Pendapatan" value={pl.revenue} bold />
-        {pl.revenueByProject.map(r => <Row key={r.projectId || 'umum'} label={`  Omzet: ${r.projectName}`} value={r.amount} />)}
-        <Row label="HPP" value={pl.hpp} />
-        {pl.hppBreakdown.map(r => <Row key={r.label} label={`  ${r.label}`} value={r.amount} />)}
-        <Row label="Laba Kotor" value={pl.grossProfit} bold />
-        <Row label="Beban Operasional" value={pl.opex} />
-        {pl.opexBreakdown.map(r => <Row key={r.categoryId} label={`  ${r.categoryName}`} value={r.amount} />)}
-        <Row label="Beban Lainnya" value={pl.otherExpense} />
-        <Row label="Laba Bersih" value={pl.netProfit} bold />
+      <div className="space-y-4">
+        <div className="bg-white rounded-2xl border p-5 space-y-1">
+          <h3 className="font-black text-lg mb-3">Laba Rugi (Tata Letak V1 dari Buku Besar)</h3>
+          <Row label="Pendapatan" value={pl.revenue} bold />
+          {pl.revenueByProject.map(r => <Row key={r.projectId || 'umum'} label={`  Omzet: ${r.projectName}`} value={r.amount} />)}
+          <Row label="HPP" value={pl.hpp} />
+          {pl.hppBreakdown.map(r => <Row key={r.label} label={`  ${r.label}`} value={r.amount} />)}
+          <Row label={`Laba Kotor (Margin ${grossMarginPct}%)`} value={pl.grossProfit} bold />
+          <Row label="Beban Operasional" value={pl.opex} />
+          {pl.opexBreakdown.map(r => <Row key={r.categoryId} label={`  ${r.categoryName}`} value={r.amount} />)}
+          <Row label="Beban Lainnya" value={pl.otherExpense} />
+          <Row label={`Laba Bersih (Margin ${netMarginPct}%)`} value={pl.netProfit} bold />
+        </div>
+        {bundle.projects.length > 0 && (
+          <div className="bg-white rounded-2xl border overflow-hidden">
+            <div className="px-5 py-3 border-b font-bold text-sm text-slate-800">Profitabilitas per Proyek (Buku Besar)</div>
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="text-left p-3">Proyek</th>
+                  <th className="text-right p-3">Pendapatan</th>
+                  <th className="text-right p-3">HPP</th>
+                  <th className="text-right p-3">Laba Kotor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bundle.projects.map(p => (
+                  <tr key={p.projectId} className="border-t border-slate-50">
+                    <td className="p-3 font-semibold">{p.projectName}</td>
+                    <td className="p-3 text-right">{formatFinanceRupiah(p.revenue)}</td>
+                    <td className="p-3 text-right text-rose-600">{formatFinanceRupiah(p.expense)}</td>
+                    <td className="p-3 text-right font-bold text-emerald-700">{formatFinanceRupiah(p.net)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     );
   }

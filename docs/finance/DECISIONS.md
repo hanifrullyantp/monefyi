@@ -50,3 +50,9 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
 - **Pilihan:** Menetapkan default konservatif `ambang_kapitalisasi_rupiah = Rp 5.000.000` (dapat diubah pemilik). Di bawah ambang $\rightarrow$ Beban Operasional; di atas/sama dengan ambang untuk kata kunci peralatan/renovasi/aset $\rightarrow$ tanya balik pemilik (Aset Tetap vs Beban Operasional).
 - **Alasan:** Tidak ada risiko kehilangan data, mudah diubah lewat konfigurasi organisasi.
 
+## D-F2-01 — Cadangan Opex Default pada Mode Dividen Per Bisnis
+- **Tanggal:** 2026-11-24
+- **Konteks:** Dividen mode `per_bisnis` dibagikan dari `Laba Ditahan` dan dibatasi kas tersedia dikurangi cadangan opex bulanan agar biaya usaha periode berjalan tetap aman (`Q-03` di `OPEN-QUESTIONS.md`).
+- **Pilihan:** Menetapkan default konservatif `opexReserveMultiplier = 1` ($1\times$ total plan opex bulanan), dapat disesuaikan pemilik bila menginginkan cadangan $2\times$ atau lebih.
+- **Alasan:** Mencegah dividen menghabiskan kas operasional rutin sambil tetap menjaga ruang pembagian laba yang realistis.
+

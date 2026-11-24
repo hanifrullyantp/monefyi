@@ -1,5 +1,5 @@
 import { accountRouteForType, calcQuickRatio, isBalanceSheetBalanced } from '../../lib/financeV2Calc';
-import { ensureChartOfAccounts, loadAccounts } from './accountService';
+import { computePeriodProfitFromAccounts, ensureChartOfAccounts, loadAccounts } from './accountService';
 import type { BalanceSheetData, FinanceKpis } from '../../types/financeV2';
 
 export async function getFinanceV2Snapshot(orgId: string): Promise<{
@@ -45,9 +45,7 @@ export async function getFinanceV2Snapshot(orgId: string): Promise<{
     variance,
   };
 
-  const labaPeriode = accounts
-    .filter(a => a.type === 'laba')
-    .reduce((s, a) => s + a.current_balance, 0);
+  const labaPeriode = computePeriodProfitFromAccounts(accounts);
 
   const cashFlow = accounts
     .filter(a => a.type === 'kas')

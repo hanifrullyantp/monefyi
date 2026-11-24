@@ -25,6 +25,10 @@
 - [x] `F1-1`: Perluas COA (`AccountType`), helper sub-akun HPP RAP, validasi dimensi `project_id`/`party_id`, & perluas `packages/domain/src/journal.ts` dengan enum kejadian tertutup + tes per template.
 - [x] `F1-2`: Migrasi SQL lokal F1 (`20261124120000_f1_coa_and_dimensions.sql`, status `BLOCKED remote`), layanan rekonsiliasi + dry-run, pensiun penghitung `financeV1` (`businessReportService.ts` membaca buku besar), keputusan `finance_version` di `DECISIONS.md`, & `F1-report.md`.
 
-### Langkah Berikutnya (Fase F2)
-1. Kerjakan `F2-1`: Halaman depan 3 kartu, laporan V1-style dari buku besar, & layar dividen 2 mode.
-2. Kerjakan `F2-2`: Tool `get_finance_snapshot` ($\le 400$ token) & laporan `F2-report.md`.
+### Fase F2
+- [x] `F2-1`: Halaman depan 3 kartu (`overviewCards.ts`, `FinanceOverviewThreeCards.tsx`), laporan V1-style dari buku besar (`LaporanPage.tsx`), & layar dividen 2 mode (`dividendModes.ts`, `DividendTwoModePanel.tsx`).
+- [ ] `F2-2`: Tool `get_finance_snapshot` ($\le 400$ token), `AGENT-GUIDE.md`, kasus eval `evals/finance/`, & laporan `F2-report.md`.
+
+### Langkah Berikutnya (Fase F2 -> F3)
+1. Kerjakan `F2-2`: Tool `get_finance_snapshot` ($\le 400$ token) & laporan `F2-report.md`.
+2. Lanjut otomatis ke Fase F3 (`F3-1` & `F3-2`).
