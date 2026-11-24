@@ -137,4 +137,14 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
   4. Menyaring total data internal (`laborCost`, `dailyRate`, `margin`, `eac`, `kasbon`) pada `buildDailyProjectReport` mode `'client'` (dan menolaknya bila `clientReportEnabled !== true`), serta mewajibkan bukti foto atau konfirmasi mandor/PM pada penutupan todo kendala (`closeTodoWithProof`).
 - **Alasan:** Menutup celah klaim penyelesaian sepihak di lapangan, mencegah kebocoran informasi biaya/tarif internal ke klien, mencegah pemesanan material otonom tanpa persetujuan, dan menyatukan paritas angka antara jadwal PM, buku besar upah HRD, serta simulasi arus kas Advisor.
 
+## D-G10-01 — Arsitektur Gateway Saluran Pluggable, Risiko Adaptor WhatsApp Non-Resmi, & Kemandirian Telegram/Web-PWA
+- **Tanggal:** 2026-11-24
+- **Konteks:** Operasional lapangan membutuhkan akses multi-saluran (`telegram`, `web_pwa`, `whatsapp`) tanpa menduplikasi logika agen/keuangan dan tanpa ketergantungan pada satu jalur pengiriman. Jalur WhatsApp Business API resmi membutuhkan proses verifikasi bisnis/Meta dan biaya percakapan, sementara uji coba awal (pilot) memerlukan opsi WhatsApp non-resmi di belakang kontrak yang sama tanpa mengunci arsitektur atau membahayakan nomor utama bisnis.
+- **Pilihan:**
+  1. Menempatkan seluruh logika saluran di belakang antarmuka pluggable `ChannelAdapter` (`packages/domain/src/channelGateway.ts`) dengan 4 tipe saluran (`'telegram' | 'web_pwa' | 'whatsapp_unofficial' | 'whatsapp_official'`), sehingga migrasi dari adaptor non-resmi ke API resmi cukup menukar instance adaptor pada registry tanpa menyentuh `routeSingleDoorInput`, `prepareUnifiedAction`, `commitUnifiedAction`, maupun mesin proaktif.
+  2. Mengakui dan mendokumentasikan secara jujur risiko adaptor WhatsApp non-resmi (`createUnofficialWhatsAppAdapter`, `tosRiskDisclosure`): risiko pelanggaran Ketentuan Layanan (ToS) Meta/WhatsApp, pemblokiran nomor oleh Meta, sesi QR terputus, dan perubahan protokol mendadak.
+  3. Menerapkan pagar keras pada adaptor WhatsApp non-resmi: melarang broadcast massal (`maxRecipientsPerSend === 1`, menolak `mass_broadcast_forbidden` bila penerima `> 1`), melarang penanaman kredensial/token sesi di kode, dan mewajibkan penggunaan **nomor pilot khusus** (bukan nomor utama bisnis/pribadi pemilik) hingga migrasi ke `whatsapp_official` disetujui pemilik (`Q-06`).
+  4. Menjaga agar adaptor **Telegram (`createTelegramAdapter`)** dan **Web/PWA (`createWebPwaAdapter`)** 100% mandiri dan dapat berjalan penuh tanpa modul maupun konfigurasi WhatsApp.
+- **Alasan:** Menjaga keterpisahan bersih antara transportasi saluran dan logika agen/akuntansi, meminimalkan risiko blokir nomor utama saat pilot, serta memastikan kelangsungan operasional 100% melalui Telegram dan Web/PWA bila jalur WhatsApp non-resmi dinonaktifkan atau sedang bermigrasi ke API resmi.
+
 

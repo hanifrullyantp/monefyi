@@ -25,6 +25,9 @@ planner_invitations
 planner_contracts
 planner_finance
 planner_budget
+planner_channel_identities
+planner_outbound_message_logs
+planner_org_proactive_budgets
 
 # 2. Supabase Edge Functions & Shared Modules
 planner-spa-deploy

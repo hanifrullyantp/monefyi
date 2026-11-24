@@ -4,6 +4,30 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G10-2] 2026-11-24 — Gateway Saluran Pluggable (`telegram`, `web_pwa`, `whatsapp`), Mesin Proaktif Beranggaran Gangguan, Ringkasan Pemilik 5 Baris, & Simulasi 20 Orang × 5 Proyek × 7 Hari
+- **Branch / PR:** `feat/g10-2-channel-adapters-wa-proactive-budget-sim`
+- **Fase:** G10 (`G10-2` — Gateway Saluran, Adaptor WA Non-Resmi, Orkestrator Proaktif, & Penutupan Gerbang G10)
+- **Perubahan & Alasan:**
+  - **Gateway Saluran & Adaptor Pluggable (`packages/domain/src/channelGateway.ts`):**
+    - Mendefinisikan antarmuka `ChannelAdapter` (`channelType: 'telegram' | 'web_pwa' | 'whatsapp_unofficial' | 'whatsapp_official'`, `parseInbound`, `formatOutbound`, `supportsMedia`, `send` pluggable) beserta implementasi `createTelegramAdapter`, `createWebPwaAdapter`, `createUnofficialWhatsAppAdapter`, dan `createOfficialWhatsAppAdapter` sehingga perpindahan ke WhatsApp Business API resmi tidak menyentuh logika agen sama sekali, dan Telegram/Web-PWA tetap 100% mandiri tanpa WhatsApp.
+    - `createUnofficialWhatsAppAdapter`: melarang keras broadcast massal (`maxRecipientsPerSend === 1` → tolak `mass_broadcast_forbidden`), bebas kredensial/sesi di kode, serta menyertakan `tosRiskDisclosure` (risiko ToS/blokir nomor & rekomendasi nomor pilot khusus).
+    - `resolveChannelIdentity`: menautkan `(channelType, externalHandle)` ke `(orgId, memberId, role)` dengan isolasi lintas-tenant ketat (`cross_tenant_forbidden`).
+    - `processInboundChannelMessage`: menegakkan deduplikasi `externalMessageId` (`duplicate_inbound_ignored`), batas laju `rateLimitPerMinute` (`rate_limited`), penyimpanan metadata media (`mediaAttachmentHash`, `mimeType`), deteksi prompt injection (`prompt_injection_rejected`), penanganan opt-out `"STOP"`/`"BERHENTI"` (`userOptedOut = true`), dan penerusan pesan sah ke `routeSingleDoorInput` + `prepareUnifiedAction` (**0 tulis data langsung tanpa `prepare`/`commit`**).
+  - **Mesin Proaktif & Anggaran Gangguan (`packages/domain/src/proactiveOrchestrator.ts`):**
+    - Mendukung seluruh 7 pemicu lintas domain (`absensi_belum_masuk`, `progres_mandek`, `hari_kerja_melebihi_rap`, `tagihan_jatuh_tempo`, `stok_menipis`, `hari_gajian`, `todo_terlambat`) dan lintas saluran.
+    - `runProactiveDispatchCycle`: menegakkan `maxQuestionsPerPersonPerDay` (default `3`), jam tenang `quietHours` (`20:00`–`07:00` lokal → `deferred_quiet_hours`), bundling pemicu slot sama menjadi 1 ringkasan terpadu, **0 pertanyaan ganda** (`already_answered_or_sent`), penghentian + eskalasi ke atasan saat diabaikan (`ignoredStreak >= maxIgnoreCount`, default `2`), format tebakan kuat (`"Di proyek <X> hari ini? Jawab: ya / bukan"`), `userOptedOut` & `orgKillSwitch`, serta pencatatan wajib `OutboundMessageLog`.
+    - `buildOwnerDailySummary5Lines`: menghasilkan tepat `<= 5` baris ringkasan harian pemilik (Kas, Kehadiran, Progres, Keputusan, Risiko) secara deterministik dan ber-provenance.
+  - **Migrasi SQL Lokal (`my-supabase-project/supabase/migrations/20261124200000_g10_channel_gateway_proactive.sql`, status `BLOCKED remote`):**
+    - Menambah tabel `planner_channel_identities`, tabel append-only `planner_outbound_message_logs`, dan `planner_org_proactive_budgets` ber-RLS ketat `is_org_member` tanpa memutasi tabel jurnal.
+  - **Tes Gerbang & Simulasi G10 (`apps/web/src/lib/financeV2/__tests__/g10ChannelsAndProactiveSim.test.ts`):**
+    - Simulasi penuh **20 orang** (14 tukang, 3 mandor, 2 PM, 1 pemilik), **5 proyek**, **7 hari** memverifikasi seluruh invarian anggaran gangguan, opt-out, kill switch, eskalasi, prompt injection, isolasi lintas-tenant, 0 tulis tanpa `prepare`/`commit`, ringkasan 5 baris, larangan broadcast massal WA non-resmi, kemandirian Telegram/Web-PWA, serta uji struktural SQL.
+  - **Dokumentasi:** Menambah `D-G10-01` di `docs/finance/DECISIONS.md`, `Q-06` di `docs/finance/OPEN-QUESTIONS.md`, Langkah 16 di `docs/finance/DEPLOY-RUNBOOK.md`, memperbarui `docs/finance/PROGRESS.md` (Fase **G10 `DONE`**, siapkan **G11**), dan menerbitkan `docs/finance/PHASES/G10-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru; seluruh aksi masuk melalui gerbang `prepare`/`commit` runtime tunggal (`unifiedAgentGateway.ts`).
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124200000_g10_channel_gateway_proactive.sql` (`BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g10ChannelsAndProactiveSim.test.ts`.
+- **Dampak ke Tool Agent:** Melengkapi lapisan saluran masuk/keluar pluggable dan orkestrator proaktif beranggaran gangguan di depan runtime satu pintu G10-1.
+- **Cara Rollback:** `git revert` commit PR ini (serta abaikan/batalkan migrasi `20261124200000` jika belum dijalankan di DB).
+
 ## [G10-1] 2026-11-24 — Satu Pintu Input (HRD + PM + Keuangan) & Penyatuan 18 Aksi `managerAgentService` ke Runtime `prepare`/`commit` Tunggal
 - **Branch / PR:** `feat/g10-1-unified-agent-prepare-commit-18-actions`
 - **Fase:** G10 (`G10-1` — Satu Pintu Input & Runtime `prepare`/`commit` Tunggal)
