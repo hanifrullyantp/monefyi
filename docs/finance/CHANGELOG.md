@@ -4,6 +4,19 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F3-T1] 2026-11-24 — Engine AI Pencatat 9 Intent (`prepare_entry` / `commit_entry`), Klasifikasi 3 Lapis, & Memori Koreksi
+- **Branch / PR:** `finance/F3-T1-prepare-commit-classifier-intents`
+- **Fase:** F3 (AI Pencatat)
+- **Perubahan & Alasan:**
+  - Membangun `agent-core/src/financeEntryEngine.ts`: mendukung 9 intent tertutup (`catat_biaya_proyek`, `catat_opex`, `catat_pemasukan`, `bayar_hutang`, `terima_piutang`, `kasbon`, `transfer_kas`, `dividen`, `tanya_saldo`), ekstraksi rupiah/tanggal deterministik, resolusi entitas dengan alias + fuzzy (`needs_choice` maks. 5 kandidat), klasifikasi 3 lapis (`org_rule` -> `domain_rule` -> `llm_closed_choice` maks. 5 kandidat), 3 pita keyakinan (`auto_commit` / `confirm_one_tap` / `ask_back`), penjaga aset vs opex $\ge \text{Rp }5.000.000$, blokir pengeluaran pribadi & periode terkunci, wajib `ownerApproved` untuk dividen, dan `recordFinanceCorrection`.
+  - Mendaftarkan `prepare_entry` & `commit_entry` di `agent-core/src/registry.ts` (menjaga batas $\le 8$ tool/spesialis dengan memisahkan tool biaya proyek legacy ke `project`/`purchasing`) serta menyinkronkan `functions.json`, `mcp.json`, `fixtures.json`, dan `AGENT_MANUAL.md`.
+  - Menulis `PHASES/F3-plan.md`, memperbarui `AGENT-GUIDE.md` beserta system prompt $\le 1.200$ token, dan menambah `financeEntryEngine.test.ts`.
+- **Akun / Template Jurnal Tersentuh:** Semua 24 template kode kejadian di `packages/domain/src/journal.ts` (`source='agent'`, `model`, `prepare_token`).
+- **Migrasi SQL:** Tidak ada (kolom metadata sudah disiapkan di migrasi F1).
+- **Tes Ditambah:** `apps/web/src/lib/financeEntryEngine.test.ts`.
+- **Dampak ke Tool Agent:** Specialist `finance` & `manager` memakai `prepare_entry` + `commit_entry` (9 intent) selain `get_finance_snapshot`.
+- **Cara Rollback:** `git revert` commit merge PR ini dan jalankan ulang `writeArtifacts.ts`.
+
 ## [F2-T2] 2026-11-24 — Tool `get_finance_snapshot` ($\le 400$ Token) & Laporan Akhir F2
 - **Branch / PR:** `finance/F2-T2-agent-finance-snapshot`
 - **Fase:** F2 (Tampilan & Snapshot)

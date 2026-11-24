@@ -156,6 +156,85 @@
       }
     },
     {
+      "name": "prepare_entry",
+      "description": "Siapkan transaksi 9 intent dengan klasifikasi server dan token 10 menit.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "intent": {
+            "type": "string",
+            "description": "Jenis kejadian keuangan tertutup.",
+            "enum": [
+              "catat_biaya_proyek",
+              "catat_opex",
+              "catat_pemasukan",
+              "bayar_hutang",
+              "terima_piutang",
+              "kasbon",
+              "transfer_kas",
+              "dividen",
+              "tanya_saldo"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "description": "Kalimat transaksi lengkap pengguna."
+          },
+          "project_id": {
+            "type": "string",
+            "description": "Id proyek terverifikasi."
+          },
+          "party_id": {
+            "type": "string",
+            "description": "Id pihak terverifikasi."
+          },
+          "wallet_id": {
+            "type": "string",
+            "description": "Id dompet kas terverifikasi."
+          },
+          "entry_date": {
+            "type": "string",
+            "description": "Tanggal YYYY-MM-DD jika ditentukan."
+          }
+        },
+        "required": [
+          "intent",
+          "text"
+        ]
+      }
+    },
+    {
+      "name": "commit_entry",
+      "description": "Posting jurnal dari prepare_entry memakai token dan idempotency_key.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "prepare_token": {
+            "type": "string",
+            "description": "Token dari prepare_entry."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Kunci unik mencegah posting ganda."
+          },
+          "owner_approved": {
+            "type": "string",
+            "description": "Persetujuan eksplisit pemilik untuk dividen.",
+            "enum": [
+              "true",
+              "false"
+            ]
+          }
+        },
+        "required": [
+          "prepare_token",
+          "idempotency_key"
+        ]
+      }
+    },
+    {
       "name": "get_finance_snapshot",
       "description": "Ringkasan kas, piutang, hutang, laba rugi, dan RAP proyek dari buku besar.",
       "inputSchema": {

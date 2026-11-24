@@ -29,6 +29,10 @@
 - [x] `F2-1`: Halaman depan 3 kartu (`overviewCards.ts`, `FinanceOverviewThreeCards.tsx`), laporan V1-style dari buku besar (`LaporanPage.tsx`), & layar dividen 2 mode (`dividendModes.ts`, `DividendTwoModePanel.tsx`).
 - [x] `F2-2`: Tool `get_finance_snapshot` ($\le 400$ token, terukur ~278 token), `AGENT-GUIDE.md`, kasus eval `evals/finance/f2_snapshot.yaml`, & laporan `F2-report.md`.
 
+### Fase F3
+- [x] `F3-1`: Engine `prepare_entry` & `commit_entry` (`financeEntryEngine.ts`, 9 intent, 3-tier klasifikasi, 3 pita keyakinan, memori koreksi, token budget `AGENT-GUIDE.md`).
+- [ ] `F3-2`: Gold set $\ge 200$ kalimat (`evals/finance/gold_200_id.yaml`) pada $\ge 2$ model kecil + CI + `F3-report.md`.
+
 ### Langkah Berikutnya (Fase F3 -> F4)
-1. Kerjakan `F3-1`: Engine `prepare_entry` & `commit_entry` untuk 9 intent + 3-tier klasifikasi + memori koreksi.
-2. Kerjakan `F3-2`: Gold set $\ge 200$ kalimat Indonesia pada $\ge 2$ model kecil + CI + `F3-report.md`.
+1. Kerjakan `F3-2`: Gold set $\ge 200$ kalimat Indonesia pada $\ge 2$ model kecil + CI + `F3-report.md`.
+2. Lanjut otomatis ke Fase F4 (`F4-1` AI Belajar RAP + `F4-2` E2E siklus bisnis penuh & laporan akhir).
