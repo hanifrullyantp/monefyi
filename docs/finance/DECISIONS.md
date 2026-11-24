@@ -127,3 +127,14 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
   5. Mengunci batas otonomi perbaikan: `autoModifyCodeOrPromptAllowed: false` (sistem dilarang mengubah kode atau prompt sendiri; semua kasus agent gagal menghasilkan `EvalCaseCandidate` berstatus `'pending_human_review'`, dan `computeQualityDashboard` memicu rekomendasi penurunan `L2 -> L1` bila akurasi turun atau terjadi kesalahan kritis).
 - **Alasan:** Menjamin siklus umpan balik produk & AI yang cepat, aman dari kebocoran PII/kredensial, menghormati privasi organisasi, serta menjaga setiap perubahan kode/prompt tetap tunduk pada tinjauan manusia dan eval gate.
 
+## D-G9-01 — Guard Bukti Foto 100%, Redaksi Laporan Klien, & Draf PO Wajib Persetujuan Manusia pada Agen Project Manager
+- **Tanggal:** 2026-11-24
+- **Konteks:** Sebelumnya `WorkerDashboard.tsx` memungkinkan pekerja menekan tombol `"Selesai 100%"` atau menggeser slider ke `100%` langsung tanpa bukti foto maupun verifikasi mandor/PM, belum ada penyaringan data internal (tarif harian, biaya upah, EAC, kasbon, margin) untuk laporan klien, dan dibutuhkan penghubung deterministik antara jadwal Gantt PM, akrual upah HRD (G8), dan dampak keterlambatan termin ke proyeksi arus kas (G3).
+- **Pilihan:**
+  1. Menempatkan seluruh perhitungan deterministik PM di `packages/domain/src/projectManagerAgent.ts` (integer rupiah via `toRupiah` dan `provenance`) dengan `deriveDailyPlanFromSchedule` yang menghasilkan `DailyAssignmentPlan` selaras `DailyAssignmentSchedule` di `hrdPayroll.ts`.
+  2. Menegakkan aturan keras penyelesaian `100%` melalui `evaluateProgressUpdateRequest` dan guard UI `validateWorkerProgressUpdate` (`apps/web/src/lib/workerProgressGuard.ts` yang dipakai langsung oleh `apps/web/src/pages/WorkerDashboard.tsx`): pekerja tanpa foto valid atau persetujuan SoD supervisor (`approvedBy !== actorId`) ditolak (`rejected_requires_proof`); pekerja dengan foto masuk ke antrean `pending_supervisor_verification` tanpa menandai `completed` 100%.
+  3. Mengunci seluruh draf pembelian material akibat `stock_low` ke `status: 'pending_human_approval'` dan `autoOrderAllowed: false`.
+  4. Menyaring total data internal (`laborCost`, `dailyRate`, `margin`, `eac`, `kasbon`) pada `buildDailyProjectReport` mode `'client'` (dan menolaknya bila `clientReportEnabled !== true`), serta mewajibkan bukti foto atau konfirmasi mandor/PM pada penutupan todo kendala (`closeTodoWithProof`).
+- **Alasan:** Menutup celah klaim penyelesaian sepihak di lapangan, mencegah kebocoran informasi biaya/tarif internal ke klien, mencegah pemesanan material otonom tanpa persetujuan, dan menyatukan paritas angka antara jadwal PM, buku besar upah HRD, serta simulasi arus kas Advisor.
+
+

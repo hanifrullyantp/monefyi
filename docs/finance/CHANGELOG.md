@@ -4,6 +4,29 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G9] 2026-11-24 — Agen Project Manager Deterministik, Guard Bukti Foto 100% UI Karyawan, Laporan Klien Terredaksi, & Simulasi Proyek 30 Hari End-to-End
+- **Branch / PR:** `feat/g9-project-manager-agent-30d-sim`
+- **Fase:** G9 (Agen Project Manager & Rekonsiliasi Lapangan–HRD–Keuangan)
+- **Perubahan & Alasan:**
+  - **Domain Deterministik Agen Project Manager (`packages/domain/src/projectManagerAgent.ts`):**
+    - `deriveDailyPlanFromSchedule`: menurunkan `dailyAssignments` (`DailyAssignmentPlan` selaras `DailyAssignmentSchedule` di `hrdPayroll.ts`) dan `plannedProgressPct` / `actualProgressPct` tertimbang per tanggal dari jadwal Gantt `workItems`.
+    - `evaluateProgressUpdateRequest`: menolak `requestedProgressPct >= 100` dari pekerja tanpa `photoAttachmentHash`/`photoUrl` valid atau persetujuan SoD supervisor (`mandor` / `pm` / `owner` dengan `approvedBy !== actorId`) dengan `ok: false`, `status: 'rejected_requires_proof'`, `reason: 'photo_or_supervisor_approval_required'`; unggahan foto oleh pekerja tanpa supervisor masuk `pending_supervisor_verification`.
+    - `evaluateLaborProductivityAndEac`: menghitung `eacLaborCostRupiah` (`actualLaborCost / (actualProgressPct / 100)` saat `>= 10%`), `laborVarianceAtCompletionRupiah`, serta peringatan `'labor_overrun'` (`eac > rap * 1.1`) dan `'progress_stalled'` (`daysWithoutProgress >= 3` saat ada pekerja aktif).
+    - `evaluateMaterialAndPurchaseDrafts`: mendeteksi `stock_low` saat `currentStockQty < neededQty` atau `<= minStockThreshold` dan menyusun `purchase_request_draft` berstatus wajib `'pending_human_approval'` (`autoOrderAllowed: false`) dalam integer rupiah.
+    - `buildDailyProjectReport`: menyusun laporan harian proyek mode `'owner'` (menyertakan biaya upah/tarif/EAC/kasbon/margin internal) vs mode `'client'` (hanya aktif saat `clientReportEnabled === true` dan menyaring seluruh data internal `laborCost`, `dailyRate`, `margin`, `eac`, `kasbon`).
+    - `evaluateDelayAndTerminImpact`: menghitung `scheduleSlipDays`, `projectedCompletionDate`, menandai `'termin_blocked_by_progress_delay'`, menghitung `estimatedCashInDelayDays` dan `blockedTerminAmountRupiah`, serta menghasilkan `advisorWhatIfScenario` siap-eksekusi untuk `runAdvisorWhatIf`.
+    - `createTodoFromIssue` & `closeTodoWithProof`: membuat todo otomatis dari kendala/kekurangan stok ke PIC tahap dan menolak penutupan tanpa `proofAttachmentHash` atau konfirmasi mandor/PM (`reason: 'closure_proof_required'`).
+  - **Perbaikan Guard UI Karyawan (`apps/web/src/lib/workerProgressGuard.ts`, `apps/web/src/pages/WorkerDashboard.tsx`):**
+    - Menambatkan `validateWorkerProgressUpdate` (memanggil `evaluateProgressUpdateRequest`) ke tombol `+25%`, `Selesai 100%`, dan slider progres di `WorkerDashboard.tsx`, serta menambahkan panel lampiran bukti foto wajib yang menahan pengajuan pekerja pada status verifikasi mandor/PM tanpa langsung menandai `'completed'` 100%.
+  - **Tes Gerbang G9 & Simulasi 30 Hari (`apps/web/src/lib/financeV2/__tests__/g9ProjectManager30DaySim.test.ts`):**
+    - Simulasi penuh 30 hari proyek terpadu (3 tahap Gantt, 3 tukang + 1 mandor + 1 PM) memverifikasi paritas 3 arah **total upah HRD 30 hari (`Rp 13.200.000`) === total debit `hpp_labor` Buku Besar === `actualLaborCostRupiah` PM EAC**, pengakuan DP bertahap (`computeRecognizableRevenue`), dampak keterlambatan termin ke `runAdvisorWhatIf`, guard foto 100% domain & UI, draf PO `pending_human_approval`, todo berbukti, dan laporan klien bebas kebocoran data internal.
+  - **Dokumentasi:** Menambah `D-G9-01` di `docs/finance/DECISIONS.md`, menerbitkan `docs/finance/PHASES/G9-report.md`, dan memperbarui `docs/finance/PROGRESS.md` & `docs/finance/CHANGELOG.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru; mengintegrasikan verifikasi buku besar dengan `hpp_labor`, `hutang_gaji`, `project_labor_accrual`, dan `dp_revenue_recognition`.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada fase G9.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g9ProjectManager30DaySim.test.ts`.
+- **Dampak ke Tool Agent:** Menyediakan domain deterministik untuk penjadwalan harian PM, guard progres 100%, EAC upah, draf PO `pending_human_approval`, pelaporan owner/klien, todo berbukti, dan koordinasi keterlambatan termin ke `runAdvisorWhatIf`.
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [G7] 2026-11-24 — Sistem Umpan Balik Terpadu, Observabilitas Lintas Aplikasi, Anonimisasi PII, Penggabungan Laporan Otomatis, Dasbor Mutu, & Laporan Gerbang `G7-report.md`
 - **Branch / PR:** `feat/g7-unified-feedback-observability`
 - **Fase:** G7 (Sistem Umpan Balik Terpadu & Observabilitas Lintas Aplikasi)
