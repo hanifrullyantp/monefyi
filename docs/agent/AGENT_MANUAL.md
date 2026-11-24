@@ -68,6 +68,15 @@ Risiko: commit. Peran minimum: worker.
 - `prepare_token` (string, wajib): Token dari prepare_record_cost.
 - `idempotency_key` (string, wajib): Kunci yang sama saat mencoba ulang.
 
+## get_finance_snapshot
+
+Ringkasan kas, piutang, hutang, laba rugi, dan RAP proyek dari buku besar.
+
+Risiko: read. Peran minimum: manager.
+
+- `kind` (string): Jenis ringkasan laporan, default ringkasan. Pilihan: ringkasan, laba_rugi, neraca, arus_kas.
+- `project_id` (string): Batasi ke satu id proyek.
+
 ## propose_notification
 
 Usulkan pemberitahuan. Belum mengirim.

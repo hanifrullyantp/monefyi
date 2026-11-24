@@ -95,11 +95,28 @@ export const TOOLS: ToolDef[] = [
     ],
   },
   {
+    name: 'get_finance_snapshot',
+    description: 'Ringkasan kas, piutang, hutang, laba rugi, dan RAP proyek dari buku besar.',
+    risk: 'read',
+    minRole: 'manager',
+    specialists: ['manager', 'finance'],
+    args: [
+      {
+        name: 'kind',
+        type: 'string',
+        required: false,
+        enum: ['ringkasan', 'laba_rugi', 'neraca', 'arus_kas'],
+        description: 'Jenis ringkasan laporan, default ringkasan.',
+      },
+      { name: 'project_id', type: 'string', required: false, description: 'Batasi ke satu id proyek.' },
+    ],
+  },
+  {
     name: 'propose_notification',
     description: 'Usulkan pemberitahuan. Belum mengirim.',
     risk: 'prepare',
     minRole: 'manager',
-    specialists: ['manager', 'project', 'finance', 'purchasing', 'hr'],
+    specialists: ['project', 'purchasing', 'hr'],
     args: [
       { name: 'project_id', type: 'string', required: true, description: 'Id proyek dari find_project.' },
       {

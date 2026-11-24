@@ -1,0 +1,22 @@
+# Evaluasi snapshot & laporan ringkas keuangan F2 (gerbang F2)
+- id: f2_snapshot_ringkasan_budget
+  kind: snapshot
+  max_tokens: 400
+  max_list_items: 5
+  input_kind: ringkasan
+- id: f2_snapshot_laba_rugi_budget
+  kind: snapshot
+  max_tokens: 350
+  max_list_items: 5
+  input_kind: laba_rugi
+- id: f2_snapshot_neraca_budget
+  kind: snapshot
+  max_tokens: 350
+  max_list_items: 5
+  input_kind: neraca
+- id: f2_snapshot_arus_kas_budget
+  kind: snapshot
+  max_tokens: 350
+  max_list_items: 5
+  input_kind: arus_kas
+

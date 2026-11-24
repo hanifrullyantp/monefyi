@@ -38,7 +38,7 @@ Dokumen ini mendefinisikan antarmuka, batasan, anggaran token, dan pagar pengama
 
 ---
 
-## 3. Katalog Tool Aktif (Baseline F0)
+## 3. Katalog Tool Aktif (F0–F2)
 
 Sumber tunggal definisi tool berada di `agent-core/src/registry.ts` (dihasilkan ke `agent-core/functions.json` dan `docs/agent/AGENT_MANUAL.md`):
 
@@ -47,11 +47,12 @@ Sumber tunggal definisi tool berada di `agent-core/src/registry.ts` (dihasilkan 
 - `find_wallet(query, project_id?)` — *read*, min `worker`
 - `get_project_cash(project_id)` — *read*, min `worker`
 - `get_party_debt(party_id, project_id?)` — *read*, min `worker`
+- `get_finance_snapshot(kind?, project_id?)` — *read*, min `manager` ($\le 400$ token; `kind`: `ringkasan` | `laba_rugi` | `neraca` | `arus_kas`, daftar maks. 5 item + total + 1 baris `summary`)
 - `prepare_record_cost(project_id, item, total, qty?, unit?, entry_date)` — *prepare*, min `worker` (menolak periode terkunci di F0)
 - `commit_record_cost(prepare_token, idempotency_key)` — *commit*, min `worker`
-- `propose_notification(project_id, audience, message_id)` — *prepare*, min `manager`
+- `propose_notification(project_id, audience, message_id)` — *prepare*, min `manager` (`project`, `purchasing`, `hr`)
 
-*(Tool baru per fase—seperti `get_finance_snapshot` di F2 dan intent pencatatan lengkap di F3—akan didokumentasikan di sini seiring gerbang tiap fase.)*
+*(Intent pencatatan lengkap `prepare_entry`/`commit_entry` untuk 9 intent di F3 akan didokumentasikan di bagian ini.)*
 
 ---
 

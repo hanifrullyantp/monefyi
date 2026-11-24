@@ -1,6 +1,6 @@
 # PROGRESS — Papan Kerja Keuangan Froyek (F0–F4)
 
-**Fase Aktif:** `F2` (Tampilan & Snapshot)  
+**Fase Aktif:** `F3` (AI Pencatat)  
 **Orkestrator:** Argon (Mode Otonom)  
 **Terakhir Diperbarui:** 2026-11-24
 
@@ -12,8 +12,8 @@
 |---|---|---|---|---|
 | **F0** | Kebenaran Akuntansi (`T0`–`T9`) | `DONE` | `F0-T0`, `F0-T8`, `F0-T1`, `F0-T2/T5`, `F0-T3/T4`, `F0-T6/T7`, `F0-T9` | Semua tes invarian & T1–T8 hijau; `F0-report.md` terbit; migrasi SQL lokal `BLOCKED remote`. |
 | **F1** | Akun Baru & Dimensi Proyek | `DONE` | `F1-T1`, `F1-T2` | COA F1 lengkap, 24 template kejadian tertutup, migrasi+dry-run+rekonsiliasi (`BLOCKED remote`), pensiun penghitung `financeV1`, `F1-report.md`. |
-| **F2** | Tampilan & Snapshot | `DOING` | `F2-T1`, `F2-T2` | 3 kartu depan, laporan V1-style dari buku besar, layar dividen 2 mode, `get_finance_snapshot`. |
-| **F3** | AI Pencatat | `TODO` | `F3-T1`, `F3-T2` | 9 intent, `prepare_entry`/`commit_entry`, memori koreksi, gold set $\ge 200$ kalimat pada $\ge 2$ model kecil. |
+| **F2** | Tampilan & Snapshot | `DONE` | `F2-T1`, `F2-T2` | 3 kartu depan, laporan V1 buku besar, dividen 2 mode (`D-F2-01`), `get_finance_snapshot` (~278 token), `F2-report.md`. |
+| **F3** | AI Pencatat | `DOING` | `F3-T1`, `F3-T2` | 9 intent, `prepare_entry`/`commit_entry`, memori koreksi, gold set $\ge 200$ kalimat pada $\ge 2$ model kecil. |
 | **F4** | AI Belajar RAP & E2E | `TODO` | `F4-T1`, `F4-T2` | Dataset proyek selesai, draf rentang+provenance, MAPE eval, uji E2E siklus penuh, `FINAL-REPORT.md`. |
 
 ---
@@ -27,8 +27,8 @@
 
 ### Fase F2
 - [x] `F2-1`: Halaman depan 3 kartu (`overviewCards.ts`, `FinanceOverviewThreeCards.tsx`), laporan V1-style dari buku besar (`LaporanPage.tsx`), & layar dividen 2 mode (`dividendModes.ts`, `DividendTwoModePanel.tsx`).
-- [ ] `F2-2`: Tool `get_finance_snapshot` ($\le 400$ token), `AGENT-GUIDE.md`, kasus eval `evals/finance/`, & laporan `F2-report.md`.
+- [x] `F2-2`: Tool `get_finance_snapshot` ($\le 400$ token, terukur ~278 token), `AGENT-GUIDE.md`, kasus eval `evals/finance/f2_snapshot.yaml`, & laporan `F2-report.md`.
 
-### Langkah Berikutnya (Fase F2 -> F3)
-1. Kerjakan `F2-2`: Tool `get_finance_snapshot` ($\le 400$ token) & laporan `F2-report.md`.
-2. Lanjut otomatis ke Fase F3 (`F3-1` & `F3-2`).
+### Langkah Berikutnya (Fase F3 -> F4)
+1. Kerjakan `F3-1`: Engine `prepare_entry` & `commit_entry` untuk 9 intent + 3-tier klasifikasi + memori koreksi.
+2. Kerjakan `F3-2`: Gold set $\ge 200$ kalimat Indonesia pada $\ge 2$ model kecil + CI + `F3-report.md`.

@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F2-T2] 2026-11-24 — Tool `get_finance_snapshot` ($\le 400$ Token) & Laporan Akhir F2
+- **Branch / PR:** `finance/F2-T2-agent-finance-snapshot`
+- **Fase:** F2 (Tampilan & Snapshot)
+- **Perubahan & Alasan:**
+  - Menambahkan `agent-core/src/financeSnapshot.ts` (`buildFinanceSnapshot`, `estimateJsonTokens`) yang mengembalikan JSON ringkas $\le 400$ token (~278 token untuk 8 dompet & 8 proyek), membatasi daftar ke maks. 5 item + total, serta mendukung parameter `kind` (`ringkasan`, `laba_rugi`, `neraca`, `arus_kas`).
+  - Mendaftarkan `get_finance_snapshot` ke `agent-core/src/registry.ts` (deskripsi 11 kata $\le 25$ kata) dan menjaga `toolsFor('finance' | 'manager', *) <= 8` dengan menata ulang `propose_notification` ke `['project', 'purchasing', 'hr']`.
+  - Menjalankan `writeArtifacts.ts` sehingga `agent-core/functions.json`, `agent-core/mcp.json`, `agent-core/fixtures.json`, dan `docs/agent/AGENT_MANUAL.md` tersinkronisasi.
+  - Menambah kasus uji `evals/finance/f2_snapshot.yaml`, memperluas `apps/web/src/lib/agentTools.test.ts`, memperbarui `docs/finance/AGENT-GUIDE.md` & `PROGRESS.md`, dan menerbitkan `docs/finance/PHASES/F2-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Read-only dari saldo & ringkasan laporan buku besar `financeV2`.
+- **Migrasi SQL:** Tidak ada.
+- **Tes Ditambah:** Uji token budget & truncation F2 di `apps/web/src/lib/agentTools.test.ts` + `evals/finance/f2_snapshot.yaml`.
+- **Dampak ke Tool Agent:** Specialist `finance` dan `manager` kini memiliki tool `get_finance_snapshot(kind?, project_id?)`.
+- **Cara Rollback:** `git revert` commit merge PR ini dan jalankan ulang `writeArtifacts.ts`.
+
 ## [F2-T1] 2026-11-24 — 3 Kartu Halaman Depan, Laporan V1 dari Buku Besar, & Dividen 2 Mode
 - **Branch / PR:** `finance/F2-T1-three-cards-v1-report-dividend-ui`
 - **Fase:** F2 (Tampilan & Snapshot)

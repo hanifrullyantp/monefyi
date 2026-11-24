@@ -155,6 +155,31 @@
     }
   },
   {
+    "name": "get_finance_snapshot",
+    "description": "Ringkasan kas, piutang, hutang, laba rugi, dan RAP proyek dari buku besar.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Jenis ringkasan laporan, default ringkasan.",
+          "enum": [
+            "ringkasan",
+            "laba_rugi",
+            "neraca",
+            "arus_kas"
+          ]
+        },
+        "project_id": {
+          "type": "string",
+          "description": "Batasi ke satu id proyek."
+        }
+      },
+      "required": []
+    }
+  },
+  {
     "name": "propose_notification",
     "description": "Usulkan pemberitahuan. Belum mengirim.",
     "parameters": {

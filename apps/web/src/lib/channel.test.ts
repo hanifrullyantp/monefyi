@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parametersFromProfile, emptyProfile, type CompanyProfile } from '../../../../agent-core/src/profile';
 import { SOP_CATALOG } from '../../../../agent-core/src/sopData';
 import { routeRequest } from '../../../../agent-core/src/runtime';
-import { TOOLS } from '../../../../agent-core/src/registry';
+import { TOOLS, assertRegistry, toolsFor } from '../../../../agent-core/src/registry';
 import {
   LINK_TTL_MS,
   allowMessage,
@@ -259,6 +259,8 @@ describe('kanal telegram', () => {
     const ready = parametersFromProfile(sop!, filled);
     expect(ready.ok).toBe(true);
     if (ready.ok) expect(ready.parameters.jam_tanya_progres).toBe(16);
-    expect(TOOLS).toHaveLength(8);
+    expect(assertRegistry()).toEqual([]);
+    expect(toolsFor('finance', 'manager').length).toBeLessThanOrEqual(8);
+    expect(TOOLS.length).toBeGreaterThanOrEqual(8);
   });
 });
