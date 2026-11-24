@@ -13,6 +13,8 @@ import {
 import { useAppStore, type Project } from '../../store/appStore';
 import { showToast } from '../../store/uiStore';
 import { getFinanceV2Snapshot } from '../../services/financeV2/balanceSheetService';
+import { loadOverviewThreeCards } from '../../services/financeV2/overviewCardsService';
+import { buildOverviewThreeCards, type FinanceOverviewThreeCardsData } from '../../lib/financeV2/overviewCards';
 import { loadPayables } from '../../services/financeV2/payableService';
 import { aggregateNetCashflow, getOrgFinanceTotals } from '../../services/projectFinanceService';
 import { buildBusinessSnapshotFromAccounts } from '../../lib/migration/project-normalize';
@@ -24,6 +26,8 @@ import NeracaGrid from '../../components/sandbox-ui/NeracaGrid';
 import Sparkline from '../../components/sandbox-ui/Sparkline';
 import BalanceDiagnosisModal from '../../components/finance-v2/BalanceDiagnosisModal';
 import FinanceIntegrationPanel from '../../components/finance-v2/FinanceIntegrationPanel';
+import FinanceOverviewThreeCards from '../../components/finance-v2/FinanceOverviewThreeCards';
+import DividendTwoModePanel from '../../components/finance-v2/DividendTwoModePanel';
 import { ToolRow, ListCard } from '../../components/common';
 import ProjectTransactionModals, { type ModalKind } from '../../components/projects/v2/ProjectTransactionModals';
 
@@ -58,6 +62,7 @@ export default function FinanceSandboxOverview() {
   const [mtdLaba, setMtdLaba] = useState(0);
   const [payrollOutstanding, setPayrollOutstanding] = useState(0);
   const [projectsReadyClose, setProjectsReadyClose] = useState(0);
+  const [threeCardsData, setThreeCardsData] = useState<FinanceOverviewThreeCardsData | null>(null);
 
   // Mobile interactive state
   const [neracaMobileOpen, setNeracaMobileOpen] = useState(false);
@@ -97,12 +102,33 @@ export default function FinanceSandboxOverview() {
         projects.filter(p => p.status === 'completed' && p.finance_status !== 'finance_closed')
           .length,
       );
+      const demoNames: Record<string, string> = {};
+      const demoRap: Record<string, number> = {};
+      for (const p of projects) {
+        demoNames[p.id] = p.name;
+        demoRap[p.id] = p.total_budget_planned || p.contract_value || 0;
+      }
+      setThreeCardsData(
+        buildOverviewThreeCards({
+          todayIso: new Date().toISOString().slice(0, 10),
+          monthLabel: monthRange.from.slice(0, 7),
+          accounts: [],
+          monthLines: [],
+          allProjectLines: [],
+          projectNames: demoNames,
+          opexCategoryNames: {},
+          rapPlannedByProject: demoRap,
+          receivables: [],
+          payables: [],
+          monthlyOpexPlanned: 0,
+        }),
+      );
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const [snap, payables, cf, orgTotals, reportBundle, payroll] = await Promise.all([
+      const [snap, payables, cf, orgTotals, reportBundle, payroll, threeCards] = await Promise.all([
         getFinanceV2Snapshot(tenant.id),
         loadPayables(tenant.id),
         aggregateNetCashflow(tenant.id, 30),
@@ -113,7 +139,9 @@ export default function FinanceSandboxOverview() {
           dateTo: monthRange.to,
         }),
         listPayrollEntries(tenant.id, 48),
+        loadOverviewThreeCards(tenant.id, projects),
       ]);
+      setThreeCardsData(threeCards);
       const hutangOpen = payables.reduce((s, p) => s + (p.amount - p.paid_amount), 0);
       const biz = buildBusinessSnapshotFromAccounts(tenant.name, snap.accounts, hutangOpen);
 
@@ -337,6 +365,28 @@ export default function FinanceSandboxOverview() {
         {/* Integrasi Jurnal Panel */}
         {!demoActive && tenant?.id && (
           <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} compact />
+        )}
+
+        {threeCardsData && (
+          <div className="space-y-4">
+            <FinanceOverviewThreeCards
+              data={threeCardsData}
+              onOpenKas={() => navigate(`${BASE}/kasbank`)}
+              onOpenLaporan={() => navigate(`${BASE}/laporan`)}
+            />
+            <DividendTwoModePanel
+              totalCash={threeCardsData.card1CashDebt.totalCash}
+              monthlyPlannedOpex={threeCardsData.card3BusinessMonth.opexPlanned}
+              labaDitahan={labaDitahan}
+              projects={threeCardsData.card2Projects.map(p => ({
+                projectId: p.projectId,
+                projectName: p.projectName,
+                revenue: p.revenue,
+                hpp: p.hpp,
+                contractValue: p.rapPlanned,
+              }))}
+            />
+          </div>
         )}
 
         {/* Neraca Bisnis (Collapsible) */}
@@ -616,6 +666,28 @@ export default function FinanceSandboxOverview() {
 
         {!demoActive && tenant?.id && (
           <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} compact />
+        )}
+
+        {threeCardsData && (
+          <div className="space-y-4">
+            <FinanceOverviewThreeCards
+              data={threeCardsData}
+              onOpenKas={() => navigate(`${BASE}/kasbank`)}
+              onOpenLaporan={() => navigate(`${BASE}/laporan`)}
+            />
+            <DividendTwoModePanel
+              totalCash={threeCardsData.card1CashDebt.totalCash}
+              monthlyPlannedOpex={threeCardsData.card3BusinessMonth.opexPlanned}
+              labaDitahan={labaDitahan}
+              projects={threeCardsData.card2Projects.map(p => ({
+                projectId: p.projectId,
+                projectName: p.projectName,
+                revenue: p.revenue,
+                hpp: p.hpp,
+                contractValue: p.rapPlanned,
+              }))}
+            />
+          </div>
         )}
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">

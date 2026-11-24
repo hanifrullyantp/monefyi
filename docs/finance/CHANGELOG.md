@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F2-T1] 2026-11-24 — 3 Kartu Halaman Depan, Laporan V1 dari Buku Besar, & Dividen 2 Mode
+- **Branch / PR:** `finance/F2-T1-three-cards-v1-report-dividend-ui`
+- **Fase:** F2 (Tampilan & Snapshot)
+- **Perubahan & Alasan:**
+  - Menambahkan `overviewCards.ts` + `overviewCardsService.ts` + komponen `FinanceOverviewThreeCards.tsx` untuk menampilkan 3 kartu utama di overview keuangan: (1) Uang & Hutang-Piutang (dompet kas, piutang/retensi, hutang jatuh tempo), (2) Untung/Rugi per Proyek (laba, margin %, RAP vs realisasi), (3) Bisnis Bulan Ini (profit kotor, plan vs realisasi opex, profit bersih).
+  - Menambahkan `dividendModes.ts` + komponen `DividendTwoModePanel.tsx` untuk simulasi dan penyusunan jurnal dividen mode `per_proyek` (pool kas bersih proyek + offset piutang owner) dan mode `per_bisnis` (dari Laba Ditahan dengan batas kas dikurangi cadangan $1\times$ opex bulanan terencana sesuai `D-F2-01`).
+  - Memperbarui `balanceSheetService.ts` (`computePeriodProfitFromAccounts`), `LaporanPage.tsx` (margin % & tabel profitabilitas per proyek dari buku besar pada tab Laba Rugi), dan `FinanceSandboxOverview.tsx` (aman untuk Demo mode).
+  - Menulis `PHASES/F2-plan.md`, menambah `D-F2-01` di `DECISIONS.md`, dan memperbarui `PROGRESS.md`.
+- **Akun / Template Jurnal Tersentuh:** `kas`, `piutang`, `piutang_retensi`, `pendapatan_proyek`, `hpp_*`, `beban_opex`, `laba_ditahan`, `dividen` (`businessDividendCash`, `projectDividendCash`).
+- **Migrasi SQL:** Tidak ada.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/f2OverviewDividend.test.ts`.
+- **Dampak ke Tool Agent:** Fondasi data 3 kartu yang sama akan dipakai langsung oleh `get_finance_snapshot` di `F2-T2`.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F1-T2] 2026-11-24 — Migrasi SQL Lokal F1, Rekonsiliasi Dry-Run, & Pensiun Penghitung V1
 - **Branch / PR:** `finance/F1-T2-migration-reconciliation-retire-v1`
 - **Fase:** F1 (Akun Baru & Dimensi Proyek)
