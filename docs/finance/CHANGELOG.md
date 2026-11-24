@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F4-T1] 2026-11-24 — AI Belajar RAP dari Proyek Selesai, Fallback Katalog, & Evaluasi MAPE
+- **Branch / PR:** `finance/F4-T1-rap-learning-and-eval`
+- **Fase:** F4 (AI Belajar RAP & E2E)
+- **Perubahan & Alasan:**
+  - Membangun `packages/domain/src/rapLearning.ts` (`buildRapLearningDataset`, `generateRapDraftFromHistory`, `computeRapCompletionFeedback`, `evaluateRapPredictionMape`) yang menormalisasi realisasi proyek selesai (`completed`/`finance_closed`) per satuan volume (`m2`/`unit`), mengeluarkan draf rentang `low`/`mid`/`high` beserta *provenance* (`Berdasarkan N proyek serupa` jika $N \ge 3$ atau fallback katalog Estimator jika $N < 3$), serta selalu mewajibkan `requiresOwnerApproval: true`.
+  - Menambahkan `apps/web/src/services/financeV2/rapLearningService.ts` (`proposeRapDraftForProject`, `approveRapDraft`, `recordProjectRapCompletionFeedback`).
+  - Menambahkan dataset `evals/finance/rap_historical_eval.yaml` (6 proyek selesai historis + 3 proyek *holdout*) dan tes `apps/web/src/lib/rapLearningEval.test.ts`.
+  - Menulis `PHASES/F4-plan.md`, `PHASES/F4-report.md`, memperbarui `AGENT-GUIDE.md` & `PROGRESS.md`.
+- **Akun / Template Jurnal Tersentuh:** Membaca realisasi `hpp_*` dari buku besar (`buildProfitLossFromLines`); tidak menulis jurnal langsung tanpa persetujuan RAP.
+- **Migrasi SQL:** Tidak ada.
+- **Tes Ditambah:** `apps/web/src/lib/rapLearningEval.test.ts`, `evals/finance/rap_historical_eval.yaml`.
+- **Dampak ke Tool Agent:** AI dapat mengusulkan draf RAP berrentang + *provenance* yang selalu meminta persetujuan pemilik.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F3-T2] 2026-11-24 — Gold Set Evaluasi 218 Kalimat Indonesia pada 2 Model Kecil & Integrasi CI
 - **Branch / PR:** `finance/F3-T2-gold-eval-200-two-models`
 - **Fase:** F3 (AI Pencatat)

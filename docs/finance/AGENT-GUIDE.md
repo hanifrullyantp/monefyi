@@ -50,6 +50,7 @@ Sumber tunggal definisi tool berada di `agent-core/src/registry.ts` (dihasilkan 
   - Pita keyakinan: `high` ($\rightarrow$ `auto_commit` jika di bawah ambang), `medium` ($\rightarrow$ `confirm_one_tap`), `low` ($\rightarrow$ `ask_back`).
   - Penjaga keras: `dividen` wajib `owner_approved=true`, opex $\ge \text{Rp }5.000.000$ untuk kata kunci aset/renovasi bertanya balik `opex` vs `aset_tetap`, pengeluaran pribadi ditolak.
 - `commit_entry(prepare_token, idempotency_key, owner_approved?)` — *commit*, memvalidasi token 10 menit, idempotensi, & persetujuan pemilik.
+- **RAP Pembelajaran (`F4`, domain/service):** `generateRapDraftFromHistory` menyusun draf rentang `low`/`mid`/`high` + *provenance* (`Berdasarkan N proyek serupa` atau fallback katalog Estimator jika $N < 3$) dengan `requiresOwnerApproval: true` wajib sebelum aktif.
 
 ## 3.1 System Prompt Ringkas Agent Keuangan ($\le 1.200$ token)
 

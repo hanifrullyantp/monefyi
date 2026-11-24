@@ -1,0 +1,121 @@
+# Evaluasi historis AI Belajar RAP (F4-T1): 6 proyek selesai & 3 holdout
+history:
+  - projectId: hist-1
+    projectType: renovasi_rumah
+    status: finance_closed
+    volume: 100
+    volumeUnit: m2
+    planned_material: 210000000
+    planned_labor: 90000000
+    planned_equipment: 15000000
+    planned_overhead: 15000000
+    planned_other: 10000000
+    actual_material: 225000000
+    actual_labor: 95000000
+    actual_equipment: 16000000
+    actual_overhead: 16500000
+    actual_other: 9500000
+  - projectId: hist-2
+    projectType: renovasi_rumah
+    status: completed
+    volume: 80
+    volumeUnit: m2
+    planned_material: 170000000
+    planned_labor: 74000000
+    planned_equipment: 12000000
+    planned_overhead: 12000000
+    planned_other: 8000000
+    actual_material: 176000000
+    actual_labor: 76000000
+    actual_equipment: 12400000
+    actual_overhead: 12800000
+    actual_other: 7600000
+  - projectId: hist-3
+    projectType: renovasi_rumah
+    status: finance_closed
+    volume: 120
+    volumeUnit: m2
+    planned_material: 258000000
+    planned_labor: 112000000
+    planned_equipment: 18500000
+    planned_overhead: 18500000
+    planned_other: 11500000
+    actual_material: 270000000
+    actual_labor: 117000000
+    actual_equipment: 19200000
+    actual_overhead: 19800000
+    actual_other: 11400000
+  - projectId: hist-4
+    projectType: bangun_ruko
+    status: finance_closed
+    volume: 200
+    volumeUnit: m2
+    planned_material: 540000000
+    planned_labor: 240000000
+    planned_equipment: 40000000
+    planned_overhead: 34000000
+    planned_other: 20000000
+    actual_material: 560000000
+    actual_labor: 248000000
+    actual_equipment: 42000000
+    actual_overhead: 36000000
+    actual_other: 19000000
+  - projectId: hist-5
+    projectType: bangun_ruko
+    status: finance_closed
+    volume: 150
+    volumeUnit: m2
+    planned_material: 405000000
+    planned_labor: 180000000
+    planned_equipment: 30000000
+    planned_overhead: 25500000
+    planned_other: 15000000
+    actual_material: 414000000
+    actual_labor: 183000000
+    actual_equipment: 31000000
+    actual_overhead: 26400000
+    actual_other: 14700000
+  - projectId: hist-6
+    projectType: bangun_ruko
+    status: completed
+    volume: 180
+    volumeUnit: m2
+    planned_material: 486000000
+    planned_labor: 216000000
+    planned_equipment: 36000000
+    planned_overhead: 30600000
+    planned_other: 18000000
+    actual_material: 504000000
+    actual_labor: 223200000
+    actual_equipment: 37400000
+    actual_overhead: 32000000
+    actual_other: 17500000
+holdouts:
+  - id: hold-renov-90
+    projectType: renovasi_rumah
+    volume: 90
+    volumeUnit: m2
+    actual_material: 201000000
+    actual_labor: 86500000
+    actual_equipment: 14300000
+    actual_overhead: 14600000
+    actual_other: 8600000
+  - id: hold-renov-110
+    projectType: renovasi_rumah
+    volume: 110
+    volumeUnit: m2
+    actual_material: 245000000
+    actual_labor: 105500000
+    actual_equipment: 17500000
+    actual_overhead: 17800000
+    actual_other: 10500000
+  - id: hold-ruko-160
+    projectType: bangun_ruko
+    volume: 160
+    volumeUnit: m2
+    actual_material: 446000000
+    actual_labor: 198000000
+    actual_equipment: 33500000
+    actual_overhead: 28500000
+    actual_other: 15500000
+
