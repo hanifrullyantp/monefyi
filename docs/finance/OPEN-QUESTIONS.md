@@ -24,3 +24,8 @@ Daftar pertanyaan bisnis/akuntansi untuk diputuskan pemilik sebelum atau saat me
 - **Konteks:** Proyek kini memiliki kolom `revenue_recognition_method` dengan default konservatif `'termin'` dan opsi `'progress_pct'` (`D-G0-02`) serta tabel jadwal `planner_revenue_recognition_schedules`.
 - **Pertanyaan:** Apakah seluruh proyek baru tetap memakai default konservatif `'termin'` (pengakuan DP saat termin tercapai) dan eksekusi jadwal bulanan memerlukan konfirmasi pemilik sebelum diposting, atau proyek konstruksi berjangka panjang otomatis memakai `'progress_pct'` dengan penjadwalan otomatis akhir bulan?
 
+## Q-06 — Persetujuan Risiko Jalur WhatsApp Non-Resmi vs Jadwal Migrasi ke WhatsApp Business API Resmi (G10-2)
+- **Konteks:** Sesuai `D-G10-01`, adaptor `whatsapp_unofficial` dibangun di belakang antarmuka pluggable `ChannelAdapter` (tanpa broadcast massal, `maxRecipientsPerSend === 1`, tanpa kredensial tertanam di kode) untuk kebutuhan pilot, namun memiliki risiko nyata pelanggaran ToS Meta/WhatsApp, pemblokiran nomor, dan sesi QR terputus, sementara Telegram dan Web/PWA berjalan 100% mandiri.
+- **Pertanyaan:** Apakah pemilik menyetujui penggunaan sementara adaptor `whatsapp_unofficial` khusus dengan **nomor pilot terdedikasi** selama fase uji coba (dengan risiko ToS/blokir nomor tersebut), atau memilih langsung mengaktifkan WhatsApp Business API resmi (`whatsapp_official`) sejak awal serta menetapkan target tanggal migrasi penuh dari jalur non-resmi ke API resmi?
+
+

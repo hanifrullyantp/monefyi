@@ -134,6 +134,14 @@ File: `my-supabase-project/supabase/migrations/20261124193000_g7_unified_feedbac
 - Membuat tabel `planner_org_telemetry_settings` (`org_id UNIQUE`, `behavior_telemetry_opt_out boolean DEFAULT false`, `updated_by`, `updated_at`).
 - Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` (`worker` untuk `SELECT`/`INSERT` feedback, `manager` untuk `UPDATE` triase, `owner` untuk pengaturan opt-out telemetri) tanpa menyentuh atau memutasi tabel jurnal.
 
+### Langkah 16 — Migrasi G10-2 (Gateway Saluran & Mesin Proaktif Beranggaran Gangguan)
+File: `my-supabase-project/supabase/migrations/20261124200000_g10_channel_gateway_proactive.sql`
+- Membuat tabel `planner_channel_identities` (`org_id`, `member_id`, `member_role`, `channel_type` `'telegram'|'web_pwa'|'whatsapp_unofficial'|'whatsapp_official'`, `external_handle`, `opted_out`, `is_active`, dengan `UNIQUE(channel_type, external_handle)`) untuk penautan identitas lintas saluran berisolasi tenant.
+- Membuat tabel append-only `planner_outbound_message_logs` (`org_id`, `recipient_member_id`, `channel_type`, `question_keys text[]`, `message_body`, `outcome`, `sent_at`) dengan trigger `planner_outbound_message_logs_no_mutation` (`BEFORE UPDATE OR DELETE`, `ERRCODE = '55000'`) sebagai jejak pesan keluar wajib.
+- Membuat tabel `planner_org_proactive_budgets` (`org_id UNIQUE`, `max_questions_per_person_per_day DEFAULT 3`, `quiet_start_hour DEFAULT 20`, `quiet_end_hour DEFAULT 7`, `kill_switch_enabled DEFAULT false`) untuk kontrol anggaran gangguan & kill switch per organisasi.
+- Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` pada ketiga tabel tanpa menyentuh atau memutasi tabel jurnal buku besar.
+
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check
