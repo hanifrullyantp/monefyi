@@ -68,6 +68,29 @@ Risiko: commit. Peran minimum: worker.
 - `prepare_token` (string, wajib): Token dari prepare_record_cost.
 - `idempotency_key` (string, wajib): Kunci yang sama saat mencoba ulang.
 
+## prepare_entry
+
+Siapkan transaksi 9 intent dengan klasifikasi server dan token 10 menit.
+
+Risiko: prepare. Peran minimum: worker.
+
+- `intent` (string, wajib): Jenis kejadian keuangan tertutup. Pilihan: catat_biaya_proyek, catat_opex, catat_pemasukan, bayar_hutang, terima_piutang, kasbon, transfer_kas, dividen, tanya_saldo.
+- `text` (string, wajib): Kalimat transaksi lengkap pengguna.
+- `project_id` (string): Id proyek terverifikasi.
+- `party_id` (string): Id pihak terverifikasi.
+- `wallet_id` (string): Id dompet kas terverifikasi.
+- `entry_date` (string): Tanggal YYYY-MM-DD jika ditentukan.
+
+## commit_entry
+
+Posting jurnal dari prepare_entry memakai token dan idempotency_key.
+
+Risiko: commit. Peran minimum: worker.
+
+- `prepare_token` (string, wajib): Token dari prepare_entry.
+- `idempotency_key` (string, wajib): Kunci unik mencegah posting ganda.
+- `owner_approved` (string): Persetujuan eksplisit pemilik untuk dividen. Pilihan: true, false.
+
 ## get_finance_snapshot
 
 Ringkasan kas, piutang, hutang, laba rugi, dan RAP proyek dari buku besar.

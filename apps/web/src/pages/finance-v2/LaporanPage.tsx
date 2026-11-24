@@ -61,9 +61,9 @@ export default function LaporanPage() {
 
   useEffect(() => {
     if (!tenant?.id) return;
-    loadAccounts(tenant.id).then(setAccounts).catch(() => {});
-    loadOpexCategories(tenant.id).then(setCategories).catch(() => {});
-    listPeriodSnapshots(tenant.id).then(setPeriodSnapshots).catch(() => {});
+    loadAccounts(tenant.id).then(setAccounts).catch(() => { });
+    loadOpexCategories(tenant.id).then(setCategories).catch(() => { });
+    listPeriodSnapshots(tenant.id).then(setPeriodSnapshots).catch(() => { });
   }, [tenant?.id]);
 
   const load = useCallback(async () => {
@@ -123,7 +123,7 @@ export default function LaporanPage() {
     try {
       await closeFinancePeriod({ orgId: tenant.id, periodMonth: monthStartISO() });
       showToast('Periode ditutup', 'success');
-      listPeriodSnapshots(tenant.id).then(setPeriodSnapshots).catch(() => {});
+      listPeriodSnapshots(tenant.id).then(setPeriodSnapshots).catch(() => { });
       load();
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Gagal tutup periode', 'error');

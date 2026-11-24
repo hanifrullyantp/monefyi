@@ -257,9 +257,8 @@ export default function FinanceSandboxOverview() {
     <button
       type="button"
       onClick={() => setBalanceOpen(true)}
-      className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-opacity hover:opacity-85 ${
-        balanceCheck.isBalanced ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-      }`}
+      className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-opacity hover:opacity-85 ${balanceCheck.isBalanced ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+        }`}
     >
       {balanceCheck.isBalanced ? <CheckCircle2 className="w-3.5 h-3.5" /> : null}
       {balanceCheck.isBalanced ? 'Balance' : 'Tidak Balance'}
@@ -330,9 +329,8 @@ export default function FinanceSandboxOverview() {
               LABA BERSIH MTD
             </div>
             <div
-              className={`text-lg font-extrabold mt-1.5 tabular-nums truncate ${
-                mtdLaba >= 0 ? 'text-[#047857]' : 'text-[#BE123C]'
-              }`}
+              className={`text-lg font-extrabold mt-1.5 tabular-nums truncate ${mtdLaba >= 0 ? 'text-[#047857]' : 'text-[#BE123C]'
+                }`}
             >
               {formatRupiah(mtdLaba)}
             </div>
@@ -402,11 +400,10 @@ export default function FinanceSandboxOverview() {
                 <span className="text-[15px] font-extrabold text-[#0F172A]">Neraca Bisnis</span>
                 {balanceCheck && (
                   <span
-                    className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${
-                      balanceCheck.isBalanced
+                    className={`text-[11px] font-extrabold px-2 py-0.5 rounded-full ${balanceCheck.isBalanced
                         ? 'bg-[#ECFDF5] text-[#047857]'
                         : 'bg-[#FFF1F2] text-[#BE123C]'
-                    }`}
+                      }`}
                   >
                     {balanceCheck.isBalanced ? '✓ Balance' : '⚠ Perlu Cek'}
                   </span>
@@ -417,9 +414,8 @@ export default function FinanceSandboxOverview() {
               </div>
             </div>
             <span
-              className={`w-7 h-7 rounded-full bg-[#F1F5F4] flex items-center justify-center shrink-0 text-slate-700 transition-transform duration-200 ml-2 ${
-                neracaMobileOpen ? 'rotate-180' : ''
-              }`}
+              className={`w-7 h-7 rounded-full bg-[#F1F5F4] flex items-center justify-center shrink-0 text-slate-700 transition-transform duration-200 ml-2 ${neracaMobileOpen ? 'rotate-180' : ''
+                }`}
             >
               <ChevronDown className="w-4 h-4" />
             </span>
@@ -503,11 +499,10 @@ export default function FinanceSandboxOverview() {
           <button
             type="button"
             onClick={() => setChipFilter('all')}
-            className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${
-              chipFilter === 'all'
+            className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${chipFilter === 'all'
                 ? 'bg-[#0F172A] text-white shadow-xs'
                 : 'bg-white border border-[#E5EAE8] text-[#334155]'
-            }`}
+              }`}
           >
             <span>Semua</span>
             <span className={chipFilter === 'all' ? 'text-white/80' : 'text-[#8A99A6]'}>
@@ -519,11 +514,10 @@ export default function FinanceSandboxOverview() {
             onClick={() =>
               setChipFilter(prev => (prev === 'over_contract' ? 'all' : 'over_contract'))
             }
-            className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${
-              chipFilter === 'over_contract'
+            className={`h-10 px-3.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${chipFilter === 'over_contract'
                 ? 'bg-[#BE123C] text-white shadow-xs'
                 : 'bg-white border border-[#E5EAE8] text-[#BE123C]'
-            }`}
+              }`}
           >
             <span>Realisasi melebihi kontrak</span>
             <span
@@ -698,9 +692,8 @@ export default function FinanceSandboxOverview() {
           >
             <div className="text-xs font-semibold text-slate-500 mb-1">Laba Bersih MTD</div>
             <div
-              className={`text-xl font-black ${
-                mtdLaba >= 0 ? 'text-emerald-700' : 'text-rose-600'
-              }`}
+              className={`text-xl font-black ${mtdLaba >= 0 ? 'text-emerald-700' : 'text-rose-600'
+                }`}
             >
               {formatRupiah(mtdLaba)}
             </div>
@@ -724,11 +717,10 @@ export default function FinanceSandboxOverview() {
           >
             <div className="text-xs font-semibold text-slate-500 mb-1">Arus Kas 30 Hari</div>
             <div
-              className={`text-xl font-black ${
-                (cashflow[cashflow.length - 1] || 0) >= 0
+              className={`text-xl font-black ${(cashflow[cashflow.length - 1] || 0) >= 0
                   ? 'text-emerald-700'
                   : 'text-rose-600'
-              }`}
+                }`}
             >
               {formatRupiah(cashflow[cashflow.length - 1] || 0)}
             </div>
