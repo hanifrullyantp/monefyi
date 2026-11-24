@@ -62,6 +62,12 @@ File: `my-supabase-project/supabase/migrations/20261124144000_g0_5_revenue_recog
 - Membuat tabel `planner_revenue_recognition_schedules` (`UNIQUE(project_id, period_month)`) beserta policy RLS `is_org_member`.
 - Menambahkan RPC idempoten `public.planner_recognize_project_dp_revenue(p_org_id, p_project_id, p_period_month, p_amount, p_progress_pct, p_actor)` untuk memposting `Dr uang_muka_klien / Cr pendapatan_proyek` secara append-only per `(project_id, period_month)`.
 
+### Langkah 8 — Migrasi G0-6 (Identitas Pihak via `party_id` & Pinjaman Antar Proyek via Jurnal Double-Entry)
+File: `my-supabase-project/supabase/migrations/20261124145000_g0_6_party_id_and_interproject_loans.sql`
+- Memperluas constraint `planner_journal_entries_reference_type_check` dengan `'interproject_loan'` dan `'interproject_loan_repayment'`.
+- Menambahkan kolom & indeks `party_id uuid REFERENCES planner_parties(id) ON DELETE SET NULL` secara idempoten pada `planner_payables`, `planner_receivables`, `planner_project_incomes`, dan `planner_cost_realizations`.
+- Membuat RPC append-only `public.planner_post_interproject_loan(p_org_id, p_from_project_id, p_to_project_id, p_amount, p_entry_date, p_description, p_is_repayment, p_actor)` yang memvalidasi `p_from_project_id <> p_to_project_id`, `p_amount > 0`, memastikan dompet kas kedua proyek, dan memposting jurnal 4-baris seimbang melalui `public.planner_post_journal`.
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check

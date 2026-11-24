@@ -83,10 +83,12 @@ Dokumen ini adalah spesifikasi hidup (*living specification*) untuk buku besar d
 | **Edit Biaya Proyek** | `reversal` + `project_expense` | (1) `Kas Proyek` / `Hutang Dagang` (balik)<br>(2) `HPP Proyek` (baru) | (1) `HPP Proyek` (balik)<br>(2) `Kas Proyek` / `Hutang Dagang` (baru) | `updateCostRealization` (jurnal lama dibalik, jurnal baru diposting ke akun HPP F1) |
 | **Hapus Biaya / Pemasukan** | `reversal` | Kebalikan baris jurnal asli | Kebalikan baris jurnal asli | `deleteCostRealization` / `deleteProjectIncome` + soft-delete baris sumber |
 | **Transfer Antar Kas** | `transfer` | `Kas Tujuan` | `Kas Asal` | `transferKas` |
-| **Hutang Baru (Akrual)** | `project_expense` | `HPP Proyek` | `Hutang Dagang/Pajak/Lain` | `createPayable` / `payableAccrual` |
-| **Bayar Hutang** | `payable_payment` / `project_expense` | `Hutang Dagang/Pajak/Lain` | `Kas` | `recordPayablePayment` |
-| **Piutang Baru** | `project_income` | `Piutang Usaha` | `Pendapatan Proyek` | `createReceivable` / `receivableAccrual` |
-| **Terima Piutang** | `receivable_receipt` / `project_income` | `Kas` | `Piutang Usaha` | `recordReceivablePayment` |
+| **Pinjaman Antar Proyek (Pencairan A → B)** | `interproject_loan` | (1) `Piutang` (Proyek A)<br>(2) `Kas Tujuan` (Proyek B) | (1) `Kas` (Proyek A)<br>(2) `Hutang Lain` (Proyek B) | `planner_post_interproject_loan` / `postInterprojectLoan` (4 baris seimbang, dampak L/R = 0, kas konsolidasi = 0) |
+| **Pelunasan Pinjaman Antar Proyek (B → A)** | `interproject_loan_repayment` | (1) `Hutang Lain` (Proyek B)<br>(2) `Kas Tujuan` (Proyek A) | (1) `Kas` (Proyek B)<br>(2) `Piutang` (Proyek A) | `planner_post_interproject_loan` / `postInterprojectLoanRepayment` (4 baris seimbang, dampak L/R = 0, kas konsolidasi = 0) |
+| **Hutang Baru (Akrual)** | `project_expense` | `HPP Proyek` | `Hutang Dagang/Pajak/Lain` | `createPayable` / `payableAccrual` (`party_id` wajib) |
+| **Bayar Hutang** | `payable_payment` / `project_expense` | `Hutang Dagang/Pajak/Lain` | `Kas` | `recordPayablePayment` (`party_id`) |
+| **Piutang Baru** | `project_income` | `Piutang Usaha` | `Pendapatan Proyek` | `createReceivable` / `receivableAccrual` (`party_id` wajib) |
+| **Terima Piutang** | `receivable_receipt` / `project_income` | `Kas` | `Piutang Usaha` | `recordReceivablePayment` (`party_id`) |
 | **Opex Bisnis** | `opex` | `Beban Operasional` | `Kas Bisnis` | `createOpexRealization` |
 | **Investasi Modal** | `manual` | `Kas Bisnis` | `Modal Disetor` | `recordInvestorTransaction` (`invest`) |
 | **Penarikan Modal** | `manual` | `Modal Disetor` | `Kas Bisnis` | `recordInvestorTransaction` (`withdraw`) |

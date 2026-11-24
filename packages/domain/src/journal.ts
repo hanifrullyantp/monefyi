@@ -33,6 +33,7 @@ export type TemplateLine = {
   role: JournalAccountRole;
   debit: number;
   credit: number;
+  side?: 'from' | 'to';
 };
 
 export const FINANCE_EVENT_CODES = [
@@ -61,6 +62,8 @@ export const FINANCE_EVENT_CODES = [
   'project_close_transfer',
   'period_close_transfer',
   'dp_revenue_recognition',
+  'interproject_loan_disbursement',
+  'interproject_loan_repayment',
 ] as const;
 
 export type FinanceEventCode = (typeof FINANCE_EVENT_CODES)[number];
@@ -332,6 +335,36 @@ export function periodCloseTransfer(amount: number, isLoss = false): TemplateLin
   ];
 }
 
+/**
+ * Pencairan pinjaman antar proyek (Proyek A -> Proyek B) dalam jurnal 4-baris seimbang.
+ * Dampak Laba/Rugi = 0, dampak Kas konsolidasi = 0.
+ */
+export function interprojectLoanDisbursement(amount: number): TemplateLine[] {
+  const value = toRupiah(amount);
+  if (value <= 0) return [];
+  return [
+    { role: 'piutang', debit: value, credit: 0, side: 'from' },
+    { role: 'kas', debit: 0, credit: value, side: 'from' },
+    { role: 'kas_tujuan', debit: value, credit: 0, side: 'to' },
+    { role: 'hutang_lain', debit: 0, credit: value, side: 'to' },
+  ];
+}
+
+/**
+ * Pelunasan pinjaman antar proyek (Proyek B -> Proyek A) dalam jurnal 4-baris seimbang.
+ * Dampak Laba/Rugi = 0, dampak Kas konsolidasi = 0.
+ */
+export function interprojectLoanRepayment(amount: number): TemplateLine[] {
+  const value = toRupiah(amount);
+  if (value <= 0) return [];
+  return [
+    { role: 'hutang_lain', debit: value, credit: 0, side: 'to' },
+    { role: 'kas', debit: 0, credit: value, side: 'to' },
+    { role: 'kas_tujuan', debit: value, credit: 0, side: 'from' },
+    { role: 'piutang', debit: 0, credit: value, side: 'from' },
+  ];
+}
+
 /** Builder tunggal berbasis kode kejadian tertutup (dipakai server dan tool agent). */
 export function buildJournalTemplate(
   eventCode: FinanceEventCode,
@@ -364,6 +397,8 @@ export function buildJournalTemplate(
     case 'project_close_transfer': return projectCloseTransfer(amount);
     case 'period_close_transfer': return periodCloseTransfer(amount, opts?.isLoss);
     case 'dp_revenue_recognition': return recognizeDownPaymentRevenue(amount);
+    case 'interproject_loan_disbursement': return interprojectLoanDisbursement(amount);
+    case 'interproject_loan_repayment': return interprojectLoanRepayment(amount);
   }
 }
 
