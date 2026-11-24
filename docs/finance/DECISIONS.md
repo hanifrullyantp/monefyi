@@ -56,3 +56,14 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
 - **Pilihan:** Menetapkan default konservatif `opexReserveMultiplier = 1` ($1\times$ total plan opex bulanan), dapat disesuaikan pemilik bila menginginkan cadangan $2\times$ atau lebih.
 - **Alasan:** Mencegah dividen menghabiskan kas operasional rutin sambil tetap menjaga ruang pembagian laba yang realistis.
 
+---
+
+## D-G0-01 — Taksonomi 4 Kategori Akun (`aktiva`, `pasiva`, `pendapatan`, `beban`) & Penggulungan Laba ke Neraca
+- **Tanggal:** 2026-11-24
+- **Konteks:** Pada migrasi F1 (`20261124120000_f1_coa_and_dimensions.sql`), akun `hpp_*`, `beban_opex`, dan `beban_penyusutan` sebelumnya dikategorikan sebagai `'aktiva'`, sedangkan `pendapatan_proyek` sebagai `'pasiva'`. Akibatnya, laporan Neraca (`balanceSheetReport.ts` dan `balanceSheetService.ts`) membocorkan akun beban ke daftar `aktiva` dan akun pendapatan ke daftar `pasiva`.
+- **Pilihan:**
+  1. Memperluas kategori akun (`AccountCategory` & `planner_finance_accounts_category_check`) menjadi 4 kategori akuntansi standar: `'aktiva'`, `'pasiva'`, `'pendapatan'`, dan `'beban'`.
+  2. Memperbarui saldo normal di `planner_apply_line_balance()`, `balanceDelta()`, dan `balancesFromLines()`: `'aktiva'` & `'beban'` memakai `debit - credit`, sedangkan `'pasiva'` & `'pendapatan'` memakai `credit - debit`.
+  3. Mengecualikan akun `'pendapatan'` dan `'beban'` dari daftar `aktiva[]` dan `pasiva[]` pada Neraca (`buildBalanceSheetFromBalances` & `getFinanceV2Snapshot`), lalu menggulung `computedCurrentProfit = SUM(pendapatan) - SUM(beban)` (digabung dengan akun `'laba'` legacy bila ada tanpa double-counting) ke sisi `pasiva[]` sebagai baris ekuitas `"Laba Periode Berjalan (Dari Buku Besar)"` bila nilainya $\neq 0$.
+- **Alasan:** Memisahkan akun Laba/Rugi (nominal) dari akun Neraca (riil) sesuai standar akuntansi double-entry sambil menjamin persamaan `Total Aktiva === Total Pasiva` selalu seimbang pada buku besar.
+

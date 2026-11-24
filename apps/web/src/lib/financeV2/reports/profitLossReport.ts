@@ -1,5 +1,6 @@
 import { balanceDelta } from '../../financeV2Calc';
 import { toRupiah } from '../../../../../../packages/domain/src/journal';
+import type { AccountCategory } from '../../../types/financeV2';
 import type { JournalLineEnriched, ProfitLossReport, ReportFilters } from './types';
 import { loadEnrichedJournalLines } from './loadReportData';
 
@@ -247,10 +248,10 @@ function round(n: number) {
 export function balancesFromLines(lines: JournalLineEnriched[]): Map<string, {
   name: string;
   type: string;
-  category: 'aktiva' | 'pasiva';
+  category: AccountCategory;
   balance: number;
 }> {
-  const map = new Map<string, { name: string; type: string; category: 'aktiva' | 'pasiva'; balance: number }>();
+  const map = new Map<string, { name: string; type: string; category: AccountCategory; balance: number }>();
   for (const line of lines) {
     const existing = map.get(line.accountId) || {
       name: line.accountName,

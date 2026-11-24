@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G0-3] 2026-11-24 — Perbaikan Taksonomi Kategori Akun (`pendapatan`/`beban`) & Neraca
+- **Branch / PR:** `feat/g0-3-account-taxonomy-neraca`
+- **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-3)
+- **Perubahan & Alasan:**
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124141000_g0_3_account_taxonomy.sql` (status `BLOCKED remote`): memperluas `planner_finance_accounts_category_check` menjadi `('aktiva', 'pasiva', 'pendapatan', 'beban')`, memperbarui kategori baris akun existing (`pendapatan_proyek` $\rightarrow$ `'pendapatan'`, `hpp_*`/`beban_opex`/`beban_penyusutan` $\rightarrow$ `'beban'`), memperbarui `seed_default_chart_of_accounts`, dan memperbarui trigger `planner_apply_line_balance()` agar `'aktiva'` & `'beban'` memakai `NEW.debit - NEW.credit` serta `'pasiva'` & `'pendapatan'` memakai `NEW.credit - NEW.debit`.
+  - Memperluas tipe `AccountCategory` di `apps/web/src/types/financeV2.ts` dan `JournalLineEnriched['accountCategory']` di `apps/web/src/lib/financeV2/reports/types.ts` menjadi `'aktiva' | 'pasiva' | 'pendapatan' | 'beban'`, serta menyelaraskan `balanceDelta`, `balancesFromLines`, `loadReportData`, `normalCategoryForAccountType`, dan `rollupByCategory`.
+  - Mengekstrak fungsi murni `buildBalanceSheetFromBalances(balanceMap, asOfDate)` di `apps/web/src/lib/financeV2/reports/balanceSheetReport.ts` (dan menyelaraskan `apps/web/src/services/financeV2/balanceSheetService.ts`): mengecualikan akun `'pendapatan'` & `'beban'` dari `aktiva[]`/`pasiva[]`, menghitung `computedCurrentProfit = SUM(pendapatan) - SUM(beban)`, dan menggabungkannya secara konsisten dengan akun `'laba'` legacy (tanpa double-counting) pada sisi `pasiva[]` sebagai `"Laba Periode Berjalan (Dari Buku Besar)"` agar `Total Aktiva === Total Pasiva`.
+  - Memperbarui `docs/finance/ACCOUNTING-MODEL.md` (tabel COA 4 kategori), `docs/finance/DECISIONS.md` (`D-G0-01`), dan `docs/finance/PROGRESS.md`.
+- **Akun / Template Jurnal Tersentuh:** `pendapatan_proyek` (`pendapatan`), `hpp_material`, `hpp_labor`, `hpp_equipment`, `hpp_overhead`, `hpp_other`, `hpp_uncategorized`, `beban_opex`, `beban_penyusutan` (`beban`), serta agregasi `laba` pada Neraca.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124141000_g0_3_account_taxonomy.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/balanceSheetTaxonomy.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool; laporan Neraca dari buku besar kini bersih dari kebocoran akun beban/pendapatan.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G0-1] 2026-11-24 — Perbaikan Rekonsiliasi Migrasi F1 Nyata (Append-Only & Dry-Run Rollback)
 - **Branch / PR:** `feat/g0-1-real-migration-reconciliation`
 - **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-1)

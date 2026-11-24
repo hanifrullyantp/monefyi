@@ -72,6 +72,6 @@ export async function buildFinanceReportBundle(filters: ReportFilters): Promise<
 
 export * from './types';
 export { buildProfitLossReport, buildProfitLossFromLines } from './profitLossReport';
-export { buildBalanceSheetReport } from './balanceSheetReport';
+export { buildBalanceSheetReport, buildBalanceSheetFromBalances } from './balanceSheetReport';
 export { buildCashFlowReport } from './cashFlowReport';
 export { buildProjectReports } from './projectReport';

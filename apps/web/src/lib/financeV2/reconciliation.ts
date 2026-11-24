@@ -81,6 +81,13 @@ const AKTIVA_ACCOUNT_TYPES = new Set<AccountType>([
   'stok',
   'aset_tetap',
   'prabayar',
+]);
+
+const PENDAPATAN_ACCOUNT_TYPES = new Set<AccountType>([
+  'pendapatan_proyek',
+]);
+
+const BEBAN_ACCOUNT_TYPES = new Set<AccountType>([
   'hpp_material',
   'hpp_labor',
   'hpp_equipment',
@@ -92,7 +99,10 @@ const AKTIVA_ACCOUNT_TYPES = new Set<AccountType>([
 ]);
 
 export function normalCategoryForAccountType(type: AccountType): AccountCategory {
-  return AKTIVA_ACCOUNT_TYPES.has(type) ? 'aktiva' : 'pasiva';
+  if (AKTIVA_ACCOUNT_TYPES.has(type)) return 'aktiva';
+  if (PENDAPATAN_ACCOUNT_TYPES.has(type)) return 'pendapatan';
+  if (BEBAN_ACCOUNT_TYPES.has(type)) return 'beban';
+  return 'pasiva';
 }
 
 export function summarizeAccounts(
@@ -155,7 +165,7 @@ export function applyReclassificationJournalsToAccounts(
         cloned.push(target);
       }
       const category = normalCategoryForAccountType(line.accountType);
-      const delta = category === 'aktiva' ? debit - credit : credit - debit;
+      const delta = category === 'aktiva' || category === 'beban' ? debit - credit : credit - debit;
       target.current_balance += delta;
     }
   }
