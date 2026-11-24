@@ -120,3 +120,6 @@ export async function createJournalEntry(input: CreateJournalInput): Promise<Jou
   if (loadErr || !entry) throw new Error(loadErr?.message || 'Jurnal tidak terbaca setelah disimpan.');
   return mapEntry(entry);
 }
+
+/** Alias semantik untuk posting jurnal buku besar. */
+export const postJournalEntry = createJournalEntry;

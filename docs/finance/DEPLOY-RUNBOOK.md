@@ -55,6 +55,13 @@ File: `my-supabase-project/supabase/migrations/20261124143000_g0_2_rpc_f1_accoun
 - Mengganti `planner_create_cost_realization_atomic` (menambah `p_party_id uuid DEFAULT NULL`, membuang overload 11-argumen lama) untuk memposting `Dr hpp_<type>` (dengan `needs_review = (v_hpp_type = 'hpp_uncategorized')`) dan `Cr hutang_dagang` (akrual) atau `Cr kas` (tunai/transfer).
 - Memperbarui `planner_backfill_cost_journals()` agar memakai `planner_hpp_account_type_for_rap` serta mengisi `project_id` dan `needs_review` pada `planner_journal_lines`.
 
+### Langkah 7 — Migrasi G0-5 (Pengakuan Pendapatan DP Berbasis Progres / Termin Terjadwal)
+File: `my-supabase-project/supabase/migrations/20261124144000_g0_5_revenue_recognition.sql`
+- Menambahkan kolom `revenue_recognition_method` (`'termin'` default konservatif atau `'progress_pct'`) pada `planner_projects`.
+- Memperluas constraint `planner_journal_entries_reference_type_check` dengan `'revenue_recognition'`.
+- Membuat tabel `planner_revenue_recognition_schedules` (`UNIQUE(project_id, period_month)`) beserta policy RLS `is_org_member`.
+- Menambahkan RPC idempoten `public.planner_recognize_project_dp_revenue(p_org_id, p_project_id, p_period_month, p_amount, p_progress_pct, p_actor)` untuk memposting `Dr uang_muka_klien / Cr pendapatan_proyek` secara append-only per `(project_id, period_month)`.
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check
