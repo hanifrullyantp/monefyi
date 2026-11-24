@@ -1,7 +1,9 @@
 import { supabase } from '../../lib/supabase';
 import { extraPiutangBeyondContract } from '../../lib/projects/cashIdentity';
 import { getProjectCashSummary } from '../projectTransferService';
+import { loadProjectIncomes } from '../incomeService';
 import { loadReceivablesByProject } from './receivableService';
+import { loadPayablesByProject } from './payableService';
 import { getOrCreateProjectKasAccount } from './kasService';
 
 export type ProjectClosePreview = {
@@ -17,6 +19,8 @@ export type ProjectClosePreview = {
   transfersNet: number;
   interProjectDebt: number;
   openReceivables: number;
+  openPayables: number;
+  openRetention: number;
   extraReceivables: number;
   financeStatus: string;
   warnings: string[];
@@ -40,16 +44,22 @@ export async function buildProjectClosePreview(
   const totalSpent = Number(project.total_spent) || 0;
   const finalProfit = totalReceived - totalSpent;
 
-  const [cashSummary, receivables, kasAccount] = await Promise.all([
+  const [cashSummary, receivables, payables, incomes, kasAccount] = await Promise.all([
     getProjectCashSummary(projectId, orgId),
     loadReceivablesByProject(orgId, projectId),
+    loadPayablesByProject(orgId, projectId),
+    loadProjectIncomes(projectId),
     getOrCreateProjectKasAccount(orgId, projectId, project.name as string).catch(() => null),
   ]);
 
   const settings = (project.settings || {}) as Record<string, unknown>;
   const contractValue = Number(settings.contract_value) || Number(project.total_budget) || 0;
   const interProjectDebt = cashSummary.owedTo.reduce((s, d) => s + d.amount, 0);
-  const openReceivables = receivables.reduce((s, r) => s + (r.amount - r.paid_amount), 0);
+  const openReceivables = receivables.reduce((s, r) => s + Math.max(0, r.amount - r.paid_amount), 0);
+  const openPayables = payables.reduce((s, p) => s + Math.max(0, p.amount - p.paid_amount), 0);
+  const openRetention = incomes
+    .filter((i) => i.category === 'retensi' && i.status === 'pending')
+    .reduce((s, i) => s + i.amount, 0);
   const extraReceivables = extraPiutangBeyondContract(openReceivables, contractValue, totalReceived);
   const transfersNet =
     cashSummary.loansIn + cashSummary.repaymentsIn - cashSummary.loansOut - cashSummary.repaymentsOut;
@@ -65,6 +75,12 @@ export async function buildProjectClosePreview(
   }
   if (openReceivables > 0) {
     warnings.push(`Masih ada piutang terbuka: Rp ${openReceivables.toLocaleString('id-ID')}`);
+  }
+  if (openRetention > 0) {
+    warnings.push(`Masih ada retensi belum cair: Rp ${openRetention.toLocaleString('id-ID')}`);
+  }
+  if (openPayables > 0) {
+    warnings.push(`Masih ada hutang proyek terbuka: Rp ${openPayables.toLocaleString('id-ID')}`);
   }
   if (finalProfit < 0) {
     warnings.push(`Proyek defisit (basis kas): Rp ${Math.abs(finalProfit).toLocaleString('id-ID')}`);
@@ -88,6 +104,8 @@ export async function buildProjectClosePreview(
     transfersNet,
     interProjectDebt,
     openReceivables,
+    openPayables,
+    openRetention,
     extraReceivables,
     financeStatus: (project.finance_status as string) || 'active',
     warnings,

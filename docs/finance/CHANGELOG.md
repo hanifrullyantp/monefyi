@@ -4,6 +4,19 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F0-T6/T7] 2026-11-24 — Guard Tutup Proyek, Periode Terkunci, & Investor Atomik + Batas Dividen
+- **Branch / PR:** `finance/F0-T6-T7-guards-and-atomic-investor`
+- **Fase:** F0 (Kebenaran — T6 & T7)
+- **Perubahan & Alasan:**
+  - **T6a (`projectCloseService.ts`, `kasService.ts`):** `buildProjectClosePreview` kini memuat hutang proyek (`openPayables`) dan retensi belum cair (`openRetention`). `closeProjectFinance` memblokir penutupan proyek apabila masih ada piutang, retensi, hutang proyek, atau hutang antar-proyek terbuka kecuali diberikan `ownerWriteOff` eksplisit bertanda pemilik (`actorRole === 'owner'` dan `reason` terisi).
+  - **T6b (`journalService.ts`, SQL `planner_post_journal`):** Menambahkan `assertPeriodNotLocked` di client dan validasi `periode_terkunci` di RPC `planner_post_journal` terhadap `planner_finance_period_snapshots`.
+  - **T7 (`investorService.ts`, SQL `planner_sync_investor_total_invested`):** Memvalidasi `amount <= Kas Bisnis` dan `amount <= Laba Ditahan` sebelum menyisipkan transaksi dividen investor, menurunkan `total_invested` secara deterministik dari seluruh transaksi `planner_investor_transactions` (+ trigger SQL), serta menambahkan kompensasi rollback bila jurnal gagal.
+- **Akun / Template Jurnal Tersentuh:** `Kas Bisnis`, `Modal Disetor`, `Laba Ditahan` (`dividend`, `manual`), seluruh jurnal pada periode terkunci.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124100000_f0_accounting_correctness.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** Tes T6a, T6b, dan T7 di `apps/web/src/services/financeV2/__tests__/f0AccountingCorrectness.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool; aturan periode terkunci dan persetujuan pemilik selaras dengan kontrak di `AGENT-GUIDE.md`.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F0-T3/T4] 2026-11-24 — Posting Atomik Pemasukan/Biaya & Edit/Hapus dengan Pembalik + Soft-Delete
 - **Branch / PR:** `finance/F0-T3-T4-atomic-posting-and-reversals`
 - **Fase:** F0 (Kebenaran — T3 & T4)

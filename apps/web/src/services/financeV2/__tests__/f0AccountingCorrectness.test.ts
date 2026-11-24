@@ -320,6 +320,7 @@ import { closeProjectFinance } from '../kasService';
 import { closeFinancePeriod } from '../periodCloseService';
 import { buildProfitLossReport } from '../../../lib/financeV2/reports/profitLossReport';
 import { createJournalEntry } from '../journalService';
+import { recordInvestorTransaction } from '../investorService';
 import { createProjectIncome, deleteProjectIncome, loadProjectIncomes } from '../../incomeService';
 import {
   createCostRealization,
@@ -642,6 +643,152 @@ describe('F0-T3 & F0-T4: Posting atomik, tanpa penelan error, edit=pembalik+baru
     expect(db.journalEntries.filter((j) => j.reference_type === 'reversal')).toHaveLength(2);
     expect(Number(db.accounts.find((a) => a.id === 'acc-kas-proj')!.current_balance)).toBe(0);
     expect(Number(db.accounts.find((a) => a.id === 'acc-laba')!.current_balance)).toBe(0);
+  });
+});
+
+describe('F0-T6 & F0-T7: Guard tutup proyek, periode terkunci, dan investor atomik + batas dividen', () => {
+  beforeEach(() => {
+    seq = 1;
+    forceJournalFailure = false;
+    db = createInitialDb();
+    db.receivables = [];
+    db.payables = [];
+    db.investors = [
+      {
+        id: 'inv-1',
+        org_id: 'org-1',
+        name: 'Investor Utama',
+        total_invested: 0,
+        share_pct: 100,
+        is_active: true,
+        created_at: '',
+      },
+    ];
+    db.investorTxs = [];
+    db.periodSnapshots = [];
+    mockRpc.mockClear();
+  });
+
+  it('T6a: closeProjectFinance menolak tutup proyek bila ada piutang, hutang, atau retensi terbuka tanpa write-off pemilik', async () => {
+    db.payables.push({
+      id: 'pay-1',
+      org_id: 'org-1',
+      creditor_type: 'vendor',
+      creditor_name: 'Toko Besi',
+      creditor_project_id: 'proj-1',
+      category: 'dagang',
+      amount: 2_000_000,
+      paid_amount: 0,
+      status: 'open',
+      created_at: '',
+    });
+
+    await expect(
+      closeProjectFinance({ orgId: 'org-1', projectId: 'proj-1', createdBy: 'user-1', force: true }),
+    ).rejects.toThrow();
+
+    // Retensi pending juga memblokir
+    db.payables = [];
+    db.projectIncomes.push({
+      id: 'inc-ret-1',
+      project_id: 'proj-1',
+      date: '2026-11-20',
+      amount: 5_000_000,
+      category: 'retensi',
+      description: 'Retensi 5%',
+      status: 'pending',
+      recorded_by: 'user-1',
+    });
+
+    await expect(
+      closeProjectFinance({ orgId: 'org-1', projectId: 'proj-1', createdBy: 'user-1' }),
+    ).rejects.toThrow();
+
+    // Non-owner write-off harus ditolak
+    await expect(
+      closeProjectFinance({
+        orgId: 'org-1',
+        projectId: 'proj-1',
+        createdBy: 'user-1',
+        ownerWriteOff: { approvedByOwner: true, actorRole: 'manager', reason: 'Minta tutup' },
+      }),
+    ).rejects.toThrow();
+
+    // Write-off eksplisit pemilik berhasil menutup proyek
+    await expect(
+      closeProjectFinance({
+        orgId: 'org-1',
+        projectId: 'proj-1',
+        createdBy: 'owner-1',
+        ownerWriteOff: { approvedByOwner: true, actorRole: 'owner', reason: 'Retensi dihapusbukukan pemilik' },
+      }),
+    ).resolves.toBeTruthy();
+  });
+
+  it('T6b: createJournalEntry menolak jurnal bertanggal pada periode yang sudah ditutup', async () => {
+    db.periodSnapshots.push({
+      id: 'snap-1',
+      org_id: 'org-1',
+      period_month: '2026-10-01',
+      snapshot_json: {},
+      closed_at: '2026-11-01T00:00:00Z',
+    });
+
+    await expect(
+      createJournalEntry({
+        orgId: 'org-1',
+        entryDate: '2026-10-15',
+        description: 'Backdate ke bulan terkunci',
+        referenceType: 'project_expense',
+        lines: [
+          { accountId: 'acc-laba', debit: 100_000, credit: 0 },
+          { accountId: 'acc-kas-proj', debit: 0, credit: 100_000 },
+        ],
+      }),
+    ).rejects.toThrow(/periode_terkunci|ditutup/i);
+  });
+
+  it('T7: investorService menolak dividen melebihi kas tersedia atau laba ditahan sebelum insert, dan total_invested diturunkan dari transaksi', async () => {
+    // Kas Bisnis = 10jt, Laba Ditahan = 4jt -> dividen 5jt harus ditolak (melebihi Laba Ditahan)
+    db.accounts.find((a) => a.id === 'acc-kas-bisnis')!.current_balance = 10_000_000;
+    db.accounts.find((a) => a.id === 'acc-laba-ditahan')!.current_balance = 4_000_000;
+
+    await expect(
+      recordInvestorTransaction({
+        orgId: 'org-1',
+        investorId: 'inv-1',
+        type: 'dividend',
+        amount: 5_000_000,
+        createdBy: 'owner-1',
+      }),
+    ).rejects.toThrow(/laba ditahan|kas/i);
+    expect(db.investorTxs).toHaveLength(0);
+
+    // Kas Bisnis = 3jt, Laba Ditahan = 10jt -> dividen 5jt harus ditolak (melebihi Kas Bisnis)
+    db.accounts.find((a) => a.id === 'acc-kas-bisnis')!.current_balance = 3_000_000;
+    db.accounts.find((a) => a.id === 'acc-laba-ditahan')!.current_balance = 10_000_000;
+
+    await expect(
+      recordInvestorTransaction({
+        orgId: 'org-1',
+        investorId: 'inv-1',
+        type: 'dividend',
+        amount: 5_000_000,
+        createdBy: 'owner-1',
+      }),
+    ).rejects.toThrow(/kas/i);
+    expect(db.investorTxs).toHaveLength(0);
+
+    // total_invested harus diturunkan dari seluruh transaksi (meski nilai kolom awal di DB stale)
+    db.investors[0].total_invested = 999_999; // nilai stale
+    await recordInvestorTransaction({
+      orgId: 'org-1',
+      investorId: 'inv-1',
+      type: 'invest',
+      amount: 10_000_000,
+      createdBy: 'owner-1',
+    });
+    expect(db.investors[0].total_invested).toBe(10_000_000);
   });
 });
 
