@@ -25,5 +25,8 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - name: Install
         run: npm ci
+      - name: Docs gate
+        working-directory: .
+        run: node scripts/docs-gate-check.mjs
       - name: Gerbang tier rendah
         run: npx vitest run src/lib/agentEval.test.ts src/lib/agentRuntime.test.ts

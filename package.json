@@ -27,6 +27,7 @@
     "test:landing": "npm --prefix apps/landing run test:all-engine",
     "typecheck:landing": "npm --prefix apps/landing run typecheck",
     "gate:rebrand": "node scripts/rebrand-gate-check.mjs",
+    "gate:docs": "node scripts/docs-gate-check.mjs",
     "build:landing": "node scripts/build-marketing-landing.cjs",
     "build:app": "vite build --config vite.app.config.js",
     "build:stay": "node scripts/build-stay.cjs",
