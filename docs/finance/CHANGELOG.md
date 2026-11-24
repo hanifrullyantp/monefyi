@@ -4,6 +4,25 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G2-2] 2026-11-24 — Mesin Pengingat Multitenant (Cron), Draf Penagihan (WA/Email), Jejak Audit, & Laporan Gerbang G2
+- **Branch / PR:** `feat/g2-2-cron-reminders-collection-drafts-audit`
+- **Fase:** G2 (Keuangan Proaktif & Penutupan Periode — G2-2 & Gerbang G2)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/reminderScheduler.ts`:
+    - `buildTenantProactiveReminders(orgId, input, asOfDate, options?)`: memfilter ketat seluruh entitas hanya untuk `orgId` bersangkutan (menolak item lintas tenant & mencatat `crossTenantRejectedCount`), menghasilkan 5 jenis pengingat deterministik (`payable_due`, `receivable_overdue`, `termin_ready_to_bill`, `missing_receipt_attachment`, `journal_needs_review`) dengan `dedupeKey` idempoten per hari (`${orgId}:${reminderType}:${entityId}:${asOfDate}`) dan nominal bulat rupiah.
+    - `buildCollectionMessageDraft(input)`: menyusun draf pesan penagihan Bahasa Indonesia sopan (`whatsapp` / `email`) lengkap dengan nomor invoice, nominal rupiah deterministik, & `provenance`; menegakkan aturan keras pada `L0` dan `L1` (serta pengiriman eksternal) bahwa `status` selalu `'pending_approval'` & `autoSendAllowed: false`.
+    - `approveAndDispatchCollectionDraft(draft, approval)`: memvalidasi isolasi tenant (`cross_tenant_forbidden`), pemisahan wewenang / SoD (`approvedBy !== draft.createdBy` -> `self_approval_forbidden`), dan keberadaan `auditLogId` non-kosong (`audit_trail_required`) sebelum status berubah ke `'dispatched'`.
+    - `runMultiTenantCronBatch(tenants, asOfDate)`: mengeksekusi `buildTenantProactiveReminders` secara terisolasi per `orgId` dengan penjaga lapis kedua terhadap kebocoran lintas organisasi.
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124160000_g2_proactive_reminders_audit.sql` (`BLOCKED remote`): tabel append-only `planner_proactive_audit_logs` (trigger `BEFORE UPDATE OR DELETE`, `ERRCODE = '55000'`), tabel `planner_finance_reminders` (`UNIQUE(org_id, dedupe_key)`), tabel `planner_collection_drafts` (`CHECK (approved_by IS NULL OR approved_by <> created_by)`, `CHECK (status <> 'dispatched' OR (approved_by IS NOT NULL AND audit_log_id IS NOT NULL))`), serta RLS ketat `is_org_member` bebas mutasi tabel jurnal.
+  - Menambahkan layanan `apps/web/src/services/financeV2/proactiveAssistantService.ts` (`runTenantReminderCron`, `runIsolatedMultiTenantCron`, `createCollectionDraft`, `approveAndRecordCollectionDispatch`).
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/proactiveMultitenantAudit.test.ts` (isolasi multi-tenant, 0 kebocoran lintas org, aturan L0/L1, penolakan `audit_trail_required` / `self_approval_forbidden` / `cross_tenant_forbidden`, idempotensi `dedupeKey` 5 jenis pengingat, mock service, & uji struktural SQL).
+  - Memperbarui `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 11), `docs/finance/PROGRESS.md` (menandai Fase `G2` `DONE` & menyiapkan `G3`), `docs/finance/CHANGELOG.md`, dan menerbitkan laporan gerbang `docs/finance/PHASES/G2-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template atau mutasi tabel jurnal; layanan proaktif membaca metrik buku besar & mencatat pengingat, draf penagihan, dan jejak audit pada tabel terpisah.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124160000_g2_proactive_reminders_audit.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/proactiveMultitenantAudit.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah signature tool agent; menyediakan penjadwal pengingat multitenant, penyusun draf WA/Email tanpa hitung LLM, dan penjaga persetujuan SoD + audit trail wajib.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G2-1] 2026-11-24 — Umur Piutang/Hutang (Aging), Skor Risiko Klien, Peringatan Proyek/Kas, & Checklist Tutup Bulan Otomatis
 - **Branch / PR:** `feat/g2-1-aging-risk-alerts-month-close`
 - **Fase:** G2 (Keuangan Proaktif & Penutupan Periode — G2-1)

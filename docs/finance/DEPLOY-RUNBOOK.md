@@ -80,6 +80,13 @@ File: `my-supabase-project/supabase/migrations/20261124151000_g1_2_bank_reconcil
 - Membuat tabel `planner_bank_reconciliations` (`org_id`, `wallet_account_id`, `period_month`, `book_balance_rupiah`, `bank_balance_rupiah`, `explained_diff_rupiah`, `unexplained_diff_rupiah`, `status` `'reconciled' | 'needs_review'`, `summary_json`) sebagai snapshot rekonsiliasi append-only.
 - Mengaktifkan RLS berbasis `is_org_member` pada kedua tabel (`worker` untuk `SELECT`, `manager` untuk `INSERT`/`UPDATE` peninjauan baris mutasi dengan larangan hapus baris terikat jurnal) tanpa memutasi tabel jurnal.
 
+### Langkah 11 — Migrasi G2-2 (Pengingat Proaktif Multitenant, Draf Penagihan, & Jejak Audit)
+File: `my-supabase-project/supabase/migrations/20261124160000_g2_proactive_reminders_audit.sql`
+- Membuat tabel append-only `planner_proactive_audit_logs` (`org_id`, `actor_id`, `actor_type`, `action`, `target_table`, `target_id`, `payload_json`, `created_at`) beserta trigger `planner_reject_proactive_audit_mutation()` (`ERRCODE = '55000'`) penolak `UPDATE`/`DELETE`.
+- Membuat tabel `planner_finance_reminders` (`org_id`, `reminder_type`, `dedupe_key`, `severity`, `entity_id`, `title`, `detail_json`, `status`) dengan constraint deduplikasi idempoten `UNIQUE(org_id, dedupe_key)`.
+- Membuat tabel `planner_collection_drafts` (`org_id`, `party_id`, `channel`, `subject`, `body`, `total_amount_rupiah`, `autonomy_level`, `status`, `created_by`, `approved_by`, `audit_log_id`, `dispatched_at`) dengan constraint `CHECK (approved_by IS NULL OR approved_by <> created_by)` (SoD), `CHECK (status <> 'dispatched' OR (approved_by IS NOT NULL AND audit_log_id IS NOT NULL))` (wajib jejak audit), dan trigger integritas `planner_guard_collection_draft_integrity()`.
+- Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` pada ketiga tabel tanpa memutasi tabel jurnal.
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check
