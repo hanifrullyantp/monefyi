@@ -4,6 +4,24 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G1-2] 2026-11-24 — Impor Mutasi Bank (BCA/Mandiri/BRI/BNI/Generic CSV), Pencocokan Otomatis, & Rekonsiliasi Kas
+- **Branch / PR:** `feat/g1-2-bank-statement-reconciliation`
+- **Fase:** G1 (Alur Bukti, Mutasi Bank, & Rekonsiliasi Kas — G1-2)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/bankStatement.ts`:
+    - `parseBankStatementCsv`: deteksi otomatis & parser CSV/TSV format bank Indonesia (BCA `Tanggal,Keterangan,Cabang,Jumlah,Saldo` dengan `CR`/`DB` & tanggal `DD/MM` via `yearHint`, Mandiri/BRI/BNI `Tanggal,Deskripsi,Debit,Kredit,Saldo`, dan Generic CSV), menghasilkan nominal integer rupiah (`> 0`), `entryDate` (`YYYY-MM-DD`), `direction` (`'in' | 'out'`), `runningBalance` opsional, serta `rowHash` SHA-256 deterministik untuk deduplikasi impor ulang.
+    - `matchBankStatementToLedger`: pencocokan 1-to-1 deterministik berdasarkan arah sama, nominal integer rupiah eksak sama, selisih tanggal `<= dateToleranceDays` (default 3 hari), dengan skor kemiripan teks keterangan/pihak (`computeDescriptionSimilarity`) sebagai tie-breaker. Kandidat dengan skor sama (`tied_ledger_candidates` / `tied_bank_rows`) **tidak pernah auto-match** dan dimasukkan ke `ambiguousMatches`; baris tanpa pasangan masuk `unmatchedBankRows` (`status: 'unmatched'`) dan `unmatchedLedgerLines`.
+    - `deriveReconciliationItems` & `reconcileCashVsBank`: menghitung `rawDifference = bankEndingBalance - bookCashBalance`, memilah item penjelas (`bank_fee`, `bank_interest`, `deposit_in_transit`, `outstanding_withdrawal`), serta menentukan status `'reconciled'` hanya jika `unexplainedDifference === 0` (selain itu `'needs_review'`) lengkap dengan `provenance`.
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124151000_g1_2_bank_reconciliation.sql` (`BLOCKED remote`): tabel `planner_bank_statement_rows` (`UNIQUE(org_id, wallet_account_id, row_hash)`, `matched_journal_id REFERENCES planner_journal_entries(id) ON DELETE RESTRICT`), tabel `planner_bank_reconciliations`, dan RLS berbasis `is_org_member` bebas mutasi tabel jurnal.
+  - Menambahkan layanan `apps/web/src/services/financeV2/bankReconciliationService.ts` (`importAndMatchBankStatement`, `runCashBankReconciliation`, `resolveBankStatementMatch`, `loadWalletLedgerCashLines`) yang mengintegrasikan domain deterministik dengan tabel Supabase tanpa mutasi jurnal.
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/bankReconciliation.test.ts` (BCA, Mandiri, BRI, BNI, Generic CSV, deduplikasi `rowHash`, pencocokan 1-to-1, toleransi tanggal, deteksi kandidat ambigu, antrean `unmatched`, rekonsiliasi `'reconciled'` vs `'needs_review'`, layanan Supabase mock, dan uji struktural SQL).
+  - Memperbarui `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 10), `docs/finance/PROGRESS.md`, dan `docs/finance/CHANGELOG.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru; membaca baris buku besar pada akun dompet `kas` (`debit - credit`) secara read-only.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124151000_g1_2_bank_reconciliation.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/bankReconciliation.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool agent; angka rekonsiliasi kas vs bank dihitung penuh oleh kode deterministik dari buku besar.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G1-1] 2026-11-24 — Ekstraksi Nota/Struk/Invoice -> Draf `prepare_entry` & Lampiran Bukti Terikat ke Jurnal
 - **Branch / PR:** `feat/g1-1-receipt-extraction-attachment`
 - **Fase:** G1 (Alur Bukti, Nota OCR, & Review Terstruktur — G1-1)

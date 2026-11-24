@@ -74,6 +74,12 @@ File: `my-supabase-project/supabase/migrations/20261124150000_g1_1_journal_attac
 - Menambahkan indeks pada `(org_id, sha256_hash)` untuk deteksi duplikat dan `(journal_entry_id)` untuk lookup bukti per jurnal.
 - Mengaktifkan RLS (`is_org_member(org_id, 'worker')` untuk `SELECT`, `is_org_member(org_id, 'manager')` untuk `INSERT`/`UPDATE` pengikatan `journal_entry_id` dari `NULL -> UUID` saja) serta trigger `planner_guard_journal_attachment_binding()` agar bukti yang sudah terikat jurnal tidak dapat dihapus maupun dimodifikasi.
 
+### Langkah 10 — Migrasi G1-2 (Impor Mutasi Bank, Pencocokan Otomatis, & Rekonsiliasi Kas)
+File: `my-supabase-project/supabase/migrations/20261124151000_g1_2_bank_reconciliation.sql`
+- Membuat tabel `planner_bank_statement_rows` (`org_id`, `wallet_account_id`, `bank_format`, `entry_date`, `description`, `direction`, `amount_rupiah`, `running_balance`, `row_hash`, `match_status`, `matched_journal_id REFERENCES planner_journal_entries(id) ON DELETE RESTRICT`) dengan constraint deduplikasi `UNIQUE(org_id, wallet_account_id, row_hash)` serta indeks dompet/tanggal, status pencocokan, dan jurnal.
+- Membuat tabel `planner_bank_reconciliations` (`org_id`, `wallet_account_id`, `period_month`, `book_balance_rupiah`, `bank_balance_rupiah`, `explained_diff_rupiah`, `unexplained_diff_rupiah`, `status` `'reconciled' | 'needs_review'`, `summary_json`) sebagai snapshot rekonsiliasi append-only.
+- Mengaktifkan RLS berbasis `is_org_member` pada kedua tabel (`worker` untuk `SELECT`, `manager` untuk `INSERT`/`UPDATE` peninjauan baris mutasi dengan larangan hapus baris terikat jurnal) tanpa memutasi tabel jurnal.
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check
