@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G0-4] 2026-11-24 — Jaminan Trigger Imutabilitas Jurnal & Tes Penolakan Mutasi
+- **Branch / PR:** `feat/g0-4-immutability-guard`
+- **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-4)
+- **Perubahan & Alasan:**
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124142000_g0_4_immutability_guard.sql` (status `BLOCKED remote`): memperbarui secara idempoten `public.planner_reject_journal_mutation()` dengan `RAISE EXCEPTION 'jurnal_tidak_boleh_diubah' USING ERRCODE = '55000'`, memasang ulang trigger `BEFORE UPDATE OR DELETE` pada `planner_journal_entries` (`planner_journal_entries_no_mutation`), `planner_journal_lines` (`planner_journal_lines_no_mutation`), dan `planner_journal_allocations` (`planner_journal_allocations_no_mutation`), serta memastikan RLS aktif tanpa policy `UPDATE`/`DELETE`/`ALL` pada ketiga tabel jurnal.
+  - Menambahkan modul penjaga kontrak `apps/web/src/lib/financeV2/immutabilityGuard.ts` (`assertJournalOperationAllowed`, `JournalImmutabilityError`, `JOURNAL_IMMUTABLE_TABLES`).
+  - Menambahkan suite pengujian otomatis `apps/web/src/lib/financeV2/__tests__/journalImmutability.test.ts` yang mencakup: (1) uji statis layanan TS di `apps/web/src/services/**` bebas `.update()`/`.delete()` pada tabel jurnal, (2) uji statis migrasi SQL pasca-phase3 (`20261124*`) bebas mutasi jurnal (kecuali file lama F1 yang telah digantikan G0-1), (3) uji struktural SQL terhadap `20261104140000_planner_phase3_ledger.sql` & `20261124142000_g0_4_immutability_guard.sql`, dan (4) uji kontrak perilaku ledger append-only yang menolak `UPDATE`/`DELETE` dengan `'jurnal_tidak_boleh_diubah'` sambil mengizinkan `INSERT` & jurnal pembalik (`reversal`).
+  - Memperbaiki klaim asal trigger imutabilitas pada `docs/finance/DEPLOY-RUNBOOK.md` (dari fase 3 `20261104140000_planner_phase3_ledger.sql` & diperkuat G0-4 `20261124142000_g0_4_immutability_guard.sql`, bukan F0) serta mendokumentasikan urutan migrasi G0 (`g0_1`, `g0_3`, `g0_4`), dan memperbarui `docs/finance/PROGRESS.md`.
+- **Akun / Template Jurnal Tersentuh:** Seluruh tabel buku besar (`planner_journal_entries`, `planner_journal_lines`, `planner_journal_allocations`); koreksi tetap menggunakan jurnal pembalik (`reference_type = 'reversal'`).
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124142000_g0_4_immutability_guard.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/journalImmutability.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool; kontrak append-only buku besar kini dijamin oleh trigger SQL (3 tabel) + tes statis/struktural/kontrak di CI.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G0-3] 2026-11-24 — Perbaikan Taksonomi Kategori Akun (`pendapatan`/`beban`) & Neraca
 - **Branch / PR:** `feat/g0-3-account-taxonomy-neraca`
 - **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-3)
