@@ -839,10 +839,14 @@ export default function HrEmployees() {
                               <button
                                 type="button"
                                 onClick={async () => {
-                                  const { undoActionId } = await updatePayrollStatus(p.id, 'paid', undefined, tenant && user ? { orgId: tenant.id, actorId: user.id } : undefined);
-                                  showToast('Ditandai lunas', 'success');
-                                  notifyUndoable('Payroll ditandai lunas', undoActionId);
-                                  load();
+                                  try {
+                                    const { undoActionId } = await updatePayrollStatus(p.id, 'paid', undefined, tenant && user ? { orgId: tenant.id, actorId: user.id } : undefined);
+                                    showToast('Ditandai lunas', 'success');
+                                    notifyUndoable('Payroll ditandai lunas', undoActionId);
+                                    load();
+                                  } catch (err: any) {
+                                    showToast(err?.message || 'Gagal menandai lunas: posting jurnal gagal', 'error');
+                                  }
                                 }}
                                 className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold"
                               >

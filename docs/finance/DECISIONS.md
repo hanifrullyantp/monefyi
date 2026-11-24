@@ -105,3 +105,14 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
   4. Menegakkan Segregation of Duties (`approvedBy <> createdBy`), kill switch organisasi, batas nominal harian agen, kuota token/biaya, idempotency key, dan pelarangan total sinyal debit/kredit atau perhitungan angka di memori koreksi (`recordUserCorrectionSignal`).
 - **Alasan:** Menjamin otonomi hanya dibuka bertahap berbasis bukti empiris pada transaksi rutin bernilai aman, memutus eskalasi insiden secara instan lewat auto-demote dan kill switch, serta menjaga auditabilitas append-only tanpa pernah melanggar pagar akuntansi deterministik.
 
+---
+
+## D-G8-01 — Larangan Status Lunas Palsu, Wajib Konfirmasi Pembayaran Nyata & Jurnal Atomik pada Penggajian
+- **Tanggal:** 2026-11-24
+- **Konteks:** Sebelumnya `aiHrdPayrollService.ts` menghasilkan referensi palsu `MYR-PAY-...` tanpa memanggil gateway pembayaran, menandai status `'paid'` dan mencetak `"Status: *LUNAS & BERHASIL DITRANSFER ✅*"`, menebak tarif cadangan `Rp 150.000`, menyembunyikan kekurangan kasbon lewat `Math.max(0, ...)`, mengirim `payrollEntryId` non-UUID ke bridge jurnal, serta bersama `payrollService.ts` menelan kegagalan posting jurnal dengan `console.error`/`console.warn`.
+- **Pilihan:**
+  1. **Agen tidak pernah mengeksekusi transfer uang sendiri** dan **dilarang menandai `'paid'` / `'LUNAS'`** tanpa `PaymentConfirmation` nyata yang terverifikasi (`provider_webhook` dari `PayrollPaymentProvider` atau `manual_owner_confirmation` dengan SoD `confirmedBy !== preparedBy`). Tanpa konfirmasi nyata, status batch wajib `'awaiting_payment_confirmation'` dan slip WhatsApp wajib menulis `"Status: *MENUNGGU KONFIRMASI PEMBAYARAN*"`.
+  2. **Tanpa tarif tebakan tersembunyi & tanpa penyembunyian kasbon:** tarif gaji kosong/`<= 0` ditandai `rateStatus: 'missing_rate'` (`requiresRateQuestion: true`, `grossSalary: 0`), parameter kerja/lembur dibaca dari `laborPolicy` yang dapat dikonfigurasi, dan kelebihan kasbon dicatat eksplisit pada `remainingKasbonBalance` serta `kasbonShortfall` (`appliedKasbonDeduction + remainingKasbonBalance === totalKasbon`).
+  3. **Jurnal atomik & anti-swallow error:** `payrollEntryId` wajib berupa UUID valid dari `planner_payroll_entries.id`. Setiap kegagalan posting jurnal pada `aiHrdPayrollService.ts` dan `payrollService.ts` (`updatePayrollStatus`, `reviewBonRequest`) wajib melakukan kompensasi rollback status (atau menandai `[JOURNAL_POST_FAILED]` jika rollback gagal) dan melempar error eksplisit sehingga tidak pernah ada status `'paid'` tanpa jurnal di buku besar.
+- **Alasan:** Menjaga integritas pembukuan kas/beban gaji, mencegah pekerja/pemilik menerima klaim lunas palsu atau slip dengan angka tebakan, dan memastikan buku besar selalu sinkron dengan status pembayaran payroll dan kasbon.
+

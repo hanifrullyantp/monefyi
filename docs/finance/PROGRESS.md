@@ -99,3 +99,22 @@
 
 ### Tindak Lanjut Produksi (Eksekusi Manual oleh Operator / Pemilik)
 - [ ] **Aktivasi Produksi & Integrasi Runtime Lanjutan (Pasca-Program G0–G6):** Rotasi token `.env.local`, backup DB, uji paritas offline `g0-owner-local-parity-check.mjs --input ...` pada data nyata, eksekusi 13 migrasi SQL `F0`–`G5` (`BLOCKED remote`) via `DEPLOY-RUNBOOK.md`, pengisian profil pajak `planner_org_tax_configs`, aktivasi awal pada otonomi `L1` + Mode Bayangan, serta penyambungan antarmuka web terpadu & adapter cron/WA/Email produksi.
+
+---
+
+## Program G7–G11 — Hardening Kebenaran Payroll, Kepatuhan Operasional, & Penyambungan Runtime (Urutan: G8 → G7 → G9 → G10 → G11)
+
+| Fase / Tugas | Nama | Status | Branch / PR | Catatan |
+|---|---|---|---|---|
+| **G8-1** | Hapus Klaim "LUNAS/BERHASIL DITRANSFER" Palsu, Hapus Tarif Cadangan/Hardcode Tersembunyi, & Perbaiki Posting Jurnal Gaji Anti-Swallow | `DONE` | `feat/g8-1-remove-fake-disbursement-fix-payroll-errors` | `PayrollPaymentProvider` & `PaymentConfirmation`, status `'awaiting_payment_confirmation'` tanpa konfirmasi nyata, slip WA jujur (`formatWhatsAppSlip`), UUID valid `planner_payroll_entries.id`, `laborPolicy` konfigurabel + `missing_rate` tanpa `150000`, `remainingKasbonBalance`/`kasbonShortfall` tanpa `Math.max(0, ...)`, rollback & lempar error di `payrollService.ts` & `aiHrdPayrollService.ts`, `D-G8-01`, & `g8PayrollTruthAndNoFakePaid.test.ts`. |
+| **G7** | Integrasi UI & Runtime Keuangan Terpadu | `PENDING` | — | Menyusul setelah G8. |
+| **G9** | Penguatan Audit & Rekonsiliasi Lapangan | `PENDING` | — | Menyusul setelah G7. |
+| **G10** | Otomasi Operasional & Adapter Produksi | `PENDING` | — | Menyusul setelah G9. |
+| **G11** | Stabilisasi & Verifikasi Akhir Lintas Modul | `PENDING` | — | Menyusul setelah G10. |
+
+### Daftar Tugas Program G7–G11 (Urutan G8 → G7 → G9 → G10 → G11)
+- [x] `G8-1`: Hapus klaim `"LUNAS/BERHASIL DITRANSFER"` palsu, hapus tarif cadangan `150000`/hardcode tersembunyi, catat sisa kasbon jujur, wajibkan UUID valid & `PaymentConfirmation` nyata + SoD, dan perbaiki posting jurnal gaji/kasbon anti-swallow (`aiHrdPayrollService.ts`, `payrollService.ts`, `payrollJournalBridge.ts`, `AiHrdPayrollModal.tsx`, `HrEmployees.tsx`, `D-G8-01`, & `g8PayrollTruthAndNoFakePaid.test.ts`).
+- [ ] `G7`: Integrasi UI & Runtime Keuangan Terpadu.
+- [ ] `G9`: Penguatan Audit & Rekonsiliasi Lapangan.
+- [ ] `G10`: Otomasi Operasional & Adapter Produksi.
+- [ ] `G11`: Stabilisasi & Verifikasi Akhir Lintas Modul.

@@ -4,6 +4,30 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G8-1] 2026-11-24 — Hapus Klaim "LUNAS/BERHASIL DITRANSFER" Palsu, Hapus Tarif Cadangan Tersembunyi, & Perbaiki Posting Jurnal Gaji Anti-Swallow
+- **Branch / PR:** `feat/g8-1-remove-fake-disbursement-fix-payroll-errors`
+- **Fase:** G8 (Hardening HRD, Payroll Jujur, & Kebenaran Buku Besar Gaji — G8-1)
+- **Perubahan & Alasan:**
+  - **Hapus Klaim Lunas Palsu & Transfer Palsu (`apps/web/src/services/aiHrdPayrollService.ts`, `apps/web/src/components/hr/AiHrdPayrollModal.tsx`):**
+    - Menambahkan antarmuka pluggable `PayrollPaymentProvider` (`createPayoutBatch`, `verifyPaymentConfirmation`) dan tipe konfirmasi eksplisit `PaymentConfirmation` (`provider_webhook` | `manual_owner_confirmation`).
+    - Memecah alur menjadi `preparePayrollDisbursementBatch` (tahap persiapan berstatus `'awaiting_payment_confirmation'`) dan `confirmPayrollDisbursementBatch` (hanya menandai `'paid'` bila ada `paymentConfirmation` nyata yang terverifikasi + SoD `confirmedBy !== preparedBy` untuk konfirmasi manual + posting jurnal sukses dengan UUID `planner_payroll_entries.id` valid). `executeMayarDisbursementBatch` dipertahankan sebagai wrapper kompatibilitas yang menolak menandai `'paid'` / `'LUNAS'` tanpa `paymentConfirmation`.
+    - Menghapus `${batchRef}_${item.userId}` non-UUID dan menggantinya dengan validasi UUID ketat (`isValidUuid`) dari baris `planner_payroll_entries.id`.
+    - Memperbarui `generateSlipGajiMessage` / alias `formatWhatsAppSlip`: tanpa konfirmasi nyata wajib menulis `"Status: *MENUNGGU KONFIRMASI PEMBAYARAN*"`, dan hanya menulis `"Status: *LUNAS (TERKONFIRMASI)*"` bila `item.status === 'paid' && item.paymentConfirmed === true` (menghapus total `"LUNAS & BERHASIL DITRANSFER ✅"`).
+    - Memperbarui UI `AiHrdPayrollModal.tsx` agar jujur menampilkan status menunggu konfirmasi pembayaran dan memblokir pencairan bila masih ada pekerja tanpa tarif resmi.
+  - **Hapus Tarif Cadangan `150000` & Hardcode Tersembunyi di `analyzeFieldPayroll`:**
+    - Menambahkan `laborPolicy?: LaborPolicyConfig` (`standardWorkDaysPerMonth`, `overtimeThresholdDays`, `overtimeMultiplier`, `maxKasbonDeductionPct`).
+    - Menghapus fallback `150000`: pekerja dengan `daily_rate`/`monthly_salary` kosong atau `<= 0` ditandai `rateStatus: 'missing_rate'`, `requiresRateQuestion: true`, `baseRate: 0`, `grossSalary: 0`, dan dicatat ke `missingRateQuestions` / `aiObservations`.
+    - Menghapus `Math.max(0, gross + overtimeBonus - kasbon)` yang menyembunyikan kekurangan kasbon: menghitung `appliedKasbonDeduction = Math.min(totalKasbon, totalEarnings, maxDeductible)` dan mencatat eksplisit `remainingKasbonBalance` serta `kasbonShortfall` agar saldo utang kasbon tidak pernah hilang (`appliedKasbonDeduction + remainingKasbonBalance === totalKasbon`).
+  - **Anti-Swallow Error Posting Jurnal (`apps/web/src/services/payrollService.ts`, `apps/web/src/services/financeV2/payrollJournalBridge.ts`, `apps/web/src/pages/HrEmployees.tsx`):**
+    - Pada `updatePayrollStatus` dan `reviewBonRequest`, menghapus pola `catch (journalErr) { console.error(...); }` yang menelan error. Jika posting jurnal gagal saat menandai `'paid'`, sistem melakukan rollback kompensasi ke status sebelumnya (atau menandai `[JOURNAL_POST_FAILED]` jika rollback gagal) lalu melempar error.
+    - Pada `aiHrdPayrollService`, kegagalan posting jurnal mengembalikan/mengikat status `'journal_post_failed'` + `journalError`, menjaga baris DB tidak `'paid'`, dan melempar `PayrollJournalPostError`.
+    - Pada `payrollJournalBridge.ts`, melempar error jika akun sistem `kas`/`laba` tidak tersedia atau tautan `journal_entry_id` gagal.
+- **Akun / Template Jurnal Tersentuh:** Tetap memakai `postPayrollDisbursementJournal` (`payroll_disbursement`) dan `postBonDisbursementJournal` (`bon_disbursement`) dengan referensi UUID valid.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru.
+- **Tes Ditambah / Diperbarui:** `apps/web/src/lib/financeV2/__tests__/g8PayrollTruthAndNoFakePaid.test.ts` & `apps/web/src/services/aiHrdPayrollService.test.ts`.
+- **Dampak ke Tool Agent:** Menjamin agen tidak pernah mengklaim transfer/lunas palsu dan tidak pernah menebak tarif gaji lapangan.
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [G6] 2026-11-24 — Penutupan Program G0–G6, Hardening Minor G5, Uji E2E Siklus Penuh, Panduan Pengguna, & Laporan Akhir Jujur
 - **Branch / PR:** `feat/g6-program-closure-e2e-docs`
 - **Fase:** G6 (Program Closure, Hardening, Full-Program E2E, & Documentation Gate — G6)

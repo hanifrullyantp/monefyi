@@ -297,7 +297,30 @@ export async function updatePayrollStatus(
         createdBy: undoContext?.actorId,
       });
     } catch (journalErr) {
-      console.error('Payroll journal posting failed:', journalErr);
+      const errMsg = journalErr instanceof Error ? journalErr.message : String(journalErr);
+      const { error: rollbackErr } = await supabase
+        .from('planner_payroll_entries')
+        .update({
+          status: beforeSnapshot.status,
+          bonus_amount: beforeSnapshot.bonus_amount,
+          deduction_amount: beforeSnapshot.deduction_amount,
+          net_amount: beforeSnapshot.net_amount,
+          notes: beforeSnapshot.notes ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', entryId);
+
+      if (rollbackErr) {
+        await supabase
+          .from('planner_payroll_entries')
+          .update({
+            notes: `[JOURNAL_POST_FAILED] ${errMsg}`,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', entryId);
+      }
+
+      throw new Error(`Posting jurnal gaji gagal untuk entri ${entryId}: ${errMsg}`);
     }
   }
 
@@ -391,7 +414,27 @@ export async function reviewBonRequest(
         createdBy: reviewerId,
       });
     } catch (journalErr) {
-      console.error('Bon journal posting failed:', journalErr);
+      const errMsg = journalErr instanceof Error ? journalErr.message : String(journalErr);
+      const { error: rollbackErr } = await supabase
+        .from('planner_bon_requests')
+        .update({
+          status: existing.status,
+          reviewed_by: existing.reviewed_by ?? null,
+          reviewed_at: existing.reviewed_at ?? null,
+          reject_reason: existing.reject_reason ?? null,
+        })
+        .eq('id', requestId);
+
+      if (rollbackErr) {
+        await supabase
+          .from('planner_bon_requests')
+          .update({
+            reject_reason: `[JOURNAL_POST_FAILED] ${errMsg}`,
+          })
+          .eq('id', requestId);
+      }
+
+      throw new Error(`Posting jurnal kasbon gagal untuk permintaan ${requestId}: ${errMsg}`);
     }
   }
 
