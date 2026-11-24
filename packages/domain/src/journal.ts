@@ -13,6 +13,7 @@ export type JournalAccountRole =
   | 'uang_muka_klien'
   | 'hutang'
   | 'hutang_dagang'
+  | 'hutang_gaji'
   | 'hutang_pajak'
   | 'hutang_lain'
   | 'pendapatan_proyek'
@@ -64,6 +65,9 @@ export const FINANCE_EVENT_CODES = [
   'dp_revenue_recognition',
   'interproject_loan_disbursement',
   'interproject_loan_repayment',
+  'project_labor_accrual',
+  'office_payroll_accrual',
+  'payroll_liability_settlement',
 ] as const;
 
 export type FinanceEventCode = (typeof FINANCE_EVENT_CODES)[number];
@@ -365,11 +369,53 @@ export function interprojectLoanRepayment(amount: number): TemplateLine[] {
   ];
 }
 
+/** Akrual upah tenaga kerja proyek harian/borongan: Dr hpp_labor / Cr hutang_gaji. */
+export function projectLaborAccrual(amount: number): TemplateLine[] {
+  const value = toRupiah(amount);
+  return [
+    { role: 'hpp_labor', debit: value, credit: 0 },
+    { role: 'hutang_gaji', debit: 0, credit: value },
+  ];
+}
+
+/** Akrual gaji bulanan karyawan kantor (non-proyek): Dr beban_opex / Cr hutang_gaji. */
+export function officePayrollAccrual(amount: number): TemplateLine[] {
+  const value = toRupiah(amount);
+  return [
+    { role: 'beban_opex', debit: value, credit: 0 },
+    { role: 'hutang_gaji', debit: 0, credit: value },
+  ];
+}
+
+/**
+ * Pelunasan kewajiban gaji/upah dengan potongan kasbon bersaldo (opsional).
+ * Dr hutang_gaji (totalLiability) / Cr kas (totalLiability - offset) + Cr piutang (offset).
+ */
+export function payrollLiabilitySettlement(
+  totalLiability: number,
+  kasbonOffset = 0,
+): TemplateLine[] {
+  const total = Math.max(0, toRupiah(totalLiability));
+  if (total <= 0) return [];
+  const offset = Math.min(total, Math.max(0, toRupiah(kasbonOffset)));
+  const cashOut = total - offset;
+  const lines: TemplateLine[] = [
+    { role: 'hutang_gaji', debit: total, credit: 0 },
+  ];
+  if (cashOut > 0) {
+    lines.push({ role: 'kas', debit: 0, credit: cashOut });
+  }
+  if (offset > 0) {
+    lines.push({ role: 'piutang', debit: 0, credit: offset });
+  }
+  return lines;
+}
+
 /** Builder tunggal berbasis kode kejadian tertutup (dipakai server dan tool agent). */
 export function buildJournalTemplate(
   eventCode: FinanceEventCode,
   amount: number,
-  opts?: { dpApplied?: number; isLoss?: boolean; rapType?: string | null },
+  opts?: { dpApplied?: number; isLoss?: boolean; rapType?: string | null; kasbonOffset?: number },
 ): TemplateLine[] {
   switch (eventCode) {
     case 'project_cost_material': return projectExpense(amount, 'material');
@@ -399,6 +445,9 @@ export function buildJournalTemplate(
     case 'dp_revenue_recognition': return recognizeDownPaymentRevenue(amount);
     case 'interproject_loan_disbursement': return interprojectLoanDisbursement(amount);
     case 'interproject_loan_repayment': return interprojectLoanRepayment(amount);
+    case 'project_labor_accrual': return projectLaborAccrual(amount);
+    case 'office_payroll_accrual': return officePayrollAccrual(amount);
+    case 'payroll_liability_settlement': return payrollLiabilitySettlement(amount, opts?.kasbonOffset ?? 0);
   }
 }
 
@@ -417,6 +466,7 @@ const PROJECT_DIMENSION_ROLES = new Set<string>([
 const PARTY_DIMENSION_ROLES = new Set<string>([
   'hutang',
   'hutang_dagang',
+  'hutang_gaji',
   'hutang_pajak',
   'hutang_lain',
   'piutang',

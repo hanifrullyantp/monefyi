@@ -4,6 +4,32 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G8-2] 2026-11-24 — Model Kehadiran `day_fraction`, Tarif Beriwayat `effectiveFrom`, Akrual Harian Upah Proyek (`Dr hpp_labor / Cr hutang_gaji`), Gaji Kantor Opex, BPJS/PPh 21 Konfigurabel, & Kasbon Bersaldo
+- **Branch / PR:** `feat/g8-2-project-labor-accrual-day-fraction-kasbon`
+- **Fase:** G8 (Hardening HRD, Payroll Jujur, & Kebenaran Buku Besar Gaji — G8-2)
+- **Perubahan & Alasan:**
+  - **Template Jurnal & COA (`packages/domain/src/journal.ts`, `apps/web/src/types/financeV2.ts`, `apps/web/src/lib/financeV2Calc.ts`):**
+    - Menambahkan `'hutang_gaji'` pada `JournalAccountRole`, `PARTY_DIMENSION_ROLES` (wajib `party_id`), `AccountType`, `ACCOUNT_TYPE_LABEL` (`'Hutang Gaji & Upah'`), serta cakupan quick ratio & rute di `financeV2Calc.ts`.
+    - Menambahkan 3 kode kejadian tertutup pada `FINANCE_EVENT_CODES`: `'project_labor_accrual'`, `'office_payroll_accrual'`, `'payroll_liability_settlement'`.
+    - Menambahkan template seimbang (`toRupiah`): `projectLaborAccrual` (`Dr hpp_labor / Cr hutang_gaji`), `officePayrollAccrual` (`Dr beban_opex / Cr hutang_gaji`), dan `payrollLiabilitySettlement` (`Dr hutang_gaji / Cr kas + Cr piutang` saat ada potongan kasbon).
+  - **Domain Deterministik HRD–Keuangan (`packages/domain/src/hrdPayroll.ts`):**
+    - `validateDailyAttendanceSplits`: memvalidasi setiap `dayFraction` berada pada `(0, 1]` dan jumlah per `(workerId, workDate) <= 1.0` (mendukung pembagian 1 hari ke 2+ proyek, mis. `0.5 + 0.5`).
+    - `resolveAttendanceProjectFromSchedule`: menebak proyek dari jadwal harian PM (`dailyAssignments`); `needsConfirmation: false` bila cocok rencana dan `true` bila berbeda/tanpa rencana/ambigu.
+    - `resolveEffectiveCompensationRate`: memilih tarif `daily | borongan | monthly` dengan `effectiveFrom <= workDate` terbaru (prioritas tarif per orang lalu tarif per peran) tanpa fallback Rp 150.000; mengembalikan `status: 'missing_rate'` + pertanyaan jika kosong atau `<= 0`.
+    - `buildDailyProjectLaborAccruals`: menghitung upah reguler (`dayFraction * dailyRate`, `boronganUnits * unitRate`, atau prorata bulanan sesuai `laborPolicy`) + lembur sesuai `laborPolicy`, menghasilkan entri seimbang `Dr hpp_labor (projectId) / Cr hutang_gaji (partyId)` dan menjaga invarian **total upah per proyek === total debit `hpp_labor` proyek di buku besar** (0 jurnal tebakan untuk pekerja `missing_rate`).
+    - `buildOfficeMonthlyPayrollAccrual`: membukukan gaji bulanan karyawan kantor ke `beban_opex` (`Dr beban_opex / Cr hutang_gaji`), bukan beban proyek (`hpp_labor`), disertai draf BPJS & PPh 21 konfigurabel.
+    - `calculatePayrollStatutoryDrafts`: menghitung draf BPJS & PPh 21 100% dari `statutoryConfig` (mengembalikan `config_required` bila kosong) dan selalu berlabel `"Draf untuk ditinjau konsultan pajak — bukan nasihat hukum/pajak berlisensi"`.
+    - `computeKasbonSettlement`: membatasi potongan kasbon dengan `maxDeductionPct`, membawa `remainingKasbonBalance`, dan menghasilkan template jurnal seimbang `payrollLiabilitySettlement(grossPayable, deductedAmount)`.
+  - **Migrasi SQL Lokal (`my-supabase-project/supabase/migrations/20261124190000_g8_hrd_project_labor_accrual.sql`, `BLOCKED remote`):**
+    - Memperluas `planner_finance_accounts_type_check` & `seed_default_chart_of_accounts` dengan `'hutang_gaji'`.
+    - Membuat tabel `planner_attendance_project_splits` (`day_fraction CHECK (day_fraction > 0 AND day_fraction <= 1)`, trigger integritas, `journal_entry_id ON DELETE RESTRICT`), `planner_compensation_rate_history`, `planner_daily_assignments`, dan `planner_org_labor_policies` dengan RLS ketat `is_org_member` tanpa mutasi tabel jurnal.
+  - **Dokumentasi:** Memperbarui `docs/finance/ACCOUNTING-MODEL.md`, `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 14), `docs/finance/PROGRESS.md`, dan `docs/finance/CHANGELOG.md`.
+- **Akun / Template Jurnal Tersentuh:** `hutang_gaji`, `project_labor_accrual`, `office_payroll_accrual`, `payroll_liability_settlement`.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124190000_g8_hrd_project_labor_accrual.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g8ProjectLaborAccrual.test.ts`.
+- **Dampak ke Tool Agent:** Menambah kode kejadian tertutup akrual gaji/upah pada `FINANCE_EVENT_CODES` & `buildJournalTemplate`; tetap tunduk pada aturan `validateJournalDimensions` (`party_id` wajib untuk `hutang_gaji`).
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [G8-1] 2026-11-24 — Hapus Klaim "LUNAS/BERHASIL DITRANSFER" Palsu, Hapus Tarif Cadangan Tersembunyi, & Perbaiki Posting Jurnal Gaji Anti-Swallow
 - **Branch / PR:** `feat/g8-1-remove-fake-disbursement-fix-payroll-errors`
 - **Fase:** G8 (Hardening HRD, Payroll Jujur, & Kebenaran Buku Besar Gaji — G8-1)
