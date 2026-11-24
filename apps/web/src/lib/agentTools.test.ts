@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { findMatches } from '../../../../agent-core/src/find';
+import { buildFinanceSnapshot, estimateJsonTokens } from '../../../../agent-core/src/financeSnapshot';
 import { agentManual, fixtures, functionSchema, mcpTools } from '../../../../agent-core/src/generate';
 import { commitRecordCost, prepareRecordCost } from '../../../../agent-core/src/prepare';
 import { TOOLS, assertRegistry, toolsFor } from '../../../../agent-core/src/registry';
@@ -128,5 +129,64 @@ describe('registry tool', () => {
     }
     const guardYaml = readFileSync(new URL('evals/finance/f0_guardrails.yaml', root), 'utf8');
     expect(guardYaml).toContain('f0_tolak_periode_terkunci');
+  });
+
+  it('F2 get_finance_snapshot mengembalikan JSON <= 400 token dan daftar maks 5 item + total', () => {
+    const sampleInput = {
+      asOf: '2026-11-24',
+      monthLabel: '2026-11',
+      wallets: Array.from({ length: 8 }, (_, i) => ({
+        id: `wallet-000${i + 1}`,
+        name: `Bank Rekening Operasional ${i + 1}`,
+        balance: (i + 1) * 5_000_000,
+      })),
+      receivableTotal: 35_000_000,
+      receivableDue: 12_000_000,
+      retentionTotal: 5_000_000,
+      payableTotal: 18_000_000,
+      payableDue: 4_000_000,
+      monthRevenue: 120_000_000,
+      monthHpp: 72_000_000,
+      monthGrossProfit: 48_000_000,
+      monthOpexActual: 11_000_000,
+      monthOpexPlanned: 14_000_000,
+      monthNetProfit: 37_000_000,
+      projects: Array.from({ length: 8 }, (_, i) => ({
+        id: `proj-000${i + 1}`,
+        name: `Proyek Pembangunan Rumah ${i + 1}`,
+        revenue: 40_000_000,
+        hpp: 25_000_000,
+        profit: 15_000_000 + i * 1_000_000,
+        rapUsagePct: 62.5,
+      })),
+      balanceSheet: {
+        totalAktiva: 220_000_000,
+        totalPasiva: 220_000_000,
+        isBalanced: true,
+        labaDitahan: 60_000_000,
+        asetTetap: 45_000_000,
+      },
+      cashFlow: {
+        opening: 100_000_000,
+        inflows: 120_000_000,
+        outflows: 40_000_000,
+        closing: 180_000_000,
+      },
+    };
+
+    const ringkasan = buildFinanceSnapshot({ ...sampleInput, kind: 'ringkasan' });
+    expect(ringkasan.cash?.top.length).toBeLessThanOrEqual(5);
+    expect(ringkasan.cash?.count).toBe(8);
+    expect(ringkasan.projects?.items.length).toBeLessThanOrEqual(5);
+    expect(ringkasan.projects?.total).toBe(8);
+    expect(estimateJsonTokens(ringkasan)).toBeLessThanOrEqual(400);
+
+    for (const kind of ['laba_rugi', 'neraca', 'arus_kas'] as const) {
+      const rep = buildFinanceSnapshot({ ...sampleInput, kind });
+      expect(estimateJsonTokens(rep)).toBeLessThanOrEqual(350);
+    }
+
+    const f2Yaml = readFileSync(new URL('evals/finance/f2_snapshot.yaml', root), 'utf8');
+    expect(f2Yaml).toContain('f2_snapshot_ringkasan_budget');
   });
 });
