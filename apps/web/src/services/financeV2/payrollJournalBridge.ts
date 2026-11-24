@@ -37,7 +37,9 @@ export async function postPayrollDisbursementJournal(input: {
 
   const kas = await findSystemAccount(input.orgId, 'kas', 'bisnis');
   const laba = await findSystemAccount(input.orgId, 'laba', 'periode');
-  if (!kas || !laba) return null;
+  if (!kas || !laba) {
+    throw new Error('Akun sistem kas_bisnis atau laba_periode tidak ditemukan untuk posting jurnal gaji.');
+  }
 
   const debitLines = allocation.lines.length
     ? allocation.lines.map(line => ({
@@ -63,7 +65,7 @@ export async function postPayrollDisbursementJournal(input: {
     ],
   });
 
-  await supabase
+  const { error: linkErr } = await supabase
     .from('planner_payroll_entries')
     .update({
       journal_entry_id: entry.id,
@@ -71,6 +73,10 @@ export async function postPayrollDisbursementJournal(input: {
       updated_at: new Date().toISOString(),
     })
     .eq('id', input.payrollEntryId);
+
+  if (linkErr) {
+    throw new Error(`Gagal menautkan journal_entry_id ke payroll entry: ${linkErr.message}`);
+  }
 
   return { journalId: entry.id, allocation };
 }
@@ -97,7 +103,9 @@ export async function postBonDisbursementJournal(input: {
 
   const kas = await findSystemAccount(input.orgId, 'kas', 'bisnis');
   const laba = await findSystemAccount(input.orgId, 'laba', 'periode');
-  if (!kas || !laba) return null;
+  if (!kas || !laba) {
+    throw new Error('Akun sistem kas_bisnis atau laba_periode tidak ditemukan untuk posting jurnal gaji.');
+  }
 
   const entry = await createJournalEntry({
     orgId: input.orgId,
@@ -112,10 +120,14 @@ export async function postBonDisbursementJournal(input: {
     ],
   });
 
-  await supabase
+  const { error: linkErr } = await supabase
     .from('planner_bon_requests')
     .update({ journal_entry_id: entry.id })
     .eq('id', input.bonRequestId);
+
+  if (linkErr) {
+    throw new Error(`Gagal menautkan journal_entry_id ke bon request: ${linkErr.message}`);
+  }
 
   return entry.id;
 }

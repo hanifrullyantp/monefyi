@@ -108,11 +108,15 @@ export default function AiHrdPayrollModal({
     setStep(2);
   };
 
-  // Eksekusi Payout Mayar setelah Disetujui
+  // Tahap 1: Siapkan Daftar Payout (status awaiting_payment_confirmation; agen tidak mengeksekusi transfer uang)
   const handleExecuteDisbursement = async () => {
     if (!analysis) return;
     if (!confirmedTruth.approvalAck) {
-      showToast('Mohon centang konfirmasi persetujuan penggajian', 'error');
+      showToast('Mohon centang konfirmasi persetujuan penyusunan daftar gaji', 'error');
+      return;
+    }
+    if (analysis.summary.missingRateCount > 0) {
+      showToast('Lengkapi tarif gaji pekerja yang masih kosong terlebih dahulu', 'error');
       return;
     }
 
@@ -123,14 +127,15 @@ export default function AiHrdPayrollModal({
         budget: budgetForm,
         items: analysis.calculations,
         actorId,
+        preparedBy: actorId,
       });
 
       setDisbursementResult(result);
       setStep(3);
-      showToast('⚡ Penggajian berhasil dicairkan ke rekening via Sistem Mayar!', 'success');
+      showToast('Daftar penggajian disiapkan — menunggu konfirmasi pembayaran nyata.', 'success');
       if (onDisbursementCompleted) onDisbursementCompleted();
     } catch (err: any) {
-      showToast(err?.message || 'Gagal mengeksekusi pencairan', 'error');
+      showToast(err?.message || 'Gagal menyiapkan daftar penggajian', 'error');
     } finally {
       setIsExecuting(false);
     }
@@ -494,7 +499,7 @@ export default function AiHrdPayrollModal({
                       className="w-4 h-4 rounded border-amber-500 bg-slate-900 text-amber-500 focus:ring-amber-500 cursor-pointer"
                     />
                     <span className="font-extrabold text-amber-300">
-                      Saya selaku Owner / Manager menyetujui AI HRD untuk langsung mencairkan gaji ke rekening karyawan via Sistem Mayar.
+                      Saya mengonfirmasi kebenaran kalkulasi dan menyetujui penyusunan daftar payout gaji (belum berstatus lunas sebelum konfirmasi pembayaran nyata).
                     </span>
                   </label>
                 </div>
@@ -502,27 +507,29 @@ export default function AiHrdPayrollModal({
             </div>
           )}
 
-          {/* STEP 3: Sukses Pencairan & Kirim Slip Gaji */}
+          {/* STEP 3: Status Persiapan Batch & Kirim Slip Gaji */}
           {step === 3 && disbursementResult && (
             <div className="space-y-5 text-center py-4">
-              <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/10">
-                <CheckCircle2 className="w-9 h-9" />
+              <div className="w-16 h-16 rounded-3xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center mx-auto shadow-xl shadow-amber-500/10">
+                <Clock className="w-9 h-9" />
               </div>
 
               <div>
                 <h3 className="text-xl font-black text-white">
-                  Penggajian Lapangan Berhasil Dieksekusi!
+                  {disbursementResult.status === 'paid' && disbursementResult.paymentConfirmed
+                    ? 'Penggajian Terkonfirmasi Lunas!'
+                    : 'Daftar Penggajian Disiapkan — Menunggu Konfirmasi Pembayaran'}
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Batch ID Mayar:{' '}
-                  <span className="font-mono font-bold text-emerald-400">{disbursementResult.mayarBatchRef}</span>
+                  Referensi Batch:{' '}
+                  <span className="font-mono font-bold text-amber-400">{disbursementResult.batchRef}</span>
                 </p>
               </div>
 
               {/* Rangkuman Eksekusi */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-left">
                 <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800">
-                  <span className="text-[10px] text-slate-500 uppercase font-black block">Total Dicairkan</span>
+                  <span className="text-[10px] text-slate-500 uppercase font-black block">Total Rencana Gaji</span>
                   <span className="font-black text-emerald-400 text-sm">
                     Rp {disbursementResult.totalDisbursed.toLocaleString('id-ID')}
                   </span>
@@ -534,9 +541,11 @@ export default function AiHrdPayrollModal({
                   </span>
                 </div>
                 <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-slate-500 uppercase font-black block">Sistem Pembayaran</span>
+                  <span className="text-[10px] text-slate-500 uppercase font-black block">Status Pembayaran</span>
                   <span className="font-black text-amber-300 text-xs">
-                    Mayar Payout &amp; Direct Transfer
+                    {disbursementResult.status === 'paid' && disbursementResult.paymentConfirmed
+                      ? 'LUNAS (TERKONFIRMASI)'
+                      : 'MENUNGGU KONFIRMASI'}
                   </span>
                 </div>
               </div>
@@ -637,18 +646,18 @@ export default function AiHrdPayrollModal({
               </button>
               <button
                 type="button"
-                disabled={isExecuting || !confirmedTruth.approvalAck}
+                disabled={isExecuting || !confirmedTruth.approvalAck || (analysis?.summary.missingRateCount ?? 0) > 0}
                 onClick={handleExecuteDisbursement}
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-extrabold text-xs shadow-lg shadow-rose-950 flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isExecuting ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Mentransfer via Sistem Mayar...</span>
+                    <span>Menyiapkan Daftar Payout...</span>
                   </>
                 ) : (
                   <>
-                    <span>Setujui &amp; Cairkan Gaji via Mayar ⚡</span>
+                    <span>Siapkan Daftar Payout (Tunggu Konfirmasi)</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -658,7 +667,11 @@ export default function AiHrdPayrollModal({
 
           {step === 3 && (
             <div className="w-full flex items-center justify-between">
-              <span className="text-xs text-slate-400">Jurnal pembukuan beban gaji otomatis tercatat.</span>
+              <span className="text-xs text-slate-400">
+                {disbursementResult?.status === 'paid' && disbursementResult?.paymentConfirmed
+                  ? 'Jurnal pembukuan beban gaji tercatat setelah konfirmasi.'
+                  : 'Status masih menunggu konfirmasi pembayaran nyata; jurnal belum diposting sebagai lunas.'}
+              </span>
               <button
                 type="button"
                 onClick={onClose}
