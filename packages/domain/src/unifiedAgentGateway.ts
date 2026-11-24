@@ -391,6 +391,7 @@ export type CommitUnifiedActionRequest = {
 export type CommitRejectCode =
   | AuthorizeRejectCode
   | 'invalid_or_expired_prepare_token'
+  | 'idempotency_key_mismatch'
   | 'prompt_injection_detected';
 
 export type CommitUnifiedActionResult =
@@ -1366,12 +1367,22 @@ export function commitUnifiedAction(
     );
   }
 
-  const effectiveIdempKey = String(commitReq.idempotencyKey ?? '').trim() || prepared.idempotencyKey;
+  const providedIdempKey = String(commitReq.idempotencyKey ?? '').trim();
+  if (providedIdempKey && providedIdempKey !== prepared.idempotencyKey) {
+    return reject(
+      'idempotency_key_mismatch',
+      `Commit ditolak: idempotencyKey '${providedIdempKey}' tidak cocok dengan idempotencyKey tahap prepare ('${prepared.idempotencyKey}').`,
+    );
+  }
+  const effectiveIdempKey = prepared.idempotencyKey;
 
   // Idempotensi: jika commit dengan idempotencyKey sama sudah berhasil sebelumnya, kembalikan hasil lama tanpa eksekusi ganda.
   const existingCommitted =
     prepared.committedResult
-    ?? findCommittedByIdempotencyKey(preparedStore, reqOrgId, effectiveIdempKey);
+    ?? findCommittedByIdempotencyKey(preparedStore, reqOrgId, effectiveIdempKey)
+    ?? (providedIdempKey
+      ? findCommittedByIdempotencyKey(preparedStore, reqOrgId, providedIdempKey)
+      : undefined);
 
   if (existingCommitted) {
     return {

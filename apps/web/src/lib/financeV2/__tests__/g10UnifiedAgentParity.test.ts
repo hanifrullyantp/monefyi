@@ -717,6 +717,7 @@ describe('G10-1: Satu Pintu Input (HRD + PM + Keuangan) & Penyatuan 18 Aksi ke R
     expect(commitRetry.auditRecord).toEqual(commit1.auditRecord);
 
     // 2. Uji alur penuh prepareManagerAction -> commitManagerAction pada managerAgentService.ts
+    const projPolicy = makePolicy({ dailyAgentCapRupiah: 500_000_000 });
     const serviceStore: PreparedActionStore = new Map();
     const action: AgentAction = {
       id: 'act-g10-proj-1',
@@ -736,7 +737,7 @@ describe('G10-1: Satu Pintu Input (HRD + PM + Keuangan) & Penyatuan 18 Aksi ke R
 
     const prepSvc = prepareManagerAction(action, ctx, env, {
       preparedStore: serviceStore,
-      policy,
+      policy: projPolicy,
       dailyUsage: usage,
       nowMs: t0,
     });
@@ -746,7 +747,7 @@ describe('G10-1: Satu Pintu Input (HRD + PM + Keuangan) & Penyatuan 18 Aksi ke R
 
     const commitSvc1 = await commitManagerAction(prepSvc.action, ctx, env, {
       preparedStore: serviceStore,
-      policy,
+      policy: projPolicy,
       dailyUsage: usage,
       approvedBy: 'owner-1',
       approverRole: 'owner',
@@ -763,7 +764,7 @@ describe('G10-1: Satu Pintu Input (HRD + PM + Keuangan) & Penyatuan 18 Aksi ke R
     // Commit kedua dengan idempotencyKey sama -> 0 eksekusi ganda ke projectService!
     const commitSvc2 = await commitManagerAction(prepSvc.action, ctx, env, {
       preparedStore: serviceStore,
-      policy,
+      policy: projPolicy,
       dailyUsage: usage,
       approvedBy: 'owner-1',
       approverRole: 'owner',
@@ -773,5 +774,220 @@ describe('G10-1: Satu Pintu Input (HRD + PM + Keuangan) & Penyatuan 18 Aksi ke R
     expect(commitSvc2.duplicate).toBe(true);
     expect(commitSvc2.code).toBe('duplicate_commit_prevented');
     expect(createProject).toHaveBeenCalledTimes(1);
+  });
+
+  it('regresi keamanan 1: menolak tampering payload/type pasca-prepare — eksekusi hanya memakai snapshot terverifikasi commitRes', async () => {
+    const store: PreparedActionStore = new Map();
+    const policy = makePolicy();
+    const usage = makeUsage();
+    const t0 = 1_795_500_000_000;
+    const { ctx, env } = makeManagerEnvAndCtx();
+
+    vi.mocked(executeIntent).mockResolvedValueOnce({
+      success: true,
+      message: 'Biaya tercatat',
+    });
+
+    const action: AgentAction = {
+      id: 'act-tamper-1',
+      type: 'record_cost',
+      division: 'finance',
+      params: { project: 'P1', item: 'Semen 10 sak', total: 650_000 },
+      summary: 'Catat beli semen 650rb',
+      needsApproval: false,
+      status: 'pending',
+    };
+
+    const prep = prepareManagerAction(action, ctx, env, {
+      preparedStore: store,
+      policy,
+      dailyUsage: usage,
+      nowMs: t0,
+    });
+    expect(prep.ok).toBe(true);
+    if (!prep.ok) throw new Error('expected ok');
+
+    // Penyerang memodifikasi type & params setelah prepare sebelum memanggil commitManagerAction
+    const tamperedAction: AgentAction = {
+      ...prep.action,
+      type: 'add_project',
+      division: 'project',
+      params: {
+        ...prep.action.params,
+        name: 'Proyek Palsu',
+        item: 'Transfer Gelap',
+        total: 99_000_000,
+      },
+      summary: 'Tampered summary',
+    };
+
+    const committed = await commitManagerAction(tamperedAction, ctx, env, {
+      preparedStore: store,
+      policy,
+      dailyUsage: usage,
+      approvedBy: 'owner-1',
+      approverRole: 'owner',
+      nowMs: t0 + 1_000,
+    });
+    expect(committed.ok).toBe(true);
+    expect(committed.auditRecord?.actionType).toBe('record_cost');
+    expect(createProject).not.toHaveBeenCalled();
+    expect(executeIntent).toHaveBeenCalledTimes(1);
+    expect(executeIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        intent: 'record_cost',
+        params: expect.objectContaining({
+          item: 'Semen 10 sak',
+          total: 650_000,
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('regresi keamanan 2: actionAmount memperhitungkan baseCost (upsert_pricelist) & contract_value (add_project) untuk approval dan batas harian', () => {
+    const store: PreparedActionStore = new Map();
+    const t0 = 1_795_500_000_000;
+    const { ctx, env } = makeManagerEnvAndCtx();
+
+    // upsert_pricelist dengan baseCost > 5jt di mode L2 tetap wajib approval & terhitung ke daily cap
+    const pricelistAction: AgentAction = {
+      id: 'act-pl-high',
+      type: 'upsert_pricelist',
+      division: 'purchasing',
+      params: { name: 'Lift Barang Proyek', unit: 'unit', baseCost: 6_000_000 },
+      summary: 'Update harga Lift Barang Proyek',
+      needsApproval: false,
+      status: 'pending',
+    };
+
+    const prepL2 = prepareManagerAction(pricelistAction, ctx, env, {
+      preparedStore: store,
+      policy: makePolicy({ autonomyLevel: 'L2', dailyAgentCapRupiah: 20_000_000, approvalThresholdRupiah: 5_000_000 }),
+      dailyUsage: makeUsage(),
+      nowMs: t0,
+    });
+    expect(prepL2.ok).toBe(true);
+    if (!prepL2.ok) throw new Error('expected ok');
+    expect(prepL2.requiresApproval).toBe(true);
+    expect(prepL2.preparedRecord.amountRupiah).toBe(6_000_000);
+    expect(prepL2.preparedRecord.riskLevel).toBe('high_risk');
+
+    const prepOverCap = prepareManagerAction(pricelistAction, ctx, env, {
+      preparedStore: store,
+      policy: makePolicy({ dailyAgentCapRupiah: 5_000_000 }),
+      dailyUsage: makeUsage(),
+      nowMs: t0,
+    });
+    expect(prepOverCap.ok).toBe(false);
+    if (prepOverCap.ok) throw new Error('expected reject');
+    expect(prepOverCap.code).toBe('daily_amount_cap_exceeded');
+
+    // add_project dengan contract_value > dailyAgentCapRupiah juga ditolak oleh batas nominal harian
+    const projOverCap = prepareManagerAction(
+      {
+        id: 'act-proj-overcap',
+        type: 'add_project',
+        division: 'project',
+        params: { name: 'Proyek Besar', contract_value: 150_000_000 },
+        summary: 'Buat proyek besar',
+        needsApproval: true,
+        status: 'pending',
+      },
+      ctx,
+      env,
+      {
+        preparedStore: store,
+        policy: makePolicy({ dailyAgentCapRupiah: 50_000_000 }),
+        dailyUsage: makeUsage(),
+        nowMs: t0,
+      },
+    );
+    expect(projOverCap.ok).toBe(false);
+    if (projOverCap.ok) throw new Error('expected reject');
+    expect(projOverCap.code).toBe('daily_amount_cap_exceeded');
+  });
+
+  it('regresi keamanan 3: menolak override idempotencyKey saat commit agar tidak bisa melewati deteksi duplikat', () => {
+    const store: PreparedActionStore = new Map();
+    const policy = makePolicy();
+    const usage = makeUsage();
+    const t0 = 1_795_500_000_000;
+
+    const prep = prepareUnifiedAction(
+      {
+        orgId: 'org-g10-1',
+        actorId: 'agent:gm',
+        actorRole: 'manager',
+        actionType: 'record_cost',
+        roles: ['finance', 'pm'],
+        modality: 'text',
+        rawText: 'beli semen 500rb',
+        params: { item: 'semen', total: 500_000 },
+        amountRupiah: 500_000,
+        idempotencyKey: 'idemp-orig-1',
+        nowMs: t0,
+      },
+      policy,
+      usage,
+      store,
+    );
+    expect(prep.ok).toBe(true);
+    if (!prep.ok) throw new Error('expected ok');
+
+    // Coba override idempotencyKey sebelum commit pertama -> ditolak
+    const mismatchBefore = commitUnifiedAction(
+      {
+        prepareToken: prep.prepareToken,
+        idempotencyKey: 'idemp-override-999',
+        orgId: 'org-g10-1',
+        approvedBy: 'owner-1',
+        approverRole: 'owner',
+        nowMs: t0 + 1_000,
+      },
+      store,
+      policy,
+      usage,
+    );
+    expect(mismatchBefore.ok).toBe(false);
+    expect(mismatchBefore.executed).toBe(false);
+    if (mismatchBefore.ok) throw new Error('expected reject');
+    expect(mismatchBefore.code).toBe('idempotency_key_mismatch');
+
+    // Commit sah dengan idempotencyKey asli
+    const validCommit = commitUnifiedAction(
+      {
+        prepareToken: prep.prepareToken,
+        idempotencyKey: 'idemp-orig-1',
+        orgId: 'org-g10-1',
+        approvedBy: 'owner-1',
+        approverRole: 'owner',
+        nowMs: t0 + 2_000,
+      },
+      store,
+      policy,
+      usage,
+    );
+    expect(validCommit.ok).toBe(true);
+    expect(validCommit.executed).toBe(true);
+
+    // Commit kedua mencoba mengganti idempotencyKey -> tetap ditolak dan 0 eksekusi ganda
+    const mismatchAfter = commitUnifiedAction(
+      {
+        prepareToken: prep.prepareToken,
+        idempotencyKey: 'idemp-bypass-attempt',
+        orgId: 'org-g10-1',
+        approvedBy: 'owner-1',
+        approverRole: 'owner',
+        nowMs: t0 + 3_000,
+      },
+      store,
+      policy,
+      usage,
+    );
+    expect(mismatchAfter.ok).toBe(false);
+    expect(mismatchAfter.executed).toBe(false);
+    if (mismatchAfter.ok) throw new Error('expected reject');
+    expect(mismatchAfter.code).toBe('idempotency_key_mismatch');
   });
 });

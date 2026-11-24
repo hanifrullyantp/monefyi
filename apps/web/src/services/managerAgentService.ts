@@ -392,8 +392,10 @@ export function buildMessages(
 const HIGH_RISK: ActionType[] = ['generate_payroll', 'add_project', 'convert_estimation'];
 
 function actionAmount(a: { type: ActionType; params: Record<string, unknown> }): number {
-  const direct = Number(a.params.total ?? a.params.amount ?? 0) || 0;
-  if (direct > 0) return direct;
+  const direct = Number(
+    a.params.total ?? a.params.amount ?? a.params.baseCost ?? a.params.contract_value ?? 0,
+  );
+  if (Number.isFinite(direct) && direct > 0) return direct;
   const qty = Number(a.params.qty) || 0;
   const unitPrice = Number(a.params.unitPrice) || 0;
   return qty > 0 && unitPrice > 0 ? qty * unitPrice : 0;
@@ -1726,7 +1728,18 @@ export async function commitManagerAction(
     };
   }
 
-  const execRes = await executePreparedActionBody(action, ctx, env);
+  const verifiedAction: AgentAction = {
+    ...action,
+    type: commitRes.actionType,
+    division: ACTION_DIVISION[commitRes.actionType],
+    params: { ...commitRes.params },
+    summary: commitRes.summary,
+    prepareToken: commitRes.prepareToken,
+    idempotencyKey: commitRes.idempotencyKey,
+    auditRecord: commitRes.auditRecord,
+  };
+
+  const execRes = await executePreparedActionBody(verifiedAction, ctx, env);
   if (!execRes.ok) {
     const rec = store instanceof Map ? store.get(prepareToken) : store[prepareToken];
     if (rec) {
