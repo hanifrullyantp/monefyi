@@ -12,12 +12,17 @@ export function buildProjectReports(
     if (!pid) continue;
     if (!map[pid]) map[pid] = { revenue: 0, expense: 0 };
 
-    if (line.accountType === 'kas') {
-      map[pid].revenue += line.debit;
-      map[pid].expense += line.credit;
+    if (line.accountType === 'pendapatan_proyek') {
+      map[pid].revenue += (line.credit - line.debit);
+    } else if (line.accountType.startsWith('hpp_')) {
+      map[pid].expense += (line.debit - line.credit);
     } else if (line.accountType === 'laba') {
+      if (line.referenceType === 'project_close' || line.referenceType === 'period_close' || line.referenceType === 'dividend') continue;
       map[pid].revenue += line.credit;
       map[pid].expense += line.debit;
+    } else if (line.accountType === 'kas' && !lines.some(l => l.journalId === line.journalId && (l.accountType === 'pendapatan_proyek' || l.accountType.startsWith('hpp_') || l.accountType === 'laba'))) {
+      map[pid].revenue += line.debit;
+      map[pid].expense += line.credit;
     }
   }
 

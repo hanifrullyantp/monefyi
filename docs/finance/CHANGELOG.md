@@ -4,6 +4,21 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F1-T2] 2026-11-24 — Migrasi SQL Lokal F1, Rekonsiliasi Dry-Run, & Pensiun Penghitung V1
+- **Branch / PR:** `finance/F1-T2-migration-reconciliation-retire-v1`
+- **Fase:** F1 (Akun Baru & Dimensi Proyek)
+- **Perubahan & Alasan:**
+  - Menulis migrasi SQL lokal `20261124120000_f1_coa_and_dimensions.sql` (`BLOCKED remote`): memperluas constraint COA, menambah `project_id`/`party_id`/`needs_review` pada `planner_journal_lines`, menambah `source`/`model`/`prepare_token` pada `planner_journal_entries`, memperbarui `seed_default_chart_of_accounts` & `planner_post_journal`, serta menambah RPC `planner_migrate_f1_ledger(org_id, p_dry_run)`.
+  - Menambahkan engine rekonsiliasi & dry-run TypeScript di `apps/web/src/lib/financeV2/reconciliation.ts` + tes `reconciliation.test.ts`.
+  - Memperbarui `profitLossReport.ts`, `loadReportData.ts`, dan `projectReport.ts` agar membaca akun F1 dan dimensi `project_id`/`party_id` langsung dari baris jurnal, serta mempertahankan kompatibilitas F0.
+  - Memensiunkan `financeV1` sebagai penghitung: `businessReportService.ts` kini membaca buku besar `financeV2` via `businessReportFromLedger`.
+  - Mencatat keputusan `D-F1-01` & `D-F1-02` di `DECISIONS.md`, memperbarui `ACCOUNTING-MODEL.md`, `PROGRESS.md`, dan menerbitkan `PHASES/F1-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Seluruh COA F1 (`pendapatan_proyek`, `hpp_*`, `uang_muka_klien`, `piutang_retensi`, `beban_opex`, `beban_penyusutan`, `akumulasi_penyusutan`, `dividen`).
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124120000_f1_coa_and_dimensions.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/reconciliation.test.ts`.
+- **Dampak ke Tool Agent:** Metadata `source`, `model`, `prepare_token` siap disimpan di `planner_journal_entries`.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F1-T1] 2026-11-24 — COA Baru, Dimensi Proyek/Pihak, & Template Kejadian Tertutup
 - **Branch / PR:** `finance/F1-T1-coa-project-party-templates`
 - **Fase:** F1 (Akun Baru & Dimensi Proyek)

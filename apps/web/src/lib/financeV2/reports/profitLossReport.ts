@@ -4,6 +4,26 @@ import type { JournalLineEnriched, ProfitLossReport, ReportFilters } from './typ
 import { loadEnrichedJournalLines } from './loadReportData';
 
 const EQUITY_TRANSFER_REFS = new Set(['project_close', 'period_close', 'dividend']);
+type HppRapBucket = 'material' | 'labor' | 'equipment' | 'overhead' | 'other' | 'uncategorized';
+
+function isPlAccountType(type: string): boolean {
+  return (
+    type === 'laba'
+    || type === 'pendapatan_proyek'
+    || type.startsWith('hpp_')
+    || type === 'beban_opex'
+    || type === 'beban_penyusutan'
+  );
+}
+
+function hppBucketForAccountType(type: string): HppRapBucket {
+  if (type === 'hpp_material') return 'material';
+  if (type === 'hpp_labor') return 'labor';
+  if (type === 'hpp_equipment') return 'equipment';
+  if (type === 'hpp_overhead') return 'overhead';
+  if (type === 'hpp_other') return 'other';
+  return 'uncategorized';
+}
 
 export function buildProfitLossFromLines(
   lines: JournalLineEnriched[],
@@ -19,9 +39,16 @@ export function buildProfitLossFromLines(
 
   const revenueByProjectMap: Record<string, number> = {};
   const hppMap: Record<string, number> = {};
+  const hppByRapType: Record<HppRapBucket, number> = {
+    material: 0,
+    labor: 0,
+    equipment: 0,
+    overhead: 0,
+    other: 0,
+    uncategorized: 0,
+  };
   const opexMap: Record<string, number> = {};
 
-  // Peta jurnal asli untuk menangani jurnal pembalik (reversal) secara akurat.
   const journalRefMap = new Map<string, { referenceType: string | null; referenceId: string | null }>();
   for (const line of lines) {
     if (!journalRefMap.has(line.journalId)) {
@@ -33,7 +60,7 @@ export function buildProfitLossFromLines(
   }
 
   for (const line of lines) {
-    if (line.accountType !== 'laba') continue;
+    if (!isPlAccountType(line.accountType)) continue;
     if (line.referenceType && EQUITY_TRANSFER_REFS.has(line.referenceType)) continue;
 
     if (line.referenceType === 'reversal') {
@@ -41,26 +68,63 @@ export function buildProfitLossFromLines(
       const origType = orig?.referenceType || null;
       if (origType && EQUITY_TRANSFER_REFS.has(origType)) continue;
 
-      if (origType === 'project_income' || (!origType && line.debit > 0 && line.credit === 0)) {
-        revenue -= line.debit;
+      if (line.accountType === 'pendapatan_proyek' || origType === 'project_income' || (!origType && line.debit > 0 && line.credit === 0 && line.accountType === 'laba')) {
+        const revDelta = line.debit - line.credit;
+        revenue -= revDelta;
         const pid = line.projectId || (orig?.referenceId ? receivableProjectMap[orig.referenceId] : null) || null;
         const key = pid || '_none';
-        revenueByProjectMap[key] = (revenueByProjectMap[key] || 0) - line.debit;
-      } else if (origType === 'opex') {
-        opex -= line.credit;
+        revenueByProjectMap[key] = (revenueByProjectMap[key] || 0) - revDelta;
+      } else if (line.accountType === 'beban_opex' || origType === 'opex') {
+        const opexDelta = line.credit - line.debit;
+        opex -= opexDelta;
         if (orig?.referenceId) {
           const catKey = opexRealizationCategory[orig.referenceId] || orig.referenceId;
-          opexMap[catKey] = (opexMap[catKey] || 0) - line.credit;
+          opexMap[catKey] = (opexMap[catKey] || 0) - opexDelta;
         }
-      } else if (origType === 'amortize' || origType === 'depreciation') {
-        otherExpense -= line.credit;
+      } else if (line.accountType === 'beban_penyusutan' || origType === 'amortize' || origType === 'depreciation') {
+        otherExpense -= (line.credit - line.debit);
       } else {
-        hpp -= line.credit;
-        hppMap['Biaya Proyek'] = (hppMap['Biaya Proyek'] || 0) - line.credit;
+        const hppDelta = line.credit - line.debit;
+        hpp -= hppDelta;
+        const bucket = hppBucketForAccountType(line.accountType);
+        hppByRapType[bucket] -= hppDelta;
+        hppMap['Biaya Proyek'] = (hppMap['Biaya Proyek'] || 0) - hppDelta;
       }
       continue;
     }
 
+    // Akun F1 khusus
+    if (line.accountType === 'pendapatan_proyek') {
+      const amt = line.credit - line.debit;
+      revenue += amt;
+      const key = line.projectId || '_none';
+      revenueByProjectMap[key] = (revenueByProjectMap[key] || 0) + amt;
+      continue;
+    }
+    if (line.accountType.startsWith('hpp_')) {
+      const amt = line.debit - line.credit;
+      hpp += amt;
+      const bucket = hppBucketForAccountType(line.accountType);
+      hppByRapType[bucket] += amt;
+      const hppLabel = line.projectId ? (projectNames[line.projectId] || 'Biaya Proyek') : 'Biaya Proyek';
+      hppMap[hppLabel] = (hppMap[hppLabel] || 0) + amt;
+      continue;
+    }
+    if (line.accountType === 'beban_opex') {
+      const amt = line.debit - line.credit;
+      opex += amt;
+      if (line.referenceId) {
+        const catKey = opexRealizationCategory[line.referenceId] || line.referenceId;
+        opexMap[catKey] = (opexMap[catKey] || 0) + amt;
+      }
+      continue;
+    }
+    if (line.accountType === 'beban_penyusutan') {
+      otherExpense += (line.debit - line.credit);
+      continue;
+    }
+
+    // Kompatibilitas akun 'laba' F0
     if (line.credit > 0) {
       revenue += line.credit;
       let pid: string | null = line.projectId;
@@ -79,8 +143,8 @@ export function buildProfitLossFromLines(
       } else if (line.referenceType === 'opex' || line.referenceType === 'bon_disbursement') {
         opex += line.debit;
       } else if (line.referenceType === 'project_expense' || line.referenceType === 'payable_payment') {
-        // Klasifikasi HPP berdasarkan jenis transaksi/akun, bukan teks deskripsi.
         hpp += line.debit;
+        hppByRapType.uncategorized += line.debit;
         const hppLabel = line.projectId
           ? (projectNames[line.projectId] || 'Biaya Proyek')
           : 'Biaya Proyek';
@@ -88,6 +152,7 @@ export function buildProfitLossFromLines(
       } else if (line.referenceType === 'payroll_disbursement' || line.referenceType === 'payroll_accrual') {
         if (line.projectId) {
           hpp += line.debit;
+          hppByRapType.labor += line.debit;
           hppMap['Tenaga Kerja Proyek'] = (hppMap['Tenaga Kerja Proyek'] || 0) + line.debit;
         } else {
           opex += line.debit;
@@ -124,6 +189,14 @@ export function buildProfitLossFromLines(
         label,
         amount: round(amount),
       })),
+    hppByRapType: {
+      material: round(hppByRapType.material),
+      labor: round(hppByRapType.labor),
+      equipment: round(hppByRapType.equipment),
+      overhead: round(hppByRapType.overhead),
+      other: round(hppByRapType.other),
+      uncategorized: round(hppByRapType.uncategorized),
+    },
     opexBreakdown: Object.entries(opexMap)
       .filter(([, amount]) => round(amount) !== 0)
       .map(([categoryId, amount]) => ({

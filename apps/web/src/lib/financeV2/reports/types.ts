@@ -24,6 +24,7 @@ export interface JournalLineEnriched {
   accountType: AccountType;
   accountCategory: 'aktiva' | 'pasiva';
   projectId: string | null;
+  partyId?: string | null;
   debit: number;
   credit: number;
 }
@@ -37,6 +38,7 @@ export interface ProfitLossReport {
   netProfit: number;
   revenueByProject: { projectId: string | null; projectName: string; amount: number }[];
   hppBreakdown: { label: string; amount: number }[];
+  hppByRapType?: Record<'material' | 'labor' | 'equipment' | 'overhead' | 'other' | 'uncategorized', number>;
   opexBreakdown: { categoryId: string; categoryName: string; amount: number }[];
 }
 

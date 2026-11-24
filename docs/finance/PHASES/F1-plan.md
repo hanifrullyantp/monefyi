@@ -23,3 +23,4 @@
 |---|---|---|
 | `finance/F1-T1-coa-project-party-templates` | COA baru (`financeV2.ts`, `accountService.ts`), sub-akun HPP RAP, validasi dimensi `project_id`/`party_id`, enum `FinanceEventCode` & template lengkap di `packages/domain/src/journal.ts` + tes per template | Agent Ledger + Agent AI |
 | `finance/F1-T2-migration-reconciliation-retire-v1` | Migrasi SQL lokal `20261124120000_f1_coa_and_dimensions.sql` (`BLOCKED remote`), `reconciliation.ts` (`dryRun`), dukungan F1 COA di `profitLossReport.ts` & `loadReportData.ts`, pensiun penghitung `businessReportService.ts`, `DECISIONS.md`, & `F1-report.md` | Agent DB + Agent Ledger + Agent QA + Agent Dokumen |
+
