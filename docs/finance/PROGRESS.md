@@ -40,7 +40,7 @@
 ### Langkah Berikutnya (Eksekusi Pemilik / Operator)
 1. Rotate token yang pernah berada di `apps/web/.env.local`.
 2. Tinjau `docs/finance/OPEN-QUESTIONS.md` & `docs/finance/DECISIONS.md`.
-3. Jalankan migrasi SQL F0, F1, & G0 (`g0_1`, `g0_3`, `g0_4`, `g0_2`, `g0_5`, `g0_6`) sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
+3. Jalankan migrasi SQL F0, F1, G0 (`g0_1`, `g0_3`, `g0_4`, `g0_2`, `g0_5`, `g0_6`), & G1 (`g1_1`, `g1_2`) sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
 
 ---
 
@@ -58,6 +58,7 @@
 | **G0-8** | Skrip Uji Paritas Lokal Offline Owner | `DONE` | `feat/g0-7-8-staging-parity-report` | Skrip 100% offline `scripts/g0-owner-local-parity-check.mjs` (`--input` & `--demo-synthetic`) + `g0OwnerParityScript.test.ts` (bukti statis bebas modul/API jaringan, pengecualian `dividend`/`cancelled`/`deleted_at`, deteksi anomali `missingJournalEntryId`, `unbalancedJournals`, `needs_review`), & panduan di `DEPLOY-RUNBOOK.md`. |
 | **G0-Gate** | Laporan Gerbang Fase G0 (`G0-report.md`) | `DONE` | `feat/g0-7-8-staging-parity-report` | Laporan jujur status `G0-1`–`G0-8`, tabel sebelum vs sesudah dry-run sintetis, daftar & urutan migrasi SQL lokal (`BLOCKED remote`), bukti hasil tes aktual, & sisa risiko menuju `G1`. |
 | **G1-1** | Ekstraksi Nota/Struk/Invoice $\rightarrow$ Draf `prepare_entry` & Lampiran Bukti Terikat Jurnal | `DONE` | `feat/g1-1-receipt-extraction-attachment` | Parser deterministik `packages/domain/src/receiptExtraction.ts` (PPN, tanggal ID, SHA-256, skor keyakinan, deteksi prompt injection), `apps/web/src/lib/financeEntryEngine.ts`, `receiptAttachmentService.ts` (`extractReceiptToDraft` selalu draf & `bindAttachmentToJournal`), SQL lokal `20261124150000_g1_1_journal_attachments.sql` (`BLOCKED remote`, `ON DELETE RESTRICT`, RLS + trigger guard), & `receiptExtraction.test.ts`. |
+| **G1-2** | Impor Mutasi Bank (BCA/Mandiri/BRI/BNI/Generic CSV), Pencocokan Otomatis, & Rekonsiliasi Kas | `DONE` | `feat/g1-2-bank-statement-reconciliation` | Parser deterministik `packages/domain/src/bankStatement.ts` (`parseBankStatementCsv`, `matchBankStatementToLedger` tanpa auto-match kandidat ambigu, `reconcileCashVsBank` + `provenance`), `bankReconciliationService.ts`, SQL lokal `20261124151000_g1_2_bank_reconciliation.sql` (`BLOCKED remote`, `UNIQUE(org_id, wallet_account_id, row_hash)`, `ON DELETE RESTRICT`, RLS `is_org_member`), & `bankReconciliation.test.ts`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
@@ -72,4 +73,5 @@
 
 ### Status Fase Berikutnya (`G1`)
 - [x] `G1-1`: Ekstraksi nota/struk/invoice $\rightarrow$ draf `prepare_entry` & lampiran bukti terikat jurnal (`receiptExtraction.ts`, `receiptAttachmentService.ts`, `20261124150000_g1_1_journal_attachments.sql`, & `receiptExtraction.test.ts`).
-- [ ] `G1-Deploy`: Menunggu tinjauan pemilik atas `docs/finance/PHASES/G0-report.md`, eksekusi manual migrasi SQL `F0`/`F1`/`G0`/`G1-1` (`DEPLOY-RUNBOOK.md`), dan uji paritas offline pada data produksi via `scripts/g0-owner-local-parity-check.mjs --input <export.json>`.
+- [x] `G1-2`: Impor mutasi bank (BCA/Mandiri/BRI/BNI/Generic CSV), pencocokan 1-to-1 deterministik (tanpa auto-match kandidat ambigu), & rekonsiliasi kas (`bankStatement.ts`, `bankReconciliationService.ts`, `20261124151000_g1_2_bank_reconciliation.sql`, & `bankReconciliation.test.ts`).
+- [ ] `G1-Deploy`: Menunggu tinjauan pemilik atas `docs/finance/PHASES/G0-report.md`, eksekusi manual migrasi SQL `F0`/`F1`/`G0`/`G1-1`/`G1-2` (`DEPLOY-RUNBOOK.md`), dan uji paritas offline pada data produksi via `scripts/g0-owner-local-parity-check.mjs --input <export.json>`.
