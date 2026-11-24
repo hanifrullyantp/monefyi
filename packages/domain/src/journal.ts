@@ -7,7 +7,7 @@
 export type CashMovement = 'in' | 'out';
 
 export type TemplateLine = {
-  role: 'kas' | 'kas_tujuan' | 'laba' | 'hutang' | 'piutang';
+  role: 'kas' | 'kas_tujuan' | 'laba' | 'laba_ditahan' | 'hutang' | 'piutang';
   debit: number;
   credit: number;
 };
@@ -59,6 +59,22 @@ export function receiveReceivable(amount: number): TemplateLine[] {
   const value = toRupiah(amount);
   return [
     { role: 'kas', debit: value, credit: 0 },
+    { role: 'piutang', debit: 0, credit: value },
+  ];
+}
+
+export function projectDividendCash(amount: number): TemplateLine[] {
+  const value = toRupiah(amount);
+  return [
+    { role: 'laba_ditahan', debit: value, credit: 0 },
+    { role: 'kas', debit: 0, credit: value },
+  ];
+}
+
+export function projectDividendReceivableOffset(amount: number): TemplateLine[] {
+  const value = toRupiah(amount);
+  return [
+    { role: 'laba_ditahan', debit: value, credit: 0 },
     { role: 'piutang', debit: 0, credit: value },
   ];
 }

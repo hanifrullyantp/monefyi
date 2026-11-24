@@ -4,6 +4,8 @@ import {
   linesAreBalanced,
   partyDebt,
   payPayable,
+  projectDividendCash,
+  projectDividendReceivableOffset,
   projectExpense,
   projectIncome,
   receiveReceivable,
@@ -11,17 +13,21 @@ import {
 } from '../../../../packages/domain/src/journal';
 
 describe('template jurnal', () => {
-  it('lima kejadian seimbang dalam rupiah bulat', () => {
+  it('kejadian seimbang dalam rupiah bulat termasuk dividen proyek', () => {
     for (const lines of [
       projectExpense(100_000),
       projectIncome(1_500_000.4),
       walletTransfer(250_000),
       payPayable(80_000),
       receiveReceivable(80_000),
+      projectDividendCash(500_000),
+      projectDividendReceivableOffset(200_000),
     ]) {
       expect(linesAreBalanced(lines)).toBe(true);
     }
     expect(projectIncome(1_500_000.4)[0].debit).toBe(1_500_000);
+    expect(projectDividendCash(500_000)[0]).toMatchObject({ role: 'laba_ditahan', debit: 500_000 });
+    expect(projectDividendReceivableOffset(200_000)[1]).toMatchObject({ role: 'piutang', credit: 200_000 });
   });
 });
 

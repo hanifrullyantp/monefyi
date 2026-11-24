@@ -1,5 +1,4 @@
 import { supabase } from '../../lib/supabase';
-import { recalculateProjectSpent } from '../costService';
 import { extraPiutangBeyondContract } from '../../lib/projects/cashIdentity';
 import {
   dividendPool,
@@ -10,9 +9,12 @@ import {
   type DividendPayout,
   type DividendPreviewLine,
 } from '../../lib/projects/dividend';
+import { toRupiah } from '../../../../../packages/domain/src/journal';
+import { orgToday } from '../../../../../packages/domain/src/dates';
 import { normalizePartyKey } from '../../lib/financeV2/partyLedger';
 import { loadReceivablesByProject, recordReceivablePayment } from './receivableService';
 import { loadPayablesByProject } from './payableService';
+import { postProjectDividendJournal } from './projectJournalBridge';
 
 export async function loadProjectDividendConfig(projectId: string): Promise<DividendConfig> {
   const { data, error } = await supabase
@@ -119,14 +121,21 @@ export async function recordDividendPayouts(input: {
   }
 
   const recs = await loadReceivablesByProject(input.orgId, input.projectId);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = orgToday();
   const newPayouts: DividendPayout[] = [...preview.config.payouts];
 
-  for (const line of preview.lines) {
-    if (line.remainingCash <= 0 && line.offsetPiutang <= 0) continue;
-    if (line.alreadyPaid > 0 && line.remainingCash <= 0) continue;
+  const totalPlannedCash = preview.lines.reduce((s, l) => s + toRupiah(l.remainingCash), 0);
+  if (totalPlannedCash > toRupiah(preview.pool)) {
+    throw new Error('Kas proyek tersedia tidak mencukupi untuk pembayaran dividen.');
+  }
 
-    let offsetLeft = line.offsetPiutang;
+  for (const line of preview.lines) {
+    const cashAmount = toRupiah(line.remainingCash);
+    const offsetAmount = toRupiah(line.offsetPiutang);
+    if (cashAmount <= 0 && offsetAmount <= 0) continue;
+    if (line.alreadyPaid > 0 && cashAmount <= 0) continue;
+
+    let offsetLeft = offsetAmount;
     if (offsetLeft > 0) {
       const ownerRecs = recs.filter(
         r => normalizePartyKey(r.debtor_name) === normalizePartyKey(line.party.name)
@@ -147,32 +156,31 @@ export async function recordDividendPayouts(input: {
       }
     }
 
-    if (line.remainingCash > 0) {
-      const { error } = await supabase.from('planner_cost_realizations').insert({
-        project_id: input.projectId,
-        date: today,
-        description: `Dividen: ${line.party.name}`,
-        total_amount: Math.round(line.remainingCash),
-        supplier: line.party.name,
-        status: 'dividend',
-        recorded_by: input.userId,
-      });
-      if (error) throw new Error(error.message);
-    }
+    const payoutId = `pay-${Date.now()}-${line.party.id}`;
+    const { cashJournalId, offsetJournalId } = await postProjectDividendJournal({
+      orgId: input.orgId,
+      projectId: input.projectId,
+      partyName: line.party.name,
+      cashAmount,
+      offsetAmount: offsetAmount > 0 && line.alreadyPaid === 0 ? offsetAmount : 0,
+      entryDate: today,
+      createdBy: input.userId,
+    });
 
     newPayouts.push({
-      id: `pay-${Date.now()}-${line.party.id}`,
+      id: payoutId,
       partyId: line.party.id,
       partyName: line.party.name,
-      shareAmount: line.shareAmount,
-      offsetPiutang: line.offsetPiutang,
-      cashPaid: line.remainingCash,
+      shareAmount: toRupiah(line.shareAmount),
+      offsetPiutang: offsetAmount,
+      cashPaid: cashAmount,
       date: today,
-      note: line.offsetPiutang > 0 ? 'Termasuk offset piutang owner' : undefined,
+      note: offsetAmount > 0 ? 'Termasuk offset piutang owner' : undefined,
+      journalEntryId: cashJournalId ?? undefined,
+      offsetJournalEntryId: offsetJournalId ?? undefined,
     });
   }
 
-  await recalculateProjectSpent(input.projectId);
   return saveProjectDividendConfig(input.projectId, {
     parties: preview.config.parties,
     payouts: newPayouts,

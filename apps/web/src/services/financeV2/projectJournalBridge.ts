@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
-import { findSystemAccount } from './accountService';
+import { toRupiah } from '../../../../../packages/domain/src/journal';
+import { ensureChartOfAccounts, findSystemAccount } from './accountService';
 import { createJournalEntry } from './journalService';
 import { getOrCreateProjectKasAccount } from './kasService';
 
@@ -130,6 +131,76 @@ export async function reverseProjectJournal(
   return reversal.id;
 }
 
+/**
+ * Post project dividend as equity distribution:
+ * - Cash payout: Dr Laba Ditahan / Cr Kas Proyek
+ * - Owner receivable offset: Dr Laba Ditahan / Cr Piutang Usaha
+ */
+export async function postProjectDividendJournal(input: {
+  orgId: string;
+  projectId: string;
+  partyName: string;
+  cashAmount: number;
+  offsetAmount: number;
+  entryDate?: string;
+  createdBy?: string;
+  cashReferenceId?: string;
+  offsetReferenceId?: string;
+}): Promise<{ cashJournalId: string | null; offsetJournalId: string | null }> {
+  const cashAmount = toRupiah(input.cashAmount);
+  const offsetAmount = toRupiah(input.offsetAmount);
+  if (cashAmount <= 0 && offsetAmount <= 0) {
+    return { cashJournalId: null, offsetJournalId: null };
+  }
+
+  await ensureChartOfAccounts(input.orgId);
+  const labaDitahan = await findSystemAccount(input.orgId, 'laba_ditahan');
+  if (!labaDitahan) {
+    throw new Error('Akun Laba Ditahan tidak ditemukan untuk mencatat dividen.');
+  }
+
+  let cashJournalId: string | null = null;
+  let offsetJournalId: string | null = null;
+
+  if (offsetAmount > 0) {
+    const piutang = await findSystemAccount(input.orgId, 'piutang');
+    if (!piutang) throw new Error('Akun Piutang Usaha tidak ditemukan untuk offset dividen.');
+    const offsetEntry = await createJournalEntry({
+      orgId: input.orgId,
+      entryDate: input.entryDate,
+      description: `Dividen (offset piutang): ${input.partyName}`,
+      referenceType: 'dividend',
+      referenceId: input.offsetReferenceId,
+      createdBy: input.createdBy,
+      lines: [
+        { accountId: labaDitahan.id, debit: offsetAmount, credit: 0, projectId: input.projectId },
+        { accountId: piutang.id, debit: 0, credit: offsetAmount, projectId: input.projectId },
+      ],
+    });
+    offsetJournalId = offsetEntry.id;
+  }
+
+  if (cashAmount > 0) {
+    const { name } = await resolveProjectOrg(input.projectId);
+    const projectKas = await getOrCreateProjectKasAccount(input.orgId, input.projectId, name);
+    const cashEntry = await createJournalEntry({
+      orgId: input.orgId,
+      entryDate: input.entryDate,
+      description: `Dividen proyek: ${input.partyName}`,
+      referenceType: 'dividend',
+      referenceId: input.cashReferenceId,
+      createdBy: input.createdBy,
+      lines: [
+        { accountId: labaDitahan.id, debit: cashAmount, credit: 0, projectId: input.projectId },
+        { accountId: projectKas.id, debit: 0, credit: cashAmount, projectId: input.projectId },
+      ],
+    });
+    cashJournalId = cashEntry.id;
+  }
+
+  return { cashJournalId, offsetJournalId };
+}
+
 
 /**
  * Idempotent backfill for historical incomes/costs without journal_entry_id.
@@ -188,6 +259,8 @@ export async function backfillProjectJournalsForOrg(orgId: string, createdBy?: s
     .is('journal_entry_id', null);
 
   for (const row of costs || []) {
+    const status = String(row.status || 'recorded').toLowerCase();
+    if (status === 'dividend' || status === 'cancelled' || row.deleted_at != null) continue;
     const amount = Number(row.total_amount) || 0;
     if (amount <= 0) continue;
     try {
