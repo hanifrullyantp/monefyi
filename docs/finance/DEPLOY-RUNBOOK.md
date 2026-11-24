@@ -68,6 +68,12 @@ File: `my-supabase-project/supabase/migrations/20261124145000_g0_6_party_id_and_
 - Menambahkan kolom & indeks `party_id uuid REFERENCES planner_parties(id) ON DELETE SET NULL` secara idempoten pada `planner_payables`, `planner_receivables`, `planner_project_incomes`, dan `planner_cost_realizations`.
 - Membuat RPC append-only `public.planner_post_interproject_loan(p_org_id, p_from_project_id, p_to_project_id, p_amount, p_entry_date, p_description, p_is_repayment, p_actor)` yang memvalidasi `p_from_project_id <> p_to_project_id`, `p_amount > 0`, memastikan dompet kas kedua proyek, dan memposting jurnal 4-baris seimbang melalui `public.planner_post_journal`.
 
+### Langkah 9 — Migrasi G1-1 (Lampiran Bukti Nota/Struk/Invoice Terikat ke Jurnal)
+File: `my-supabase-project/supabase/migrations/20261124150000_g1_1_journal_attachments.sql`
+- Membuat tabel `planner_journal_attachments` dengan FK `journal_entry_id uuid REFERENCES planner_journal_entries(id) ON DELETE RESTRICT` (nullable saat draf, diikat saat `commit_entry`), `sha256_hash`, `ocr_raw_text`, `extracted_json`, dan `confidence_score numeric(4,3)`.
+- Menambahkan indeks pada `(org_id, sha256_hash)` untuk deteksi duplikat dan `(journal_entry_id)` untuk lookup bukti per jurnal.
+- Mengaktifkan RLS (`is_org_member(org_id, 'worker')` untuk `SELECT`, `is_org_member(org_id, 'manager')` untuk `INSERT`/`UPDATE` pengikatan `journal_entry_id` dari `NULL -> UUID` saja) serta trigger `planner_guard_journal_attachment_binding()` agar bukti yang sudah terikat jurnal tidak dapat dihapus maupun dimodifikasi.
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check

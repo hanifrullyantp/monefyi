@@ -57,6 +57,7 @@
 | **G0-7** | Staging & Dry-Run Nyata Skala Besar (Dataset Sintetis) | `DONE` | `feat/g0-7-8-staging-parity-report` | Generator deterministik Mulberry32 (`25` proyek, `350` biaya 6 tipe RAP, `150` pemasukan, piutang, hutang, modal, dividen = `596` transaksi) di `scripts/g0-staging-migration-dryrun.mjs` & `g0StagingDryRun.test.ts`; seluruh invarian `reconcileF1Migration` & `buildBalanceSheetFromBalances` lulus (`matched=true`, `isBalanced=true`, `expenseInAktiva=0`). |
 | **G0-8** | Skrip Uji Paritas Lokal Offline Owner | `DONE` | `feat/g0-7-8-staging-parity-report` | Skrip 100% offline `scripts/g0-owner-local-parity-check.mjs` (`--input` & `--demo-synthetic`) + `g0OwnerParityScript.test.ts` (bukti statis bebas modul/API jaringan, pengecualian `dividend`/`cancelled`/`deleted_at`, deteksi anomali `missingJournalEntryId`, `unbalancedJournals`, `needs_review`), & panduan di `DEPLOY-RUNBOOK.md`. |
 | **G0-Gate** | Laporan Gerbang Fase G0 (`G0-report.md`) | `DONE` | `feat/g0-7-8-staging-parity-report` | Laporan jujur status `G0-1`–`G0-8`, tabel sebelum vs sesudah dry-run sintetis, daftar & urutan migrasi SQL lokal (`BLOCKED remote`), bukti hasil tes aktual, & sisa risiko menuju `G1`. |
+| **G1-1** | Ekstraksi Nota/Struk/Invoice $\rightarrow$ Draf `prepare_entry` & Lampiran Bukti Terikat Jurnal | `DONE` | `feat/g1-1-receipt-extraction-attachment` | Parser deterministik `packages/domain/src/receiptExtraction.ts` (PPN, tanggal ID, SHA-256, skor keyakinan, deteksi prompt injection), `apps/web/src/lib/financeEntryEngine.ts`, `receiptAttachmentService.ts` (`extractReceiptToDraft` selalu draf & `bindAttachmentToJournal`), SQL lokal `20261124150000_g1_1_journal_attachments.sql` (`BLOCKED remote`, `ON DELETE RESTRICT`, RLS + trigger guard), & `receiptExtraction.test.ts`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
@@ -70,4 +71,5 @@
 - [x] `G0-Report`: Terbitkan `docs/finance/PHASES/G0-report.md` (Fase **G0** seluruhnya `DONE`).
 
 ### Status Fase Berikutnya (`G1`)
-- [ ] `G1`: **READY** — Menunggu tinjauan pemilik atas `docs/finance/PHASES/G0-report.md`, eksekusi manual migrasi SQL `F0`/`F1`/`G0` (`DEPLOY-RUNBOOK.md`), dan uji paritas offline pada data produksi via `scripts/g0-owner-local-parity-check.mjs --input <export.json>`.
+- [x] `G1-1`: Ekstraksi nota/struk/invoice $\rightarrow$ draf `prepare_entry` & lampiran bukti terikat jurnal (`receiptExtraction.ts`, `receiptAttachmentService.ts`, `20261124150000_g1_1_journal_attachments.sql`, & `receiptExtraction.test.ts`).
+- [ ] `G1-Deploy`: Menunggu tinjauan pemilik atas `docs/finance/PHASES/G0-report.md`, eksekusi manual migrasi SQL `F0`/`F1`/`G0`/`G1-1` (`DEPLOY-RUNBOOK.md`), dan uji paritas offline pada data produksi via `scripts/g0-owner-local-parity-check.mjs --input <export.json>`.
