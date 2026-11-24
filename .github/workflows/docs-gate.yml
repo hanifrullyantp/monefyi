@@ -1,0 +1,27 @@
+name: Finance docs-gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "finance/**"
+
+jobs:
+  docs-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Periksa gerbang dokumentasi keuangan
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: node scripts/docs-gate-check.mjs
+      - name: Jalankan unit test docs-gate
+        working-directory: apps/web
+        run: npx vitest run src/lib/docsGateCheck.test.ts
+
