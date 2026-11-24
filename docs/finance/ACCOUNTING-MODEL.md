@@ -73,6 +73,7 @@ Dokumen ini adalah spesifikasi hidup (*living specification*) untuk buku besar d
 | Kejadian | `reference_type` | Debit (Dr) | Kredit (Cr) | Sumber / Catatan |
 |---|---|---|---|---|
 | **DP Klien (`dp`, `received`)** | `project_income` | `Kas Proyek` | `Uang Muka Klien` | `planner_create_project_income_atomic` / `resolveProjectIncomeTemplate` (`project_id`, `party_id`) |
+| **Pengakuan Pendapatan DP (`dp_revenue_recognition`)** | `revenue_recognition` | `Uang Muka Klien` | `Pendapatan Proyek` | `planner_recognize_project_dp_revenue` / `computeRecognizableRevenue` (`termin` default konservatif atau `progress_pct`, dibatasi sisa kewajiban DP) |
 | **Termin/Pelunasan/Lain Tunai (`received`)** | `project_income` | `Kas Proyek` | `Pendapatan Proyek` | `planner_create_project_income_atomic` / `postProjectIncomeJournal` |
 | **Termin/Pelunasan/Lain Tagihan (`invoiced`/`accrued`)** | `project_income` | `Piutang Usaha` | `Pendapatan Proyek` | `planner_create_project_income_atomic` / `postProjectIncomeJournal` (`project_id`, `party_id`) |
 | **Retensi Ditahan (`retensi`, `pending`/`invoiced`/`accrued`)** | `project_income` | `Piutang Retensi` | `Pendapatan Proyek` | `planner_create_project_income_atomic` / `postProjectIncomeJournal` (`project_id`, `party_id`) |

@@ -60,6 +60,7 @@ export const FINANCE_EVENT_CODES = [
   'dividend_business_cash',
   'project_close_transfer',
   'period_close_transfer',
+  'dp_revenue_recognition',
 ] as const;
 
 export type FinanceEventCode = (typeof FINANCE_EVENT_CODES)[number];
@@ -181,6 +182,16 @@ export function clientDownPayment(amount: number): TemplateLine[] {
   return [
     { role: 'kas', debit: value, credit: 0 },
     { role: 'uang_muka_klien', debit: 0, credit: value },
+  ];
+}
+
+/** Pengakuan pendapatan dari kewajiban Uang Muka Klien (DP) sesuai progres/termin. */
+export function recognizeDownPaymentRevenue(amount: number): TemplateLine[] {
+  const value = Math.max(0, toRupiah(amount));
+  if (value <= 0) return [];
+  return [
+    { role: 'uang_muka_klien', debit: value, credit: 0 },
+    { role: 'pendapatan_proyek', debit: 0, credit: value },
   ];
 }
 
@@ -352,6 +363,7 @@ export function buildJournalTemplate(
     case 'dividend_business_cash': return businessDividendCash(amount);
     case 'project_close_transfer': return projectCloseTransfer(amount);
     case 'period_close_transfer': return periodCloseTransfer(amount, opts?.isLoss);
+    case 'dp_revenue_recognition': return recognizeDownPaymentRevenue(amount);
   }
 }
 

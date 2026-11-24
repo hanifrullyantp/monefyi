@@ -20,3 +20,7 @@ Daftar pertanyaan bisnis/akuntansi untuk diputuskan pemilik sebelum atau saat me
 - **Konteks:** Saat ini masih ada referensi `finance_version` (`v1`, `v2`, `v3`) di tipe & pengaturan migrasi, serta kolom turunan `total_spent` / `total_received` di `planner_projects`.
 - **Pertanyaan:** Pada F1 saat `financeV1` dipensiunkan sebagai penghitung (hanya tata letaknya yang dipakai di F2), apakah kita mengunci seluruh organisasi ke satu jalur `financeV2` saja tanpa toggle `v1`?
 
+## Q-05 — Kebijakan Default Pengakuan Pendapatan DP Proyek (`termin` vs `progress_pct`) (G0-5)
+- **Konteks:** Proyek kini memiliki kolom `revenue_recognition_method` dengan default konservatif `'termin'` dan opsi `'progress_pct'` (`D-G0-02`) serta tabel jadwal `planner_revenue_recognition_schedules`.
+- **Pertanyaan:** Apakah seluruh proyek baru tetap memakai default konservatif `'termin'` (pengakuan DP saat termin tercapai) dan eksekusi jadwal bulanan memerlukan konfirmasi pemilik sebelum diposting, atau proyek konstruksi berjangka panjang otomatis memakai `'progress_pct'` dengan penjadwalan otomatis akhir bulan?
+

@@ -46,7 +46,9 @@ export type JournalReferenceType =
   | 'reversal'
   | 'payable_payment'
   | 'receivable_receipt'
-  | 'dividend';
+  | 'dividend'
+  | 'f1_migration'
+  | 'revenue_recognition';
 
 export interface FinanceAccount {
   id: string;

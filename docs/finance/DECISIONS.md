@@ -67,3 +67,12 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
   3. Mengecualikan akun `'pendapatan'` dan `'beban'` dari daftar `aktiva[]` dan `pasiva[]` pada Neraca (`buildBalanceSheetFromBalances` & `getFinanceV2Snapshot`), lalu menggulung `computedCurrentProfit = SUM(pendapatan) - SUM(beban)` (digabung dengan akun `'laba'` legacy bila ada tanpa double-counting) ke sisi `pasiva[]` sebagai baris ekuitas `"Laba Periode Berjalan (Dari Buku Besar)"` bila nilainya $\neq 0$.
 - **Alasan:** Memisahkan akun Laba/Rugi (nominal) dari akun Neraca (riil) sesuai standar akuntansi double-entry sambil menjamin persamaan `Total Aktiva === Total Pasiva` selalu seimbang pada buku besar.
 
+## D-G0-02 — Pengakuan Pendapatan DP Berbasis Progres / Termin Terjadwal
+- **Tanggal:** 2026-11-24
+- **Konteks:** DP yang masuk dicatat sebagai kewajiban (`uang_muka_klien`), namun diperlukan mekanisme terjadwal dan idempoten untuk mengakui DP menjadi `pendapatan_proyek` seiring penyelesaian proyek tanpa pernah mengakui melebihi DP yang benar-benar diterima.
+- **Pilihan:**
+  1. Menambahkan konfigurasi per proyek `revenue_recognition_method` pada `planner_projects` dengan dua mode: `'termin'` (default konservatif) dan `'progress_pct'`.
+  2. Menempatkan seluruh logika perhitungan deterministik di `packages/domain/src/revenueRecognition.ts` (`computeRecognizableRevenue`, `buildScheduledRecognitionPlan`) serta template `recognizeDownPaymentRevenue` (`Dr uang_muka_klien, Cr pendapatan_proyek`) di `packages/domain/src/journal.ts` (`dp_revenue_recognition`).
+  3. Menyimpan jadwal dan keunikan bulanan per proyek pada `planner_revenue_recognition_schedules` (`UNIQUE(project_id, period_month)`) serta memposting jurnal lewat RPC idempoten `planner_recognize_project_dp_revenue` (`reference_type = 'revenue_recognition'`) tanpa melanggar imutabilitas jurnal.
+- **Alasan:** Menjamin pengakuan pendapatan akrual sesuai kemajuan proyek, menjaga total pengakuan kumulatif tidak pernah melampaui kewajiban DP yang diterima, serta memastikan eksekusi jadwal bulanan aman dijalankan berulang kali (idempoten).
+

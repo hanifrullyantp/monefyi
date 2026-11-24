@@ -4,6 +4,22 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G0-5] 2026-11-24 — Pengakuan Pendapatan DP Berbasis Progres / Termin Terjadwal
+- **Branch / PR:** `feat/g0-5-revenue-recognition`
+- **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-5)
+- **Perubahan & Alasan:**
+  - Menambahkan `'dp_revenue_recognition'` ke `FINANCE_EVENT_CODES`, helper `recognizeDownPaymentRevenue(amount)` (`Dr uang_muka_klien, Cr pendapatan_proyek`), serta cabang pada `buildJournalTemplate` di `packages/domain/src/journal.ts`.
+  - Membuat modul domain deterministik `packages/domain/src/revenueRecognition.ts`: tipe `RevenueRecognitionMethod` (`'termin' | 'progress_pct'`), `computeRecognizableRevenue(input)` (menjamin bilangan bulat rupiah dan batas atas `dpReceivedTotal` tanpa over-recognition), dan `buildScheduledRecognitionPlan(projects, periodMonth)`.
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124144000_g0_5_revenue_recognition.sql` (status `BLOCKED remote`): menambah kolom `revenue_recognition_method` pada `planner_projects` (`DEFAULT 'termin'`), menambah `'revenue_recognition'` pada `planner_journal_entries_reference_type_check`, membuat tabel `planner_revenue_recognition_schedules` + RLS `is_org_member`, dan fungsi idempoten `public.planner_recognize_project_dp_revenue(...)` yang memposting jurnal append-only tanpa mutasi tabel jurnal.
+  - Membuat layanan `apps/web/src/services/financeV2/revenueRecognitionService.ts` (`planMonthlyRevenueRecognition`, `postRevenueRecognition` via RPC dengan fallback `postJournalEntry` memakai `recognizeDownPaymentRevenue`), memperbarui `JournalReferenceType` di `apps/web/src/types/financeV2.ts`, serta mengekspor alias `postJournalEntry` di `apps/web/src/services/financeV2/journalService.ts`.
+  - Menambahkan suite pengujian `apps/web/src/lib/financeV2/__tests__/revenueRecognition.test.ts` (progres bertahap `0% -> 30% -> 75% -> 100% -> 120%`, mode `'termin'` persentase & nominal eksplisit, `buildScheduledRecognitionPlan`, uji struktural SQL, dan uji layanan RPC/fallback).
+  - Memperbarui `docs/finance/ACCOUNTING-MODEL.md`, `docs/finance/DECISIONS.md` (`D-G0-02`), `docs/finance/OPEN-QUESTIONS.md` (`Q-05`), `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 7), dan `docs/finance/PROGRESS.md`.
+- **Akun / Template Jurnal Tersentuh:** `uang_muka_klien`, `pendapatan_proyek` (`dp_revenue_recognition`, `reference_type = 'revenue_recognition'`).
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124144000_g0_5_revenue_recognition.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/revenueRecognition.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool; proyek kini mendukung pengakuan pendapatan DP bertahap yang idempoten di buku besar.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G0-2] 2026-11-24 — Migrasi RPC Atomik ke Akun F1 & Paritas SQL vs Domain
 - **Branch / PR:** `feat/g0-2-rpc-f1-parity`
 - **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-2)
