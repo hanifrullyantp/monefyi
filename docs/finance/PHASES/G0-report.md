@@ -68,7 +68,7 @@ Hasil eksekusi langsung pada branch `feat/g0-7-8-staging-parity-report`:
 - `node scripts/g0-staging-migration-dryrun.mjs`: **PASS** (exit code `0`, `"dataset": "SYNTHETIC"`, `"status": "PASS"`, `matched: true`, `balanceSheetBalanced: true`, `expenseInAktiva: 0`).
 - `node scripts/g0-owner-local-parity-check.mjs --demo-synthetic`: **PASS** (exit code `0`, `"mode": "OFFLINE_LOCAL_ONLY"`, `"status": "PASS"`, seluruh metrik `matched: true`, `neraca.isBalanced: true`, `expenseInAktiva: 0`, `missingJournalEntryIdCount: 0`, `unbalancedJournalsCount: 0`, `needsReviewCount: 1`).
 - `npm run gate:docs`: **PASS** (`docs/finance/CHANGELOG.md` memuat entri `[G0-7/G0-8]` bersama perubahan file keuangan pada branch).
-- `npm run gate:rebrand`: **PASS** (exit code `0`, `Unapproved violations: 0` dari `1185` file yang dipindai).
+- `npm run gate:rebrand`: **PASS** (exit code `0`, `Unapproved violations: 0` dari `1187` file yang dipindai).
 
 ---
 
