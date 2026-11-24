@@ -4,6 +4,26 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G10-1] 2026-11-24 — Satu Pintu Input (HRD + PM + Keuangan) & Penyatuan 18 Aksi `managerAgentService` ke Runtime `prepare`/`commit` Tunggal
+- **Branch / PR:** `feat/g10-1-unified-agent-prepare-commit-18-actions`
+- **Fase:** G10 (`G10-1` — Satu Pintu Input & Runtime `prepare`/`commit` Tunggal)
+- **Perubahan & Alasan:**
+  - **Domain Satu Pintu & Runtime Tunggal (`packages/domain/src/unifiedAgentGateway.ts`):**
+    - `UNIFIED_MANAGER_ACTIONS` & `UNIFIED_MANAGER_ACTION_TYPES`: memetakan seluruh 18 aksi dari `managerAgentService.ts` ke peran terkait (`'hrd' | 'pm' | 'finance'`), tingkat risiko (`'read' | 'low_write' | 'high_risk'`), peran minimum, dan kebijakan persetujuan wajib manusia + SoD (aksi berisiko tinggi seperti `generate_payroll`, `review_bon`, `add_project`, `convert_estimation`, `record_transfer`, `update_project_status`, `add_employee`, serta `record_cost`/`record_income` di atas ambang selalu mewajibkan approval + SoD).
+    - `routeSingleDoorInput`: menerima input multi-modalitas (`'text' | 'voice_transcript' | 'photo_ocr'`), menolak prompt injection (`detectPromptInjection` → `prompt_injection_detected`), mendeteksi peran terpicu (`hrd`, `pm`, `finance`) secara deterministik tanpa pengguna memilih modul, dan menghasilkan kandidat `PreparedActionRequest`.
+    - `prepareUnifiedAction`: menegakkan isolasi `orgId`, kill switch, kuota token/biaya, batas nominal harian, dan deteksi prompt injection; menerbitkan `prepareToken` deterministik ber-TTL 10 menit, `idempotencyKey`, `requiresApproval`, dan `auditDraft` tanpa pernah menulis/memposting data.
+    - `commitUnifiedAction`: menolak keras commit tanpa `prepareToken` sah & belum kedaluwarsa (`invalid_or_expired_prepare_token`), menolak override `idempotencyKey` (`idempotency_key_mismatch`), menegakkan isolasi lintas tenant (`cross_tenant_forbidden`), SoD (`self_approval_forbidden`), persetujuan manusia (`approval_required`), kill switch (`kill_switch_active`), dan idempotensi (`duplicate_commit_prevented` mengembalikan hasil sebelumnya dengan 0 eksekusi ganda), serta menerbitkan `auditRecord` lengkap.
+  - **Integrasi ke `apps/web/src/services/managerAgentService.ts`:**
+    - Menyelaraskan `ActionType` dengan `UNIFIED_MANAGER_ACTION_TYPES` (18 aksi), menambah gerbang `routeManagerSingleDoorInput`, `prepareManagerAction`, dan `commitManagerAction` (mengeksekusi payload terverifikasi dari `commitRes` sehingga tampering pasca-prepare ditolak/diabaikan, serta menghitung `baseCost` & `contract_value` pada `actionAmount`), dan menyalurkan `executeAgentAction` melalui gerbang `prepare`/`commit` + audit trail sambil menjaga kompatibilitas tipe pemanggil UI.
+    - Menambahkan penjaga prompt injection pada `localSmartManagerTurn` dan `runManagerTurn`.
+  - **Tes Paritas 18 Aksi & Satu Pintu (`apps/web/src/lib/financeV2/__tests__/g10UnifiedAgentParity.test.ts`):**
+    - Verifikasi otomatis paritas 100% seluruh 18 aksi `managerAgentService.ts` di `UNIFIED_MANAGER_ACTIONS`, uji satu pintu 3 modalitas (`text`, `voice_transcript`, `photo_ocr`) memicu `hrd` + `pm` + `finance` sekaligus, uji penolakan tanpa `prepareToken` valid, token kedaluwarsa, prompt injection, self-approval SoD, lintas-tenant, kill switch aktif, batas harian/kuota, dan commit ganda (`idempotencyKey` sama → 0 eksekusi ganda).
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru; gerbang runtime tunggal membungkus eksekusi aksi Manager Agent sebelum memanggil layanan/intent keuangan maupun operasional.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada `G10-1`.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g10UnifiedAgentParity.test.ts`.
+- **Dampak ke Tool Agent:** Menyatukan seluruh 18 aksi GM/Manajer di bawah satu pintu input dan satu runtime `prepare`/`commit` yang diaudit dan dilindungi SoD/idempotensi/kill-switch.
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [G9] 2026-11-24 — Agen Project Manager Deterministik, Guard Bukti Foto 100% UI Karyawan, Laporan Klien Terredaksi, & Simulasi Proyek 30 Hari End-to-End
 - **Branch / PR:** `feat/g9-project-manager-agent-30d-sim`
 - **Fase:** G9 (Agen Project Manager & Rekonsiliasi Lapangan–HRD–Keuangan)
