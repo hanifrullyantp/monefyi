@@ -16,6 +16,8 @@ interface MockDbState {
   periodSnapshots: TableRow[];
   opexCategories: TableRow[];
   opexRealizations: TableRow[];
+  projectTransfers: TableRow[];
+  reportRuns: TableRow[];
 }
 
 function createInitialDb(): MockDbState {
@@ -75,6 +77,8 @@ function createInitialDb(): MockDbState {
     periodSnapshots: [],
     opexCategories: [],
     opexRealizations: [],
+    projectTransfers: [],
+    reportRuns: [],
   };
 }
 
@@ -101,6 +105,8 @@ function tableFor(name: string): TableRow[] {
     case 'planner_finance_period_snapshots': return db.periodSnapshots;
     case 'planner_opex_categories': return db.opexCategories;
     case 'planner_opex_realizations': return db.opexRealizations;
+    case 'planner_project_transfers': return db.projectTransfers;
+    case 'planner_finance_report_runs': return db.reportRuns;
     default: return [];
   }
 }
@@ -110,8 +116,22 @@ function createQueryBuilder(table: string) {
   let op: 'select' | 'insert' | 'update' | 'delete' = 'select';
   let payload: TableRow | TableRow[] | null = null;
   let headCount = false;
+  let selectStr = '*';
 
   const applyFilters = (rows: TableRow[]) => rows.filter((r) => filters.every((fn) => fn(r)));
+
+  const enrichRow = (row: TableRow): TableRow => {
+    if (table === 'planner_journal_entries' && selectStr.includes('planner_journal_lines')) {
+      const lines = db.journalLines
+        .filter((l) => l.journal_id === row.id)
+        .map((l) => ({
+          ...l,
+          account: db.accounts.find((a) => a.id === l.account_id) || null,
+        }));
+      return { ...row, lines };
+    }
+    return row;
+  };
 
   const exec = async (): Promise<{ data: unknown; error: { message: string; code?: string } | null; count?: number }> => {
     const rows = tableFor(table);
@@ -136,7 +156,7 @@ function createQueryBuilder(table: string) {
       rows.push(...remaining);
       return { data: [...matched], error: null };
     }
-    const matched = applyFilters(rows);
+    const matched = applyFilters(rows).map(enrichRow);
     if (headCount) {
       return { data: null, count: matched.length, error: null };
     }
@@ -144,7 +164,8 @@ function createQueryBuilder(table: string) {
   };
 
   const builder: Record<string, unknown> = {
-    select(_cols?: string, opts?: { count?: string; head?: boolean }) {
+    select(cols?: string, opts?: { count?: string; head?: boolean }) {
+      if (cols) selectStr = cols;
       if (opts?.head) headCount = true;
       return builder;
     },
@@ -168,6 +189,17 @@ function createQueryBuilder(table: string) {
     },
     neq(col: string, val: unknown) {
       filters.push((r) => r[col] !== val);
+      return builder;
+    },
+    or(expr: string) {
+      const parts = expr.split(',').map((p) => p.trim());
+      filters.push((r) =>
+        parts.some((p) => {
+          const [col, cmp, val] = p.split('.');
+          if (cmp === 'eq') return String(r[col] ?? '') === val;
+          return false;
+        }),
+      );
       return builder;
     },
     in(col: string, vals: unknown[]) {
@@ -270,6 +302,10 @@ vi.mock('../../../lib/supabase', () => ({
 import { recordDividendPayouts } from '../projectDividendService';
 import { backfillProjectJournalsForOrg } from '../projectJournalBridge';
 import { getFinanceIntegrationStatus } from '../financeIntegrationService';
+import { closeProjectFinance } from '../kasService';
+import { closeFinancePeriod } from '../periodCloseService';
+import { buildProfitLossReport } from '../../../lib/financeV2/reports/profitLossReport';
+import { createJournalEntry } from '../journalService';
 
 describe('F0-T1: Dividen proyek sebagai jurnal ekuitas, bukan biaya proyek', () => {
   beforeEach(() => {
@@ -348,6 +384,121 @@ describe('F0-T1: Dividen proyek sebagai jurnal ekuitas, bukan biaya proyek', () 
     const res = await backfillProjectJournalsForOrg('org-1', 'user-1');
     expect(res.costsPosted).toBe(0);
     expect(db.journalEntries.filter((j) => j.reference_type === 'project_expense')).toHaveLength(0);
+  });
+});
+
+describe('F0-T2 & F0-T5: Laba tidak terhitung dua kali & HPP berbasis akun/jenis', () => {
+  beforeEach(() => {
+    seq = 1;
+    db = createInitialDb();
+    // Reset saldo awal proyek bersih untuk skenario T2 & T5
+    db.receivables = [];
+    db.projects[0].total_received = 100_000_000;
+    db.projects[0].total_spent = 60_000_000;
+    db.accounts.find((a) => a.id === 'acc-kas-proj')!.current_balance = 0;
+    db.accounts.find((a) => a.id === 'acc-piutang')!.current_balance = 0;
+    db.accounts.find((a) => a.id === 'acc-laba')!.current_balance = 0;
+    db.accounts.find((a) => a.id === 'acc-laba-ditahan')!.current_balance = 0;
+    mockRpc.mockClear();
+  });
+
+  it('T5: biaya proyek tanpa kata "stok" di deskripsi masuk ke HPP, bukan otherExpense', async () => {
+    await createJournalEntry({
+      orgId: 'org-1',
+      entryDate: '2026-11-05',
+      description: 'Termin 1 klien',
+      referenceType: 'project_income',
+      referenceId: 'inc-1',
+      lines: [
+        { accountId: 'acc-kas-proj', debit: 100_000_000, credit: 0, projectId: 'proj-1' },
+        { accountId: 'acc-laba', debit: 0, credit: 100_000_000, projectId: 'proj-1' },
+      ],
+    });
+    await createJournalEntry({
+      orgId: 'org-1',
+      entryDate: '2026-11-10',
+      description: 'Biaya proyek: Beli semen 10 sak & upah tukang',
+      referenceType: 'project_expense',
+      referenceId: 'cost-1',
+      lines: [
+        { accountId: 'acc-laba', debit: 60_000_000, credit: 0, projectId: 'proj-1' },
+        { accountId: 'acc-kas-proj', debit: 0, credit: 60_000_000, projectId: 'proj-1' },
+      ],
+    });
+
+    const pl = await buildProfitLossReport(
+      { orgId: 'org-1', dateFrom: '2026-11-01', dateTo: '2026-11-30' },
+      {
+        projectNames: { 'proj-1': 'Rumah Pak Budi' },
+        opexCategoryNames: {},
+        receivableProjectMap: {},
+        opexRealizationCategory: {},
+      },
+    );
+
+    expect(pl.revenue).toBe(100_000_000);
+    expect(pl.hpp).toBe(60_000_000);
+    expect(pl.otherExpense).toBe(0);
+    expect(pl.grossProfit).toBe(40_000_000);
+    expect(pl.netProfit).toBe(40_000_000);
+  });
+
+  it('T2: closeProjectFinance lalu closeFinancePeriod memindahkan laba hanya sekali (saldo Laba Periode = 0, Laba Ditahan = 40jt)', async () => {
+    await createJournalEntry({
+      orgId: 'org-1',
+      entryDate: '2026-11-05',
+      description: 'Termin 1 klien',
+      referenceType: 'project_income',
+      referenceId: 'inc-1',
+      lines: [
+        { accountId: 'acc-kas-proj', debit: 100_000_000, credit: 0, projectId: 'proj-1' },
+        { accountId: 'acc-laba', debit: 0, credit: 100_000_000, projectId: 'proj-1' },
+      ],
+    });
+    await createJournalEntry({
+      orgId: 'org-1',
+      entryDate: '2026-11-10',
+      description: 'Biaya proyek: Beli material',
+      referenceType: 'project_expense',
+      referenceId: 'cost-1',
+      lines: [
+        { accountId: 'acc-laba', debit: 60_000_000, credit: 0, projectId: 'proj-1' },
+        { accountId: 'acc-kas-proj', debit: 0, credit: 60_000_000, projectId: 'proj-1' },
+      ],
+    });
+
+    await closeProjectFinance({
+      orgId: 'org-1',
+      projectId: 'proj-1',
+      createdBy: 'user-1',
+    });
+
+    await closeFinancePeriod({
+      orgId: 'org-1',
+      periodMonth: '2026-11-01',
+      closedBy: 'user-1',
+    });
+
+    const plAfterClose = await buildProfitLossReport(
+      { orgId: 'org-1', dateFrom: '2026-11-01', dateTo: '2026-11-30' },
+      {
+        projectNames: { 'proj-1': 'Rumah Pak Budi' },
+        opexCategoryNames: {},
+        receivableProjectMap: {},
+        opexRealizationCategory: {},
+      },
+    );
+
+    expect(plAfterClose.netProfit).toBe(40_000_000);
+    expect(plAfterClose.otherExpense).toBe(0);
+
+    const labaDitahan = Number(db.accounts.find((a) => a.id === 'acc-laba-ditahan')!.current_balance);
+    const labaPeriode = Number(db.accounts.find((a) => a.id === 'acc-laba')!.current_balance);
+
+    // Laba hanya pindah satu kali ke Laba Ditahan (40jt, bukan 80jt)
+    expect(labaDitahan).toBe(40_000_000);
+    // Saldo Laba Periode setelah tutup periode = 0
+    expect(labaPeriode).toBe(0);
   });
 });
 

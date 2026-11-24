@@ -1,5 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { buildFinanceReportBundle } from '../../lib/financeV2/reports';
+import { loadEnrichedJournalLines } from '../../lib/financeV2/reports/loadReportData';
+import { toRupiah } from '../../../../../packages/domain/src/journal';
 import { getFinanceV2Snapshot } from './balanceSheetService';
 import { loadPayables } from './payableService';
 import { createJournalEntry } from './journalService';
@@ -10,9 +12,10 @@ function monthStart(d = new Date()): string {
 }
 
 function monthEnd(monthIso: string): string {
-  const d = new Date(`${monthIso}T00:00:00`);
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return last.toISOString().slice(0, 10);
+  const year = Number(monthIso.slice(0, 4));
+  const month = Number(monthIso.slice(5, 7));
+  const lastDay = new Date(year, month, 0).getDate();
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 }
 
 export async function closeFinancePeriod(input: {
@@ -79,26 +82,39 @@ export async function closeFinancePeriod(input: {
 
   const labaPeriode = await findSystemAccount(input.orgId, 'laba', 'periode');
   const labaDitahan = await findSystemAccount(input.orgId, 'laba_ditahan');
-  if (labaPeriode && labaDitahan && bundle.profitLoss.netProfit !== 0) {
-    const net = bundle.profitLoss.netProfit;
-    const abs = Math.abs(net);
-    await createJournalEntry({
+  if (labaPeriode && labaDitahan) {
+    // Hitung laba periode yang sudah lebih dulu dipindahkan oleh tutup proyek (project_close) pada periode ini
+    // agar tidak terjadi pemindahan ganda ke Laba Ditahan.
+    const periodLines = await loadEnrichedJournalLines({
       orgId: input.orgId,
-      entryDate: periodEnd,
-      description: `Tutup periode ${period.slice(0, 7)}`,
-      referenceType: 'period_close',
-      referenceId: row.id,
-      createdBy: input.closedBy,
-      lines: net >= 0
-        ? [
-            { accountId: labaPeriode.id, debit: abs, credit: 0 },
-            { accountId: labaDitahan.id, debit: 0, credit: abs },
-          ]
-        : [
-            { accountId: labaDitahan.id, debit: abs, credit: 0 },
-            { accountId: labaPeriode.id, debit: 0, credit: abs },
-          ],
+      dateFrom: period,
+      dateTo: periodEnd,
     });
+    const alreadyClosedByProjectClose = periodLines
+      .filter(l => l.accountType === 'laba' && l.referenceType === 'project_close')
+      .reduce((sum, l) => sum + (l.debit - l.credit), 0);
+
+    const remainingProfit = toRupiah(bundle.profitLoss.netProfit - alreadyClosedByProjectClose);
+    if (remainingProfit !== 0) {
+      const abs = Math.abs(remainingProfit);
+      await createJournalEntry({
+        orgId: input.orgId,
+        entryDate: periodEnd,
+        description: `Tutup periode ${period.slice(0, 7)}`,
+        referenceType: 'period_close',
+        referenceId: row.id,
+        createdBy: input.closedBy,
+        lines: remainingProfit >= 0
+          ? [
+              { accountId: labaPeriode.id, debit: abs, credit: 0 },
+              { accountId: labaDitahan.id, debit: 0, credit: abs },
+            ]
+          : [
+              { accountId: labaDitahan.id, debit: abs, credit: 0 },
+              { accountId: labaPeriode.id, debit: 0, credit: abs },
+            ],
+      });
+    }
   }
 
   return { snapshotId: row.id as string };
