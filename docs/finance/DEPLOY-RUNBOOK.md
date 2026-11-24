@@ -87,6 +87,12 @@ File: `my-supabase-project/supabase/migrations/20261124160000_g2_proactive_remin
 - Membuat tabel `planner_collection_drafts` (`org_id`, `party_id`, `channel`, `subject`, `body`, `total_amount_rupiah`, `autonomy_level`, `status`, `created_by`, `approved_by`, `audit_log_id`, `dispatched_at`) dengan constraint `CHECK (approved_by IS NULL OR approved_by <> created_by)` (SoD), `CHECK (status <> 'dispatched' OR (approved_by IS NOT NULL AND audit_log_id IS NOT NULL))` (wajib jejak audit), dan trigger integritas `planner_guard_collection_draft_integrity()`.
 - Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` pada ketiga tabel tanpa memutasi tabel jurnal.
 
+### Langkah 12 — Migrasi G4-2 (Konfigurasi Pajak Organisasi & Pinjaman Pembiayaan)
+File: `my-supabase-project/supabase/migrations/20261124170000_g4_cfo_tax_config_and_loans.sql`
+- Membuat tabel `planner_org_tax_configs` (`org_id`, `profile_code`, `effective_from`, `regulation_ref`, `verified_at`, `is_pkp`, `ppn_rate_pct`, `income_tax_regime`, `income_tax_rate_pct`, `payment_due_day`, `filing_due_day`, `capitalization_threshold_rupiah` default `5000000` sesuai `D-F1-02`, `updated_by`, `updated_at`, `UNIQUE(org_id)`). Tarif dan hari jatuh tempo tidak di-hardcode di kode aplikasi.
+- Membuat tabel `planner_financing_loans` (`id`, `org_id`, `lender_name`, `principal_rupiah`, `annual_interest_rate_pct`, `tenor_months`, `start_date`, `monthly_installment_rupiah`, `status`, `created_by`, `created_at`).
+- Mengaktifkan RLS ketat berbasis `is_org_member(org_id, 'worker')` (`SELECT`) dan `is_org_member(org_id, 'manager')` (`INSERT`/`UPDATE`) pada kedua tabel tanpa memutasi tabel jurnal.
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check

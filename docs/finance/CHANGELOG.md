@@ -4,6 +4,25 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G4-2] 2026-11-24 — Modul Pajak Konfigurabel, Aset Tetap & Penyusutan Terjadwal, Pendanaan/Cicilan, Skenario Tahunan, & Laporan Gerbang G4
+- **Branch / PR:** `feat/g4-2-cfo-tax-assets-financing-annual-plan`
+- **Fase:** G4 (CFO Tax, Capital Assets, Financing, Annual Plan, & Gerbang G4 — G4-2)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/cfoTaxAndCapital.ts` dengan seluruh nominal integer rupiah (`toRupiah`), `provenance`, dan disclaimer wajib:
+    - `calculateTaxDraftAndCalendar(input)`: menghitung draf PPN Keluaran, PPN Masukan, PPN Kurang/(Lebih) Bayar, dan PPh (`pph_final_konstruksi` | `pph_badan` | `pph_final_umkm`) serta `calendar` setor/lapor **100% dari `TaxProfileConfig`** tanpa tarif hardcode; mengembalikan `config_required` bila tarif/konfigurasi kosong, mengeluarkan `"Wajib verifikasi tarif ke regulasi terkini"` bila `verifiedAt` kosong atau `> 180` hari, dan selalu menyertakan disclaimer `"Draf untuk ditinjau konsultan pajak — bukan nasihat hukum/pajak berlisensi"` (`TAX_DRAFT_DISCLAIMER`).
+    - `evaluateAssetCapitalization(item, capitalizationThresholdRupiah)`: membandingkan nilai perolehan vs `capitalizationThresholdRupiah` (dapat diatur, default `5_000_000` sesuai `D-F1-02`) dan masa manfaat `> 12` bulan (`capitalize_fixed_asset` vs `expense_opex`).
+    - `buildScheduledDepreciationPlan(assets, periodMonth, lockedPeriods)`: menghitung penyusutan bulanan garis lurus (`straight_line`) dibatasi agar nilai buku tidak pernah turun di bawah `residualValue`, menghasilkan template jurnal seimbang `depreciationExpense(amount)` (`Dr beban_penyusutan / Cr akumulasi_penyusutan`), dan **menolak tegas (`ok: false`, `reason: 'periode_terkunci'`, `entries: []`)** bila `periodMonth` masuk `lockedPeriods`.
+    - `buildLoanAmortizationSchedule(loan)` & `evaluateWorkingCapitalFundingNeed(forecast13w, minCashBufferRupiah)`: menghasilkan jadwal cicilan bulanan (pokok, bunga, sisa pokok akhir tepat `0`, dampak arus kas) dan rekomendasi kapan serta berapa modal kerja tambahan dibutuhkan saat `minEndingCash < minCashBufferRupiah`.
+    - `buildAnnualScenarioPlan(input)`: menyusun proyeksi 12 bulan × 3 skenario (`conservative`, `base`, `growth`) meliputi pendapatan, HPP, opex, laba bersih, kas akhir tiap bulan, ringkasan tahunan, dan `provenance`.
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124170000_g4_cfo_tax_config_and_loans.sql` (`BLOCKED remote`): tabel `planner_org_tax_configs` (`UNIQUE(org_id)`) dan `planner_financing_loans` dengan RLS ketat `is_org_member` tanpa mutasi tabel jurnal.
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/cfoTaxAndCapital.test.ts` (uji multi-tarif pajak bebas hardcode + `config_required` + `verifiedAt > 180` hari, ambang kapitalisasi & penolakan penyusutan periode terkunci, amortisasi sisa pokok 0 & kebutuhan modal kerja, rencana tahunan 12 bulan × 3 skenario, serta uji struktural SQL `20261124170000_g4_cfo_tax_config_and_loans.sql`).
+  - Memperbarui `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 12), `docs/finance/DECISIONS.md` (`D-G4-01`), `docs/finance/PROGRESS.md` (Fase `G4` `DONE`, menyiapkan `G5`), `docs/finance/CHANGELOG.md`, dan menerbitkan laporan gerbang `docs/finance/PHASES/G4-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Memakai template eksisting `depreciationExpense` (`Dr beban_penyusutan / Cr akumulasi_penyusutan`) dari `packages/domain/src/journal.ts`; tidak memutasi tabel jurnal.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124170000_g4_cfo_tax_config_and_loans.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/cfoTaxAndCapital.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah signature tool agent; menyediakan fungsi deterministik pajak konfigurabel, aset tetap, amortisasi pinjaman, dan rencana tahunan bebas perhitungan LLM.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G4-1] 2026-11-24 — CFO Anggaran vs Aktual, KPI, Kebijakan Dividen 2 Mode, & Laporan Bulanan Bergaya Direksi (Deterministik + Ekspor PDF)
 - **Branch / PR:** `feat/g4-1-cfo-budget-kpi-board-report-dividend`
 - **Fase:** G4 (CFO Analytics, Board Monthly Reporting, & Kebijakan Dividen — G4-1)

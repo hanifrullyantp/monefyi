@@ -40,7 +40,7 @@
 ### Langkah Berikutnya (Eksekusi Pemilik / Operator)
 1. Rotate token yang pernah berada di `apps/web/.env.local`.
 2. Tinjau `docs/finance/OPEN-QUESTIONS.md` & `docs/finance/DECISIONS.md`.
-3. Jalankan migrasi SQL F0, F1, G0 (`g0_1`, `g0_3`, `g0_4`, `g0_2`, `g0_5`, `g0_6`), G1 (`g1_1`, `g1_2`), & G2 (`g2_proactive_reminders_audit`) sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
+3. Jalankan migrasi SQL F0, F1, G0 (`g0_1`, `g0_3`, `g0_4`, `g0_2`, `g0_5`, `g0_6`), G1 (`g1_1`, `g1_2`), G2 (`g2_proactive_reminders_audit`), & G4 (`g4_cfo_tax_config_and_loans`) sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
 
 ---
 
@@ -68,6 +68,8 @@
 | **G3-2** | Penjaga Narasi & Provenance Advisor, Backtest Forecast 13 Minggu, Tool `get_advisor_brief`, & Laporan Gerbang G3 | `DONE` | `feat/g3-2-advisor-tools-narration-guard-backtest` | `packages/domain/src/advisorNarrationGuard.ts` (`formatAdvisorMobileAnswer` `<= 400` token, `extractNumbersFromNarrative`, `verifyNarrativeNumbersMatchSource`, `runCashFlowForecastBacktest` 5 jendela sintetis termasuk kasus gagal jujur), `agent-core/src/advisorTools.ts` (`buildAdvisorBriefTool` `<= 400` token) + registrasi `get_advisor_brief` pada domain `advisor` di `registry.ts`, `advisorGuardAndBacktest.test.ts`, & `G3-report.md`. |
 | **G3-Gate** | Laporan Gerbang Fase G3 (`G3-report.md`) | `DONE` | `feat/g3-2-advisor-tools-narration-guard-backtest` | Ringkasan `G3-1` & `G3-2`, hasil backtest forecast sintetis (MAPE normal vs shock/gagal jujur), bukti penjaga narasi menolak angka tak bersumber, hasil `typecheck`/`vitest`/`gate:docs`/`gate:rebrand`, & sisa risiko menuju `G4`. |
 | **G4-1** | CFO Anggaran vs Aktual, KPI, Kebijakan Dividen 2 Mode, & Laporan Bulanan Bergaya Direksi | `DONE` | `feat/g4-1-cfo-budget-kpi-board-report-dividend` | `packages/domain/src/cfoAnalytics.ts` (`computeBudgetVsActual` bulanan/tahunan + varians `>= 10%`, `computeCfoKpis` seluruh KPI wajib aman div-0, `simulateDividendPolicyComparison` 2 mode taat kas & cadangan opex, `buildBoardMonthlyReport` 1 halaman + lampiran + isolasi `lockedPeriodMonth` + `deterministicHash` SHA-256, `renderBoardReportPdfHtml` deterministik) & suite TDD `cfoAnalytics.test.ts` (10/10 lulus). |
+| **G4-2** | Modul Pajak Konfigurabel, Aset Tetap & Penyusutan Terjadwal, Pendanaan/Cicilan, & Skenario Tahunan | `DONE` | `feat/g4-2-cfo-tax-assets-financing-annual-plan` | `packages/domain/src/cfoTaxAndCapital.ts` (`calculateTaxDraftAndCalendar` bebas hardcode + `config_required` + `verifiedAt > 180` hari + label konsultan pajak, `evaluateAssetCapitalization`, `buildScheduledDepreciationPlan` + penolakan `periode_terkunci`, `buildLoanAmortizationSchedule`, `evaluateWorkingCapitalFundingNeed`, `buildAnnualScenarioPlan` 12 bulan × 3 skenario), SQL lokal `20261124170000_g4_cfo_tax_config_and_loans.sql` (`BLOCKED remote`), `D-G4-01`, & `cfoTaxAndCapital.test.ts`. |
+| **G4-Gate** | Laporan Gerbang Fase G4 (`G4-report.md`) | `DONE` | `feat/g4-2-cfo-tax-assets-financing-annual-plan` | Ringkasan `G4-1` & `G4-2`, bukti reproduksibilitas laporan direksi (`SHA-256` & HTML), bukti uji lintas-periode terkunci, hasil aktual `typecheck`/`vitest`/`gate:docs`/`gate:rebrand`, status migrasi `BLOCKED remote`, & sisa risiko menuju `G5`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
@@ -89,6 +91,8 @@
 - [x] `G3-1`: Mesin analisis deterministik Financial Advisor (`packages/domain/src/financialAdvisor.ts`: `forecastCashFlow13Weeks`, `analyzeProjectMargin`, `recommendProjectPricing`, `runAdvisorWhatIf`, `prioritizePayables`, & `financialAdvisor.test.ts`).
 - [x] `G3-2`: Penjaga narasi & provenance (`advisorNarrationGuard.ts`), backtest forecast 13 minggu, tool `get_advisor_brief` (`advisorTools.ts` + `registry.ts`), `advisorGuardAndBacktest.test.ts`, & `docs/finance/PHASES/G3-report.md` (Fase **G3** seluruhnya `DONE`).
 - [x] `G4-1`: CFO Anggaran vs Aktual, KPI, Kebijakan Dividen 2 Mode, & Laporan Bulanan Bergaya Direksi (`packages/domain/src/cfoAnalytics.ts`, `cfoAnalytics.test.ts`).
+- [x] `G4-2`: Modul Pajak Konfigurabel, Aset Tetap & Penyusutan Terjadwal, Pendanaan/Cicilan, Skenario Tahunan, SQL lokal `20261124170000_g4_cfo_tax_config_and_loans.sql` (`BLOCKED remote`), & `docs/finance/PHASES/G4-report.md` (Fase **G4** seluruhnya `DONE`).
 
-### Status Fase Berikutnya (`G4`–`G6` — CFO Analytics, Antarmuka Terpadu Web, Eksekusi Kanal Nyata, & Validasi Dataset Nyata)
-- [ ] `G4-2` / Antarmuka Terpadu & Kanal Nyata: Antarmuka web terpadu untuk review draf OCR/mutasi bank/duplikat, persetujuan draf penagihan (SoD), checklist tutup bulan, Financial Advisor, laporan direksi, serta integrasi cron scheduler & adapter kanal WA/Email nyata ber-`audit_log_id` dan validasi dataset nyata anonim pemilik pasca-migrasi SQL `F0`–`G2` (`BLOCKED remote`).
+### Status Fase Berikutnya (`G5`–`G6` — Antarmuka Terpadu Web, Eksekusi Kanal Nyata, & Validasi Dataset Nyata)
+- [ ] `G5-1` / Antarmuka Terpadu & Kanal Nyata: Antarmuka web terpadu untuk review draf OCR/mutasi bank/duplikat, persetujuan draf penagihan (SoD), checklist tutup bulan, Financial Advisor, modul pajak konfigurabel/aset tetap/pinjaman, serta laporan direksi & integrasi cron scheduler + adapter kanal WA/Email nyata ber-`audit_log_id`.
+- [ ] `G6-1` / Validasi Produksi & Dataset Nyata: Eksekusi migrasi SQL `F0`–`G4` oleh operator pasca-`BLOCKED remote`, uji paritas & backtest pada dataset nyata anonim pemilik, dan penutupan gerbang akhir program `G0`–`G6`.

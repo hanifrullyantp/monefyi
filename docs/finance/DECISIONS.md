@@ -84,3 +84,14 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
   2. Mencatat dan menghitung pinjaman antar proyek langsung di buku besar melalui jurnal 4-baris seimbang (`interprojectLoanDisbursement` / `interprojectLoanRepayment` dengan `reference_type = 'interproject_loan' | 'interproject_loan_repayment'` dan RPC `planner_post_interproject_loan`), tanpa tabel pinjaman terpisah yang mem-bypass buku besar.
 - **Alasan:** Menjamin identitas pihak deterministik bebas salah-gabung nama, serta memastikan setiap pinjaman antar proyek memiliki dampak Laba/Rugi = 0, dampak Kas konsolidasi = 0, dan saldo piutang/hutang tiap proyek terukur langsung dari buku besar.
 
+---
+
+## D-G4-01 — Modul Pajak Konfigurabel, Disclaimer Konsultan Pajak, & Guardrail Periode Terkunci
+- **Tanggal:** 2026-11-24
+- **Konteks:** Tarif PPh Final Jasa Konstruksi, PPh Badan, PPh Final UMKM, tarif PPN, serta tenggat setor/lapor dapat berubah mengikuti regulasi atau kualifikasi usaha, dan tidak boleh ditebak maupun di-hardcode di dalam fungsi perhitungan. Selain itu, pelaporan direksi dan penyusutan terjadwal lintas bulan wajib menghormati status periode terkunci (`lockedPeriodMonth` / `lockedPeriods`).
+- **Pilihan:**
+  1. Seluruh tarif dan tanggal setor/lapor wajib dibaca dari konfigurasi organisasi (`TaxProfileConfig` / tabel `planner_org_tax_configs`). Bila tarif atau konfigurasi wajib belum diisi, `calculateTaxDraftAndCalendar` wajib mengembalikan status & peringatan `config_required` tanpa menebak nilai bawaan.
+  2. Setiap keluaran modul pajak wajib memuat label eksplisit `"Draf untuk ditinjau konsultan pajak — bukan nasihat hukum/pajak berlisensi"` (`TAX_DRAFT_DISCLAIMER`) serta memunculkan peringatan `"Wajib verifikasi tarif ke regulasi terkini"` bila `verifiedAt` kosong atau berusia `> 180` hari.
+  3. Penjaga periode terkunci ditegakkan ganda: `buildBoardMonthlyReport` mengisolasi transaksi, anggaran, piutang, dan hutang agar periode setelah `lockedPeriodMonth` tidak memengaruhi laporan terkunci, sedangkan `buildScheduledDepreciationPlan` menolak `periodMonth` yang masuk `lockedPeriods` dengan `ok: false`, `reason: 'periode_terkunci'`, `entries: []`.
+- **Alasan:** Mencegah kesalahan kepatuhan pajak akibat tarif usang/hardcode, menjaga batas tanggung jawab non-nasihat hukum/pajak berlisensi, dan menjaga integritas angka laporan/jurnal pada periode yang sudah ditutup.
+
