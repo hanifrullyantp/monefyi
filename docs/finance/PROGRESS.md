@@ -61,6 +61,7 @@
 | **G1-2** | Impor Mutasi Bank (BCA/Mandiri/BRI/BNI/Generic CSV), Pencocokan Otomatis, & Rekonsiliasi Kas | `DONE` | `feat/g1-2-bank-statement-reconciliation` | Parser deterministik `packages/domain/src/bankStatement.ts` (`parseBankStatementCsv`, `matchBankStatementToLedger` tanpa auto-match kandidat ambigu, `reconcileCashVsBank` + `provenance`), `bankReconciliationService.ts`, SQL lokal `20261124151000_g1_2_bank_reconciliation.sql` (`BLOCKED remote`, `UNIQUE(org_id, wallet_account_id, row_hash)`, `ON DELETE RESTRICT`, RLS `is_org_member`), & `bankReconciliation.test.ts`. |
 | **G1-3** | Deteksi Duplikat & Nominal Janggal, 4 Intent Baru, & Evaluasi Held-Out/Adversarial | `DONE` | `feat/g1-3-duplicate-anomaly-intents-eval` | `packages/domain/src/anomalyDetection.ts` (`detectDuplicateEntry`, `detectAnomalousAmount`), 4 intent baru (`catat_invoice_terbit`, `catat_termin_diterima`, `catat_retensi`, `catat_gaji`) + penjaga prompt injection & safety downgrade di `financeEntryEngine.ts` (218/218 F3 tetap lulus), dev set `g1_dev_set.yaml` (20 kasus) & held-out adversarial `g1_heldout_adversarial.yaml` (30 kasus) (`0` salah auto-commit), & `g1AnomalyAndEval.test.ts`. |
 | **G1-Gate** | Laporan Gerbang Fase G1 (`G1-report.md`) | `DONE` | `feat/g1-3-duplicate-anomaly-intents-eval` | Ringkasan `G1-1`–`G1-3`, metrik dev vs held-out adversarial per kategori, pengakuan jujur data sintetis + format ekspor nota/mutasi anonim owner, bukti `typecheck`/`vitest`/`gate:docs`/`gate:rebrand`, & sisa risiko menuju `G2`. |
+| **G2-1** | Umur Piutang/Hutang (Aging), Skor Risiko Klien, Peringatan Proyek/Kas, & Checklist Tutup Bulan Otomatis | `DONE` | `feat/g2-1-aging-risk-alerts-month-close` | Modul deterministik `packages/domain/src/proactiveFinance.ts` (`computeAgingSchedule` 5 bucket + `byParty`, `scoreClientCollectionRisk`, `evaluateProjectProactiveAlerts`, `evaluateMonthCloseChecklist` 6 butir wajib) dengan integer rupiah + `provenance`, serta suite TDD `proactiveFinance.test.ts`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
@@ -76,7 +77,8 @@
 - [x] `G1-2`: Impor mutasi bank (BCA/Mandiri/BRI/BNI/Generic CSV), pencocokan 1-to-1 deterministik (tanpa auto-match kandidat ambigu), & rekonsiliasi kas (`bankStatement.ts`, `bankReconciliationService.ts`, `20261124151000_g1_2_bank_reconciliation.sql`, & `bankReconciliation.test.ts`).
 - [x] `G1-3`: Deteksi duplikat & nominal janggal (`anomalyDetection.ts`), 4 intent baru (`financeEntryEngine.ts`), evaluasi dev vs held-out adversarial (`g1_dev_set.yaml`, `g1_heldout_adversarial.yaml`, `g1AnomalyAndEval.test.ts`).
 - [x] `G1-Report`: Terbitkan `docs/finance/PHASES/G1-report.md` (Fase **G1** seluruhnya `DONE`).
+- [x] `G2-1`: Domain proaktif deterministik (`proactiveFinance.ts`: `computeAgingSchedule`, `scoreClientCollectionRisk`, `evaluateProjectProactiveAlerts`, `evaluateMonthCloseChecklist`, & `proactiveFinance.test.ts`).
 
-### Status Fase Berikutnya (`G2` — UI & Workflow Review Terpadu)
-- [ ] `G2-1`: Antarmuka review draf nota OCR, antrean duplikat/anomali, & pencocokan mutasi bank (`needs_review` + `confirm_one_tap` + `ask_back`).
-- [ ] `G2-2`: Validasi dataset nyata anonim dari pemilik (nota fisik & CSV mutasi bank riil) serta evaluasi lintas-model setelah eksekusi migrasi SQL `F0`–`G1` (`BLOCKED remote`).
+### Status Fase Berikutnya (`G2` — Lanjutan Layanan, UI Review Terpadu, & Dataset Nyata)
+- [ ] `G2-2`: Integrasi layanan & antarmuka review terpadu (draf nota OCR, antrean duplikat/anomali, pencocokan mutasi bank, briefing aging/risiko/alert, & checklist tutup bulan).
+- [ ] `G2-3`: Validasi dataset nyata anonim dari pemilik (nota fisik & CSV mutasi bank riil) serta evaluasi lintas-model setelah eksekusi migrasi SQL `F0`–`G1` (`BLOCKED remote`).

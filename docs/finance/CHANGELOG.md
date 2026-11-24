@@ -4,6 +4,23 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G2-1] 2026-11-24 — Umur Piutang/Hutang (Aging), Skor Risiko Klien, Peringatan Proyek/Kas, & Checklist Tutup Bulan Otomatis
+- **Branch / PR:** `feat/g2-1-aging-risk-alerts-month-close`
+- **Fase:** G2 (Keuangan Proaktif & Penutupan Periode — G2-1)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/proactiveFinance.ts` dengan seluruh kalkulasi bilangan bulat rupiah (`toRupiah`) dan `provenance` eksplisit:
+    - `computeAgingSchedule(items, asOfDate, options?)`: mendukung `kind: 'receivable' | 'payable'`, mengelompokkan item jatuh tempo ke 5 bucket (`current`, `days_1_30`, `days_31_60`, `days_61_90`, `over_90`), menghitung total per bucket, `totalOutstanding`, `totalOverdue`, ringkasan per `partyId` (`byParty`), serta menolak pencampuran piutang dan hutang.
+    - `scoreClientCollectionRisk(input)`: menghitung secara deterministik `latePaymentRate`, `avgDaysLate`, `maxDaysOverdue`, `overdueRatio`, skor risiko `0..100`, pita risiko (`'low' | 'medium' | 'high' | 'critical'`), `reasons[]`, dan `provenance`.
+    - `evaluateProjectProactiveAlerts(projects, asOfDate)`: menghasilkan peringatan deterministik per proyek untuk `project_over_budget` (`warning` `>= 90%` RAP, `critical` `> 100%` RAP), `project_cash_low` (`< 15%` sisa RAP atau `< Rp 5.000.000` saat proyek aktif), dan `dp_received_zero_progress` (saldo DP masuk `> 0` dengan `progressPct === 0`).
+    - `evaluateMonthCloseChecklist(input)`: mengevaluasi 6 butir wajib tutup bulan (`receipts_complete`, `bank_reconciled`, `accruals_reviewed`, `depreciation_posted`, `opex_vs_plan_reviewed`, `zero_needs_review`) beserta `opexVariance` dan menetapkan `readyToClose = true` hanya jika 0 butir berstatus `'block'`.
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/proactiveFinance.test.ts` yang memverifikasi seluruh 5 bucket aging piutang/hutang, skor risiko klien (`low` vs `critical`), 3 jenis alert proyek + proyek sehat, serta checklist tutup bulan (`readyToClose: true` vs pemblokiran bank/needs_review).
+  - Memperbarui `docs/finance/PROGRESS.md` & `docs/finance/CHANGELOG.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template atau mutasi jurnal; modul membaca/mengevaluasi metrik deterministik dari data buku besar & proyek.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada PR ini.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/proactiveFinance.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah signature tool agent; menyediakan fungsi domain deterministik bagi briefing/alert proaktif dan checklist tutup bulan tanpa perhitungan oleh LLM.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G1-3] 2026-11-24 — Deteksi Duplikat & Nominal Janggal, 4 Intent Baru, Evaluasi Held-Out/Adversarial, & Laporan Gerbang G1
 - **Branch / PR:** `feat/g1-3-duplicate-anomaly-intents-eval`
 - **Fase:** G1 (Alur Bukti, Mutasi Bank, Deteksi Duplikat/Anomali, & Evaluasi Adversarial — G1-3 & Gerbang G1)
