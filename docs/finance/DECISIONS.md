@@ -36,3 +36,17 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
 - **Pilihan:** Semua migrasi F0 ditulis sebagai file SQL lokal (`my-supabase-project/supabase/migrations/`), **tidak** di-push ke remote, dan dicatat `BLOCKED remote` di `OPEN-DECISIONS.md`. Kode TypeScript memiliki fallback yang kompatibel jika skema remote belum diperbarui.
 - **Alasan:** Mematuhi aturan keras larangan push/deploy ke Supabase remote produksi.
 
+---
+
+## D-F1-01 — Nasib `finance_version` (`v1`/`v2`/`v3`) & Pensiun Penghitung V1
+- **Tanggal:** 2026-11-24
+- **Konteks:** Sebelumnya `financeV1` (`businessReportService.ts`) menghitung laporan langsung dari tabel operasional (`planner_project_incomes`, `planner_cost_realizations`, `planner_opex_realizations`) sementara `financeV2`/`v3` membaca/menulis buku besar.
+- **Pilihan:** `financeV2` ditetapkan sebagai **satu-satunya jalur tulis dan penghitung** buku besar; `financeV1` dipensiunkan sebagai penghitung (`businessReportService.ts` membaca dari `financeV2` via `businessReportFromLedger`), sementara tata letak laporan V1 dipertahankan di F2. `v3` tetap menjadi alias tampilan UI sandbox dari `financeV2`.
+- **Alasan:** Menjamin satu sumber kebenaran agar angka laporan pemilik usaha selalu sama persis dengan buku besar.
+
+## D-F1-02 — Ambang Kapitalisasi Aset Tetap Default
+- **Tanggal:** 2026-11-24
+- **Konteks:** Pengeluaran non-proyek seperti `"beli keramik perbaikan workshop"` masuk Beban Operasional, sedangkan pembelian aset bernilai besar perlu dikapitalisasi sebagai Aset Tetap. Pemilik belum menetapkan angka ambang eksplisit di `OPEN-QUESTIONS.md`.
+- **Pilihan:** Menetapkan default konservatif `ambang_kapitalisasi_rupiah = Rp 5.000.000` (dapat diubah pemilik). Di bawah ambang $\rightarrow$ Beban Operasional; di atas/sama dengan ambang untuk kata kunci peralatan/renovasi/aset $\rightarrow$ tanya balik pemilik (Aset Tetap vs Beban Operasional).
+- **Alasan:** Tidak ada risiko kehilangan data, mudah diubah lewat konfigurasi organisasi.
+

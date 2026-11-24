@@ -33,23 +33,36 @@ Dokumen ini adalah spesifikasi hidup (*living specification*) untuk buku besar d
 
 ## 3. Chart of Accounts (COA)
 
-### Status F0 (Skema Aktif Saat Ini)
+### Status F1 (COA Lengkap & Dimensi Proyek/Pihak)
 
-| Tipe Akun (`type`) | Kategori (`category`) | Saldo Normal | Nama Default Sistem | Keterangan |
+| Tipe Akun (`type`) | Kategori (`category`) | Saldo Normal | Nama Default Sistem | Dimensi Wajib |
 |---|---|---|---|---|
-| `kas` | `aktiva` | Debit | `Kas Bisnis`, `Kas <Proyek>` | Dompet kas bisnis & dompet per proyek (`project_id`) |
-| `piutang` | `aktiva` | Debit | `Piutang Usaha` | Tagihan klien, piutang owner/pihak |
-| `stok` | `aktiva` | Debit | `Persediaan Barang` | Nilai stok barang/material |
-| `aset_tetap` | `aktiva` | Debit | `Properti & Peralatan` | Aset jangka panjang |
-| `prabayar` | `aktiva` | Debit | `Biaya Dibayar Dimuka` | Beban dibayar dimuka (diamortisasi) |
-| `hutang_dagang` | `pasiva` | Kredit | `Hutang Dagang` | Kewajiban ke supplier/mandor |
-| `hutang_pajak` | `pasiva` | Kredit | `Hutang Pajak` | Kewajiban pajak |
-| `hutang_lain` | `pasiva` | Kredit | `Hutang Lain-lain` | Kewajiban lainnya |
-| `modal_disetor` | `pasiva` | Kredit | `Modal Disetor` | Setoran & penarikan modal investor |
-| `laba_ditahan` | `pasiva` | Kredit | `Laba Ditahan` | Akumulasi laba & sumber distribusi dividen |
-| `laba` | `pasiva` | Kredit | `Laba Periode Berjalan` | Akun penampung pendapatan (Cr) & HPP/Opex (Dr) di F0 (akan dipisah di F1) |
+| `kas` | `aktiva` | Debit | `Kas Bisnis`, `Kas <Proyek>` | `project_id` (kas proyek) |
+| `piutang` | `aktiva` | Debit | `Piutang Usaha` | `party_id` (+ `project_id` jika proyek) |
+| `piutang_retensi` | `aktiva` | Debit | `Piutang Retensi` | `project_id`, `party_id` |
+| `stok` | `aktiva` | Debit | `Persediaan Barang` | — |
+| `aset_tetap` | `aktiva` | Debit | `Properti & Peralatan` | — |
+| `prabayar` | `aktiva` | Debit | `Biaya Dibayar Dimuka` | — |
+| `uang_muka_klien` | `pasiva` | Kredit | `Uang Muka Klien` | `project_id` |
+| `hutang_dagang` | `pasiva` | Kredit | `Hutang Dagang` | `party_id` |
+| `hutang_pajak` | `pasiva` | Kredit | `Hutang Pajak` | `party_id` |
+| `hutang_lain` | `pasiva` | Kredit | `Hutang Lain-lain` | `party_id` |
+| `akumulasi_penyusutan` | `pasiva` | Kredit | `Akumulasi Penyusutan` | — |
+| `modal_disetor` | `pasiva` | Kredit | `Modal Disetor` | — |
+| `dividen` | `pasiva` | Debit (kontra ekuitas) | `Dividen / Prive` | `project_id` (jika dividen proyek) |
+| `laba_ditahan` | `pasiva` | Kredit | `Laba Ditahan` | — |
+| `pendapatan_proyek` | `pasiva` | Kredit | `Pendapatan Proyek` | `project_id` |
+| `hpp_material` | `aktiva` | Debit | `HPP Proyek - Material` | `project_id` |
+| `hpp_labor` | `aktiva` | Debit | `HPP Proyek - Tenaga Kerja` | `project_id` |
+| `hpp_equipment` | `aktiva` | Debit | `HPP Proyek - Peralatan` | `project_id` |
+| `hpp_overhead` | `aktiva` | Debit | `HPP Proyek - Overhead` | `project_id` |
+| `hpp_other` | `aktiva` | Debit | `HPP Proyek - Lainnya` | `project_id` |
+| `hpp_uncategorized` | `aktiva` | Debit | `HPP Proyek - Belum Dikategorikan` | `project_id` (`needs_review`) |
+| `beban_opex` | `aktiva` | Debit | `Beban Operasional` | — |
+| `beban_penyusutan` | `aktiva` | Debit | `Beban Penyusutan` | — |
+| `laba` | `pasiva` | Kredit | `Laba Periode Berjalan` | Legacy F0 (kompatibilitas mundur) |
 
-*(Catatan Fase F1: Akun `laba` akan dipecah menjadi akun nominal terpisah: Pendapatan Proyek, HPP Proyek dengan sub-akun RAP `material/labor/equipment/overhead/other/uncategorized`, Beban Operasional per kategori, Uang Muka Klien, Piutang Retensi, Akumulasi Penyusutan, dan Dividen/Prive.)*
+*(Laba periode dihitung dari akun: $\text{Pendapatan Proyek} - \sum \text{HPP} - \text{Beban Operasional} - \text{Beban Penyusutan}$.)*
 
 ---
 

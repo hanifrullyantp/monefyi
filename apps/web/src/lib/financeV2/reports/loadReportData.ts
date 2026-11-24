@@ -24,6 +24,8 @@ export async function loadEnrichedJournalLines(filters: ReportFilters): Promise<
         account_id,
         debit,
         credit,
+        project_id,
+        party_id,
         account:planner_finance_accounts (
           id, name, type, category, project_id
         )
@@ -42,7 +44,8 @@ export async function loadEnrichedJournalLines(filters: ReportFilters): Promise<
     for (const line of lines) {
       const acc = line.account as Record<string, unknown> | null;
       if (!acc) continue;
-      const projectId = (acc.project_id as string) || null;
+      const projectId = (line.project_id as string) || (acc.project_id as string) || null;
+      const partyId = (line.party_id as string) || null;
       if (filters.projectId && projectId !== filters.projectId) continue;
       if (filters.allowedProjectIds && projectId && !filters.allowedProjectIds.has(projectId)) continue;
       if (filters.accountId && acc.id !== filters.accountId) continue;
@@ -58,6 +61,7 @@ export async function loadEnrichedJournalLines(filters: ReportFilters): Promise<
         accountType: acc.type as AccountType,
         accountCategory: acc.category as 'aktiva' | 'pasiva',
         projectId,
+        partyId,
         debit: Number(line.debit) || 0,
         credit: Number(line.credit) || 0,
       });

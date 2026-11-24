@@ -81,7 +81,8 @@ Dokumen ini mencatat item ambigu, blokir infrastruktur remote, serta implikasi b
 
 ---
 
-## 7. Keamanan Kredensial & Migrasi SQL Keuangan (Fase F0)
+## 7. Keamanan Kredensial & Migrasi SQL Keuangan (Fase F0 & F1)
 
 - **Kewajiban Rotasi Token (`F0-T8`):** `apps/web/.env.local` sebelumnya sempat terlacak di indeks Git. File tersebut telah dikeluarkan dari Git (`git rm --cached apps/web/.env.local`) dan ditambahkan ke `.gitignore`. **Pemilik WAJIB melakukan rotasi manual seluruh token yang pernah berada di `apps/web/.env.local` (termasuk token Vercel dan kunci API lainnya).**
-- **Status Migrasi SQL Keuangan F0 (`BLOCKED remote`):** Seluruh perubahan skema/RPC F0 hanya ditulis sebagai file migrasi SQL lokal di `my-supabase-project/supabase/migrations/` dan **TIDAK** di-push ke instance Supabase remote produksi (`https://zzwqfmdyncxbolestkqp.supabase.co`).
+- **Status Migrasi SQL Keuangan F0 (`BLOCKED remote`):** Seluruh perubahan skema/RPC F0 (`my-supabase-project/supabase/migrations/20261124100000_f0_accounting_correctness.sql`) hanya ditulis sebagai file migrasi SQL lokal dan **TIDAK** di-push ke instance Supabase remote produksi (`https://zzwqfmdyncxbolestkqp.supabase.co`).
+- **Status Migrasi SQL Keuangan F1 (`BLOCKED remote`):** `my-supabase-project/supabase/migrations/20261124120000_f1_coa_and_dimensions.sql` (seed COA F1, kolom `project_id`/`party_id` pada baris jurnal, & migrasi dry-run) berstatus `BLOCKED remote` sampai pemilik mengeksekusi runbook migrasi.

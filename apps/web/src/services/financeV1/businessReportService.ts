@@ -12,10 +12,97 @@ import type {
 import { HPP_TYPE_LABELS } from '../../types/financeV1Report';
 import { ensureDefaultOpexCategories, loadOpexRealizationsInRange } from './opexService';
 import { filterEligibleProjectIds } from '../../lib/financeReportEligibility';
+import { buildProfitLossFromLines, type JournalLineEnriched, type ProfitLossReport } from '../../lib/financeV2/reports';
+import { loadEnrichedJournalLines } from '../../lib/financeV2/reports/loadReportData';
+import { buildProjectReports } from '../../lib/financeV2/reports/projectReport';
 
 function pct(part: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((part / total) * 1000) / 10;
+}
+
+/**
+ * Membangun tata letak laporan V1 murni dari buku besar financeV2 (dipakai setelah financeV1 dipensiunkan sebagai penghitung).
+ */
+export function businessReportFromLedger(input: {
+  filters: FinanceV1ReportFilters;
+  lines: JournalLineEnriched[];
+  projectNames: Record<string, string>;
+  opexCategoryNames: Record<string, string>;
+  receivableProjectMap: Record<string, string | null>;
+  opexRealizationCategory: Record<string, string>;
+}): BusinessFinanceReport {
+  const pl: ProfitLossReport = buildProfitLossFromLines(
+    input.lines,
+    input.projectNames,
+    input.opexCategoryNames,
+    input.receivableProjectMap,
+    input.opexRealizationCategory,
+  );
+  const projectReports = buildProjectReports(input.lines, input.projectNames);
+
+  const revenueRows: ProjectAmountRow[] = pl.revenueByProject
+    .filter((r) => r.projectId !== null || r.amount !== 0)
+    .map((r) => ({
+      projectId: r.projectId || '_none',
+      projectName: r.projectName,
+      amount: r.amount,
+      pctOfTotal: pct(r.amount, pl.revenue),
+    }));
+
+  const typeOrder = ['material', 'labor', 'equipment', 'overhead', 'other', 'uncategorized'] as const;
+  const byType = pl.hppByRapType || {
+    material: 0,
+    labor: 0,
+    equipment: 0,
+    overhead: 0,
+    other: 0,
+    uncategorized: pl.hpp,
+  };
+  const hppRows: HppTypeRow[] = typeOrder
+    .filter((t) => (byType[t] || 0) > 0)
+    .map((type) => ({
+      type,
+      label: HPP_TYPE_LABELS[type] || type,
+      amount: byType[type] || 0,
+      pctOfTotal: pct(byType[type] || 0, pl.hpp),
+    }));
+
+  const opexCategoryRows: OpexCategoryRow[] = pl.opexBreakdown
+    .map((row) => ({
+      categoryId: row.categoryId,
+      categoryName: row.categoryName,
+      amount: row.amount,
+      pctOfTotal: pct(row.amount, pl.opex),
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const byProjectProfit: ProjectProfitRow[] = projectReports
+    .map((p) => {
+      const gp = p.revenue - p.expense;
+      return {
+        projectId: p.projectId,
+        projectName: p.projectName,
+        revenue: p.revenue,
+        hpp: p.expense,
+        grossProfit: gp,
+        marginPct: pct(gp, p.revenue),
+      };
+    })
+    .sort((a, b) => b.grossProfit - a.grossProfit);
+
+  return {
+    filters: input.filters,
+    generatedAt: new Date().toISOString(),
+    revenue: { total: pl.revenue, byProject: revenueRows },
+    hpp: { total: pl.hpp, byType: hppRows },
+    grossProfit: pl.grossProfit,
+    grossMarginPct: pct(pl.grossProfit, pl.revenue),
+    opex: { total: pl.opex, byCategory: opexCategoryRows },
+    netProfit: pl.netProfit,
+    netMarginPct: pct(pl.netProfit, pl.revenue),
+    byProjectProfit,
+  };
 }
 
 function inDateRange(date: string, from: string, to: string): boolean {
@@ -102,18 +189,45 @@ export async function buildBusinessFinanceReport(
     filters.projectId,
   );
 
-  const scopedIds = filters.projectId
-    ? [...eligibleIds]
-    : [...eligibleIds];
+  // Jalur utama (F1): baca langsung dari buku besar financeV2.
+  const [ledgerLines, categories, opexRows, recvRes] = await Promise.all([
+    loadEnrichedJournalLines({
+      orgId,
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      projectId: filters.projectId,
+      allowedProjectIds: eligibleIds,
+    }),
+    ensureDefaultOpexCategories(orgId),
+    loadOpexRealizationsInRange(orgId, filters.dateFrom, filters.dateTo),
+    supabase.from('planner_receivables').select('id, debtor_project_id').eq('org_id', orgId),
+  ]);
 
-  const [incomes, costs, rapTypes, categories] = await Promise.all([
+  const opexCategoryNames = Object.fromEntries(categories.map(c => [c.id, c.name]));
+  const opexRealizationCategory = Object.fromEntries(opexRows.map(r => [r.id, r.category_id]));
+  const receivableProjectMap: Record<string, string | null> = {};
+  for (const r of recvRes.data || []) {
+    receivableProjectMap[r.id as string] = (r.debtor_project_id as string) || null;
+  }
+
+  if (ledgerLines.length > 0) {
+    return businessReportFromLedger({
+      filters,
+      lines: ledgerLines,
+      projectNames: projectNameMap,
+      opexCategoryNames,
+      receivableProjectMap,
+      opexRealizationCategory,
+    });
+  }
+
+  // Fallback hanya untuk org yang belum memiliki entri jurnal sama sekali (pra-backfill).
+  const scopedIds = [...eligibleIds];
+  const [incomes, costs, rapTypes] = await Promise.all([
     loadIncomesInRange(scopedIds, filters.dateFrom, filters.dateTo),
     loadCostsInRange(scopedIds, filters.dateFrom, filters.dateTo),
     loadRapTypes(scopedIds),
-    ensureDefaultOpexCategories(orgId),
   ]);
-
-  const opexRows = await loadOpexRealizationsInRange(orgId, filters.dateFrom, filters.dateTo);
   const categoryNameMap = Object.fromEntries(categories.map(c => [c.id, c.name]));
 
   const revenueByProject: Record<string, number> = {};
