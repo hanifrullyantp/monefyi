@@ -93,6 +93,13 @@ File: `my-supabase-project/supabase/migrations/20261124170000_g4_cfo_tax_config_
 - Membuat tabel `planner_financing_loans` (`id`, `org_id`, `lender_name`, `principal_rupiah`, `annual_interest_rate_pct`, `tenor_months`, `start_date`, `monthly_installment_rupiah`, `status`, `created_by`, `created_at`).
 - Mengaktifkan RLS ketat berbasis `is_org_member(org_id, 'worker')` (`SELECT`) dan `is_org_member(org_id, 'manager')` (`INSERT`/`UPDATE`) pada kedua tabel tanpa memutasi tabel jurnal.
 
+### Langkah 13 — Migrasi G5 (Kepercayaan, Otonomi Berbasis Bukti, SoD, & Pemulihan Insiden)
+File: `my-supabase-project/supabase/migrations/20261124180000_g5_trust_autonomy_governance.sql`
+- Membuat tabel append-only `planner_shadow_evaluations` (`org_id`, `intent`, `category`, `amount_band` `'small'|'medium'|'large'`, `agent_draft_json`, `human_decision_json`, `agreed`, `is_critical_error`, `created_at`) beserta trigger penolak `UPDATE`/`DELETE` (`planner_reject_shadow_eval_mutation`).
+- Membuat tabel `planner_autonomy_policies` (`org_id`, `intent`, `category`, `amount_band`, `current_level` `'L0'|'L1'|'L2'`, `kill_switch_enabled`, `daily_cap_rupiah`, `monthly_token_budget`, `updated_at`, `UNIQUE(org_id, intent, category, amount_band)`) dengan kebijakan tulis ketat `is_org_member(org_id, 'owner')`.
+- Membuat tabel `planner_incident_postmortems` (`id`, `org_id`, `original_journal_id REFERENCES planner_journal_entries(id) ON DELETE RESTRICT`, `proposed_reversal_json`, `status`, `created_by`, `approved_by`) dengan constraint SoD `CHECK (approved_by IS NULL OR approved_by <> created_by)` serta trigger penjaga identitas `planner_guard_incident_postmortem_integrity`.
+- Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` pada ketiga tabel tanpa memutasi tabel jurnal.
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check

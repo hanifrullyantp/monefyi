@@ -4,6 +4,27 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G5] 2026-11-24 — Kepercayaan, Otonomi Berbasis Bukti, SoD, Ekspor Audit, Prosedur Insiden, Simulasi Serangan, & Laporan Gerbang G5
+- **Branch / PR:** `feat/g5-trust-autonomy-governance-security`
+- **Fase:** G5 (Trust, Evidence-Based Autonomy, Governance, & Security Gate — G5)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/autonomyGovernance.ts`:
+    - `resolveAmountBand` & `evaluateShadowAgreement(records)`: mengukur kesepakatan Mode Bayangan (draf agen vs keputusan akhir manusia) per kombinasi `(intent, category, amountBand)` (`small <= 1jt`, `medium 1jt..10jt`, `large > 10jt`), menghitung `sampleCount`, `agreedCount`, `agreementRate`, dan `criticalErrorCount` (salah nominal, salah pihak, duplikat, salah arah).
+    - `evaluateAutonomyPromotion(sliceMetrics, policy?)`: menerapkan ambang konservatif `D-G5-01` (`minSamples = 30`, `minAccuracy = 0.98`, `maxCriticalErrors = 0`), **melarang keras** aksi berisiko tinggi (`dividen`, `tutup_proyek`, `tutup_periode`, `write_off`, `pinjaman_antar_proyek`, `pembayaran_keluar` pita `large`/di atas ambang) naik ke `L2`, dan memicu **auto-demote `L2 -> L1`** segera bila terjadi `criticalErrorCount > 0` atau `agreementRate < minAccuracy`.
+    - `authorizeAgentAction(request, orgPolicy, dailyUsage)`: menegakkan isolasi lintas-tenant (`cross_tenant_forbidden`), kill switch (`kill_switch_active`), hierarki wewenang (`role_escalation_forbidden`), Segregation of Duties (`self_approval_forbidden`), idempotensi (`duplicate_payment_blocked`), batas nominal harian (`daily_amount_cap_exceeded`), dan kuota token/biaya (`token_budget_exceeded` / `cost_budget_exceeded`).
+    - `buildAuditTrailExport(logs, format: 'json' | 'csv')`: mengekspor jejak audit lengkap (`orgId`, `actorId`, `actorType`, `model`, `promptTokens`, `completionTokens`, `evidenceAttachmentHash`, `journalEntryId`, `createdAt`) secara deterministik ber-SHA-256.
+    - `recordUserCorrectionSignal(existingMemory, correction)`: menyimpan sinyal koreksi slot/kategori sambil menolak tegas upaya penyimpanan `debit`, `credit`, `journalLines`, atau rumus/nominal perhitungan LLM (`accounting_math_signal_forbidden`).
+  - Menambahkan modul pemulihan insiden `packages/domain/src/incidentRecovery.ts`:
+    - `proposeMispostingReversalAndPostmortem(incident)` & `approveMispostingReversalPostmortem(postmortem, approval)`: memvalidasi jurnal asli append-only (menolak `mutateOriginalAttempt` dengan `jurnal_tidak_boleh_diubah`), menyusun usulan jurnal pembalik seimbang 100% (`debit <-> credit`, `referenceType: 'reversal'`, `requiresHumanApproval: true`), menghasilkan dokumen post-mortem terstruktur dengan `autonomyDemotionTriggered: true` dan `status: 'awaiting_approval'`, serta menegakkan SoD saat persetujuan.
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124180000_g5_trust_autonomy_governance.sql` (`BLOCKED remote`): tabel `planner_shadow_evaluations` (append-only trigger), `planner_autonomy_policies` (`UNIQUE(org_id, intent, category, amount_band)`), dan `planner_incident_postmortems` (`REFERENCES planner_journal_entries(id) ON DELETE RESTRICT`, `CHECK (approved_by IS NULL OR approved_by <> created_by)`) dengan RLS ketat `is_org_member` tanpa mutasi tabel jurnal.
+  - Menambahkan suite TDD & simulasi serangan `apps/web/src/lib/financeV2/__tests__/g5TrustAndAttackSim.test.ts` (menguji shadow mode, promosi & auto-demote L2, **5 simulasi serangan wajib** yang seluruhnya ditolak, prosedur insiden, ekspor audit JSON/CSV, memori koreksi, dan struktur SQL G5).
+  - Memperbarui `docs/finance/DECISIONS.md` (`D-G5-01`), `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 13), `docs/finance/PROGRESS.md` (Fase `G5` `DONE`, menyiapkan `G6`), `docs/finance/CHANGELOG.md`, dan menerbitkan laporan gerbang `docs/finance/PHASES/G5-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah template akun baru atau memutasi tabel jurnal; memakai validator `linesAreBalanced` dari `packages/domain/src/journal.ts` untuk menyusun usulan jurnal pembalik `referenceType = 'reversal'`.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124180000_g5_trust_autonomy_governance.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g5TrustAndAttackSim.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah kontrak tool agent eksisting; menyediakan lapisan tata kelola otorisasi, shadow mode, auto-demote, ekspor audit, dan prosedur insiden deterministik untuk eksekutor & admin UI.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G4-2] 2026-11-24 — Modul Pajak Konfigurabel, Aset Tetap & Penyusutan Terjadwal, Pendanaan/Cicilan, Skenario Tahunan, & Laporan Gerbang G4
 - **Branch / PR:** `feat/g4-2-cfo-tax-assets-financing-annual-plan`
 - **Fase:** G4 (CFO Tax, Capital Assets, Financing, Annual Plan, & Gerbang G4 — G4-2)

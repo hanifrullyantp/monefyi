@@ -95,3 +95,13 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
   3. Penjaga periode terkunci ditegakkan ganda: `buildBoardMonthlyReport` mengisolasi transaksi, anggaran, piutang, dan hutang agar periode setelah `lockedPeriodMonth` tidak memengaruhi laporan terkunci, sedangkan `buildScheduledDepreciationPlan` menolak `periodMonth` yang masuk `lockedPeriods` dengan `ok: false`, `reason: 'periode_terkunci'`, `entries: []`.
 - **Alasan:** Mencegah kesalahan kepatuhan pajak akibat tarif usang/hardcode, menjaga batas tanggung jawab non-nasihat hukum/pajak berlisensi, dan menjaga integritas angka laporan/jurnal pada periode yang sudah ditutup.
 
+## D-G5-01 — Ambang Promosi Otonomi L2 Berbasis Bukti Shadow Mode, Auto-Demote, & Pemisahan Wewenang (SoD)
+- **Tanggal:** 2026-11-24
+- **Konteks:** Agen AI keuangan tidak boleh melompat ke eksekusi semi-otonom (`L2`) tanpa bukti kesepakatan nyata di mode bayangan (`shadow mode`), dan aksi berisiko tinggi (dividen, tutup proyek/periode, write-off, pinjaman antar proyek, pembayaran keluar besar) berisiko merusak saldo/ekuitas bila dieksekusi tanpa persetujuan manusia.
+- **Pilihan:**
+  1. Menetapkan ambang konservatif promosi `L1 -> L2` per kombinasi `(intent, category, amountBand)` (`small <= 1jt`, `medium 1jt..10jt`, `large > 10jt`): **`minSamples = 30`**, **`minAccuracy = 0.98` (98%)**, dan **`maxCriticalErrors = 0`** (`0` salah nominal, salah pihak, duplikat, maupun salah arah).
+  2. Melarang keras seluruh aksi berisiko tinggi (`dividen`, `tutup_proyek`, `tutup_periode`, `write_off`, `pinjaman_antar_proyek`, serta `pembayaran_keluar` pada pita `large` / di atas ambang) naik ke `L2` — wajib tetap memerlukan persetujuan manusia.
+  3. Menegakkan **auto-demote `L2 -> L1` segera** apabila terjadi `>= 1` kesalahan kritis (`criticalErrorCount > 0`), akurasi kesepakatan turun di bawah `98%`, atau terjadi insiden salah posting (`proposeMispostingReversalAndPostmortem` memicu `autonomyDemotionTriggered: true` dan usulan jurnal pembalik seimbang append-only berstatus `awaiting_approval`).
+  4. Menegakkan Segregation of Duties (`approvedBy <> createdBy`), kill switch organisasi, batas nominal harian agen, kuota token/biaya, idempotency key, dan pelarangan total sinyal debit/kredit atau perhitungan angka di memori koreksi (`recordUserCorrectionSignal`).
+- **Alasan:** Menjamin otonomi hanya dibuka bertahap berbasis bukti empiris pada transaksi rutin bernilai aman, memutus eskalasi insiden secara instan lewat auto-demote dan kill switch, serta menjaga auditabilitas append-only tanpa pernah melanggar pagar akuntansi deterministik.
+
