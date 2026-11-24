@@ -7,6 +7,7 @@ import {
   orgToday,
   parseCostCommand,
   parseRupiah,
+  parseTanggal,
 } from '../../../../packages/domain/src/money';
 import {
   assertContextSize,
@@ -136,6 +137,31 @@ describe('orgToday', () => {
   it('23.30 WIB belum berganti hari', () => {
     const instant = new Date('2026-11-03T16:30:00.000Z');
     expect(orgToday('Asia/Jakarta', instant)).toBe('2026-11-03');
+  });
+});
+
+describe('parseTanggal - deterministik bahasa Indonesia', () => {
+  const instant = new Date('2026-11-24T02:00:00.000Z'); // 2026-11-24 09:00 WIB
+
+  it('mengurai hari ini, kemarin, besok, lusa sesuai zona waktu', () => {
+    expect(parseTanggal('hari ini', 'Asia/Jakarta', instant)).toMatchObject({ ok: true, date: '2026-11-24', needsReview: false });
+    expect(parseTanggal('kemarin', 'Asia/Jakarta', instant)).toMatchObject({ ok: true, date: '2026-11-23', needsReview: false });
+    expect(parseTanggal('besok', 'Asia/Jakarta', instant)).toMatchObject({ ok: true, date: '2026-11-25', needsReview: false });
+    expect(parseTanggal('lusa', 'Asia/Jakarta', instant)).toMatchObject({ ok: true, date: '2026-11-26', needsReview: false });
+  });
+
+  it('mengurai format YYYY-MM-DD, DD/MM/YYYY, dan DD Bulan YYYY', () => {
+    expect(parseTanggal('2026-11-05', 'Asia/Jakarta', instant).date).toBe('2026-11-05');
+    expect(parseTanggal('05/11/2026', 'Asia/Jakarta', instant).date).toBe('2026-11-05');
+    expect(parseTanggal('5-11-2026', 'Asia/Jakarta', instant).date).toBe('2026-11-05');
+    expect(parseTanggal('17 Agustus 2026', 'Asia/Jakarta', instant).date).toBe('2026-08-17');
+    expect(parseTanggal('3 nov 2026', 'Asia/Jakarta', instant).date).toBe('2026-11-03');
+  });
+
+  it('menolak tanggal kalender tidak valid', () => {
+    expect(parseTanggal('2026-02-30', 'Asia/Jakarta', instant).ok).toBe(false);
+    expect(parseTanggal('32/01/2026', 'Asia/Jakarta', instant).ok).toBe(false);
+    expect(parseTanggal('kapan ya', 'Asia/Jakarta', instant).ok).toBe(false);
   });
 });
 

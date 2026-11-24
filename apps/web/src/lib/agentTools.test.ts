@@ -86,4 +86,47 @@ describe('registry tool', () => {
     expect(manual).toBe(agentManual());
     expect(JSON.parse(readFileSync(new URL('agent-core/fixtures.json', root), 'utf8'))).toEqual(fixtures());
   });
+
+  it('prepare_record_cost menolak periode terkunci dan menyimpan metadata source agent', () => {
+    const now = Date.parse('2026-11-24T01:00:00.000Z');
+    const locked = prepareRecordCost({
+      projectId: 'p-rumah',
+      item: 'semen',
+      total: 650_000,
+      entryDate: '2026-10-15',
+      now,
+      lockedPeriods: ['2026-10-01'],
+      source: 'agent',
+      model: 'gemini-flash',
+    });
+    expect(locked.ok).toBe(false);
+    if (!locked.ok) {
+      expect(locked.error.code).toBe('periode_terkunci');
+    }
+
+    const ok = prepareRecordCost({
+      projectId: 'p-rumah',
+      item: 'semen',
+      total: 650_000,
+      entryDate: '2026-11-24',
+      now,
+      lockedPeriods: ['2026-10-01'],
+      source: 'agent',
+      model: 'gemini-flash',
+    });
+    expect(ok.ok).toBe(true);
+    if (ok.ok) {
+      expect(ok.cost.source).toBe('agent');
+      expect(ok.cost.model).toBe('gemini-flash');
+    }
+  });
+
+  it('anggaran token F0: deskripsi setiap tool <= 25 kata dan evals/finance/f0_guardrails.yaml tersedia', () => {
+    for (const tool of TOOLS) {
+      const words = tool.description.trim().split(/\s+/).filter(Boolean);
+      expect(words.length, tool.name).toBeLessThanOrEqual(25);
+    }
+    const guardYaml = readFileSync(new URL('evals/finance/f0_guardrails.yaml', root), 'utf8');
+    expect(guardYaml).toContain('f0_tolak_periode_terkunci');
+  });
 });

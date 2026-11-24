@@ -3,7 +3,7 @@
 **Fase:** F0 (Kebenaran)  
 **Orkestrator:** Argon  
 **Tanggal:** 2026-11-24  
-**Status:** `IN_PROGRESS`
+**Status:** `COMPLETED`
 
 ---
 
@@ -23,16 +23,16 @@ Memastikan satu buku besar double-entry (`financeV2`) sebagai satu-satunya sumbe
 
 | ID | Tugas | Pemilik Agent | Branch PR | Status |
 |---|---|---|---|---|
-| **T0** | Kerangka `docs/finance/`, `.github/pull_request_template.md`, & gerbang CI `docs-gate` | Agent Dokumen | `finance/F0-T0-docs-framework` | `IN_PROGRESS` |
-| **T8** | Keluarkan `apps/web/.env.local` dari git, tambah ke `.gitignore`, catat rotasi token | Agent Dokumen | `finance/F0-T8-remove-env-local` | `PENDING` |
-| **T1** | Dividen proyek (`projectDividendService`) ke jurnal ekuitas (`Dr Dividen/Laba Ditahan, Cr Kas`), offset piutang owner dijurnal, cegah masuk `total_spent` & backfill | Agent Ledger + Agent DB | `finance/F0-T1-project-dividend-equity` | `PENDING` |
-| **T2** | Cegah laba terhitung dua kali antara `closeProjectFinance` dan `closeFinancePeriod` | Agent Ledger | `finance/F0-T2-T5-profit-loss-single-count` | `PENDING` |
-| **T5** | Hapus klasifikasi HPP berbasis teks `"stok"` di `profitLossReport`; gunakan jenis akun/referensi | Agent Ledger | `finance/F0-T2-T5-profit-loss-single-count` | `PENDING` |
-| **T3** | Posting atomik (`createProjectIncome`, `createCostRealization`) lewat RPC transaksi + hapus penelan error `console.error` | Agent Ledger + Agent DB | `finance/F0-T3-T4-atomic-posting-and-reversals` | `PENDING` |
-| **T4** | `updateCostRealization` = pembalik + posting ulang; hapus baris sumber = soft-delete + pembalik | Agent Ledger + Agent DB | `finance/F0-T3-T4-atomic-posting-and-reversals` | `PENDING` |
-| **T6** | Blokir tutup proyek jika piutang/retensi/hutang terbuka tanpa write-off pemilik; tolak jurnal di periode terkunci | Agent Ledger + Agent DB | `finance/F0-T6-T7-guards-and-atomic-investor` | `PENDING` |
-| **T7** | `investorService`: `total_invested` atomik/turunan transaksi & batasi dividen $\le$ kas tersedia dan laba ditahan | Agent Ledger + Agent DB | `finance/F0-T6-T7-guards-and-atomic-investor` | `PENDING` |
-| **T9** | Gerbang Agent-Ready F0 (`parseTanggal`, guard periode terkunci di `prepare_record_cost`), suite tes invarian buku besar, & `F0-report.md` | Agent AI + Agent QA/Eval + Agent Auditor | `finance/F0-T9-invariants-agent-gate-report` | `PENDING` |
+| **T0** | Kerangka `docs/finance/`, `.github/pull_request_template.md`, & gerbang CI `docs-gate` | Agent Dokumen | `finance/F0-T0-docs-framework` | `COMPLETED` |
+| **T8** | Keluarkan `apps/web/.env.local` dari git, tambah ke `.gitignore`, catat rotasi token | Agent Dokumen | `finance/F0-T8-remove-env-local` | `COMPLETED` |
+| **T1** | Dividen proyek (`projectDividendService`) ke jurnal ekuitas (`Dr Dividen/Laba Ditahan, Cr Kas`), offset piutang owner dijurnal, cegah masuk `total_spent` & backfill | Agent Ledger + Agent DB | `finance/F0-T1-project-dividend-equity` | `COMPLETED` |
+| **T2** | Cegah laba terhitung dua kali antara `closeProjectFinance` dan `closeFinancePeriod` | Agent Ledger | `finance/F0-T2-T5-profit-loss-single-count` | `COMPLETED` |
+| **T5** | Hapus klasifikasi HPP berbasis teks `"stok"` di `profitLossReport`; gunakan jenis akun/referensi | Agent Ledger | `finance/F0-T2-T5-profit-loss-single-count` | `COMPLETED` |
+| **T3** | Posting atomik (`createProjectIncome`, `createCostRealization`) lewat RPC transaksi + hapus penelan error `console.error` | Agent Ledger + Agent DB | `finance/F0-T3-T4-atomic-posting-and-reversals` | `COMPLETED` |
+| **T4** | `updateCostRealization` = pembalik + posting ulang; hapus baris sumber = soft-delete + pembalik | Agent Ledger + Agent DB | `finance/F0-T3-T4-atomic-posting-and-reversals` | `COMPLETED` |
+| **T6** | Blokir tutup proyek jika piutang/retensi/hutang terbuka tanpa write-off pemilik; tolak jurnal di periode terkunci | Agent Ledger + Agent DB | `finance/F0-T6-T7-guards-and-atomic-investor` | `COMPLETED` |
+| **T7** | `investorService`: `total_invested` atomik/turunan transaksi & batasi dividen $\le$ kas tersedia dan laba ditahan | Agent Ledger + Agent DB | `finance/F0-T6-T7-guards-and-atomic-investor` | `COMPLETED` |
+| **T9** | Gerbang Agent-Ready F0 (`parseTanggal`, guard periode terkunci di `prepare_record_cost`), suite tes invarian buku besar, & `F0-report.md` | Agent AI + Agent QA/Eval + Agent Auditor | `finance/F0-T9-invariants-agent-gate-report` | `COMPLETED` |
 
 ---
 

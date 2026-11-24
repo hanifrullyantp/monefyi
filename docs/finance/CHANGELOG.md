@@ -4,6 +4,21 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F0-T9] 2026-11-24 — Gerbang Agent-Ready F0, Tes Invarian Buku Besar, & Laporan F0
+- **Branch / PR:** `finance/F0-T9-invariants-agent-gate-report`
+- **Fase:** F0 (Kebenaran — Gerbang Akhir Fase)
+- **Perubahan & Alasan:**
+  - Menambahkan parser tanggal Indonesia deterministik `parseTanggal` di `packages/domain/src/dates.ts` (diekspor ulang di `money.ts`) beserta unit test di `apps/web/src/lib/domainMoney.test.ts`.
+  - Menambahkan guard `lockedPeriods` (`periode_terkunci`) serta metadata `source` dan `model` pada `prepareRecordCost` di `agent-core/src/prepare.ts`.
+  - Menambahkan kasus guardrail F0 di `evals/finance/f0_guardrails.yaml` dan tes anggaran token/guardrail di `apps/web/src/lib/agentTools.test.ts`.
+  - Menambahkan suite tes invarian buku besar lengkap di `apps/web/src/lib/financeV2/__tests__/ledgerInvariants.test.ts`.
+  - Menerbitkan laporan akhir fase `docs/finance/PHASES/F0-report.md`.
+- **Akun / Template Jurnal Tersentuh:** Semua template domain diverifikasi seimbang pada `ledgerInvariants.test.ts`.
+- **Migrasi SQL:** Tidak ada migrasi baru (seluruh SQL F0 berada di `20261124100000_f0_accounting_correctness.sql`, status `BLOCKED remote`).
+- **Tes Ditambah:** `ledgerInvariants.test.ts`, tes `parseTanggal` di `domainMoney.test.ts`, tes guardrail & token di `agentTools.test.ts`.
+- **Dampak ke Tool Agent:** `prepareRecordCost` mendukung `lockedPeriods`, `source`, dan `model`; seluruh deskripsi tool terverifikasi $\le 25$ kata.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F0-T6/T7] 2026-11-24 — Guard Tutup Proyek, Periode Terkunci, & Investor Atomik + Batas Dividen
 - **Branch / PR:** `finance/F0-T6-T7-guards-and-atomic-investor`
 - **Fase:** F0 (Kebenaran — T6 & T7)

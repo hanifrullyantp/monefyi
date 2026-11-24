@@ -13,6 +13,8 @@ export type LockedCost = {
   unitPrice: number | null;
   entryDate: string;
   expiresAt: number;
+  source?: 'agent' | 'user';
+  model?: string;
 };
 
 export type PrepareOk = { ok: true; token: string; expiresAt: number; impact: string; cost: LockedCost };
@@ -56,6 +58,9 @@ export function prepareRecordCost(input: {
   unitPrice?: number | null;
   entryDate: string;
   now: number;
+  lockedPeriods?: string[];
+  source?: 'agent' | 'user';
+  model?: string;
 }): PrepareOk | PrepareFail {
   const total = toRupiah(input.total);
   const item = input.item.trim();
@@ -71,6 +76,16 @@ export function prepareRecordCost(input: {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.entryDate)) {
     return { ok: false, error: structuredError('tanggal_tidak_valid', 'Tanggal harus YYYY-MM-DD.') };
   }
+  const entryMonth = input.entryDate.slice(0, 7);
+  if (input.lockedPeriods?.some((p) => p.slice(0, 7) === entryMonth)) {
+    return {
+      ok: false,
+      error: structuredError(
+        'periode_terkunci',
+        `Periode ${entryMonth} sudah ditutup dan dikunci. Gunakan tanggal di periode aktif.`,
+      ),
+    };
+  }
   const cost: LockedCost = {
     projectId: input.projectId,
     item,
@@ -80,6 +95,8 @@ export function prepareRecordCost(input: {
     unitPrice: input.unitPrice == null ? null : toRupiah(input.unitPrice),
     entryDate: input.entryDate,
     expiresAt: input.now + TEN_MINUTES_MS,
+    ...(input.source ? { source: input.source } : {}),
+    ...(input.model ? { model: input.model } : {}),
   };
   return {
     ok: true,

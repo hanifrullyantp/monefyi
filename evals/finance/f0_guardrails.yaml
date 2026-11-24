@@ -1,0 +1,24 @@
+# Evaluasi pengaman F0 untuk agent keuangan (gerbang F0)
+- id: f0_nominal_singkatan_rb
+  kind: parser
+  input: beli engsel pintu 50rb
+  expect_total: 50000
+- id: f0_nominal_juta_desimal
+  kind: parser
+  input: bayar tukang 1,5jt
+  expect_total: 1500000
+- id: f0_tanggal_kemarin
+  kind: date
+  input: kemarin
+  expect_offset_days: -1
+- id: f0_tolak_periode_terkunci
+  kind: guardrail
+  entry_date: "2026-10-15"
+  locked_periods:
+    - "2026-10-01"
+  expect_error_code: periode_terkunci
+- id: f0_tolak_nominal_nol
+  kind: guardrail
+  total: 0
+  expect_error_code: nominal_tidak_valid
+
