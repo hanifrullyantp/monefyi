@@ -107,6 +107,7 @@
 | Fase / Tugas | Nama | Status | Branch / PR | Catatan |
 |---|---|---|---|---|
 | **G8-1** | Hapus Klaim "LUNAS/BERHASIL DITRANSFER" Palsu, Hapus Tarif Cadangan/Hardcode Tersembunyi, & Perbaiki Posting Jurnal Gaji Anti-Swallow | `DONE` | `feat/g8-1-remove-fake-disbursement-fix-payroll-errors` | `PayrollPaymentProvider` & `PaymentConfirmation`, status `'awaiting_payment_confirmation'` tanpa konfirmasi nyata, slip WA jujur (`formatWhatsAppSlip`), UUID valid `planner_payroll_entries.id`, `laborPolicy` konfigurabel + `missing_rate` tanpa `150000`, `remainingKasbonBalance`/`kasbonShortfall` tanpa `Math.max(0, ...)`, rollback & lempar error di `payrollService.ts` & `aiHrdPayrollService.ts`, `D-G8-01`, & `g8PayrollTruthAndNoFakePaid.test.ts`. |
+| **G8-2** | Model Kehadiran `day_fraction`, Tarif Beriwayat `effectiveFrom`, Akrual Upah Proyek (`Dr hpp_labor / Cr hutang_gaji`), Gaji Kantor Opex, BPJS/PPh 21 Konfigurabel, & Kasbon Bersaldo | `DONE` | `feat/g8-2-project-labor-accrual-day-fraction-kasbon` | COA `'hutang_gaji'` + 3 template jurnal seimbang (`project_labor_accrual`, `office_payroll_accrual`, `payroll_liability_settlement`), domain `packages/domain/src/hrdPayroll.ts`, migrasi SQL lokal `20261124190000_g8_hrd_project_labor_accrual.sql` (`BLOCKED remote`), & suite TDD `g8ProjectLaborAccrual.test.ts`. |
 | **G7** | Integrasi UI & Runtime Keuangan Terpadu | `PENDING` | — | Menyusul setelah G8. |
 | **G9** | Penguatan Audit & Rekonsiliasi Lapangan | `PENDING` | — | Menyusul setelah G7. |
 | **G10** | Otomasi Operasional & Adapter Produksi | `PENDING` | — | Menyusul setelah G9. |
@@ -114,6 +115,7 @@
 
 ### Daftar Tugas Program G7–G11 (Urutan G8 → G7 → G9 → G10 → G11)
 - [x] `G8-1`: Hapus klaim `"LUNAS/BERHASIL DITRANSFER"` palsu, hapus tarif cadangan `150000`/hardcode tersembunyi, catat sisa kasbon jujur, wajibkan UUID valid & `PaymentConfirmation` nyata + SoD, dan perbaiki posting jurnal gaji/kasbon anti-swallow (`aiHrdPayrollService.ts`, `payrollService.ts`, `payrollJournalBridge.ts`, `AiHrdPayrollModal.tsx`, `HrEmployees.tsx`, `D-G8-01`, & `g8PayrollTruthAndNoFakePaid.test.ts`).
+- [x] `G8-2`: Model kehadiran `day_fraction`, tarif beriwayat `effectiveFrom`, akrual harian upah proyek (`Dr hpp_labor / Cr hutang_gaji`), gaji kantor `beban_opex`, BPJS/PPh 21 konfigurabel berlabel konsultan pajak, & kasbon bersaldo (`journal.ts`, `financeV2.ts`, `hrdPayroll.ts`, `20261124190000_g8_hrd_project_labor_accrual.sql`, & `g8ProjectLaborAccrual.test.ts`).
 - [ ] `G7`: Integrasi UI & Runtime Keuangan Terpadu.
 - [ ] `G9`: Penguatan Audit & Rekonsiliasi Lapangan.
 - [ ] `G10`: Otomasi Operasional & Adapter Produksi.

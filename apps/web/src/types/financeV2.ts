@@ -11,6 +11,7 @@ export type AccountType =
   | 'akumulasi_penyusutan'
   | 'prabayar'
   | 'hutang_dagang'
+  | 'hutang_gaji'
   | 'hutang_pajak'
   | 'hutang_lain'
   | 'modal_disetor'
@@ -148,6 +149,7 @@ export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   akumulasi_penyusutan: 'Akumulasi Penyusutan',
   prabayar: 'Pra Bayar',
   hutang_dagang: 'Hutang Dagang',
+  hutang_gaji: 'Hutang Gaji & Upah',
   hutang_pajak: 'Hutang Pajak',
   hutang_lain: 'Hutang Lain',
   modal_disetor: 'Modal Disetor',

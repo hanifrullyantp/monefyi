@@ -14,7 +14,7 @@
 
 ## Urutan Eksekusi Migrasi SQL (Harus Berurutan)
 
-Seluruh **13 file migrasi SQL lokal** berikut berada di `my-supabase-project/supabase/migrations/` dan berstatus **`BLOCKED remote`**:
+Seluruh **14 file migrasi SQL lokal** berikut berada di `my-supabase-project/supabase/migrations/` dan berstatus **`BLOCKED remote`**:
 
 | Urutan | Fase / Kode | File Migrasi SQL Lokal | Ringkasan Cakupan |
 |---|---|---|---|
@@ -31,6 +31,7 @@ Seluruh **13 file migrasi SQL lokal** berikut berada di `my-supabase-project/sup
 | **Langkah 11** | `G2` | `20261124160000_g2_proactive_reminders_audit.sql` | `planner_proactive_audit_logs` (append-only), `planner_finance_reminders`, & `planner_collection_drafts` (SoD) |
 | **Langkah 12** | `G4` | `20261124170000_g4_cfo_tax_config_and_loans.sql` | `planner_org_tax_configs` (bebas hardcode tarif) & `planner_financing_loans` |
 | **Langkah 13** | `G5` | `20261124180000_g5_trust_autonomy_governance.sql` | `planner_shadow_evaluations` (append-only), `planner_autonomy_policies`, & `planner_incident_postmortems` (SoD) |
+| **Langkah 14** | `G8-2` | `20261124190000_g8_hrd_project_labor_accrual.sql` | COA `'hutang_gaji'`, `planner_attendance_project_splits` (`day_fraction`), `planner_compensation_rate_history` (`effective_from`), `planner_daily_assignments`, & `planner_org_labor_policies` |
 
 > **Catatan Asal Trigger Imutabilitas:** Trigger penolak mutasi jurnal `public.planner_reject_journal_mutation()` untuk `planner_journal_entries` dan `planner_journal_lines` berasal dari migrasi fase 3 (`my-supabase-project/supabase/migrations/20261104140000_planner_phase3_ledger.sql`), **bukan** dari migrasi F0. Pada rangkaian di bawah, migrasi **G0-4** (`20261124142000_g0_4_immutability_guard.sql`) memperkuatnya secara idempoten dengan `ERRCODE = '55000'`, menambahkan trigger pada `planner_journal_allocations`, dan memastikan tidak ada policy RLS `UPDATE`/`DELETE`/`ALL` pada ketiga tabel jurnal.
 
@@ -117,6 +118,14 @@ File: `my-supabase-project/supabase/migrations/20261124180000_g5_trust_autonomy_
 - Membuat tabel `planner_autonomy_policies` (`org_id`, `intent`, `category`, `amount_band`, `current_level` `'L0'|'L1'|'L2'`, `kill_switch_enabled`, `daily_cap_rupiah`, `monthly_token_budget`, `updated_at`, `UNIQUE(org_id, intent, category, amount_band)`) dengan kebijakan tulis ketat `is_org_member(org_id, 'owner')`.
 - Membuat tabel `planner_incident_postmortems` (`id`, `org_id`, `original_journal_id REFERENCES planner_journal_entries(id) ON DELETE RESTRICT`, `proposed_reversal_json`, `status`, `created_by`, `approved_by`) dengan constraint SoD `CHECK (approved_by IS NULL OR approved_by <> created_by)` serta trigger penjaga identitas `planner_guard_incident_postmortem_integrity`.
 - Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` pada ketiga tabel tanpa memutasi tabel jurnal.
+
+### Langkah 14 — Migrasi G8-2 (Kehadiran `day_fraction`, Tarif `effective_from`, Akrual Upah Proyek `hutang_gaji`, & Kebijakan Kerja)
+File: `my-supabase-project/supabase/migrations/20261124190000_g8_hrd_project_labor_accrual.sql`
+- Memperluas `planner_finance_accounts_type_check` dengan `'hutang_gaji'` dan memperbarui `seed_default_chart_of_accounts` (`('hutang_gaji', 'pasiva', 'Hutang Gaji & Upah')`).
+- Membuat tabel `planner_attendance_project_splits` (`day_fraction numeric(4,2) CHECK (day_fraction > 0 AND day_fraction <= 1)`, trigger penjaga total `day_fraction <= 1.00` per pekerja per hari dan larangan ubah/hapus baris yang sudah terikat jurnal, `journal_entry_id REFERENCES planner_journal_entries(id) ON DELETE RESTRICT`).
+- Membuat tabel `planner_compensation_rate_history` (`worker_id`, `role_name`, `rate_type` `'daily'|'borongan'|'monthly'`, `rate_rupiah > 0`, `effective_from`).
+- Membuat tabel `planner_daily_assignments` (jadwal harian PM) dan `planner_org_labor_policies` (`standard_work_days`, `standard_hours_per_day`, `overtime_multiplier`, `max_kasbon_deduction_pct`, `statutory_config_json`).
+- Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` pada keempat tabel tanpa memutasi tabel jurnal.
 
 ---
 

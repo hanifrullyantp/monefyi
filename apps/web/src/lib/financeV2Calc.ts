@@ -62,7 +62,7 @@ export function calcQuickRatio(
   const kas = accounts.filter(a => a.type === 'kas').reduce((s, a) => s + a.current_balance, 0);
   const piutang = accounts.filter(a => a.type === 'piutang').reduce((s, a) => s + a.current_balance, 0);
   const hutang = accounts
-    .filter(a => ['hutang_dagang', 'hutang_pajak', 'hutang_lain'].includes(a.type))
+    .filter(a => ['hutang_dagang', 'hutang_gaji', 'hutang_pajak', 'hutang_lain'].includes(a.type))
     .reduce((s, a) => s + a.current_balance, 0);
 
   if (hutang <= 0) return null;
@@ -74,6 +74,7 @@ export function accountRouteForType(type: string): string | undefined {
     kas: '/app/finance-v2/kasbank',
     piutang: '/app/finance-v2/hutangpiutang',
     hutang_dagang: '/app/finance-v2/hutangpiutang',
+    hutang_gaji: '/app/finance-v2/hutangpiutang',
     hutang_pajak: '/app/finance-v2/hutangpiutang',
     hutang_lain: '/app/finance-v2/hutangpiutang',
     stok: '/app/finance-v2/aset',

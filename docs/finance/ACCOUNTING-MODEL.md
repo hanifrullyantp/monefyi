@@ -45,6 +45,7 @@ Dokumen ini adalah spesifikasi hidup (*living specification*) untuk buku besar d
 | `prabayar` | `aktiva` | Debit | `Biaya Dibayar Dimuka` | — |
 | `uang_muka_klien` | `pasiva` | Kredit | `Uang Muka Klien` | `project_id` |
 | `hutang_dagang` | `pasiva` | Kredit | `Hutang Dagang` | `party_id` |
+| `hutang_gaji` | `pasiva` | Kredit | `Hutang Gaji & Upah` | `party_id` |
 | `hutang_pajak` | `pasiva` | Kredit | `Hutang Pajak` | `party_id` |
 | `hutang_lain` | `pasiva` | Kredit | `Hutang Lain-lain` | `party_id` |
 | `akumulasi_penyusutan` | `pasiva` | Kredit | `Akumulasi Penyusutan` | — |
@@ -90,6 +91,9 @@ Dokumen ini adalah spesifikasi hidup (*living specification*) untuk buku besar d
 | **Piutang Baru** | `project_income` | `Piutang Usaha` | `Pendapatan Proyek` | `createReceivable` / `receivableAccrual` (`party_id` wajib) |
 | **Terima Piutang** | `receivable_receipt` / `project_income` | `Kas` | `Piutang Usaha` | `recordReceivablePayment` (`party_id`) |
 | **Opex Bisnis** | `opex` | `Beban Operasional` | `Kas Bisnis` | `createOpexRealization` |
+| **Akrual Upah Proyek Harian/Borongan (`project_labor_accrual`)** | `payroll_accrual` | `HPP Proyek - Tenaga Kerja` (`project_id`) | `Hutang Gaji & Upah` (`party_id`) | `projectLaborAccrual` / `buildDailyProjectLaborAccruals` (`day_fraction (0,1]` + lembur sesuai `laborPolicy`) |
+| **Akrual Gaji Bulanan Kantor (`office_payroll_accrual`)** | `payroll_accrual` | `Beban Operasional` | `Hutang Gaji & Upah` (`party_id`) | `officePayrollAccrual` / `buildOfficeMonthlyPayrollAccrual` (non-proyek + draf BPJS/PPh 21 konfigurabel) |
+| **Pelunasan Kewajiban Gaji & Kasbon (`payroll_liability_settlement`)** | `payroll_disbursement` | `Hutang Gaji & Upah` (`totalLiability`, `party_id`) | (1) `Kas` (`totalLiability - offset`)<br>(2) `Piutang Usaha` (`offset`, jika `offset > 0`) | `payrollLiabilitySettlement` / `computeKasbonSettlement` (potongan dibatasi `maxDeductionPct`, sisa saldo terbawa) |
 | **Investasi Modal** | `manual` | `Kas Bisnis` | `Modal Disetor` | `recordInvestorTransaction` (`invest`) |
 | **Penarikan Modal** | `manual` | `Modal Disetor` | `Kas Bisnis` | `recordInvestorTransaction` (`withdraw`) |
 | **Dividen Proyek (Kas)** | `dividend` | `Dividen / Prive` / `Laba Ditahan` | `Kas Proyek` | `recordDividendPayouts` (tidak masuk `total_spent`) |
