@@ -1,6 +1,6 @@
 # PROGRESS — Papan Kerja Keuangan Froyek (F0–F4)
 
-**Fase Aktif:** `F4` (AI Belajar RAP & E2E Siklus Penuh)  
+**Fase Aktif:** `COMPLETED` (`F0`–`F4` Selesai; siap deploy manual via `DEPLOY-RUNBOOK.md`)  
 **Orkestrator:** Argon (Mode Otonom)  
 **Terakhir Diperbarui:** 2026-11-24
 
@@ -14,7 +14,7 @@
 | **F1** | Akun Baru & Dimensi Proyek | `DONE` | `F1-T1`, `F1-T2` | COA F1 lengkap, 24 template kejadian tertutup, migrasi+dry-run+rekonsiliasi (`BLOCKED remote`), pensiun penghitung `financeV1`, `F1-report.md`. |
 | **F2** | Tampilan & Snapshot | `DONE` | `F2-T1`, `F2-T2` | 3 kartu depan, laporan V1 buku besar, dividen 2 mode (`D-F2-01`), `get_finance_snapshot` (~278 token), `F2-report.md`. |
 | **F3** | AI Pencatat | `DONE` | `F3-T1`, `F3-T2` | 9 intent, `prepare_entry`/`commit_entry`, memori koreksi, gold set 218 kalimat pada 2 model kecil (218/218), `F3-report.md`. |
-| **F4** | AI Belajar RAP & E2E | `DOING` | `F4-T1`, `F4-T2` | Dataset proyek selesai, draf rentang+provenance, MAPE eval, uji E2E siklus penuh, `FINAL-REPORT.md`. |
+| **F4** | AI Belajar RAP & E2E | `DONE` | `F4-T1`, `F4-T2` | Dataset proyek selesai, draf rentang+provenance, MAPE eval (0.34%), uji E2E siklus penuh, `DEPLOY-RUNBOOK.md`, `FINAL-REPORT.md`. |
 
 ---
 
@@ -35,7 +35,9 @@
 
 ### Fase F4
 - [x] `F4-1`: AI Belajar RAP (`packages/domain/src/rapLearning.ts`, `rapLearningService.ts`, `evals/finance/rap_historical_eval.yaml`, `rapLearningEval.test.ts`, `PHASES/F4-report.md`).
-- [ ] `F4-2`: Uji E2E siklus bisnis penuh (`fullBusinessCycleE2E.test.ts`), `DEPLOY-RUNBOOK.md`, & `FINAL-REPORT.md`.
+- [x] `F4-2`: Uji E2E siklus bisnis penuh (`fullBusinessCycleE2E.test.ts`), `DEPLOY-RUNBOOK.md`, & `FINAL-REPORT.md`.
 
-### Langkah Berikutnya (Penutupan Program)
-1. Kerjakan `F4-2`: Uji E2E siklus penuh + `DEPLOY-RUNBOOK.md` + `FINAL-REPORT.md`.
+### Langkah Berikutnya (Eksekusi Pemilik / Operator)
+1. Rotate token yang pernah berada di `apps/web/.env.local`.
+2. Tinjau `docs/finance/OPEN-QUESTIONS.md` & `docs/finance/DECISIONS.md`.
+3. Jalankan migrasi SQL F0 & F1 sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
