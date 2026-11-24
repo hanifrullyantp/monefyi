@@ -191,8 +191,7 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
 // 3. Template: Reset / Ubah Password
 function getPasswordResetTemplate(opts: SendEmailOptions) {
   const name = escapeHtml(opts.name || "Pengguna Froyek");
-  const password = escapeHtml(opts.password || "FroyekBaru2026!");
-  const loginUrl = escapeHtml(opts.resetLink || opts.appUrl || "https://estimator.froyek.com/app/estimator");
+  const loginUrl = escapeHtml(opts.resetLink || opts.appUrl || "https://froyek.com/reset-password");
 
   return `
 <!DOCTYPE html>
@@ -205,31 +204,31 @@ function getPasswordResetTemplate(opts: SendEmailOptions) {
   <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
     
     <!-- Header -->
-    <div style="background-color: #b45309; padding: 32px 28px; text-align: center;">
-      <div style="display: inline-block; width: 44px; height: 44px; background-color: #ffffff; border-radius: 12px; line-height: 44px; color: #b45309; font-size: 24px; font-weight: 900; margin-bottom: 12px;">🔒</div>
-      <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800;">Permintaan Ubah Password</h1>
-      <p style="color: #fef3c7; margin: 6px 0 0; font-size: 14px;">Password sementara Anda telah diperbarui.</p>
+    <div style="background-color: #065f46; padding: 32px 28px; text-align: center;">
+      <div style="display: inline-block; width: 44px; height: 44px; background-color: #ffffff; border-radius: 12px; line-height: 44px; color: #065f46; font-size: 24px; font-weight: 900; margin-bottom: 12px;">F</div>
+      <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800;">Reset Password</h1>
+      <p style="color: #a7f3d0; margin: 6px 0 0; font-size: 14px;">Permintaan ubah password akun Froyek.</p>
     </div>
 
     <div style="padding: 32px 28px;">
       <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-top: 0;">
         Halo <strong>${name}</strong>,<br><br>
-        Kami menerima permintaan untuk mereset password akun Froyek Anda. Gunakan password sementara berikut untuk masuk:
+        Kami menerima permintaan reset password untuk akun Froyek Anda. Klik tombol di bawah untuk membuat password baru:
       </p>
 
-      <div style="background-color: #fefce8; border-radius: 14px; padding: 20px; margin: 24px 0; border: 2px dashed #fde047; text-align: center;">
-        <span style="color: #713f12; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px;">Password Baru Sementara:</span>
-        <span style="color: #b45309; font-weight: 900; font-family: monospace; font-size: 22px; letter-spacing: 2px;">${password}</span>
-      </div>
-
       <div style="text-align: center; margin: 32px 0;">
-        <a href="${loginUrl}" style="display: inline-block; background-color: #b45309; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 800; font-size: 15px;">
-          Login & Ubah Password &rarr;
+        <a href="${loginUrl}" style="display: inline-block; background-color: #059669; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
+          Reset Password
         </a>
       </div>
 
-      <p style="color: #64748b; font-size: 13px; line-height: 1.6;">
-        Jika Anda tidak merasa meminta reset password, mohon segera hubungi admin kami untuk perlindungan akun Anda.
+      <p style="color: #64748b; font-size: 13px; line-height: 1.6; border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 24px;">
+        Jika tombol tidak berfungsi, salin dan buka link berikut di browser Anda:<br>
+        <a href="${loginUrl}" style="color: #059669; word-break: break-all; text-decoration: underline; font-size: 12px;">${loginUrl}</a>
+      </p>
+
+      <p style="color: #94a3b8; font-size: 12px; line-height: 1.5; margin-top: 20px;">
+        Jika Anda tidak merasa meminta reset password, Anda dapat mengabaikan email ini dengan aman.
       </p>
     </div>
 
@@ -303,7 +302,7 @@ export async function sendResendEmail(opts: SendEmailOptions): Promise<SendEmail
       html = getAccountAccessTemplate(opts);
       break;
     case "password_reset":
-      subject = subject || `[Reset Password] Password Sementara Akun Estimator Anda`;
+      subject = subject || `[Froyek] Permintaan Reset Password Akun Anda`;
       html = getPasswordResetTemplate(opts);
       break;
     case "followup":

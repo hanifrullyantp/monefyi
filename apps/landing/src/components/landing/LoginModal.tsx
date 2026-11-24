@@ -163,13 +163,30 @@ export function LoginModal() {
     setLoading(true);
     setError("");
     setInfo("");
-    const { error: resetErr } = await resetPasswordForEmail(email);
-    setLoading(false);
-    if (resetErr) {
-      setError(resetErr.message);
-      return;
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data?.error || "Gagal memproses permintaan reset password.");
+      }
+      setInfo(
+        data.message ||
+          "Link reset password telah dikirim ke email Anda. Cek inbox dan folder spam.",
+      );
+    } catch {
+      const { error: resetErr } = await resetPasswordForEmail(email);
+      if (resetErr) {
+        setError(resetErr.message);
+        return;
+      }
+      setInfo("Link reset password dikirim. Cek inbox dan folder spam.");
+    } finally {
+      setLoading(false);
     }
-    setInfo("Link reset password dikirim. Cek inbox dan folder spam.");
   };
 
   const handleResendVerify = async () => {

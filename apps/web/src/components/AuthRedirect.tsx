@@ -17,6 +17,15 @@ const MEMBERSHIP_SETUP_PATHS = [
 export default function AuthRedirect() {
   const { isAuthenticated, authInitializing, platformRole, user, hasMembership } = useAppStore();
   const location = useLocation();
+
+  // Jika URL mengandung hash recovery, pastikan diarahkan ke halaman reset-password
+  if (typeof window !== 'undefined') {
+    const hash = window.location.hash || '';
+    if (hash.includes('type=recovery') && location.pathname !== '/reset-password') {
+      return <Navigate to={`/reset-password${hash}`} replace />;
+    }
+  }
+
   if (authInitializing) return null;
 
   initEstimatorPwaDocument();
