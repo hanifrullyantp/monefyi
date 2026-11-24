@@ -13,9 +13,11 @@ import {
   readPasswordRecoveryError,
 } from '../../lib/passwordRecoveryIntent';
 import {
+  exchangeAuthCodeForSession,
   getSessionSafe,
   onAuthStateChange,
   resetPasswordForEmail,
+  setAuthSession,
   updatePassword,
 } from '../../services/authService';
 import { useAppStore } from '../../store/appStore';
@@ -49,14 +51,72 @@ export default function ResetPasswordPanel({ onUpdated }: ResetPasswordPanelProp
 
   useEffect(() => {
     let cancelled = false;
+
+    // 1. Ekstrak parameter dari hash dan query URL
+    const hash = typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') : '';
+    const hashParams = new URLSearchParams(hash);
+    const searchParams =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
+
+    const hashError = hashParams.get('error_description') || hashParams.get('error');
+    const searchError = searchParams.get('error_description') || searchParams.get('error');
+    if (hashError || searchError) {
+      setError(
+        decodeURIComponent(
+          hashError ||
+            searchError ||
+            'Tautan reset password tidak valid atau telah kedaluwarsa.',
+        ),
+      );
+      setReady(true);
+      return;
+    }
+
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+
+    // Jika access_token ada di hash, langsung anggap sesi aktif untuk menampilkan form buat password
+    if (accessToken && refreshToken) {
+      setHasSession(true);
+      setReady(true);
+      setAuthSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ data, error: setErr }) => {
+        if (!cancelled && !setErr && data?.session) {
+          setHasSession(true);
+        }
+      });
+    }
+
+    const code = searchParams.get('code');
+    if (code) {
+      exchangeAuthCodeForSession(code).then(({ data, error: codeErr }) => {
+        if (!cancelled) {
+          if (codeErr) {
+            setError(codeErr.message);
+          } else if (data?.session) {
+            setHasSession(true);
+          }
+          setReady(true);
+        }
+      });
+    }
+
     const subscription = onAuthStateChange((_event, session) => {
-      if (!cancelled && session) setHasSession(true);
+      if (!cancelled && session) {
+        setHasSession(true);
+        setReady(true);
+      }
     });
+
     void getSessionSafe().then(({ session }) => {
       if (cancelled) return;
-      setHasSession(!!session);
+      if (session) {
+        setHasSession(true);
+      }
       setReady(true);
     });
+
     return () => {
       cancelled = true;
       subscription.unsubscribe();

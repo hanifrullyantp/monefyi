@@ -115,3 +115,11 @@ export async function resendSignupVerification(email: string) {
 export async function updatePassword(password: string) {
   return supabase.auth.updateUser({ password });
 }
+
+export async function setAuthSession(tokens: { access_token: string; refresh_token: string }) {
+  return supabase.auth.setSession(tokens);
+}
+
+export async function exchangeAuthCodeForSession(code: string) {
+  return supabase.auth.exchangeCodeForSession(code);
+}

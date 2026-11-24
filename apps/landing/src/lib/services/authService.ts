@@ -46,7 +46,7 @@ export async function resetPasswordForEmail(email: string) {
   const supabase = getSupabaseClient();
   if (!supabase) return { data: null, error: new Error("Supabase belum dikonfigurasi.") };
   return supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: authRedirectUrl("/login"),
+    redirectTo: authRedirectUrl("/reset-password"),
   });
 }
 
