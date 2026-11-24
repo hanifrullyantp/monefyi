@@ -1,6 +1,6 @@
-# PROGRESS — Papan Kerja Keuangan Froyek (F0–F4)
+# PROGRESS — Papan Kerja Keuangan Froyek (F0–F4 & G0–G6)
 
-**Fase Aktif:** `COMPLETED` (`F0`–`F4` Selesai; siap deploy manual via `DEPLOY-RUNBOOK.md`)  
+**Fase Aktif:** `COMPLETED` (`F0`–`F4` & `G0`–`G6` Selesai; migrasi SQL produksi `BLOCKED remote` dan siap dijalankan manual via `DEPLOY-RUNBOOK.md`)  
 **Orkestrator:** Argon (Mode Otonom)  
 **Terakhir Diperbarui:** 2026-11-24
 
@@ -71,6 +71,7 @@
 | **G4-2** | Modul Pajak Konfigurabel, Aset Tetap & Penyusutan Terjadwal, Pendanaan/Cicilan, & Skenario Tahunan | `DONE` | `feat/g4-2-cfo-tax-assets-financing-annual-plan` | `packages/domain/src/cfoTaxAndCapital.ts` (`calculateTaxDraftAndCalendar` bebas hardcode + `config_required` + `verifiedAt > 180` hari + label konsultan pajak, `evaluateAssetCapitalization`, `buildScheduledDepreciationPlan` + penolakan `periode_terkunci`, `buildLoanAmortizationSchedule`, `evaluateWorkingCapitalFundingNeed`, `buildAnnualScenarioPlan` 12 bulan × 3 skenario), SQL lokal `20261124170000_g4_cfo_tax_config_and_loans.sql` (`BLOCKED remote`), `D-G4-01`, & `cfoTaxAndCapital.test.ts`. |
 | **G4-Gate** | Laporan Gerbang Fase G4 (`G4-report.md`) | `DONE` | `feat/g4-2-cfo-tax-assets-financing-annual-plan` | Ringkasan `G4-1` & `G4-2`, bukti reproduksibilitas laporan direksi (`SHA-256` & HTML), bukti uji lintas-periode terkunci, hasil aktual `typecheck`/`vitest`/`gate:docs`/`gate:rebrand`, status migrasi `BLOCKED remote`, & sisa risiko menuju `G5`. |
 | **G5** | Kepercayaan, Otonomi Berbasis Bukti, SoD, Ekspor Audit, Prosedur Insiden, & Simulasi Serangan | `DONE` | `feat/g5-trust-autonomy-governance-security` | `packages/domain/src/autonomyGovernance.ts` (shadow agreement per `(intent, category, amountBand)`, promosi `L2` `N >= 30`, `>= 98%`, `0` critical error, larangan L2 aksi berisiko tinggi, auto-demote `L2 -> L1`, SoD/kill-switch/cap/token-budget/idempotensi `authorizeAgentAction`, ekspor audit JSON/CSV `buildAuditTrailExport`, memori koreksi bebas debit/kredit `recordUserCorrectionSignal`), `packages/domain/src/incidentRecovery.ts` (`proposeMispostingReversalAndPostmortem`), SQL lokal `20261124180000_g5_trust_autonomy_governance.sql` (`BLOCKED remote`), `D-G5-01`, `g5TrustAndAttackSim.test.ts` (5 simulasi serangan semua ditolak), & `G5-report.md`. |
+| **G6** | Penutupan Program G0–G6, Hardening G5, Uji E2E Siklus Penuh, & Dokumentasi Penutup | `DONE` | `feat/g6-program-closure-e2e-docs` | Hardening `authorizeAgentAction` (`isHighRisk \|\| ...`), uji E2E terpadu siklus penuh `g6FullProgramE2E.test.ts` (G0–G5), pembaruan `DEPLOY-RUNBOOK.md` (Langkah 1–13), `FINAL-REPORT.md` jujur, `USER-GUIDE-ROLES.md`, `G6-report.md`, & seluruh program G0–G6 `COMPLETED`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
@@ -94,6 +95,7 @@
 - [x] `G4-1`: CFO Anggaran vs Aktual, KPI, Kebijakan Dividen 2 Mode, & Laporan Bulanan Bergaya Direksi (`packages/domain/src/cfoAnalytics.ts`, `cfoAnalytics.test.ts`).
 - [x] `G4-2`: Modul Pajak Konfigurabel, Aset Tetap & Penyusutan Terjadwal, Pendanaan/Cicilan, Skenario Tahunan, SQL lokal `20261124170000_g4_cfo_tax_config_and_loans.sql` (`BLOCKED remote`), & `docs/finance/PHASES/G4-report.md` (Fase **G4** seluruhnya `DONE`).
 - [x] `G5`: Kepercayaan, Otonomi Berbasis Bukti (`D-G5-01`), SoD, Ekspor Audit JSON/CSV, Prosedur Insiden & Jurnal Pembalik (`autonomyGovernance.ts`, `incidentRecovery.ts`), SQL lokal `20261124180000_g5_trust_autonomy_governance.sql` (`BLOCKED remote`), 5 simulasi serangan (`g5TrustAndAttackSim.test.ts`), & `docs/finance/PHASES/G5-report.md` (Fase **G5** `DONE`).
+- [x] `G6`: Penutupan Program G0–G6 — Hardening minor `authorizeAgentAction`, uji E2E terpadu `g6FullProgramE2E.test.ts`, pembaruan `DEPLOY-RUNBOOK.md`, `FINAL-REPORT.md` jujur, `USER-GUIDE-ROLES.md`, `G6-report.md`, & `CHANGELOG.md` (Seluruh Program **G0–G6** `COMPLETED` / `DONE`).
 
-### Status Fase Berikutnya (`G6` — Antarmuka Terpadu Web, Eksekusi Kanal Nyata, & Validasi Dataset Nyata)
-- [ ] `G6-1` / Antarmuka Terpadu, Kanal Nyata, & Validasi Produksi: Antarmuka web terpadu untuk review draf OCR/mutasi bank/duplikat, persetujuan draf penagihan & post-mortem insiden (SoD), checklist tutup bulan, Financial Advisor, CFO/pajak/aset tetap/pinjaman, panel otonomi & kill switch, integrasi cron scheduler + adapter kanal WA/Email nyata ber-`audit_log_id`, eksekusi migrasi SQL `F0`–`G5` oleh operator pasca-`BLOCKED remote`, uji paritas & backtest pada dataset nyata anonim pemilik, dan penutupan gerbang akhir program `G0`–`G6`.
+### Tindak Lanjut Produksi (Eksekusi Manual oleh Operator / Pemilik)
+- [ ] **Aktivasi Produksi & Integrasi Runtime Lanjutan (Pasca-Program G0–G6):** Rotasi token `.env.local`, backup DB, uji paritas offline `g0-owner-local-parity-check.mjs --input ...` pada data nyata, eksekusi 13 migrasi SQL `F0`–`G5` (`BLOCKED remote`) via `DEPLOY-RUNBOOK.md`, pengisian profil pajak `planner_org_tax_configs`, aktivasi awal pada otonomi `L1` + Mode Bayangan, serta penyambungan antarmuka web terpadu & adapter cron/WA/Email produksi.

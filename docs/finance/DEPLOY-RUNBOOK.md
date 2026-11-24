@@ -14,6 +14,24 @@
 
 ## Urutan Eksekusi Migrasi SQL (Harus Berurutan)
 
+Seluruh **13 file migrasi SQL lokal** berikut berada di `my-supabase-project/supabase/migrations/` dan berstatus **`BLOCKED remote`**:
+
+| Urutan | Fase / Kode | File Migrasi SQL Lokal | Ringkasan Cakupan |
+|---|---|---|---|
+| **Langkah 1** | `F0` | `20261124100000_f0_accounting_correctness.sql` | Soft-delete `deleted_at`, status `'dividend'`/`'cancelled'`, RPC atomik awal, guard periode terkunci |
+| **Langkah 2** | `F1` | `20261124120000_f1_coa_and_dimensions.sql` | COA F1, dimensi `project_id`/`party_id`/`needs_review`, metadata `source`/`model`/`prepare_token` |
+| **Langkah 3** | `G0-1` | `20261124140000_g0_1_real_f1_migration.sql` | `'f1_migration'` & `planner_migrate_f1_ledger(p_org_id, p_dry_run)` append-only + rollback dry-run |
+| **Langkah 4** | `G0-3` | `20261124141000_g0_3_account_taxonomy.sql` | 4 kategori COA (`aktiva`, `pasiva`, `pendapatan`, `beban`) & saldo normal per kategori |
+| **Langkah 5** | `G0-4` | `20261124142000_g0_4_immutability_guard.sql` | Penguatan trigger imutabilitas `ERRCODE = '55000'` pada 3 tabel jurnal + sapu policy mutasi RLS |
+| **Langkah 6** | `G0-2` | `20261124143000_g0_2_rpc_f1_accounts.sql` | `planner_hpp_account_type_for_rap`, RPC income/cost ke akun F1, & backfill tanpa `'laba'` |
+| **Langkah 7** | `G0-5` | `20261124144000_g0_5_revenue_recognition.sql` | `revenue_recognition_method`, tabel jadwal pengakuan DP, & RPC `planner_recognize_project_dp_revenue` |
+| **Langkah 8** | `G0-6` | `20261124145000_g0_6_party_id_and_interproject_loans.sql` | `party_id` pada 4 tabel operasional & RPC 4-baris `planner_post_interproject_loan` |
+| **Langkah 9** | `G1-1` | `20261124150000_g1_1_journal_attachments.sql` | `planner_journal_attachments` terikat `journal_entry_id` (`ON DELETE RESTRICT`) + trigger guard |
+| **Langkah 10** | `G1-2` | `20261124151000_g1_2_bank_reconciliation.sql` | `planner_bank_statement_rows` (`UNIQUE row_hash`) & `planner_bank_reconciliations` |
+| **Langkah 11** | `G2` | `20261124160000_g2_proactive_reminders_audit.sql` | `planner_proactive_audit_logs` (append-only), `planner_finance_reminders`, & `planner_collection_drafts` (SoD) |
+| **Langkah 12** | `G4` | `20261124170000_g4_cfo_tax_config_and_loans.sql` | `planner_org_tax_configs` (bebas hardcode tarif) & `planner_financing_loans` |
+| **Langkah 13** | `G5` | `20261124180000_g5_trust_autonomy_governance.sql` | `planner_shadow_evaluations` (append-only), `planner_autonomy_policies`, & `planner_incident_postmortems` (SoD) |
+
 > **Catatan Asal Trigger Imutabilitas:** Trigger penolak mutasi jurnal `public.planner_reject_journal_mutation()` untuk `planner_journal_entries` dan `planner_journal_lines` berasal dari migrasi fase 3 (`my-supabase-project/supabase/migrations/20261104140000_planner_phase3_ledger.sql`), **bukan** dari migrasi F0. Pada rangkaian di bawah, migrasi **G0-4** (`20261124142000_g0_4_immutability_guard.sql`) memperkuatnya secara idempoten dengan `ERRCODE = '55000'`, menambahkan trigger pada `planner_journal_allocations`, dan memastikan tidak ada policy RLS `UPDATE`/`DELETE`/`ALL` pada ketiga tabel jurnal.
 
 ### Langkah 1 — Migrasi F0 (Kebenaran Akuntansi, Atomik RPC, & Soft-Delete)
@@ -113,6 +131,9 @@ File: `my-supabase-project/supabase/migrations/20261124180000_g5_trust_autonomy_
    SELECT public.planner_migrate_f1_ledger('<ORG_UUID>'::uuid, false);
    ```
 4. Verifikasi ulang di UI `/app/finance-v2` (3 kartu ringkasan) & `/app/finance-v2/laporan` (tab Laba Rugi V1-layout, Neraca berstatus **Seimbang**, Arus Kas).
+5. Setelah Langkah 9–13 terpasang, pastikan:
+   - Profil pajak organisasi pada `planner_org_tax_configs` diisi oleh pemilik/konsultan pajak beserta `regulation_ref` & `verified_at` (sebelum diisi, modul pajak menolak menebak tarif dengan status `config_required`).
+   - Kebijakan awal `planner_autonomy_policies` diaktifkan pada level **`L1` (Asisten Draf + Konfirmasi Manusia)** dengan **Mode Bayangan aktif** (`planner_shadow_evaluations`). Jangan promosikan slice mana pun ke `L2` sebelum memenuhi `N >= 30` transaksi nyata, akurasi `>= 98%`, dan `0` kesalahan kritis (`D-G5-01`).
 
 ---
 
