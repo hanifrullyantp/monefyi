@@ -1,6 +1,7 @@
 import {
   clearEntryEngineStateForTests,
   commitEntry,
+  FINANCE_AGENT_INTENTS,
   FINANCE_EVENT_CODES,
   prepareEntry,
   recordFinanceCorrection,
@@ -14,6 +15,7 @@ import {
   type ConfidenceBand,
   type EntityCatalogItem,
   type FinanceAgentIntent,
+  type FinanceIntent,
   type OrgFinanceRule,
   type PrepareEntryInput,
   type PrepareEntryResult,
@@ -30,6 +32,7 @@ export function prepareFinanceEntry(input: PrepareEntryInput): PrepareEntryResul
 export {
   clearEntryEngineStateForTests,
   commitEntry,
+  FINANCE_AGENT_INTENTS,
   FINANCE_EVENT_CODES,
   prepareEntry,
   recordFinanceCorrection,
@@ -43,6 +46,7 @@ export {
   type ConfidenceBand,
   type EntityCatalogItem,
   type FinanceAgentIntent,
+  type FinanceIntent,
   type OrgFinanceRule,
   type PrepareEntryInput,
   type PrepareEntryResult,

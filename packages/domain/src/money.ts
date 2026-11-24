@@ -128,7 +128,7 @@ export function parseRupiah(input: string): RupiahResult {
 export function firstRupiah(input: string): RupiahResult {
   const number = '(?:\\d{1,3}(?:\\.\\d{3})+|\\d+(?:[.,]\\d+)?)';
   const re = new RegExp(
-    `(?:rp\\.?\\s*)?${number}(?:\\s*(?:juta|jt|ribu|rb|k))?(?:\\s+${number}\\s*(?:ribu|rb|k))?`,
+    `(?:rp\\.?\\s*)?${number}(?:\\s*(?:juta|jt)(?:\\s+${number}\\s*(?:ribu|rb|k))?|\\s*(?:ribu|rb|k))?`,
     'gi',
   );
   const unitAfter = new RegExp(`^\\s*(?:${UNIT_PATTERN})\\b`, 'i');
@@ -196,7 +196,7 @@ export function parseCostCommand(input: string): CostCommand | null {
   }
 
   const tail = rest.match(
-    /^(.+?)\s+(\d[\d.,]*(?:\s*(?:juta|jt|ribu|rb|k))?(?:\s+\d[\d.,]*\s*(?:ribu|rb|k))?)\s*$/i,
+    /^(.+?)\s+(\d[\d.,]*(?:\s*(?:juta|jt)(?:\s+\d[\d.,]*\s*(?:ribu|rb|k))?|\s*(?:ribu|rb|k))?)\s*$/i,
   );
   if (!tail) {
     return {

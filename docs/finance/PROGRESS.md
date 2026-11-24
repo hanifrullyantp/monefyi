@@ -59,6 +59,8 @@
 | **G0-Gate** | Laporan Gerbang Fase G0 (`G0-report.md`) | `DONE` | `feat/g0-7-8-staging-parity-report` | Laporan jujur status `G0-1`–`G0-8`, tabel sebelum vs sesudah dry-run sintetis, daftar & urutan migrasi SQL lokal (`BLOCKED remote`), bukti hasil tes aktual, & sisa risiko menuju `G1`. |
 | **G1-1** | Ekstraksi Nota/Struk/Invoice $\rightarrow$ Draf `prepare_entry` & Lampiran Bukti Terikat Jurnal | `DONE` | `feat/g1-1-receipt-extraction-attachment` | Parser deterministik `packages/domain/src/receiptExtraction.ts` (PPN, tanggal ID, SHA-256, skor keyakinan, deteksi prompt injection), `apps/web/src/lib/financeEntryEngine.ts`, `receiptAttachmentService.ts` (`extractReceiptToDraft` selalu draf & `bindAttachmentToJournal`), SQL lokal `20261124150000_g1_1_journal_attachments.sql` (`BLOCKED remote`, `ON DELETE RESTRICT`, RLS + trigger guard), & `receiptExtraction.test.ts`. |
 | **G1-2** | Impor Mutasi Bank (BCA/Mandiri/BRI/BNI/Generic CSV), Pencocokan Otomatis, & Rekonsiliasi Kas | `DONE` | `feat/g1-2-bank-statement-reconciliation` | Parser deterministik `packages/domain/src/bankStatement.ts` (`parseBankStatementCsv`, `matchBankStatementToLedger` tanpa auto-match kandidat ambigu, `reconcileCashVsBank` + `provenance`), `bankReconciliationService.ts`, SQL lokal `20261124151000_g1_2_bank_reconciliation.sql` (`BLOCKED remote`, `UNIQUE(org_id, wallet_account_id, row_hash)`, `ON DELETE RESTRICT`, RLS `is_org_member`), & `bankReconciliation.test.ts`. |
+| **G1-3** | Deteksi Duplikat & Nominal Janggal, 4 Intent Baru, & Evaluasi Held-Out/Adversarial | `DONE` | `feat/g1-3-duplicate-anomaly-intents-eval` | `packages/domain/src/anomalyDetection.ts` (`detectDuplicateEntry`, `detectAnomalousAmount`), 4 intent baru (`catat_invoice_terbit`, `catat_termin_diterima`, `catat_retensi`, `catat_gaji`) + penjaga prompt injection & safety downgrade di `financeEntryEngine.ts` (218/218 F3 tetap lulus), dev set `g1_dev_set.yaml` (20 kasus) & held-out adversarial `g1_heldout_adversarial.yaml` (30 kasus) (`0` salah auto-commit), & `g1AnomalyAndEval.test.ts`. |
+| **G1-Gate** | Laporan Gerbang Fase G1 (`G1-report.md`) | `DONE` | `feat/g1-3-duplicate-anomaly-intents-eval` | Ringkasan `G1-1`–`G1-3`, metrik dev vs held-out adversarial per kategori, pengakuan jujur data sintetis + format ekspor nota/mutasi anonim owner, bukti `typecheck`/`vitest`/`gate:docs`/`gate:rebrand`, & sisa risiko menuju `G2`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
@@ -70,8 +72,11 @@
 - [x] `G0-7`: Uji migrasi sintetis skala besar (`scripts/g0-staging-migration-dryrun.mjs` & `g0StagingDryRun.test.ts`).
 - [x] `G0-8`: Skrip uji paritas offline owner (`scripts/g0-owner-local-parity-check.mjs`, `g0OwnerParityScript.test.ts`, & panduan `DEPLOY-RUNBOOK.md`).
 - [x] `G0-Report`: Terbitkan `docs/finance/PHASES/G0-report.md` (Fase **G0** seluruhnya `DONE`).
-
-### Status Fase Berikutnya (`G1`)
 - [x] `G1-1`: Ekstraksi nota/struk/invoice $\rightarrow$ draf `prepare_entry` & lampiran bukti terikat jurnal (`receiptExtraction.ts`, `receiptAttachmentService.ts`, `20261124150000_g1_1_journal_attachments.sql`, & `receiptExtraction.test.ts`).
 - [x] `G1-2`: Impor mutasi bank (BCA/Mandiri/BRI/BNI/Generic CSV), pencocokan 1-to-1 deterministik (tanpa auto-match kandidat ambigu), & rekonsiliasi kas (`bankStatement.ts`, `bankReconciliationService.ts`, `20261124151000_g1_2_bank_reconciliation.sql`, & `bankReconciliation.test.ts`).
-- [ ] `G1-Deploy`: Menunggu tinjauan pemilik atas `docs/finance/PHASES/G0-report.md`, eksekusi manual migrasi SQL `F0`/`F1`/`G0`/`G1-1`/`G1-2` (`DEPLOY-RUNBOOK.md`), dan uji paritas offline pada data produksi via `scripts/g0-owner-local-parity-check.mjs --input <export.json>`.
+- [x] `G1-3`: Deteksi duplikat & nominal janggal (`anomalyDetection.ts`), 4 intent baru (`financeEntryEngine.ts`), evaluasi dev vs held-out adversarial (`g1_dev_set.yaml`, `g1_heldout_adversarial.yaml`, `g1AnomalyAndEval.test.ts`).
+- [x] `G1-Report`: Terbitkan `docs/finance/PHASES/G1-report.md` (Fase **G1** seluruhnya `DONE`).
+
+### Status Fase Berikutnya (`G2` — UI & Workflow Review Terpadu)
+- [ ] `G2-1`: Antarmuka review draf nota OCR, antrean duplikat/anomali, & pencocokan mutasi bank (`needs_review` + `confirm_one_tap` + `ask_back`).
+- [ ] `G2-2`: Validasi dataset nyata anonim dari pemilik (nota fisik & CSV mutasi bank riil) serta evaluasi lintas-model setelah eksekusi migrasi SQL `F0`–`G1` (`BLOCKED remote`).

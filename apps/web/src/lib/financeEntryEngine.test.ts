@@ -147,8 +147,8 @@ describe('F3 — Engine AI Pencatat 9 Intent (prepare_entry / commit_entry)', ()
     }
   });
 
-  it('mendukung seluruh 9 intent tertutup termasuk pemasukan, hutang, piutang, kasbon, transfer, tanya saldo, dan dividen wajib approval', () => {
-    expect(FINANCE_AGENT_INTENTS).toHaveLength(9);
+  it('mendukung seluruh 13 intent tertutup termasuk pemasukan, hutang, piutang, kasbon, transfer, tanya saldo, 4 intent G1, dan dividen wajib approval', () => {
+    expect(FINANCE_AGENT_INTENTS).toHaveLength(13);
 
     const dp = prepareEntry({ text: 'terima DP Proyek A dari Bu Ana 25jt kemarin', projects: PROJECTS, parties: PARTIES, wallets: WALLETS, now });
     expect(dp.ok && dp.status === 'prepared' && dp.eventCode).toBe('client_dp');

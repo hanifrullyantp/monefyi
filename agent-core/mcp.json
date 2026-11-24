@@ -157,7 +157,7 @@
     },
     {
       "name": "prepare_entry",
-      "description": "Siapkan transaksi 9 intent dengan klasifikasi server dan token 10 menit.",
+      "description": "Siapkan transaksi 13 intent dengan klasifikasi server dan token 10 menit.",
       "inputSchema": {
         "type": "object",
         "additionalProperties": false,
@@ -174,7 +174,11 @@
               "kasbon",
               "transfer_kas",
               "dividen",
-              "tanya_saldo"
+              "tanya_saldo",
+              "catat_invoice_terbit",
+              "catat_termin_diterima",
+              "catat_retensi",
+              "catat_gaji"
             ]
           },
           "text": {

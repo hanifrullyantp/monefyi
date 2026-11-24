@@ -1,0 +1,190 @@
+# G1 Dev Set — Evaluasi Pengembangan 4 Intent Baru, Duplikat, & Anomali Nominal (Sintetis)
+- id: dev_01_invoice_terbit
+  category: catat_invoice_terbit
+  input: terbitkan invoice Proyek A untuk Pak Hendra 35jt
+  expect_outcome: prepared
+  expect_intent: catat_invoice_terbit
+  expect_event: receivable_accrual
+  expect_amount: 35000000
+  expect_action: confirm_one_tap
+- id: dev_02_invoice_terbit_kirim
+  category: catat_invoice_terbit
+  input: kirim invoice proyek B kepada PT Citra Karya 18jt
+  expect_outcome: prepared
+  expect_intent: catat_invoice_terbit
+  expect_event: receivable_accrual
+  expect_amount: 18000000
+  expect_action: confirm_one_tap
+- id: dev_03_invoice_terbit_no_party
+  category: catat_invoice_terbit
+  input: terbitkan invoice Proyek A 15jt
+  expect_outcome: needs_choice
+  expect_intent: catat_invoice_terbit
+  expect_error: missing_party
+  forbid_auto_commit: true
+  is_safety_ask_back_case: true
+- id: dev_04_invoice_terbit_no_project
+  category: catat_invoice_terbit
+  input: buat invoice untuk PT Citra Karya 22jt
+  expect_outcome: needs_choice
+  expect_intent: catat_invoice_terbit
+  expect_error: missing_project
+  forbid_auto_commit: true
+  is_safety_ask_back_case: true
+- id: dev_05_termin_diterima
+  category: catat_termin_diterima
+  input: termin diterima Proyek A 40jt
+  expect_outcome: prepared
+  expect_intent: catat_termin_diterima
+  expect_event: client_termin
+  expect_amount: 40000000
+  expect_action: confirm_one_tap
+- id: dev_06_termin_diterima_dp_applied
+  category: catat_termin_diterima
+  input: pencairan termin 2 Proyek B 30jt
+  dp_applied: 10000000
+  expect_outcome: prepared
+  expect_intent: catat_termin_diterima
+  expect_event: client_termin
+  expect_amount: 30000000
+  expect_action: confirm_one_tap
+- id: dev_07_termin_diterima_explicit
+  category: catat_termin_diterima
+  input: masuk termin tahap 2 Rumah Pak Hendra 25jt
+  explicit_intent: catat_termin_diterima
+  use_similar_projects: true
+  expect_outcome: prepared
+  expect_intent: catat_termin_diterima
+  expect_event: client_termin
+  expect_amount: 25000000
+- id: dev_08_termin_no_project
+  category: catat_termin_diterima
+  input: pencairan termin 15jt
+  expect_outcome: needs_choice
+  expect_intent: catat_termin_diterima
+  expect_error: missing_project
+  forbid_auto_commit: true
+  is_safety_ask_back_case: true
+- id: dev_09_retensi_hold
+  category: catat_retensi
+  input: hold retensi Proyek A dari Pak Hendra 5jt
+  expect_outcome: prepared
+  expect_intent: catat_retensi
+  expect_event: client_retention_hold
+  expect_amount: 5000000
+- id: dev_10_retensi_release
+  category: catat_retensi
+  input: pencairan retensi Proyek B dari PT Citra Karya 4,5jt
+  expect_outcome: prepared
+  expect_intent: catat_retensi
+  expect_event: client_retention_release
+  expect_amount: 4500000
+- id: dev_11_retensi_no_party
+  category: catat_retensi
+  input: catat retensi Proyek A 3jt
+  expect_outcome: needs_choice
+  expect_intent: catat_retensi
+  expect_error: missing_party
+  forbid_auto_commit: true
+  is_safety_ask_back_case: true
+- id: dev_12_retensi_no_project
+  category: catat_retensi
+  input: release retensi dari PT Citra Karya 3jt
+  expect_outcome: needs_choice
+  expect_intent: catat_retensi
+  expect_error: missing_project
+  forbid_auto_commit: true
+  is_safety_ask_back_case: true
+- id: dev_13_gaji_tukang_proyek
+  category: catat_gaji
+  input: bayar gaji tukang Proyek A 2,5jt
+  expect_outcome: prepared
+  expect_intent: catat_gaji
+  expect_event: project_cost_labor
+  expect_amount: 2500000
+- id: dev_14_gaji_mandor_proyek
+  category: catat_gaji
+  input: transfer gaji mandor Proyek B 3,2jt
+  expect_outcome: prepared
+  expect_intent: catat_gaji
+  expect_event: project_cost_labor
+  expect_amount: 3200000
+- id: dev_15_gaji_staf_kantor
+  category: catat_gaji
+  input: payroll staf kantor bulan november 12jt
+  expect_outcome: prepared
+  expect_intent: catat_gaji
+  expect_event: opex_expense
+  expect_amount: 12000000
+- id: dev_16_gaji_tukang_no_project
+  category: catat_gaji
+  input: pembayaran gaji tukang 1,8jt
+  expect_outcome: needs_choice
+  expect_intent: catat_gaji
+  expect_error: missing_project
+  forbid_auto_commit: true
+  is_safety_ask_back_case: true
+- id: dev_17_dup_attachment_hash
+  category: duplicate_detection
+  input: beli paku proyek A 150rb
+  attachment_hash: sha256-nota-paku-001
+  existing_entries:
+    - entryId: je_prev_001
+      attachmentHash: sha256-nota-paku-001
+      projectId: proj-a
+      amount: 150000
+      entryDate: 2026-11-24
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 150000
+  expect_action: ask_back
+  expect_warning_prefix: duplikat_duplicate_attachment_hash
+  forbid_auto_commit: true
+  is_safety_ask_back_case: true
+- id: dev_18_dup_invoice_party
+  category: duplicate_detection
+  input: beli semen TB Maju Jaya proyek A 650rb
+  invoice_number: INV-MJ-2026-88
+  existing_entries:
+    - entryId: je_prev_002
+      invoiceNumber: INV-MJ-2026-88
+      partyId: sup-jaya
+      projectId: proj-a
+      amount: 650000
+      entryDate: 2026-11-23
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 650000
+  expect_action: ask_back
+  expect_warning_prefix: duplikat_duplicate_invoice_number
+  forbid_auto_commit: true
+  is_safety_ask_back_case: true
+- id: dev_19_anomali_rap_exceed
+  category: anomaly_detection
+  input: beli besi beton proyek B 800rb
+  rap_remaining_budget: 500000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 800000
+  expect_action: confirm_one_tap
+  expect_warning_prefix: nominal_janggal:exceeds_rap_remaining
+  forbid_auto_commit: true
+- id: dev_20_anomali_outlier
+  category: anomaly_detection
+  input: beli cat tembok proyek A 900rb
+  historical_amounts:
+    - 150000
+    - 180000
+    - 160000
+    - 175000
+    - 165000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 900000
+  expect_action: confirm_one_tap
+  expect_warning_prefix: nominal_janggal:statistical_outlier
+  forbid_auto_commit: true
