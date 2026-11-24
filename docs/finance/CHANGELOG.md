@@ -4,6 +4,28 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G1-3] 2026-11-24 — Deteksi Duplikat & Nominal Janggal, 4 Intent Baru, Evaluasi Held-Out/Adversarial, & Laporan Gerbang G1
+- **Branch / PR:** `feat/g1-3-duplicate-anomaly-intents-eval`
+- **Fase:** G1 (Alur Bukti, Mutasi Bank, Deteksi Duplikat/Anomali, & Evaluasi Adversarial — G1-3 & Gerbang G1)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/anomalyDetection.ts`:
+    - `detectDuplicateEntry(candidate, existingEntries, { dateWindowDays })`: mendeteksi duplikat kuat dari kesamaan `attachmentHash` (`reason: 'duplicate_attachment_hash'`, `severity: 'high'`), kesamaan `invoiceNumber` + `partyId` (`reason: 'duplicate_invoice_number'`, `severity: 'high'`), serta duplikat sedang dari nominal integer rupiah identik + selisih tanggal `<= dateWindowDays` (default 2 hari) + proyek/pihak sama (`reason: 'duplicate_amount_date_entity'`, `severity: 'medium'`), lengkap dengan `matches` & `provenance`.
+    - `detectAnomalousAmount(candidate, historicalAmounts, { rapRemainingBudget, highAmountThreshold, zScoreThreshold })`: mendeteksi nominal `<= 0` (`invalid_non_positive`), `>= highAmountThreshold` (default Rp 100.000.000, `above_approval_threshold`), `> 1.25 × rapRemainingBudget` (`exceeds_rap_remaining`), outlier statistik (`sampleCount >= 4` dan `zScore >= 2.5` atau `>= 4 × median`, `statistical_outlier`), serta indikasi salah ketik nol berlebih (`possible_extra_zero_typo`), mengembalikan `{ isAnomalous, flags, stats, requiresHumanConfirmation }`.
+  - Memperbarui `packages/domain/src/receiptExtraction.ts` (`detectPromptInjection`) dan `packages/domain/src/money.ts` (`firstRupiah` & `parseCostCommand` agar angka di akhir nama proyek seperti `"Ruko Bu Ana 1 500rb"` tidak salah bergabung menjadi token nominal tidak valid).
+  - Memperbarui `agent-core/src/financeEntryEngine.ts` (dan re-ekspor `apps/web/src/lib/financeEntryEngine.ts` + `agent-core/src/registry.ts` + artefak `docs/agent/AGENT_MANUAL.md`, `functions.json`, `mcp.json`, `fixtures.json`):
+    - Menambahkan 4 intent baru (`FINANCE_AGENT_INTENTS` = 13 intent, `FinanceIntent`): `catat_invoice_terbit` (`receivable_accrual`, wajib `project_id` + `party_id`), `catat_termin_diterima` (`client_termin`, wajib `project_id`), `catat_retensi` (`client_retention_hold` / `client_retention_release`, wajib `project_id` + `party_id`), dan `catat_gaji` (`project_cost_labor` vs `opex_expense`), sambil menjaga 100% klasifikasi 9 intent lama & 218 kasus gold F3.
+    - Menambahkan penjaga prompt injection (`prompt_injection_detected`) serta integrasi opsional `detectDuplicateEntry` & `detectAnomalousAmount` di `prepareEntry` yang menurunkan `auto_commit` menjadi `ask_back` / `confirm_one_tap` dengan `warnings` jelas (tingkat salah-auto-commit = 0).
+  - Menambahkan runner evaluasi G1 (`loadG1EvalCases`, `evaluateG1FinanceSet`) di `agent-core/src/financeEvalRunner.ts` dan dua dataset terpisah:
+    - `evals/finance/g1_dev_set.yaml` (20 kasus: 4 intent baru, duplikat, & anomali).
+    - `evals/finance/g1_heldout_adversarial.yaml` (30 kasus tahan/adversarial: typo, slang Indonesia, campur EN-ID, nominal janggal `possible_extra_zero_typo` & `Rp 250jt`, dua proyek mirip nama `Ruko Bu Ana 1` vs `Ruko Bu Ana 2`, prompt injection, duplikat, & 4 intent baru).
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/g1AnomalyAndEval.test.ts` & memperbarui assertion jumlah intent di `apps/web/src/lib/financeEntryEngine.test.ts`.
+  - Memperbarui `docs/finance/AGENT-GUIDE.md` (~1.302 token `<= 1.500`), menerbitkan laporan gerbang `docs/finance/PHASES/G1-report.md`, memperbarui `docs/finance/PROGRESS.md` (menandai Fase `G1` `DONE` & menyiapkan `G2`), dan `docs/finance/CHANGELOG.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru; 4 intent baru memetakan ke template tertutup eksisting (`receivable_accrual`, `client_termin`, `client_retention_hold`, `client_retention_release`, `project_cost_labor`, `opex_expense`).
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada PR ini.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g1AnomalyAndEval.test.ts`.
+- **Dampak ke Tool Agent:** `prepare_entry` kini mendukung 13 intent tertutup (9 lama + 4 G1), validasi prompt injection, serta warning duplikat & anomali nominal yang menurunkan `auto_commit` menjadi `ask_back`/`confirm_one_tap`.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G1-2] 2026-11-24 — Impor Mutasi Bank (BCA/Mandiri/BRI/BNI/Generic CSV), Pencocokan Otomatis, & Rekonsiliasi Kas
 - **Branch / PR:** `feat/g1-2-bank-statement-reconciliation`
 - **Fase:** G1 (Alur Bukti, Mutasi Bank, & Rekonsiliasi Kas — G1-2)

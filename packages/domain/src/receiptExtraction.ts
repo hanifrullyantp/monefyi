@@ -162,7 +162,7 @@ export function computeDeterministicSha256(input: Uint8Array | string): string {
   return Array.from(h, (word) => word.toString(16).padStart(8, '0')).join('');
 }
 
-const INJECTION_PATTERNS: RegExp[] = [
+export const CHAT_SAFE_INJECTION_PATTERNS: RegExp[] = [
   /ignore\s+(?:all\s+|any\s+)?(?:previous|prior|above)\s+instructions?/i,
   /disregard\s+(?:all\s+|previous\s+)?instructions?/i,
   /override\s+(?:system|safety|accounting|all)\s+rules?/i,
@@ -171,12 +171,31 @@ const INJECTION_PATTERNS: RegExp[] = [
   /\bauto[-_\s]?commit\b/i,
   /\bskip\s+(?:review|approval|verification)\b/i,
   /\bbypass\s+(?:approval|review|owner|guard)\b/i,
-  /\b(?:transfer|send\s+money|kirim\s+dana|ubah\s+rekening|ganti\s+rekening)\s+(?:to|ke)\b/i,
+  /\b(?:ubah\s+rekening|ganti\s+rekening)\s+(?:to|ke)\b/i,
   /\bcall\s+(?:commit_entry|prepare_entry|planner_post_journal)\b/i,
   /\bdebit\b[^.\n]{0,40}\bcredit\b/i,
-  /\babaikan\s+instruksi\s+sebelumnya\b/i,
+  /\b(?:abaikan|lupakan)\s+(?:semua\s+)?instruksi(?:\s+sebelumnya)?\b/i,
   /\bsetujui\s+otomatis\b/i,
+  /\btanpa\s+(?:review|approval|persetujuan|konfirmasi)\b/i,
 ];
+
+const INJECTION_PATTERNS: RegExp[] = [
+  ...CHAT_SAFE_INJECTION_PATTERNS,
+  /\b(?:transfer|send\s+money|kirim\s+dana)\s+(?:to|ke)\b/i,
+];
+
+export function detectPromptInjection(rawText: string): string[] {
+  const lines = String(rawText ?? '').replace(/\r\n?/g, '\n').split('\n');
+  const hits: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (CHAT_SAFE_INJECTION_PATTERNS.some((re) => re.test(trimmed))) {
+      hits.push(trimmed);
+    }
+  }
+  return hits;
+}
 
 const EXTRA_RECEIPT_UNITS = ['l', 'ltr', 'liter', 'ml', 'box', 'pak', 'pack', 'bks', 'bungkus', 'botol', 'btl', 'zak', 'm', 'cm', 'mm', 'jam', 'bln'];
 const ALL_UNITS_PATTERN = [...COST_UNITS, ...EXTRA_RECEIPT_UNITS]

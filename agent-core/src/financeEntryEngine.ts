@@ -1,5 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
+  detectAnomalousAmount,
+  detectDuplicateEntry,
+  type AmountAnomalyResult,
+  type DuplicateDetectionResult,
+  type ExistingDuplicateEntry,
+} from '../../packages/domain/src/anomalyDetection.ts';
+import {
   buildJournalTemplate,
   FINANCE_EVENT_CODES,
   linesAreBalanced,
@@ -15,6 +22,7 @@ import {
   parseRupiah,
   parseTanggal,
 } from '../../packages/domain/src/money.ts';
+import { detectPromptInjection } from '../../packages/domain/src/receiptExtraction.ts';
 
 export const FINANCE_AGENT_INTENTS = [
   'catat_biaya_proyek',
@@ -26,9 +34,14 @@ export const FINANCE_AGENT_INTENTS = [
   'transfer_kas',
   'dividen',
   'tanya_saldo',
+  'catat_invoice_terbit',
+  'catat_termin_diterima',
+  'catat_retensi',
+  'catat_gaji',
 ] as const;
 
 export type FinanceAgentIntent = (typeof FINANCE_AGENT_INTENTS)[number];
+export type FinanceIntent = FinanceAgentIntent;
 
 export type ConfidenceBand = 'high' | 'medium' | 'low';
 export type AgentNextAction = 'auto_commit' | 'confirm_one_tap' | 'ask_back' | 'read_only';
@@ -73,6 +86,15 @@ export type PrepareEntryInput = {
   amount?: number;
   entryDate?: string;
   subType?: 'dp' | 'termin' | 'pelunasan' | 'retensi_tahan' | 'retensi_cair' | 'proyek' | 'bisnis' | 'opex' | 'aset_tetap';
+  dpApplied?: number;
+  attachmentHash?: string;
+  invoiceNumber?: string;
+  existingEntries?: ExistingDuplicateEntry[];
+  historicalAmounts?: number[];
+  rapRemainingBudget?: number;
+  duplicateDateWindowDays?: number;
+  highAmountThresholdIdr?: number;
+  zScoreThreshold?: number;
   projects?: EntityCatalogItem[];
   parties?: EntityCatalogItem[];
   wallets?: EntityCatalogItem[];
@@ -109,6 +131,9 @@ export type PrepareEntryResult =
     requiresOwnerApproval: boolean;
     summary: string;
     lines: TemplateLine[];
+    warnings?: string[];
+    duplicateCheck?: DuplicateDetectionResult;
+    anomalyCheck?: AmountAnomalyResult;
     meta: {
       source: 'agent';
       model: string;
@@ -136,10 +161,12 @@ export type PrepareEntryResult =
       code:
       | 'entity_ambiguous'
       | 'missing_project'
+      | 'missing_party'
       | 'missing_amount'
       | 'missing_wallet'
       | 'confirm_asset_vs_opex'
       | 'personal_expense_blocked'
+      | 'prompt_injection_detected'
       | 'periode_terkunci'
       | 'nominal_tidak_valid'
       | 'intent_unknown';
@@ -392,8 +419,8 @@ function hasAssetKeyword(norm: string): boolean {
 }
 
 function detectIncomeSubType(norm: string): 'dp' | 'termin' | 'pelunasan' | 'retensi_tahan' | 'retensi_cair' | null {
-  if (/\b(retensi.*cair|cair.*retensi|cairkan retensi|pelunasan retensi)\b/.test(norm)) return 'retensi_cair';
-  if (/\b(tahan retensi|potong retensi|retensi)\b/.test(norm)) return 'retensi_tahan';
+  if (/\b(retensi.*cair|cair.*retensi|cairkan retensi|pelunasan retensi|release\s+retensi|retensi\s+release|pencairan\s+retensi|retention\s+release)\b/.test(norm)) return 'retensi_cair';
+  if (/\b(tahan retensi|potong retensi|hold\s+retensi|retensi\s+hold|penahanan\s+retensi|retention\s+hold|retensi)\b/.test(norm)) return 'retensi_tahan';
   if (/\b(dp|uang muka|down payment|tanda jadi)\b/.test(norm)) return 'dp';
   if (/\b(pelunasan|lunasi|lunas|sisa bayar klien|penutup)\b/.test(norm)) return 'pelunasan';
   if (/\b(termin|progres|progress|angsuran proyek)\b/.test(norm)) return 'termin';
@@ -413,11 +440,11 @@ function inferRapCategory(norm: string): {
     return { rapType: 'equipment', confidence: 0.92 };
   }
   // 3. Tenaga kerja sebelum material ("upah borongan cat", "kuli angkut semen", "tukang keramik", "jasa pemasangan kusen")
-  if (/\b(tukang|mandor|pekerja|kuli|kenek|borongan|borong|upah|tenaga kerja|gaji lapangan|lembur|harian|jasa pemasangan|jasa instalasi|jasa perakitan)\b/.test(norm)) {
+  if (/\b(tukang|mandor|pekerja|kuli|kenek|borongan|borong|upah|tenaga kerja|gaji lapangan|lembur|harian|jasa pemasangan|jasa instalasi|jasa perakitan|ongkos tukang|worker wage)\b/.test(norm)) {
     return { rapType: 'labor', confidence: 0.94 };
   }
   // 4. Material
-  if (/\b(semen|mortar|pasir|batu|split|bata|hebel|besi|engsel|pintu|keramik|granit|cat|kuas|paku|baut|sekrup|kayu|triplek|pipa|paralon|pvc|kabel|lampu|downlight|saklar|stop kontak|kran|lem|gypsum|baja ringan|genteng|spandek|seng|kaca|kusen|atap|plafon|thinner|amplas|waterproofing|gembok|kunci|aksesoris|perlengkapan|material|bahan)\b/.test(norm)) {
+  if (/\b(semen|cement|smn|mortar|pasir|batu|split|bata|hebel|besi|engsel|pintu|keramik|granit|cat|kuas|paku|baut|sekrup|kayu|triplek|pipa|paralon|pvc|kabel|lampu|downlight|saklar|stop kontak|kran|lem|gypsum|baja ringan|genteng|spandek|seng|kaca|kusen|atap|plafon|thinner|amplas|waterproofing|gembok|kunci|aksesoris|perlengkapan|material|bahan)\b/.test(norm)) {
     return { rapType: 'material', confidence: 0.94 };
   }
   return { rapType: 'other', confidence: 0.62 };
@@ -427,7 +454,7 @@ function inferOpexCategory(norm: string): string {
   if (/\b(listrik|pln|air|pdam|token listrik)\b/.test(norm)) return 'Listrik & Air';
   if (/\b(internet|wifi|indihome|telkom|paket data kantor)\b/.test(norm)) return 'Internet & Telepon';
   if (/\b(sewa kantor|sewa gudang|sewa workshop|kontrakan kantor)\b/.test(norm)) return 'Sewa Kantor';
-  if (/\b(gaji admin|staff kantor|akuntan|admin|bpjs)\b/.test(norm)) return 'Gaji Admin';
+  if (/\b(gaji admin|gaji staf|gaji staff|gaji karyawan|gaji pegawai|payroll|staff kantor|staf kantor|akuntan|admin|bpjs)\b/.test(norm)) return 'Gaji Admin';
   if (/\b(bensin|bbm|solar|transport|ojol|kurir kantor|tol)\b/.test(norm)) return 'Transport & BBM';
   if (/\b(atk|kertas|tinta|alat tulis|pantry|sabun|sapu|kebersihan|papan tulis|kopi)\b/.test(norm)) return 'Bahan Habis Pakai';
   if (/\b(pajak|perizinan|notaris|npwp|retribusi|reklame)\b/.test(norm)) return 'Pajak & Perizinan';
@@ -454,6 +481,18 @@ function detectIntent(
   if (/\b(terima piutang|pelunasan piutang|tagihan klien.*masuk|klien lunasi piutang|lunasi piutang|bayar piutang|penagihan)\b/.test(norm)) {
     return { intent: 'terima_piutang', confidence: 0.93 };
   }
+  if (/\b((?:terbit(?:kan)?|kirim|buat|cetak|issue|send)\s+(?:invoice|inv|faktur|tagihan)|invoice\s+terbit|faktur\s+terbit|tagihan\s+(?:keluar|proyek\s+ke))\b/.test(norm)) {
+    return { intent: 'catat_invoice_terbit', confidence: 0.94 };
+  }
+  if (/\b(termin\s+diterima|pencairan\s+termin|cair(?:kan|in)?\s+termin|klaim\s+termin|terima\s+pembayaran\s+termin|progress\s+payment\s+received|received\s+termin)\b/.test(norm)) {
+    return { intent: 'catat_termin_diterima', confidence: 0.94 };
+  }
+  if (/\b(catat\s+retensi|hold\s+retensi|release\s+retensi|retensi\s+(?:hold|release)|pencairan\s+retensi|penahanan\s+retensi|uang\s+retensi\s+ditahan|retention\s+(?:hold|release))\b/.test(norm)) {
+    return { intent: 'catat_retensi', confidence: 0.93 };
+  }
+  if (/\b(payroll|gaji\s+(?:bulanan|pegawai|karyawan|staf|staff|mandor|tukang)|thr\s+(?:karyawan|tukang|staf|staff)|slip\s+gaji|transfer\s+gaji|pembayaran\s+gaji|bayar\s+gaji\s+(?:karyawan|pegawai|staf|staff|tukang|mandor))\b/.test(norm)) {
+    return { intent: 'catat_gaji', confidence: 0.93 };
+  }
   if (/\b(terima\s+transfer\s+klien|klien\s+(bayar|lunasi|lunas)|dp|uang muka|termin|pelunasan|retensi|invoice dibayar)\b/.test(norm)) {
     return { intent: 'catat_pemasukan', confidence: 0.92 };
   }
@@ -466,7 +505,7 @@ function detectIntent(
   if (isWorkshopOrBusinessOpexCue(norm, hasChosenProject)) {
     return { intent: 'catat_opex', confidence: 0.91 };
   }
-  if (/\b(beli|belanja|bl|bayar|byr|catat|sewa|upah|pengadaan|borong|borongan|jasa|beli bahan|biaya|pengeluaran|ongkir)\b/.test(norm)) {
+  if (/\b(beli|belanja|bl|blj|bayar|byr|catat|sewa|upah|pengadaan|borong|borongan|jasa|beli bahan|biaya|pengeluaran|ongkir|purchase|buy)\b/.test(norm)) {
     return { intent: 'catat_biaya_proyek', confidence: 0.88 };
   }
   if (/\b(terima|masuk|lunasi)\b/.test(norm)) {
@@ -536,6 +575,22 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
   const capThreshold = input.capitalizationThresholdIdr ?? DEFAULT_CAP_THRESHOLD_IDR;
   const autoThreshold = input.autoCommitThresholdIdr ?? DEFAULT_AUTO_COMMIT_THRESHOLD_IDR;
   const model = input.model || 'deterministic-v3';
+
+  if (detectPromptInjection(rawText).length > 0) {
+    return {
+      ok: false,
+      status: 'rejected',
+      intent: 'unknown',
+      confidence: 0,
+      confidenceBand: 'low',
+      action: 'ask_back',
+      error: {
+        code: 'prompt_injection_detected',
+        next: 'Teks mengandung instruksi tidak sah. Kirim ulang detail transaksi (nominal, tanggal, proyek) tanpa perintah sistem.',
+      },
+      summary: 'Terdeteksi indikasi prompt injection; transaksi ditolak dan wajib tinjauan manual.',
+    };
+  }
 
   if (isPersonalExpense(norm)) {
     return {
@@ -891,6 +946,121 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
             : sub === 'retensi_cair'
               ? 'client_retention_release'
               : 'client_retention_hold';
+  } else if (intent === 'catat_invoice_terbit') {
+    if (!projectId) {
+      return {
+        ok: false,
+        status: projects.length > 0 ? 'needs_choice' : 'ask_back',
+        intent,
+        confidence: 0.5,
+        confidenceBand: 'low',
+        action: 'ask_back',
+        error: {
+          code: 'missing_project',
+          next: 'Pilih proyek (project_id) untuk penerbitan invoice.',
+        },
+        summary: 'Proyek belum disebutkan untuk penerbitan invoice.',
+        candidates: projects.slice(0, 5).map((p) => ({ id: p.id, label: p.name })),
+      };
+    }
+    if (!partyId) {
+      return {
+        ok: false,
+        status: parties.length > 0 ? 'needs_choice' : 'ask_back',
+        intent,
+        confidence: 0.5,
+        confidenceBand: 'low',
+        action: 'ask_back',
+        error: {
+          code: 'missing_party',
+          next: 'Pilih pihak/klien (party_id) untuk penerbitan invoice.',
+        },
+        summary: 'Pihak/klien belum disebutkan untuk penerbitan invoice.',
+        candidates: parties.slice(0, 5).map((p) => ({ id: p.id, label: p.name })),
+      };
+    }
+    eventCode = 'receivable_accrual';
+  } else if (intent === 'catat_termin_diterima') {
+    if (!projectId) {
+      return {
+        ok: false,
+        status: projects.length > 0 ? 'needs_choice' : 'ask_back',
+        intent,
+        confidence: 0.5,
+        confidenceBand: 'low',
+        action: 'ask_back',
+        error: {
+          code: 'missing_project',
+          next: 'Pilih proyek (project_id) untuk penerimaan termin.',
+        },
+        summary: 'Proyek belum disebutkan untuk penerimaan termin.',
+        candidates: projects.slice(0, 5).map((p) => ({ id: p.id, label: p.name })),
+      };
+    }
+    eventCode = 'client_termin';
+  } else if (intent === 'catat_retensi') {
+    if (!projectId) {
+      return {
+        ok: false,
+        status: projects.length > 0 ? 'needs_choice' : 'ask_back',
+        intent,
+        confidence: 0.5,
+        confidenceBand: 'low',
+        action: 'ask_back',
+        error: {
+          code: 'missing_project',
+          next: 'Pilih proyek (project_id) untuk transaksi retensi.',
+        },
+        summary: 'Proyek belum disebutkan untuk transaksi retensi.',
+        candidates: projects.slice(0, 5).map((p) => ({ id: p.id, label: p.name })),
+      };
+    }
+    if (!partyId) {
+      return {
+        ok: false,
+        status: parties.length > 0 ? 'needs_choice' : 'ask_back',
+        intent,
+        confidence: 0.5,
+        confidenceBand: 'low',
+        action: 'ask_back',
+        error: {
+          code: 'missing_party',
+          next: 'Pilih pihak/klien (party_id) untuk transaksi retensi.',
+        },
+        summary: 'Pihak/klien belum disebutkan untuk transaksi retensi.',
+        candidates: parties.slice(0, 5).map((p) => ({ id: p.id, label: p.name })),
+      };
+    }
+    const sub =
+      input.subType === 'retensi_cair' || input.subType === 'retensi_tahan'
+        ? input.subType
+        : detectIncomeSubType(norm);
+    eventCode = sub === 'retensi_cair' ? 'client_retention_release' : 'client_retention_hold';
+  } else if (intent === 'catat_gaji') {
+    const hasLaborCue = /\b(tukang|mandor|kenek|kuli|borongan|lapangan|upah|pekerja\s+proyek)\b/.test(norm);
+    const hasOfficeCue = /\b(kantor|admin|staf|staff|office|hrd|akuntan|operasional|opex|pegawai\s+kantor|karyawan\s+kantor)\b/.test(norm);
+    if (projectId && (!hasOfficeCue || hasLaborCue)) {
+      rapType = 'labor';
+      eventCode = 'project_cost_labor';
+    } else if (hasLaborCue && !projectId && !hasOfficeCue) {
+      return {
+        ok: false,
+        status: projects.length > 0 ? 'needs_choice' : 'ask_back',
+        intent,
+        confidence: 0.5,
+        confidenceBand: 'low',
+        action: 'ask_back',
+        error: {
+          code: 'missing_project',
+          next: 'Pilih proyek untuk upah/gaji tukang lapangan atau sebutkan gaji staf kantor.',
+        },
+        summary: 'Proyek untuk gaji/upah lapangan belum disebutkan.',
+        candidates: projects.slice(0, 5).map((p) => ({ id: p.id, label: p.name })),
+      };
+    } else {
+      opexCategory = 'Gaji Admin';
+      eventCode = 'opex_expense';
+    }
   } else if (intent === 'bayar_hutang') {
     eventCode = 'payable_payment';
   } else if (intent === 'terima_piutang') {
@@ -926,7 +1096,11 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
     };
   }
 
-  const lines = buildJournalTemplate(eventCode, amount);
+  const lines = buildJournalTemplate(
+    eventCode,
+    amount,
+    eventCode === 'client_termin' && input.dpApplied != null ? { dpApplied: input.dpApplied } : undefined,
+  );
   if (!linesAreBalanced(lines)) {
     throw new Error(`Template tidak seimbang untuk ${eventCode}`);
   }
@@ -939,6 +1113,71 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
   );
   // Catatan: biaya proyek & piutang tanpa partyId tetap valid bila opex; di sini validasi dimensi untuk proyek
   void dimCheck;
+
+  const warnings: string[] = [];
+  let duplicateCheck: DuplicateDetectionResult | undefined;
+  let anomalyCheck: AmountAnomalyResult | undefined;
+
+  if (input.existingEntries && input.existingEntries.length > 0) {
+    const dup = detectDuplicateEntry(
+      {
+        attachmentHash: input.attachmentHash,
+        invoiceNumber: input.invoiceNumber,
+        partyId,
+        projectId,
+        amount,
+        entryDate: dateParsed.date,
+      },
+      input.existingEntries,
+      { dateWindowDays: input.duplicateDateWindowDays },
+    );
+    if (dup.isDuplicate) {
+      duplicateCheck = dup;
+      for (const m of dup.matches) {
+        warnings.push(`duplikat_${m.reason}:${m.entryId}`);
+      }
+    }
+  }
+
+  const highThreshold = input.highAmountThresholdIdr ?? 100_000_000;
+  const shouldRunAnomalyCheck =
+    (input.historicalAmounts && input.historicalAmounts.length > 0)
+    || input.rapRemainingBudget != null
+    || amount >= highThreshold;
+  if (shouldRunAnomalyCheck) {
+    const anom = detectAnomalousAmount(
+      { amount, rapRemainingBudget: input.rapRemainingBudget },
+      input.historicalAmounts || [],
+      {
+        rapRemainingBudget: input.rapRemainingBudget,
+        highAmountThreshold: highThreshold,
+        zScoreThreshold: input.zScoreThreshold,
+      },
+    );
+    if (anom.isAnomalous) {
+      anomalyCheck = anom;
+      for (const f of anom.flags) {
+        warnings.push(`nominal_janggal:${f}`);
+      }
+    }
+  }
+
+  if (duplicateCheck?.isDuplicate) {
+    bandInfo.action = 'ask_back';
+    bandInfo.band = 'low';
+    requiresOwnerApproval = true;
+  } else if (anomalyCheck?.isAnomalous) {
+    if (anomalyCheck.flags.includes('possible_extra_zero_typo') || anomalyCheck.flags.includes('invalid_non_positive')) {
+      bandInfo.action = 'ask_back';
+      bandInfo.band = 'low';
+    } else {
+      if (bandInfo.action === 'auto_commit') bandInfo.action = 'confirm_one_tap';
+      if (bandInfo.band === 'high') bandInfo.band = 'medium';
+    }
+    if (anomalyCheck.requiresHumanConfirmation) {
+      requiresOwnerApproval = true;
+    }
+  }
 
   const token = `prep_${randomUUID()}`;
   const expiresAt = nowMs + TEN_MINUTES_MS;
@@ -989,6 +1228,9 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
     requiresOwnerApproval,
     summary,
     lines,
+    ...(warnings.length > 0 ? { warnings } : {}),
+    ...(duplicateCheck ? { duplicateCheck } : {}),
+    ...(anomalyCheck ? { anomalyCheck } : {}),
     meta: {
       source: 'agent',
       model,

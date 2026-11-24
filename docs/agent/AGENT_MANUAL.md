@@ -70,11 +70,11 @@ Risiko: commit. Peran minimum: worker.
 
 ## prepare_entry
 
-Siapkan transaksi 9 intent dengan klasifikasi server dan token 10 menit.
+Siapkan transaksi 13 intent dengan klasifikasi server dan token 10 menit.
 
 Risiko: prepare. Peran minimum: worker.
 
-- `intent` (string, wajib): Jenis kejadian keuangan tertutup. Pilihan: catat_biaya_proyek, catat_opex, catat_pemasukan, bayar_hutang, terima_piutang, kasbon, transfer_kas, dividen, tanya_saldo.
+- `intent` (string, wajib): Jenis kejadian keuangan tertutup. Pilihan: catat_biaya_proyek, catat_opex, catat_pemasukan, bayar_hutang, terima_piutang, kasbon, transfer_kas, dividen, tanya_saldo, catat_invoice_terbit, catat_termin_diterima, catat_retensi, catat_gaji.
 - `text` (string, wajib): Kalimat transaksi lengkap pengguna.
 - `project_id` (string): Id proyek terverifikasi.
 - `party_id` (string): Id pihak terverifikasi.
