@@ -84,6 +84,46 @@ File: `my-supabase-project/supabase/migrations/20261124145000_g0_6_party_id_and_
 
 ---
 
+## Uji Simulasi Skala Besar & Uji Paritas Offline Lokal Pemilik (`G0-7` & `G0-8`)
+
+### A. Simulasi Migrasi Sintetis Skala Besar (`G0-7`)
+Untuk memverifikasi logika reklasifikasi F1 & Neraca secara lokal pada dataset sintetis besar (25 proyek, 350 biaya, 150 pemasukan, total 596 transaksi) tanpa menyentuh DB remote:
+```bash
+node scripts/g0-staging-migration-dryrun.mjs
+```
+Skrip keluar dengan exit code `0` hanya jika `matched === true && balanceSheetBalanced === true && expenseInAktiva === 0`.
+
+### B. Uji Paritas Data Nyata Secara 100% Offline (`G0-8`)
+Skrip `scripts/g0-owner-local-parity-check.mjs` berjalan **100% offline** (hanya membaca file JSON lokal, tanpa modul jaringan apa pun; data produksi tidak pernah meninggalkan mesin pemilik).
+
+1. **Uji cepat dengan data sintetis bawaan:**
+   ```bash
+   node scripts/g0-owner-local-parity-check.mjs --demo-synthetic
+   ```
+2. **Ekspor data lokal dari DB produksi (dilakukan manual oleh pemilik melalui SQL Editor / `psql` / ekspor JSON privat di mesin lokal, jangan di-commit ke Git):**
+   Jalankan query berikut di Supabase SQL Editor atau koneksi `psql` privat untuk membentuk satu objek JSON berisi 6 tabel:
+   ```sql
+   SELECT jsonb_build_object(
+     'project_incomes', COALESCE((SELECT jsonb_agg(t) FROM planner_project_incomes t), '[]'::jsonb),
+     'cost_realizations', COALESCE((SELECT jsonb_agg(t) FROM planner_cost_realizations t), '[]'::jsonb),
+     'opex_realizations', COALESCE((SELECT jsonb_agg(t) FROM planner_opex_realizations t), '[]'::jsonb),
+     'journal_entries', COALESCE((SELECT jsonb_agg(t) FROM planner_journal_entries t), '[]'::jsonb),
+     'journal_lines', COALESCE((SELECT jsonb_agg(t) FROM planner_journal_lines t), '[]'::jsonb),
+     'finance_accounts', COALESCE((SELECT jsonb_agg(t) FROM planner_finance_accounts t), '[]'::jsonb)
+   ) AS owner_export;
+   ```
+   Simpan hasil JSON tersebut ke file lokal di luar repo (mis. `~/Downloads/froyek-owner-export.json`).
+3. **Jalankan pengecekan paritas offline:**
+   ```bash
+   node scripts/g0-owner-local-parity-check.mjs --input ~/Downloads/froyek-owner-export.json
+   ```
+4. **Periksa hasil laporan JSON:**
+   - Pastikan seluruh angka `comparison` (`totalPendapatan`, `totalHpp`, `totalOpex`, `labaBersih`, `totalKas`) berstatus `"matched": true` dan `neraca.isBalanced === true` dengan `expenseInAktiva === 0`.
+   - Tinjau bagian `anomalies`: pastikan `missingJournalEntryIdCount === 0`, `unbalancedJournalsCount === 0`, serta tindak lanjuti item `needsReviewLines` (jika ada biaya tanpa item RAP).
+   - Hapus file ekspor lokal setelah selesai jika tidak diperlukan lagi; **jangan pernah meng-commit file ekspor data produksi ke Git**.
+
+---
+
 ## Prosedur Rollback Darurat
 - **Rollback Kode Aplikasi:** `git revert` commit merge PR bermasalah dan re-deploy aplikasi web.
 - **Rollback Skema DB:** Kembalikan snapshot database pra-migrasi yang diambil pada tahap Prasyarat (jurnal tidak boleh dihapus/diedit manual; gunakan backup penuh jika perlu membatalkan migrasi skema).

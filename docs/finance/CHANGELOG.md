@@ -4,6 +4,21 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G0-7/G0-8] 2026-11-24 — Uji Migrasi Sintetis Skala Besar, Paritas Lokal Offline Owner, & Laporan Gerbang G0
+- **Branch / PR:** `feat/g0-7-8-staging-parity-report`
+- **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-7, G0-8, & Penutupan Gerbang G0)
+- **Perubahan & Alasan:**
+  - **G0-7:** Menambahkan skrip CLI mandiri Node ESM `scripts/g0-staging-migration-dryrun.mjs` (+ definisi tipe `scripts/g0-staging-migration-dryrun.d.mts`) dengan PRNG deterministik Mulberry32 yang membangkitkan dataset sintetis besar (**25 proyek, 350 realisasi biaya 6 tipe RAP termasuk uncategorized, 150 pemasukan DP/termin/pelunasan/retensi, piutang, hutang, modal, dividen — total 596 transaksi**) dan menguji rekonsiliasi F1 serta Neraca pasca-migrasi.
+  - **G0-7 Tes:** Menambahkan `apps/web/src/lib/financeV2/__tests__/g0StagingDryRun.test.ts` yang menjalankan `reconcileF1Migration` nyata (`dryRun: true` lalu `dryRun: false`) dan `buildBalanceSheetFromBalances` pada dataset sintetis besar (non-mutasi dry-run, keseimbangan 485 jurnal reklasifikasi, `matched === true`, kesetaraan `kas`/`piutang`/`hutang`/`netProfit + dpReclassified`/`uangMukaKlien`, Neraca seimbang, dan 0 akun beban di `aktiva[]`).
+  - **G0-8:** Menambahkan skrip 100% **offline** `scripts/g0-owner-local-parity-check.mjs` (+ `scripts/g0-owner-local-parity-check.d.mts`) dengan mode `--input <path-ke-export.json>` dan `--demo-synthetic` untuk membandingkan laporan operasional (`project_incomes`, `cost_realizations`, `opex_realizations`, mengecualikan `status IN ('dividend','cancelled')` & `deleted_at != null`) vs buku besar (`journal_entries`, `journal_lines`, `finance_accounts`) pada Total Pendapatan, Total HPP, Total Opex, Laba Bersih, Total Kas, Neraca (`isBalanced`, bebas beban di aktiva), serta melaporkan anomali (`missingJournalEntryId`, `unbalancedJournals`, `needs_review = true`).
+  - **G0-8 Tes:** Menambahkan `apps/web/src/lib/financeV2/__tests__/g0OwnerParityScript.test.ts` dengan uji statis keamanan offline (terbukti bebas modul/API jaringan), uji `--demo-synthetic`, dan uji deteksi anomali via `--input`.
+  - **Dokumentasi & Gerbang G0:** Menerbitkan `docs/finance/PHASES/G0-report.md`, menambahkan panduan ekspor & eksekusi lokal owner pada `docs/finance/DEPLOY-RUNBOOK.md`, dan memperbarui `docs/finance/PROGRESS.md` (menandai seluruh `G0-1`..`G0-8` `DONE` dan menyiapkan `G1`).
+- **Akun / Template Jurnal Tersentuh:** Tidak mengubah logika runtime aplikasi atau skema DB; memverifikasi seluruh akun COA F1 (`kas`, `piutang`, `hutang_dagang`, `uang_muka_klien`, `modal_disetor`, `dividen`, `laba`, `pendapatan_proyek`, `hpp_*`, `beban_opex`) melalui simulasi & skrip paritas offline.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada PR ini (seluruh migrasi G0 `g0_1`, `g0_3`, `g0_4`, `g0_2`, `g0_5`, `g0_6` tetap lokal berstatus `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g0StagingDryRun.test.ts`, `apps/web/src/lib/financeV2/__tests__/g0OwnerParityScript.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool agent.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G0-6] 2026-11-24 — Identitas Pihak via `party_id` & Pinjaman Antar Proyek via Jurnal Double-Entry
 - **Branch / PR:** `feat/g0-6-party-id-interproject-loan`
 - **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-6)
