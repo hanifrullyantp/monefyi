@@ -4,6 +4,20 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F1-T1] 2026-11-24 — COA Baru, Dimensi Proyek/Pihak, & Template Kejadian Tertutup
+- **Branch / PR:** `finance/F1-T1-coa-project-party-templates`
+- **Fase:** F1 (Akun Baru & Dimensi Proyek)
+- **Perubahan & Alasan:**
+  - Memperluas `AccountType` dan `ACCOUNT_TYPE_LABEL` di `apps/web/src/types/financeV2.ts` dengan akun-akun F1 (`pendapatan_proyek`, `uang_muka_klien`, `piutang_retensi`, `hpp_material`, `hpp_labor`, `hpp_equipment`, `hpp_overhead`, `hpp_other`, `hpp_uncategorized`, `beban_opex`, `beban_penyusutan`, `akumulasi_penyusutan`, `dividen`), sambil menjaga kompatibilitas `laba`.
+  - Menambahkan helper `hppAccountTypeForRapType` dan `computePeriodProfitFromAccounts` di `accountService.ts`.
+  - Memperluas `packages/domain/src/journal.ts` dengan 24 enum kejadian tertutup (`FINANCE_EVENT_CODES`), builder `buildJournalTemplate`, template lengkap (DP klien, termin potong DP, retensi, opex, akrual hutang/piutang, kasbon, penyusutan, dividen, tutup proyek/periode), serta validator dimensi `validateJournalDimensions` (`project_id` & `party_id`).
+  - Memperbarui `docs/finance/PROGRESS.md` dan `docs/finance/PHASES/F1-plan.md`.
+- **Akun / Template Jurnal Tersentuh:** Seluruh 24 kejadian di `FINANCE_EVENT_CODES` dan COA F1.
+- **Migrasi SQL:** Disiapkan pada PR `F1-T2`.
+- **Tes Ditambah:** `apps/web/src/lib/domainJournal.test.ts` (tes seluruh 24 template + dimensi + mapping RAP).
+- **Dampak ke Tool Agent:** Menyediakan enum kejadian tertutup `FINANCE_EVENT_CODES` untuk tool F3.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [F0-T9] 2026-11-24 — Gerbang Agent-Ready F0, Tes Invarian Buku Besar, & Laporan F0
 - **Branch / PR:** `finance/F0-T9-invariants-agent-gate-report`
 - **Fase:** F0 (Kebenaran — Gerbang Akhir Fase)

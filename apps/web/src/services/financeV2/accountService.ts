@@ -136,6 +136,34 @@ export async function updateAccountBalance(accountId: string, newBalance: number
   if (error) throw new Error(error.message);
 }
 
+export function hppAccountTypeForRapType(rapType?: string | null): AccountType {
+  const key = String(rapType || '').trim().toLowerCase();
+  if (key === 'material') return 'hpp_material';
+  if (key === 'labor' || key === 'tenaga' || key === 'tukang') return 'hpp_labor';
+  if (key === 'equipment' || key === 'alat') return 'hpp_equipment';
+  if (key === 'overhead') return 'hpp_overhead';
+  if (key === 'other' || key === 'lain' || key === 'lainnya') return 'hpp_other';
+  return 'hpp_uncategorized';
+}
+
+export function isHppAccountType(type: AccountType | string): boolean {
+  return String(type).startsWith('hpp_');
+}
+
+export function computePeriodProfitFromAccounts(
+  accounts: Pick<FinanceAccount, 'type' | 'current_balance'>[],
+): number {
+  let profit = 0;
+  for (const a of accounts) {
+    if (a.type === 'pendapatan_proyek' || a.type === 'laba') {
+      profit += a.current_balance;
+    } else if (isHppAccountType(a.type) || a.type === 'beban_opex' || a.type === 'beban_penyusutan') {
+      profit -= a.current_balance;
+    }
+  }
+  return Math.round(profit);
+}
+
 export function rollupByCategory(accounts: FinanceAccount[]): { aktiva: number; pasiva: number } {
   let aktiva = 0;
   let pasiva = 0;
