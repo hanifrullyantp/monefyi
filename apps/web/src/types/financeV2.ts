@@ -4,14 +4,27 @@ export type FinanceVersion = 'v1' | 'v2' | 'v3';
 export type AccountType =
   | 'kas'
   | 'piutang'
+  | 'piutang_retensi'
+  | 'uang_muka_klien'
   | 'stok'
   | 'aset_tetap'
+  | 'akumulasi_penyusutan'
   | 'prabayar'
   | 'hutang_dagang'
   | 'hutang_pajak'
   | 'hutang_lain'
   | 'modal_disetor'
+  | 'dividen'
   | 'laba_ditahan'
+  | 'pendapatan_proyek'
+  | 'hpp_material'
+  | 'hpp_labor'
+  | 'hpp_equipment'
+  | 'hpp_overhead'
+  | 'hpp_other'
+  | 'hpp_uncategorized'
+  | 'beban_opex'
+  | 'beban_penyusutan'
   | 'laba';
 
 export type AccountCategory = 'aktiva' | 'pasiva';
@@ -70,6 +83,8 @@ export interface JournalLine {
   debit: number;
   credit: number;
   notes: string | null;
+  project_id?: string | null;
+  party_id?: string | null;
 }
 
 export interface JournalLineInput {
@@ -119,16 +134,29 @@ export interface FinanceKpis {
 
 export const ACCOUNT_TYPE_LABEL: Record<AccountType, string> = {
   kas: 'Kas',
-  piutang: 'Piutang',
+  piutang: 'Piutang Usaha',
+  piutang_retensi: 'Piutang Retensi',
+  uang_muka_klien: 'Uang Muka Klien',
   stok: 'Stok',
   aset_tetap: 'Aset Tetap',
+  akumulasi_penyusutan: 'Akumulasi Penyusutan',
   prabayar: 'Pra Bayar',
   hutang_dagang: 'Hutang Dagang',
   hutang_pajak: 'Hutang Pajak',
   hutang_lain: 'Hutang Lain',
   modal_disetor: 'Modal Disetor',
+  dividen: 'Dividen / Prive',
   laba_ditahan: 'Laba Ditahan',
-  laba: 'Laba Periode',
+  pendapatan_proyek: 'Pendapatan Proyek',
+  hpp_material: 'HPP Material',
+  hpp_labor: 'HPP Tenaga Kerja',
+  hpp_equipment: 'HPP Peralatan',
+  hpp_overhead: 'HPP Overhead Proyek',
+  hpp_other: 'HPP Lainnya',
+  hpp_uncategorized: 'HPP Belum Dikategorikan',
+  beban_opex: 'Beban Operasional',
+  beban_penyusutan: 'Beban Penyusutan',
+  laba: 'Laba Periode (Legacy)',
 };
 
 export type ReceivableStatus = 'open' | 'partial' | 'paid' | 'overdue';
