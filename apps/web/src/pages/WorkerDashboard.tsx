@@ -38,6 +38,7 @@ import TeamTodoBoard from '../components/team/TeamTodoBoard';
 import { listMembers } from '../services/memberService';
 import type { OrgMember } from '../types/onboarding';
 import { validateWorkerProgressUpdate } from '../lib/workerProgressGuard';
+import { selectInitialWorkerProjectId } from '../../../../packages/domain/src/uxLightening';
 
 export const MIN_BON_AMOUNT = 1000;
 
@@ -277,14 +278,6 @@ export default function WorkerDashboard() {
   }, [refreshStatus, loadTasks, isDemo, tenant?.id]);
 
   const projectName = (projectId: string) => projects.find(p => p.id === projectId)?.name || 'Proyek';
-  const defaultProject =
-    projects.find(p => p.id === chosenProjectId) ||
-    projects.find(p => p.status === 'active') ||
-    projects[0];
-  const defaultProjectName = defaultProject?.name;
-  const scopedWorkItems = chosenProjectId
-    ? workItems.filter(wi => wi.project_id === chosenProjectId)
-    : workItems;
 
   const myMemberIds = useMemo(() => {
     const ids = new Set<string>();
@@ -295,6 +288,35 @@ export default function WorkerDashboard() {
     }
     return ids;
   }, [members, user?.id, user?.email]);
+
+  const todayIso = useMemo(() => {
+    try {
+      return new Date().toLocaleDateString('en-CA', {
+        timeZone: tenant?.timezone || 'Asia/Jakarta',
+      });
+    } catch {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }, [tenant?.timezone]);
+
+  const initialProjectResolution = useMemo(
+    () =>
+      selectInitialWorkerProjectId({
+        workerId: user?.id || 'worker',
+        memberIds: Array.from(myMemberIds),
+        workDate: todayIso,
+        projects,
+        workItems,
+      }),
+    [user?.id, myMemberIds, todayIso, projects, workItems],
+  );
+
+  const effectiveProjectId = chosenProjectId || initialProjectResolution.projectId || '';
+  const defaultProject = projects.find(p => p.id === effectiveProjectId);
+  const defaultProjectName = defaultProject?.name;
+  const scopedWorkItems = effectiveProjectId
+    ? workItems.filter(wi => wi.project_id === effectiveProjectId)
+    : workItems;
 
   const myAssignedTasks = useMemo(() => {
     if (myMemberIds.size === 0) return [];
@@ -308,21 +330,15 @@ export default function WorkerDashboard() {
       });
   }, [scopedWorkItems, myMemberIds]);
 
-  const todayIso = useMemo(() => {
-    try {
-      return new Date().toLocaleDateString('en-CA', {
-        timeZone: tenant?.timezone || 'Asia/Jakarta',
-      });
-    } catch {
-      return new Date().toISOString().slice(0, 10);
-    }
-  }, [tenant?.timezone]);
-
   const activeTasks = scopedWorkItems.filter(wi => (Number(wi.progress_pct) || 0) < 100);
   const doneTasks = scopedWorkItems.filter(wi => (Number(wi.progress_pct) || 0) >= 100);
 
   const handleCheckIn = async () => {
     if (!user?.id || !tenant?.id) return;
+    if (projects.length > 0 && !defaultProject) {
+      showToast('Pilih lokasi proyek hari ini terlebih dahulu', 'error');
+      return;
+    }
     if (isDemo || tenant.id === 'demo') {
       const nowIso = new Date().toISOString();
       const timeLabel = formatAttendanceTime(nowIso);
@@ -684,7 +700,7 @@ export default function WorkerDashboard() {
                 photoFileName: proofPhotoFileName || null,
               })
             }
-            className="flex-1 min-h-10 px-3 py-1.5 rounded-lg bg-[#059669] hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-50"
+            className="flex-1 min-h-11 px-3 py-1.5 rounded-lg bg-[#059669] hover:bg-emerald-700 text-white text-xs font-bold disabled:opacity-50"
           >
             Kirim Bukti & Ajukan 100%
           </button>
@@ -694,7 +710,7 @@ export default function WorkerDashboard() {
               setProofModalWorkItemId(null);
               setProofError(null);
             }}
-            className="min-h-10 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700"
+            className="min-h-11 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700"
           >
             Batal
           </button>
@@ -760,18 +776,33 @@ export default function WorkerDashboard() {
 
         {workerTab === 'home' && (
           <div className="space-y-4">
-            {projects.length > 1 && (
-              <div className="bg-white border border-[#E5EAE8] rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-sm">
-                <span className="text-xs font-bold text-[#5B6B7A]">Lokasi Proyek Hari Ini</span>
-                <select
-                  value={defaultProject?.id || ''}
-                  onChange={e => setChosenProjectId(e.target.value)}
-                  className="h-10 text-xs font-bold border border-[#E5EAE8] rounded-xl px-3 bg-white text-[#0F172A] max-w-[65%] focus:border-[#059669] focus:outline-none"
-                >
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+            {projects.length > 0 && (
+              <div className="bg-white border border-[#E5EAE8] rounded-2xl p-3.5 space-y-1.5 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-[#5B6B7A]">Lokasi Proyek Hari Ini</span>
+                  <select
+                    value={defaultProject?.id || ''}
+                    onChange={e => setChosenProjectId(e.target.value)}
+                    aria-label="Lokasi Proyek Hari Ini"
+                    className="min-h-11 text-xs font-bold border border-[#E5EAE8] rounded-xl px-3 bg-white text-[#0F172A] max-w-[65%] focus:border-[#059669] focus:outline-none"
+                  >
+                    <option value="">-- Pilih Proyek Hari Ini --</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                {initialProjectResolution.autoFilledFromPlan &&
+                  (!chosenProjectId || chosenProjectId === initialProjectResolution.projectId) && (
+                    <p className="text-[11px] font-medium text-[#059669]">
+                      Terisi otomatis dari jadwal tugas Anda hari ini
+                    </p>
+                  )}
+                {!defaultProject && (
+                  <p className="text-[11px] font-medium text-amber-700">
+                    Belum ada jadwal tugas hari ini — silakan pilih proyek terlebih dahulu
+                  </p>
+                )}
               </div>
             )}
             <WorkerWorkTimer
@@ -1103,7 +1134,7 @@ export default function WorkerDashboard() {
                             type="button"
                             onClick={() => void handleCancelBonRequest(b.id)}
                             disabled={cancelingBonId === b.id}
-                            className="px-2 py-1 text-[11px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg disabled:opacity-60 transition-colors"
+                            className="min-h-11 px-3 py-1 text-[11px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg disabled:opacity-60 transition-colors"
                           >
                             {cancelingBonId === b.id ? 'Membatalkan...' : 'Batalkan'}
                           </button>
