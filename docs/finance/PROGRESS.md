@@ -40,7 +40,7 @@
 ### Langkah Berikutnya (Eksekusi Pemilik / Operator)
 1. Rotate token yang pernah berada di `apps/web/.env.local`.
 2. Tinjau `docs/finance/OPEN-QUESTIONS.md` & `docs/finance/DECISIONS.md`.
-3. Jalankan migrasi SQL F0, F1, & G0 (`g0_1`, `g0_3`, `g0_4`) sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
+3. Jalankan migrasi SQL F0, F1, & G0 (`g0_1`, `g0_3`, `g0_4`, `g0_2`) sesuai `docs/finance/DEPLOY-RUNBOOK.md`.
 
 ---
 
@@ -49,10 +49,12 @@
 | Fase / Tugas | Nama | Status | Branch / PR | Catatan |
 |---|---|---|---|---|
 | **G0-1** | Perbaikan Rekonsiliasi Migrasi F1 Nyata | `DONE` | `feat/g0-1-real-migration-reconciliation` | Jurnal reklasifikasi append-only seimbang & idempoten, perhitungan `after` independen di `reconciliation.ts` + SQL lokal `20261124140000_g0_1_real_f1_migration.sql` (`BLOCKED remote`, dry-run rollback subtransaksi, tanpa mutasi `planner_journal_lines`). |
+| **G0-2** | Migrasi RPC Atomik ke Akun F1 & Paritas SQL vs Domain | `DONE` | `feat/g0-2-rpc-f1-parity` | SQL lokal `20261124143000_g0_2_rpc_f1_accounts.sql` (`BLOCKED remote`, helper `planner_hpp_account_type_for_rap`, `planner_create_project_income_atomic`, `planner_create_cost_realization_atomic`, `planner_backfill_cost_journals` bebas `'laba'`), `resolveProjectIncomeTemplate` & `resolveProjectCostTemplate` di `packages/domain/src/journal.ts`, bridge `projectJournalBridge.ts` F1, & tes paritas `rpcDomainParity.test.ts`. |
 | **G0-3** | Perbaikan Taksonomi Kategori Akun (`pendapatan`/`beban`) & Neraca | `DONE` | `feat/g0-3-account-taxonomy-neraca` | 4 kategori COA (`aktiva`, `pasiva`, `pendapatan`, `beban`), `buildBalanceSheetFromBalances` bebas akun beban/pendapatan + laba berjalan tergulung ke pasiva, SQL lokal `20261124141000_g0_3_account_taxonomy.sql` (`BLOCKED remote`), & `D-G0-01`. |
 | **G0-4** | Jaminan Trigger Imutabilitas Jurnal & Tes Penolakan Mutasi | `DONE` | `feat/g0-4-immutability-guard` | SQL lokal `20261124142000_g0_4_immutability_guard.sql` (`BLOCKED remote`, `ERRCODE = '55000'`, trigger `BEFORE UPDATE OR DELETE` pada `entries`/`lines`/`allocations`, sapu bersih policy mutasi RLS), `immutabilityGuard.ts`, tes statis/struktural/kontrak di `journalImmutability.test.ts`, & koreksi `DEPLOY-RUNBOOK.md`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
+- [x] `G0-2`: Migrasi RPC atomik & backfill ke akun F1 + paritas SQL vs `packages/domain/src/journal.ts` (`20261124143000_g0_2_rpc_f1_accounts.sql`, `projectJournalBridge.ts`, `rpcDomainParity.test.ts`).
 - [x] `G0-3`: Perbaikan taksonomi kategori akun (`pendapatan`/`beban`) & Neraca (`20261124141000_g0_3_account_taxonomy.sql`, `balanceSheetReport.ts`, `balanceSheetService.ts`, `balanceSheetTaxonomy.test.ts`, & `D-G0-01`).
 - [x] `G0-4`: Jaminan trigger imutabilitas jurnal & tes penolakan mutasi (`20261124142000_g0_4_immutability_guard.sql`, `immutabilityGuard.ts`, `journalImmutability.test.ts`, & koreksi `DEPLOY-RUNBOOK.md`).

@@ -159,6 +159,9 @@ export async function createCostRealization(
           referenceId: savedRow.id as string,
           entryDate: item.date,
           createdBy: item.recorded_by,
+          rapItemId: item.rap_item_id ?? null,
+          paymentMethod: item.payment_method ?? null,
+          status,
         });
         if (!journalId) {
           throw new Error('Jurnal biaya proyek gagal dibuat.');
@@ -322,7 +325,7 @@ export async function updateCostRealization(
 ) {
   const { data: existing, error: selErr } = await supabase
     .from('planner_cost_realizations')
-    .select('id, date, description, total_amount, journal_entry_id, recorded_by')
+    .select('id, date, description, total_amount, journal_entry_id, recorded_by, rap_item_id, payment_method, status')
     .eq('id', id)
     .single();
   if (selErr || !existing) throw new Error(selErr?.message || 'Realisasi biaya tidak ditemukan.');
@@ -351,6 +354,9 @@ export async function updateCostRealization(
       referenceId: id,
       entryDate: nextDate,
       createdBy: (existing.recorded_by as string) || undefined,
+      rapItemId: (existing.rap_item_id as string) || null,
+      paymentMethod: (existing.payment_method as string) || null,
+      status: (existing.status as string) || 'recorded',
     });
   }
 

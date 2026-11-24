@@ -66,24 +66,31 @@ Dokumen ini adalah spesifikasi hidup (*living specification*) untuk buku besar d
 
 ---
 
-## 4. Template Jurnal per Kejadian (F0)
+## 4. Template Jurnal per Kejadian (F1 / G0-2)
+
+> Spesifikasi paritas tunggal pemasukan & biaya proyek didefinisikan oleh `resolveProjectIncomeTemplate` & `resolveProjectCostTemplate` di `packages/domain/src/journal.ts` dan disinkronkan 100% dengan RPC atomik SQL (`20261124143000_g0_2_rpc_f1_accounts.sql`) serta `projectJournalBridge.ts`. Akun legacy `laba` tidak lagi dipakai untuk pencatatan proyek baru.
 
 | Kejadian | `reference_type` | Debit (Dr) | Kredit (Cr) | Sumber / Catatan |
 |---|---|---|---|---|
-| **Pemasukan Proyek** | `project_income` | `Kas Proyek` | `Laba Periode` | `createProjectIncome` / `planner_create_project_income_atomic` |
-| **Biaya Proyek** | `project_expense` | `Laba Periode` (HPP) | `Kas Proyek` | `createCostRealization` / `planner_create_cost_realization_atomic` |
-| **Edit Biaya Proyek** | `reversal` + `project_expense` | (1) `Kas Proyek` (balik)<br>(2) `Laba Periode` (baru) | (1) `Laba Periode` (balik)<br>(2) `Kas Proyek` (baru) | `updateCostRealization` (jurnal lama dibalik, jurnal baru diposting) |
+| **DP Klien (`dp`, `received`)** | `project_income` | `Kas Proyek` | `Uang Muka Klien` | `planner_create_project_income_atomic` / `resolveProjectIncomeTemplate` (`project_id`, `party_id`) |
+| **Termin/Pelunasan/Lain Tunai (`received`)** | `project_income` | `Kas Proyek` | `Pendapatan Proyek` | `planner_create_project_income_atomic` / `postProjectIncomeJournal` |
+| **Termin/Pelunasan/Lain Tagihan (`invoiced`/`accrued`)** | `project_income` | `Piutang Usaha` | `Pendapatan Proyek` | `planner_create_project_income_atomic` / `postProjectIncomeJournal` (`project_id`, `party_id`) |
+| **Retensi Ditahan (`retensi`, `pending`/`invoiced`/`accrued`)** | `project_income` | `Piutang Retensi` | `Pendapatan Proyek` | `planner_create_project_income_atomic` / `postProjectIncomeJournal` (`project_id`, `party_id`) |
+| **Retensi Cair (`retensi`, `received`)** | `project_income` | `Kas Proyek` | `Piutang Retensi` | `planner_create_project_income_atomic` / `postProjectIncomeJournal` (`project_id`, `party_id`) |
+| **Biaya Proyek Tunai/Transfer** | `project_expense` | `HPP Proyek (material/labor/equipment/overhead/other/uncategorized)` | `Kas Proyek` | `planner_create_cost_realization_atomic` / `planner_backfill_cost_journals` (`needs_review = true` bila `hpp_uncategorized`) |
+| **Biaya Proyek Akrual (`credit`/`hutang`/`tempo` atau `accrued`/`unpaid`)** | `project_expense` | `HPP Proyek (material/labor/equipment/overhead/other/uncategorized)` | `Hutang Dagang` | `planner_create_cost_realization_atomic` / `postProjectExpenseJournal` (`project_id`, `party_id`, `needs_review`) |
+| **Edit Biaya Proyek** | `reversal` + `project_expense` | (1) `Kas Proyek` / `Hutang Dagang` (balik)<br>(2) `HPP Proyek` (baru) | (1) `HPP Proyek` (balik)<br>(2) `Kas Proyek` / `Hutang Dagang` (baru) | `updateCostRealization` (jurnal lama dibalik, jurnal baru diposting ke akun HPP F1) |
 | **Hapus Biaya / Pemasukan** | `reversal` | Kebalikan baris jurnal asli | Kebalikan baris jurnal asli | `deleteCostRealization` / `deleteProjectIncome` + soft-delete baris sumber |
 | **Transfer Antar Kas** | `transfer` | `Kas Tujuan` | `Kas Asal` | `transferKas` |
-| **Hutang Baru (Akrual)** | `project_expense` | `Laba Periode` | `Hutang Dagang/Pajak/Lain` | `createPayable` |
+| **Hutang Baru (Akrual)** | `project_expense` | `HPP Proyek` | `Hutang Dagang/Pajak/Lain` | `createPayable` / `payableAccrual` |
 | **Bayar Hutang** | `payable_payment` / `project_expense` | `Hutang Dagang/Pajak/Lain` | `Kas` | `recordPayablePayment` |
-| **Piutang Baru** | `project_income` | `Piutang Usaha` | `Laba Periode` | `createReceivable` |
+| **Piutang Baru** | `project_income` | `Piutang Usaha` | `Pendapatan Proyek` | `createReceivable` / `receivableAccrual` |
 | **Terima Piutang** | `receivable_receipt` / `project_income` | `Kas` | `Piutang Usaha` | `recordReceivablePayment` |
-| **Opex Bisnis** | `opex` | `Laba Periode` | `Kas Bisnis` | `createOpexRealization` |
+| **Opex Bisnis** | `opex` | `Beban Operasional` | `Kas Bisnis` | `createOpexRealization` |
 | **Investasi Modal** | `manual` | `Kas Bisnis` | `Modal Disetor` | `recordInvestorTransaction` (`invest`) |
 | **Penarikan Modal** | `manual` | `Modal Disetor` | `Kas Bisnis` | `recordInvestorTransaction` (`withdraw`) |
-| **Dividen Proyek (Kas)** | `dividend` | `Laba Ditahan` (Dividen) | `Kas Proyek` | `recordDividendPayouts` (tidak masuk `total_spent`) |
-| **Dividen Proyek (Offset Piutang Owner)** | `dividend` | `Laba Ditahan` (Dividen) | `Piutang Usaha` | `recordDividendPayouts` (melunasi piutang owner tanpa kas keluar) |
+| **Dividen Proyek (Kas)** | `dividend` | `Dividen / Prive` / `Laba Ditahan` | `Kas Proyek` | `recordDividendPayouts` (tidak masuk `total_spent`) |
+| **Dividen Proyek (Offset Piutang Owner)** | `dividend` | `Dividen / Prive` / `Laba Ditahan` | `Piutang Usaha` | `recordDividendPayouts` (melunasi piutang owner tanpa kas keluar) |
 | **Dividen Bisnis (Investor)** | `manual` / `dividend` | `Laba Ditahan` | `Kas Bisnis` | `recordInvestorTransaction` (`dividend`, dibatasi kas & laba ditahan) |
 | **Tutup Proyek** | `project_close` | (1) `Kas Bisnis`<br>(2) `Laba Periode` (jika untung) | (1) `Kas Proyek`<br>(2) `Laba Ditahan` | `closeProjectFinance` (diblokir jika ada piutang/hutang/retensi terbuka tanpa write-off pemilik) |
 | **Tutup Periode** | `period_close` | `Laba Periode` (sisa belum ditutup) | `Laba Ditahan` | `closeFinancePeriod` (hanya memindahkan sisa laba periode yang belum dipindah `project_close`) |

@@ -104,6 +104,7 @@ export async function createJournalEntry(input: CreateJournalInput): Promise<Jou
       notes: line.notes?.trim() || null,
       party_id: line.partyId || null,
       project_id: line.projectId || null,
+      needs_review: Boolean(line.needsReview),
     })),
     p_created_by: input.createdBy || null,
   });

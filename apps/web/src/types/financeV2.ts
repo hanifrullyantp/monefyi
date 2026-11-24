@@ -85,6 +85,7 @@ export interface JournalLine {
   notes: string | null;
   project_id?: string | null;
   party_id?: string | null;
+  needs_review?: boolean;
 }
 
 export interface JournalLineInput {
@@ -94,6 +95,7 @@ export interface JournalLineInput {
   notes?: string;
   partyId?: string;
   projectId?: string;
+  needsReview?: boolean;
 }
 
 export interface CreateJournalInput {
