@@ -14,7 +14,7 @@
 
 ## Urutan Eksekusi Migrasi SQL (Harus Berurutan)
 
-Seluruh **14 file migrasi SQL lokal** berikut berada di `my-supabase-project/supabase/migrations/` dan berstatus **`BLOCKED remote`**:
+Seluruh **15 file migrasi SQL lokal** berikut berada di `my-supabase-project/supabase/migrations/` dan berstatus **`BLOCKED remote`**:
 
 | Urutan | Fase / Kode | File Migrasi SQL Lokal | Ringkasan Cakupan |
 |---|---|---|---|
@@ -32,6 +32,7 @@ Seluruh **14 file migrasi SQL lokal** berikut berada di `my-supabase-project/sup
 | **Langkah 12** | `G4` | `20261124170000_g4_cfo_tax_config_and_loans.sql` | `planner_org_tax_configs` (bebas hardcode tarif) & `planner_financing_loans` |
 | **Langkah 13** | `G5` | `20261124180000_g5_trust_autonomy_governance.sql` | `planner_shadow_evaluations` (append-only), `planner_autonomy_policies`, & `planner_incident_postmortems` (SoD) |
 | **Langkah 14** | `G8-2` | `20261124190000_g8_hrd_project_labor_accrual.sql` | COA `'hutang_gaji'`, `planner_attendance_project_splits` (`day_fraction`), `planner_compensation_rate_history` (`effective_from`), `planner_daily_assignments`, & `planner_org_labor_policies` |
+| **Langkah 15** | `G7` | `20261124193000_g7_unified_feedback_events.sql` | `planner_feedback_events` (indeks `(org_id, fingerprint)` & `(status, priority_score DESC)`) & `planner_org_telemetry_settings` (`behavior_telemetry_opt_out`) + RLS `is_org_member` |
 
 > **Catatan Asal Trigger Imutabilitas:** Trigger penolak mutasi jurnal `public.planner_reject_journal_mutation()` untuk `planner_journal_entries` dan `planner_journal_lines` berasal dari migrasi fase 3 (`my-supabase-project/supabase/migrations/20261104140000_planner_phase3_ledger.sql`), **bukan** dari migrasi F0. Pada rangkaian di bawah, migrasi **G0-4** (`20261124142000_g0_4_immutability_guard.sql`) memperkuatnya secara idempoten dengan `ERRCODE = '55000'`, menambahkan trigger pada `planner_journal_allocations`, dan memastikan tidak ada policy RLS `UPDATE`/`DELETE`/`ALL` pada ketiga tabel jurnal.
 
@@ -126,6 +127,12 @@ File: `my-supabase-project/supabase/migrations/20261124190000_g8_hrd_project_lab
 - Membuat tabel `planner_compensation_rate_history` (`worker_id`, `role_name`, `rate_type` `'daily'|'borongan'|'monthly'`, `rate_rupiah > 0`, `effective_from`).
 - Membuat tabel `planner_daily_assignments` (jadwal harian PM) dan `planner_org_labor_policies` (`standard_work_days`, `standard_hours_per_day`, `overtime_multiplier`, `max_kasbon_deduction_pct`, `statutory_config_json`).
 - Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` pada keempat tabel tanpa memutasi tabel jurnal.
+
+### Langkah 15 — Migrasi G7 (Sistem Umpan Balik Terpadu & Opt-Out Telemetri Perilaku)
+File: `my-supabase-project/supabase/migrations/20261124193000_g7_unified_feedback_events.sql`
+- Membuat tabel `planner_feedback_events` (`module` `'keuangan'|'proyek'|'sdm'|'ui'|'agent'`, seluruh 8 `category` sinyal, `severity` `'kritis'|'sedang'|'ringan'`, `fingerprint`, `anonymized_context_json`, `app_version`, `device_info`, `model`, `prompt_version`, `reporter_count`, `priority_score`, `status` `'open'|'triaged'|'pr_linked'|'resolved'|'wont_fix'`, `notify_reporters_on_resolve`) beserta indeks `(org_id, fingerprint)` & `(status, priority_score DESC)`.
+- Membuat tabel `planner_org_telemetry_settings` (`org_id UNIQUE`, `behavior_telemetry_opt_out boolean DEFAULT false`, `updated_by`, `updated_at`).
+- Mengaktifkan RLS ketat berbasis `is_org_member(org_id, ...)` (`worker` untuk `SELECT`/`INSERT` feedback, `manager` untuk `UPDATE` triase, `owner` untuk pengaturan opt-out telemetri) tanpa menyentuh atau memutasi tabel jurnal.
 
 ---
 

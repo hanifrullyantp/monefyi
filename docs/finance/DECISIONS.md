@@ -116,3 +116,14 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
   3. **Jurnal atomik & anti-swallow error:** `payrollEntryId` wajib berupa UUID valid dari `planner_payroll_entries.id`. Setiap kegagalan posting jurnal pada `aiHrdPayrollService.ts` dan `payrollService.ts` (`updatePayrollStatus`, `reviewBonRequest`) wajib melakukan kompensasi rollback status (atau menandai `[JOURNAL_POST_FAILED]` jika rollback gagal) dan melempar error eksplisit sehingga tidak pernah ada status `'paid'` tanpa jurnal di buku besar.
 - **Alasan:** Menjaga integritas pembukuan kas/beban gaji, mencegah pekerja/pemilik menerima klaim lunas palsu atau slip dengan angka tebakan, dan memastikan buku besar selalu sinkron dengan status pembayaran payroll dan kasbon.
 
+## D-G7-01 — Sistem Umpan Balik Terpadu, Anonimisasi PII Ketat, Opt-Out Telemetri Perilaku, & Larangan Modifikasi Otomatis
+- **Tanggal:** 2026-11-24
+- **Konteks:** Laporan bug pengguna, error runtime yang sebelumnya tersembunyi di `console.error`, friksi UI, koreksi diam-diam pengguna, kegagalan invarian akuntansi, dan kegagalan tool/jawaban agent tersebar lintas modul dan berisiko membocorkan data sensitif (email, HP, NIK, rekening bank, token/password) atau mendorong perubahan prompt/kode tanpa validasi.
+- **Pilihan:**
+  1. Menyatukan seluruh **8 kategori sinyal** (`user_bug_report`, `agent_rating`, `ui_confused`, `runtime_error`, `behavior_friction`, `silent_correction`, `data_invariant_failure`, `agent_unanswered_or_tool_fail`) lintas 5 modul (`keuangan`, `proyek`, `sdm`, `ui`, `agent`) ke satu domain deterministik `packages/domain/src/feedbackObservability.ts` dan tabel `planner_feedback_events`.
+  2. Wajib menyapu & menyensor payload secara rekursif (`anonymizeFeedbackPayload`) sebelum item masuk ke antrean maupun kandidat evaluasi (`[REDACTED_EMAIL]`, `[REDACTED_PHONE]`, `[REDACTED_NIK]`, `[REDACTED_BANK_ACCOUNT]`, `[REDACTED_SECRET]`, `[REDACTED_PII]`) dan men-hash `reporterId`.
+  3. Menggabungkan laporan serupa secara otomatis memakai `fingerprint` deterministik `(module + category + normalizedErrorOrScreenKey)` dan menaikkan `priorityScore = baseSeverityWeight + Math.min(50, reporterCount * 5)`.
+  4. Menegakkan opt-out organisasi (`behaviorTelemetryOptOut: true` di `planner_org_telemetry_settings`) untuk menolak sinyal `behavior_friction` sambil tetap menerima laporan bug/error runtime.
+  5. Mengunci batas otonomi perbaikan: `autoModifyCodeOrPromptAllowed: false` (sistem dilarang mengubah kode atau prompt sendiri; semua kasus agent gagal menghasilkan `EvalCaseCandidate` berstatus `'pending_human_review'`, dan `computeQualityDashboard` memicu rekomendasi penurunan `L2 -> L1` bila akurasi turun atau terjadi kesalahan kritis).
+- **Alasan:** Menjamin siklus umpan balik produk & AI yang cepat, aman dari kebocoran PII/kredensial, menghormati privasi organisasi, serta menjaga setiap perubahan kode/prompt tetap tunduk pada tinjauan manusia dan eval gate.
+

@@ -1,6 +1,6 @@
 # PROGRESS — Papan Kerja Keuangan Froyek (F0–F4, G0–G6, & G7–G11)
 
-**Fase Aktif:** Program `G7`–`G11` — Fase **`G8` `DONE`**; siap masuk Fase **`G7`** sesuai urutan `G8 → G7 → G9 → G10 → G11` (migrasi SQL lokal `F0`–`G8` berstatus `BLOCKED remote` dan siap dijalankan manual via `DEPLOY-RUNBOOK.md`)  
+**Fase Aktif:** Program `G7`–`G11` — Fase **`G8` & `G7` `DONE`**; siap masuk Fase **`G9`** sesuai urutan `G8 → G7 → G9 → G10 → G11` (migrasi SQL lokal `F0`–`G8` & `G7` berstatus `BLOCKED remote` dan siap dijalankan manual via `DEPLOY-RUNBOOK.md`)  
 **Orkestrator:** Argon (Mode Otonom)  
 **Terakhir Diperbarui:** 2026-11-24
 
@@ -110,8 +110,9 @@
 | **G8-2** | Model Kehadiran `day_fraction`, Tarif Beriwayat `effectiveFrom`, Akrual Upah Proyek (`Dr hpp_labor / Cr hutang_gaji`), Gaji Kantor Opex, BPJS/PPh 21 Konfigurabel, & Kasbon Bersaldo | `DONE` | `feat/g8-2-project-labor-accrual-day-fraction-kasbon` | COA `'hutang_gaji'` + 3 template jurnal seimbang (`project_labor_accrual`, `office_payroll_accrual`, `payroll_liability_settlement`), domain `packages/domain/src/hrdPayroll.ts`, migrasi SQL lokal `20261124190000_g8_hrd_project_labor_accrual.sql` (`BLOCKED remote`), & suite TDD `g8ProjectLaborAccrual.test.ts`. |
 | **G8-3** | Anti-Kecurangan Kehadiran, Hak Akses (RBAC) 4 Peran HRD, & Uji Gerbang Penuh G8 | `DONE` | `feat/g8-3-antifraud-rbac-g8-report` | `packages/domain/src/hrdGovernance.ts` (`evaluateAttendanceFraudSignals` 4 pola tanpa penolakan diam-diam, `filterHrdRecordsByRole` 4 peran + redaksi mandor/PM + isolasi lintas `orgId`) & `g8AntiFraudRbacAndGate.test.ts`. |
 | **G8-Gate** | Laporan Gerbang Fase G8 (`G8-report.md`) | `DONE` | `feat/g8-3-antifraud-rbac-g8-report` | Fase **G8** seluruhnya `DONE`; laporan gerbang `docs/finance/PHASES/G8-report.md` terbit; urutan lanjut menuju **G7**. |
-| **G7** | Integrasi UI & Runtime Keuangan Terpadu | `READY` | — | Fase berikutnya sesuai urutan `G8 → G7 → G9 → G10 → G11`. |
-| **G9** | Penguatan Audit & Rekonsiliasi Lapangan | `PENDING` | — | Menyusul setelah G7. |
+| **G7** | Sistem Umpan Balik Terpadu, Observabilitas Lintas Aplikasi, Anonimisasi PII, Penggabungan Laporan Otomatis, & Dasbor Mutu | `DONE` | `feat/g7-unified-feedback-observability` | `packages/domain/src/feedbackObservability.ts` (5 modul, 8 kategori sinyal, `anonymizeFeedbackPayload`, `ingestFeedbackSignal` + opt-out `behavior_friction` + `autoModifyCodeOrPromptAllowed: false`, `aggregateFeedbackQueue`, `buildEvalCandidateFromFailedAgent` status `'pending_human_review'`, `computeQualityDashboard` + rekomendasi `L2 -> L1`), `feedbackObservabilityService.ts`, SQL lokal `20261124193000_g7_unified_feedback_events.sql` (`BLOCKED remote`), `D-G7-01`, `DEPLOY-RUNBOOK.md` Langkah 15, & `g7FeedbackObservability.test.ts`. |
+| **G7-Gate** | Laporan Gerbang Fase G7 (`G7-report.md`) | `DONE` | `feat/g7-unified-feedback-observability` | Fase **G7** seluruhnya `DONE`; laporan gerbang `docs/finance/PHASES/G7-report.md` terbit; urutan lanjut menuju **G9**. |
+| **G9** | Penguatan Audit & Rekonsiliasi Lapangan | `READY` | — | Fase berikutnya sesuai urutan `G8 → G7 → G9 → G10 → G11`. |
 | **G10** | Otomasi Operasional & Adapter Produksi | `PENDING` | — | Menyusul setelah G9. |
 | **G11** | Stabilisasi & Verifikasi Akhir Lintas Modul | `PENDING` | — | Menyusul setelah G10. |
 
@@ -119,7 +120,7 @@
 - [x] `G8-1`: Hapus klaim `"LUNAS/BERHASIL DITRANSFER"` palsu, hapus tarif cadangan `150000`/hardcode tersembunyi, catat sisa kasbon jujur, wajibkan UUID valid & `PaymentConfirmation` nyata + SoD, dan perbaiki posting jurnal gaji/kasbon anti-swallow (`aiHrdPayrollService.ts`, `payrollService.ts`, `payrollJournalBridge.ts`, `AiHrdPayrollModal.tsx`, `HrEmployees.tsx`, `D-G8-01`, & `g8PayrollTruthAndNoFakePaid.test.ts`).
 - [x] `G8-2`: Model kehadiran `day_fraction`, tarif beriwayat `effectiveFrom`, akrual harian upah proyek (`Dr hpp_labor / Cr hutang_gaji`), gaji kantor `beban_opex`, BPJS/PPh 21 konfigurabel berlabel konsultan pajak, & kasbon bersaldo (`journal.ts`, `financeV2.ts`, `hrdPayroll.ts`, `20261124190000_g8_hrd_project_labor_accrual.sql`, & `g8ProjectLaborAccrual.test.ts`).
 - [x] `G8-3`: Anti-kecurangan kehadiran (`evaluateAttendanceFraudSignals`), RBAC 4 peran HRD (`filterHrdRecordsByRole`), uji gerbang penuh G8 (`g8AntiFraudRbacAndGate.test.ts`), & laporan gerbang `docs/finance/PHASES/G8-report.md` (Fase **G8** seluruhnya `DONE`).
-- [ ] `G7`: Integrasi UI & Runtime Keuangan Terpadu (**Berikutnya** sesuai urutan `G8 → G7 → G9 → G10 → G11`).
-- [ ] `G9`: Penguatan Audit & Rekonsiliasi Lapangan.
+- [x] `G7`: Sistem Umpan Balik Terpadu, Observabilitas Lintas Aplikasi, Anonimisasi PII, Penggabungan Laporan Otomatis, Dasbor Mutu, migrasi lokal `20261124193000_g7_unified_feedback_events.sql` (`BLOCKED remote`), `feedbackObservabilityService.ts`, `g7FeedbackObservability.test.ts`, & laporan gerbang `docs/finance/PHASES/G7-report.md` (Fase **G7** seluruhnya `DONE`).
+- [ ] `G9`: Penguatan Audit & Rekonsiliasi Lapangan (**Berikutnya** sesuai urutan `G8 → G7 → G9 → G10 → G11`).
 - [ ] `G10`: Otomasi Operasional & Adapter Produksi.
 - [ ] `G11`: Stabilisasi & Verifikasi Akhir Lintas Modul.
