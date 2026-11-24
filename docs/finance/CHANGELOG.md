@@ -4,6 +4,19 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [F0-T8] 2026-11-24 — Keluarkan `apps/web/.env.local` dari Git & Tambah ke `.gitignore`
+- **Branch / PR:** `finance/F0-T8-remove-env-local`
+- **Fase:** F0 (Kebenaran — T8)
+- **Perubahan & Alasan:**
+  - Menghapus `apps/web/.env.local` dari indeks Git (`git rm --cached apps/web/.env.local`) sambil mempertahankan file lokal di disk.
+  - Menambahkan `apps/web/.env.local` dan `apps/*/.env.local` secara eksplisit ke `.gitignore`.
+  - Mencatat kewajiban rotasi manual semua token pada file tersebut (termasuk token Vercel) di `OPEN-DECISIONS.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak ada.
+- **Migrasi SQL:** Tidak ada.
+- **Tes Ditambah:** Verifikasi `git ls-files apps/web/.env.local` kosong dan `git check-ignore apps/web/.env.local` berhasil.
+- **Dampak ke Tool Agent:** Tidak ada.
+- **Cara Rollback:** `git revert` commit merge PR ini (tidak disarankan karena menyangkut keamanan kredensial).
+
 ## [F0-T0] 2026-11-24 — Kerangka Dokumentasi Keuangan, Template PR, & Gerbang CI `docs-gate`
 - **Branch / PR:** `finance/F0-T0-docs-framework`
 - **Fase:** F0 (Kebenaran)

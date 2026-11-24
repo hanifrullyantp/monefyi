@@ -78,3 +78,10 @@ Dokumen ini mencatat item ambigu, blokir infrastruktur remote, serta implikasi b
 - **Status Eksekusi Remote:** `BLOCKED` (aturan kerja melarang push DB atau deploy Edge Functions ke Supabase remote produksi/aktif).
 - **Mitigasi Aktif:** Di klien, BYOK API keys sudah dipisahkan keluar dari `localStorage` (`monefyi_planner_ai_config_v1`) ke `sessionStorage`/memori, dibersihkan otomatis saat `logout()` dan saat pergantian user, default `executionMode` diturunkan ke `'review'`, dan pemanggilan `planner-ai-proxy` dikunci di belakang env `VITE_AI_PROXY_ENABLED === 'true'` agar belum memicu `404` sebelum server di-deploy (saat deploy nanti: jalankan migrasi SQL -> deploy `planner-ai-proxy` + set secret `AI_SECRET_KEY` -> aktifkan `VITE_AI_PROXY_ENABLED=true`).
 - **Keputusan Terkait `F-25` (`[BUKAN-BUG]`):** `lower.includes('indra')` di `singleDeviceSessionService.ts` tetap dipertahankan dengan komentar kode eksplisit sesuai Keputusan Produk #3.
+
+---
+
+## 7. Keamanan Kredensial & Migrasi SQL Keuangan (Fase F0)
+
+- **Kewajiban Rotasi Token (`F0-T8`):** `apps/web/.env.local` sebelumnya sempat terlacak di indeks Git. File tersebut telah dikeluarkan dari Git (`git rm --cached apps/web/.env.local`) dan ditambahkan ke `.gitignore`. **Pemilik WAJIB melakukan rotasi manual seluruh token yang pernah berada di `apps/web/.env.local` (termasuk token Vercel dan kunci API lainnya).**
+- **Status Migrasi SQL Keuangan F0 (`BLOCKED remote`):** Seluruh perubahan skema/RPC F0 hanya ditulis sebagai file migrasi SQL lokal di `my-supabase-project/supabase/migrations/` dan **TIDAK** di-push ke instance Supabase remote produksi (`https://zzwqfmdyncxbolestkqp.supabase.co`).
