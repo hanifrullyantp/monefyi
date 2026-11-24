@@ -27,6 +27,29 @@ describe('parseDimensionInput', () => {
     expect(res.isL).toBe(true);
   });
 
+  it('menjumlahkan 2,6 x 1,6 menjadi total panjang 4,2 untuk satuan meter lari (m)', () => {
+    const res = parseDimensionInput('2,6 x 1,6', 'm');
+    expect(res.total).toBe(4.2);
+    expect(res.expr).toBe('2.6+1.6');
+    expect(res.segments).toEqual([2.6, 1.6]);
+    expect(res.isL).toBe(true);
+  });
+
+  it('menjumlahkan 2,6 + 1,6 menjadi total panjang 4,2 untuk satuan meter lari (m)', () => {
+    const res = parseDimensionInput('2,6 + 1,6', 'm');
+    expect(res.total).toBe(4.2);
+    expect(res.expr).toBe('2.6+1.6');
+    expect(res.segments).toEqual([2.6, 1.6]);
+    expect(res.isL).toBe(true);
+  });
+
+  it('mengalikan 2,6 x 1,6 menjadi luas 4,16 jika satuan adalah m2', () => {
+    const res = parseDimensionInput('2,6 x 1,6', 'm2');
+    expect(res.total).toBe(4.16);
+    expect(res.expr).toBe('2.6x1.6');
+    expect(res.isL).toBe(false);
+  });
+
   it('mengalikan 2x3 menjadi quantity 6', () => {
     const res = parseDimensionInput('2x3');
     expect(res.total).toBe(6);

@@ -20,6 +20,34 @@ const COMPLETE_NUMBER = new RegExp(`^${DIMENSION_NUMBER}$`);
 const COMPLETE_SUM = new RegExp(`^${DIMENSION_NUMBER}(?:\\+${DIMENSION_NUMBER})+$`);
 const COMPLETE_PRODUCT = new RegExp(`^${DIMENSION_NUMBER}(?:[x*]${DIMENSION_NUMBER})+$`);
 
+/**
+ * Memeriksa apakah satuan adalah satuan panjang / meter lari (m, lm, meter, m1, dll).
+ */
+export function isLinearUnit(unit?: string): boolean {
+  if (!unit) return false;
+  const u = unit.trim().toLowerCase();
+  return (
+    u === 'm' ||
+    u === 'lm' ||
+    u === 'm1' ||
+    u === 'm¹' ||
+    u === "m'" ||
+    u === 'meter' ||
+    u === 'mtr' ||
+    u === 'meter lari' ||
+    u === 'ml'
+  );
+}
+
+/** Format ekspresi segmen ke tampilan standar Indonesia (2.6+1.6 -> 2,6 + 1,6). */
+export function formatDimensionDisplay(expr: string): string {
+  if (!expr) return '';
+  return expr
+    .replace(/\./g, ',')
+    .replace(/\+/g, ' + ')
+    .replace(/x/g, ' x ');
+}
+
 /** Samakan "2 kali 3", "2×3", dan "2 x 3" menjadi "2x3". */
 export function normalizeDimensionRaw(raw: string): string {
   return raw
@@ -52,9 +80,11 @@ export function isCompleteDimensionInput(raw: string): boolean {
 
 /**
  * Angka langsung jadi quantity. "2x3", "2*3", dan "2 kali 3" dikalikan.
+ * Untuk satuan linear (m, lm, meter), perkalian (2,6 x 1,6) diartikan sebagai segmen siku L
+ * dengan total panjang = akumulasi sisi dinding (2,6 + 1,6 = 4,2 m).
  * "2+2" tetap jumlah segmen dinding siku.
  */
-export function parseDimensionInput(raw: string): ParsedDimension {
+export function parseDimensionInput(raw: string, unit?: string): ParsedDimension {
   if (!raw || !raw.trim()) {
     return { total: 0, expr: '', segments: [], isL: false };
   }
@@ -77,6 +107,20 @@ export function parseDimensionInput(raw: string): ParsedDimension {
   if (COMPLETE_PRODUCT.test(clean)) {
     const nums = parseDimensionNumbers(clean.split(/[x*]/));
     if (nums && nums.length >= 2) {
+      // Jika satuan adalah satuan panjang / meter lari (m, lm, meter, m1, dll):
+      // Format perkalian seperti "2,6 x 1,6" mengindikasikan segmen dinding sudut L,
+      // sehingga total panjang dihitung dari penjumlahan segmen (2,6 + 1,6 = 4,2 m).
+      if (isLinearUnit(unit)) {
+        const sum = roundDimension(nums.reduce((acc, cur) => acc + cur, 0));
+        return {
+          total: sum,
+          expr: nums.join('+'),
+          segments: nums,
+          isL: true,
+        };
+      }
+
+      // Untuk satuan luas (m2), volume (m3), atau quantity (pcs):
       const product = roundDimension(nums.reduce((acc, cur) => acc * cur, 1));
       return {
         total: product,

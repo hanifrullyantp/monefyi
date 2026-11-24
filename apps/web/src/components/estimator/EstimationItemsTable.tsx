@@ -28,22 +28,22 @@ function GlobalQtyField({
   onApply,
 }: {
   className: string;
-  onApply: (qty: number, expr?: string) => void;
+  onApply: (qty: number, rawInput?: string) => void;
 }) {
   const [text, setText] = useState('');
   const apply = (raw: string) => {
     if (!isCompleteDimensionInput(raw)) return;
     const parsed = parseDimensionInput(raw);
-    if (Number.isFinite(parsed.total) && parsed.total >= 0) onApply(parsed.total, parsed.expr);
+    if (Number.isFinite(parsed.total) && parsed.total >= 0) onApply(parsed.total, raw);
   };
   return (
     <input
       type="text"
       inputMode="text"
       value={text}
-      placeholder="6 atau 2x3"
+      placeholder="6, 2x3, atau 2,6+1,6"
       aria-label="Ukuran global"
-      title="Isi quantity langsung, atau berapa kali berapa. Contoh: 6 atau 2x3"
+      title="Isi quantity langsung, perkalian, atau segmen sudut. Contoh: 6, 2x3, atau 2,6+1,6"
       onMouseUp={e => e.preventDefault()}
       onFocus={e => e.currentTarget.select()}
       onChange={e => {
@@ -190,10 +190,12 @@ export default function EstimationItemsTable({
     });
   };
 
-  const applyGlobalQty = (qty: number, expr = '') => {
+  const applyGlobalQty = (qty: number, rawInput = '') => {
     if (readOnly || !Number.isFinite(qty) || qty < 0) return;
     onChange(items.map(item => {
-      const merged = { ...item, qty, dimension_expr: expr };
+      const parsed = rawInput ? parseDimensionInput(rawInput, item.unit) : { total: qty, expr: '' };
+      const finalQty = parsed.total > 0 ? parsed.total : qty;
+      const merged = { ...item, qty: finalQty, dimension_expr: parsed.expr };
       const calc = calcItemRow(merged, 'qty');
       const row = { ...merged, ...calc };
       row.total_profit = effectiveItemSelling(row) - (Number(row.total_hpp) || 0);
@@ -504,6 +506,7 @@ export default function EstimationItemsTable({
                           <QtyInput
                             value={item.qty}
                             dimensionExpr={item.dimension_expr}
+                            unit={item.unit}
                             onChange={(v, expr) => updateItem(idx, { qty: v, dimension_expr: expr }, 'qty')}
                             className="mt-1 w-full min-h-11 px-2 border border-[#E5EAE8] rounded-xl text-right text-sm tabular-nums focus:border-emerald-400 outline-none"
                           />
@@ -657,10 +660,11 @@ export default function EstimationItemsTable({
                           <QtyInput
                             value={groupSharedQty(group.indices, items) ?? 0}
                             dimensionExpr={groupSharedExpr(group.indices, items)}
+                            unit={items[group.indices[0]]?.unit}
                             onChange={(v, expr) => setGroupQty(group.indices, v, expr)}
-                            placeholder="6 atau 2x3"
+                            placeholder="6, 2x3, atau 2,6+1,6"
                             className="w-full px-2 py-1.5 border border-emerald-300 bg-white rounded-lg text-right tabular-nums focus:border-emerald-500 outline-none font-semibold text-emerald-800"
-                            title={`Qty ${group.key} (${group.indices.length} item). Isi angka, atau 2x3.`}
+                            title={`Qty ${group.key} (${group.indices.length} item). Isi angka, 2x3, atau 2,6+1,6.`}
                           />
                         </td>
                         <td colSpan={9} className="px-3 py-2 text-[10px] text-emerald-600 align-middle bg-emerald-50/70">
@@ -748,6 +752,7 @@ export default function EstimationItemsTable({
                             inputRef={registerRef(`${idx}-qty`)}
                             value={item.qty}
                             dimensionExpr={item.dimension_expr}
+                            unit={item.unit}
                             onChange={(v, expr) => updateItem(idx, { qty: v, dimension_expr: expr }, 'qty')}
                             onKeyDown={e => handleKeyDown(e, idx, 'qty', fields)}
                             className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-right tabular-nums focus:border-emerald-400 outline-none"

@@ -1,4 +1,5 @@
 import type { PricelistItem } from '../types/estimator';
+import { parseDimensionInput } from './estimatorDimension';
 
 export interface ParsedEstimationItem {
   name: string;
@@ -69,6 +70,23 @@ function extractQty(text: string): { qty: number; unit?: string; cleaned: string
       qty: 1,
       cleaned: text.replace(atMatch[0], ` hpp ${atMatch[1]} `),
     };
+  }
+
+  // Cek ekspresi dimensi: "2,6 x 1,6 m", "2,6 + 1,6 m", "2x3 m2", "2+2"
+  const dimMatch = text.match(
+    /(\d+(?:[.,]\d+)?\s*(?:[x*+]|kali)\s*\d+(?:[.,]\d+)?(?:\s*(?:[x*+]|kali)\s*\d+(?:[.,]\d+)?)?)\s*(m2|m²|m3|m³|meter\s*persegi|meter|mp|kg|pcs|btg|batang|hari|hr|kaleng|kal|lm|ls|sak|m)?(?!\w)/i,
+  );
+  if (dimMatch) {
+    const rawExpr = dimMatch[1];
+    const unitToken = dimMatch[2] ? normalizeUnitToken(dimMatch[2]) : undefined;
+    const parsed = parseDimensionInput(rawExpr, unitToken);
+    if (parsed.total > 0) {
+      return {
+        qty: parsed.total,
+        unit: unitToken || (parsed.isL ? 'm' : undefined),
+        cleaned: text.replace(dimMatch[0], ' ').replace(/\s+/g, ' ').trim(),
+      };
+    }
   }
 
   const qtyUnit = text.match(

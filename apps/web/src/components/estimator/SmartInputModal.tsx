@@ -178,6 +178,7 @@ export default function SmartInputModal({ orgId, defaultMargin = 20, onClose, on
                         <td className="p-1">
                           <QtyInput
                             value={item.qty}
+                            unit={item.unit}
                             onChange={v => updateParsed(idx, { qty: v })}
                             className="w-full px-1 py-1 border border-slate-200 rounded text-right text-sm"
                           />

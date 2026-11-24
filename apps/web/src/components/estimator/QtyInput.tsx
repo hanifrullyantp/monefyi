@@ -1,10 +1,15 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { formatNumberId } from '../../lib/estimatorFormat';
-import { isCompleteDimensionInput, parseDimensionInput } from '../../lib/estimatorDimension';
+import {
+  formatDimensionDisplay,
+  isCompleteDimensionInput,
+  parseDimensionInput,
+} from '../../lib/estimatorDimension';
 
 interface Props {
   value: number;
   dimensionExpr?: string;
+  unit?: string;
   onChange: (value: number, expr?: string) => void;
   onKeyDown?: (e: KeyboardEvent<HTMLInputElement>) => void;
   className?: string;
@@ -26,6 +31,7 @@ function displayValue(n: number): string {
 export default function QtyInput({
   value,
   dimensionExpr = '',
+  unit,
   onChange,
   onKeyDown,
   className = '',
@@ -50,7 +56,7 @@ export default function QtyInput({
   useEffect(() => {
     if (!focused) {
       if (dimensionExpr && dimensionExpr.trim()) {
-        setText(dimensionExpr);
+        setText(formatDimensionDisplay(dimensionExpr));
       } else {
         setText(displayValue(value));
       }
@@ -67,10 +73,10 @@ export default function QtyInput({
 
     if (!isCompleteDimensionInput(trimmed)) return;
 
-    const parsed = parseDimensionInput(trimmed);
+    const parsed = parseDimensionInput(trimmed, unit);
     const finalVal = Math.max(min, parsed.total);
     onChange(finalVal, parsed.expr);
-    setText(parsed.expr && parsed.isL ? parsed.expr : displayValue(finalVal));
+    setText(parsed.expr && parsed.isL ? formatDimensionDisplay(parsed.expr) : displayValue(finalVal));
   };
 
   const commitFromInput = (raw: string) => {
@@ -85,7 +91,7 @@ export default function QtyInput({
 
   const isLMode = Boolean(dimensionExpr && dimensionExpr.includes('+'));
   const isProduct = Boolean(dimensionExpr && /[x*]/i.test(dimensionExpr) && !isLMode);
-  const shown = focused ? text : isLMode && dimensionExpr ? dimensionExpr : displayValue(value);
+  const shown = focused ? text : isLMode && dimensionExpr ? formatDimensionDisplay(dimensionExpr) : displayValue(value);
 
   return (
     <div className="relative w-full">
@@ -98,14 +104,14 @@ export default function QtyInput({
           isProduct
             ? `${dimensionExpr} = ${displayValue(value)}`
             : isLMode
-              ? `Bentuk L (${dimensionExpr}) = ${displayValue(value)} m`
+              ? `Bentuk L (${formatDimensionDisplay(dimensionExpr)}) = ${displayValue(value)} m`
               : title || (value > 0 ? `Quantity: ${displayValue(value)}` : undefined)
         }
         placeholder={placeholder || '6 atau 2x3'}
         onMouseUp={e => e.preventDefault()}
         onFocus={() => {
           setFocused(true);
-          setText(dimensionExpr || displayValue(value));
+          setText(dimensionExpr ? formatDimensionDisplay(dimensionExpr) : displayValue(value));
         }}
         onBlur={e => {
           setFocused(false);
@@ -121,9 +127,9 @@ export default function QtyInput({
       {!focused && isLMode && (
         <span
           className="absolute -bottom-3.5 right-1 text-[9px] font-extrabold text-amber-700 bg-amber-100/90 px-1 rounded tracking-tight pointer-events-none"
-          title={`Total dihitung otomatis: ${displayValue(value)}`}
+          title={`Total panjang dihitung otomatis: ${displayValue(value)} m`}
         >
-          Σ {displayValue(value)}m
+          Σ {displayValue(value)} m
         </span>
       )}
       {!focused && isProduct && dimensionExpr && (
