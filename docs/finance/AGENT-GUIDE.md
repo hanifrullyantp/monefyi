@@ -32,19 +32,19 @@ Kontrak antarmuka, anggaran token, dan pagar pengaman agent keuangan (`agent-cor
 
 ---
 
-## 3. Katalog Tool Aktif (F0–G1)
+## 3. Katalog Tool Aktif (F0–G3)
 
 Sumber tunggal definisi tool: `agent-core/src/registry.ts` (`agent-core/functions.json`, `docs/agent/AGENT_MANUAL.md`):
 
 - `find_project(query)` / `find_party(query)` / `find_wallet(query, project_id?)` — *read* (maks. 5 kandidat).
 - `get_project_cash(project_id)` & `get_party_debt(party_id, project_id?)` — *read*, cek kas / hutang.
 - `get_finance_snapshot(kind?, project_id?)` — *read*, min `manager` (<= 400 token).
+- `get_advisor_brief(focus?, project_id?)` — *read*, domain `advisor`, min `manager` (`<= 400` token, `buildAdvisorBriefTool`). Seluruh angka dihitung kode deterministik (`financialAdvisor.ts`); narasi wajib lolos `verifyNarrativeNumbersMatchSource` (`advisorNarrationGuard.ts`) & menyertakan `"Bukan nasihat hukum/pajak berlisensi"`.
 - `prepare_entry(intent, text, project_id?, party_id?, wallet_id?, entry_date?)` — *prepare*, **13 intent tertutup**: `catat_biaya_proyek`, `catat_opex`, `catat_pemasukan`, `bayar_hutang`, `terima_piutang`, `kasbon`, `transfer_kas`, `dividen`, `tanya_saldo`, `catat_invoice_terbit` (`receivable_accrual`), `catat_termin_diterima` (`client_termin`), `catat_retensi` (`client_retention_hold`/`release`), `catat_gaji` (`project_cost_labor`/`opex_expense`).
   - Klasifikasi: `org_rule` -> `domain_rule` -> `llm_closed_choice` (<= 5 kandidat); pita `high` (`auto_commit`), `medium` (`confirm_one_tap`), `low` (`ask_back`).
   - Penjaga: `dividen` wajib `owner_approved=true`; opex >= Rp 5jt tanya `opex` vs `aset_tetap`; pribadi & prompt injection ditolak; cek duplikat/anomali (`anomalyDetection.ts`) menurunkan `auto_commit` -> `ask_back`/`confirm_one_tap` + `warnings`.
 - `commit_entry(prepare_token, idempotency_key, owner_approved?)` — *commit*, validasi token 10 menit & idempotensi.
-- **Alur Nota/Struk/Invoice OCR (`G1-1`):** `extractReceiptFields` & `buildPrepareEntryFromReceipt` (`receiptExtraction.ts`) -> `extractReceiptToDraft` (`receiptAttachmentService.ts`) memanggil `prepareFinanceEntry` menjadi **draf ber-token** (`status: 'draft'`, `requiresReview: true`, tanpa auto-commit) dengan `attachmentHash` SHA-256, skor keyakinan, & sanitasi `prompt_injection_detected`; saat `commit_entry`, `bindAttachmentToJournal` mengikat `journal_entry_id` (`NULL -> UUID`) di `planner_journal_attachments`.
-- **RAP Pembelajaran (`F4`):** `generateRapDraftFromHistory` menyusun draf rentang + *provenance* dengan `requiresOwnerApproval: true`.
+- **Nota OCR (`G1-1`) & RAP (`F4`):** `extractReceiptFields` -> draf bertoken `requiresReview: true`; `generateRapDraftFromHistory` menyusun draf rentang + *provenance* dengan `requiresOwnerApproval: true`.
 
 ## 3.1 System Prompt Ringkas Agent Keuangan (<= 1.200 token)
 

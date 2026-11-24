@@ -1,5 +1,5 @@
 export type OrgRole = 'worker' | 'manager' | 'owner';
-export type Specialist = 'manager' | 'project' | 'finance' | 'purchasing' | 'hr';
+export type Specialist = 'manager' | 'project' | 'finance' | 'purchasing' | 'hr' | 'advisor';
 export type ToolRisk = 'read' | 'prepare' | 'commit';
 
 export type ToolArg = {
@@ -176,6 +176,23 @@ export const TOOLS: ToolDef[] = [
       { name: 'message_id', type: 'string', required: true, description: 'Kode pesan, bukan kalimat bebas.' },
     ],
   },
+  {
+    name: 'get_advisor_brief',
+    description: 'Ringkasan advisor deterministik: proyeksi kas 13 minggu, margin proyek, prioritas hutang, asumsi, dan risiko.',
+    risk: 'read',
+    minRole: 'manager',
+    specialists: ['advisor'],
+    args: [
+      {
+        name: 'focus',
+        type: 'string',
+        required: false,
+        enum: ['ringkasan', 'kas_13_minggu', 'margin_proyek', 'prioritas_hutang'],
+        description: 'Fokus ringkasan advisor, default ringkasan.',
+      },
+      { name: 'project_id', type: 'string', required: false, description: 'Id proyek dari find_project bila fokus margin.' },
+    ],
+  },
 ];
 
 export function toolsFor(specialist: Specialist, role: OrgRole): ToolDef[] {
@@ -200,7 +217,7 @@ export function assertRegistry(): string[] {
       problems.push(`${tool.name} mengirim ulang nominal atau tanggal`);
     }
   }
-  for (const specialist of ['manager', 'project', 'finance', 'purchasing', 'hr'] as Specialist[]) {
+  for (const specialist of ['manager', 'project', 'finance', 'purchasing', 'hr', 'advisor'] as Specialist[]) {
     for (const role of ['worker', 'manager', 'owner'] as OrgRole[]) {
       const count = toolsFor(specialist, role).length;
       if (count > 8) problems.push(`${specialist}/${role} melihat ${count} tool`);
