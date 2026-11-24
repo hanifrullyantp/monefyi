@@ -4,6 +4,24 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G4-1] 2026-11-24 — CFO Anggaran vs Aktual, KPI, Kebijakan Dividen 2 Mode, & Laporan Bulanan Bergaya Direksi (Deterministik + Ekspor PDF)
+- **Branch / PR:** `feat/g4-1-cfo-budget-kpi-board-report-dividend`
+- **Fase:** G4 (CFO Analytics, Board Monthly Reporting, & Kebijakan Dividen — G4-1)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/cfoAnalytics.ts` dengan seluruh nominal integer rupiah (`toRupiah`), `provenance`, dan disclaimer wajib `"Bukan nasihat hukum/pajak berlisensi"` (`CFO_ANALYTICS_DISCLAIMER`):
+    - `computeBudgetVsActual(input)`: menghitung perbandingan anggaran vs aktual (`monthly` & `annual`) untuk pos `opexItems` dan `projectItems` beserta ringkasan kelompok/keseluruhan, `variance`, `variancePct`, `status` (`under_budget` | `on_track` | `over_budget`), dan penjelasan deterministik (`explanation`) untuk varians signifikan (`|variancePct| >= 10%`).
+    - `computeCfoKpis(input)`: menghitung seluruh KPI wajib secara deterministik (`netCash`, `runwayMonths` + `runwayLabel` aman bila `burn <= 0`, `grossMarginPct`, `netMarginPct`, `dsoDays`, `dpoDays`, `receivableToRevenueRatioPct`, `clientConcentrationTop1Pct`, `clientConcentrationTop3Pct`, `teamUtilizationPct`) tanpa `NaN`/`Infinity` pada kasus `revenue === 0` / `hpp === 0` / `burn === 0`, lengkap dengan `assumptions` dan `provenance`.
+    - `simulateDividendPolicyComparison(input)`: membandingkan kebijakan dividen **per proyek** vs **per bisnis** di bawah batasan `availableCash`, cadangan opex (`opexReserveMultiplier * monthlyOpexPlan`), dan saldo `labaDitahan`, menjamin batas kas tersedia dan cadangan opex tidak pernah dilanggar serta menghasilkan rekomendasi berbasis likuiditas (`per_bisnis` | `per_proyek` | `hold`).
+    - `buildBoardMonthlyReport(input)`: menyusun laporan bulanan bergaya direksi (`pageOne`: `executiveSummary`, `kpis`, `topRisks`, `decisionsRequired`, `dividendPolicySummary`; `appendix`: `budgetVsActual`, `projectMargins`, `agingSummary`), mengisolasi transaksi & tagihan periode terkunci (`lockedPeriodMonth`) dari periode bulan berikutnya, serta menghitung `deterministicHash` (SHA-256 via `computeDeterministicSha256` atas JSON kanonis tanpa timestamp acak).
+    - `renderBoardReportPdfHtml(report)`: menghasilkan HTML cetak 1 halaman eksekutif + lampiran siap ekspor PDF yang deterministik 100% (tanpa random ID atau `new Date()`, dengan HTML escaping penuh).
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/cfoAnalytics.test.ts` (10 tes yang menguji `computeBudgetVsActual` bulanan/tahunan + batas tepat 10%, seluruh KPI termasuk kasus batas 0, simulasi dividen 2 mode, reproduksibilitas hash & HTML 100% identik, HTML escaping, serta isolasi integritas periode terkunci `lockedPeriodMonth`).
+  - Memperbarui `docs/finance/CHANGELOG.md` dan `docs/finance/PROGRESS.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template atau mutasi tabel jurnal.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada PR ini.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/cfoAnalytics.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah tool agent; menyediakan fungsi analitik CFO deterministik murni di `packages/domain/src/cfoAnalytics.ts` tanpa perhitungan LLM.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G3-2] 2026-11-24 — Penjaga Angka & Provenance Narasi Advisor, Backtest Forecast 13 Minggu, Tool `get_advisor_brief`, & Laporan Gerbang G3
 - **Branch / PR:** `feat/g3-2-advisor-tools-narration-guard-backtest`
 - **Fase:** G3 (Financial Advisor Deterministik, Penjaga Narasi, & Gerbang G3 — G3-2)
