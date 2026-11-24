@@ -132,7 +132,7 @@ export default function WorkerWorkTimer({
           type="button"
           onClick={onCheckIn}
           disabled={loading}
-          className="w-full py-3.5 bg-white text-org-dark font-black rounded-xl disabled:opacity-60"
+          className="min-h-11 w-full py-3.5 bg-white text-org-dark font-black rounded-xl disabled:opacity-60"
         >
           🟢 CHECK IN SEKARANG
         </button>
@@ -231,7 +231,7 @@ export default function WorkerWorkTimer({
         type="button"
         onClick={onCheckOut}
         disabled={loading}
-        className="w-full py-3.5 bg-white text-rose-600 font-black rounded-xl disabled:opacity-60"
+        className="min-h-11 w-full py-3.5 bg-white text-rose-600 font-black rounded-xl disabled:opacity-60"
       >
         🔴 CHECK OUT
       </button>

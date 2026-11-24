@@ -4,6 +4,29 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G11] 2026-11-24 — UX yang Meringankan (Tinjauan GM), Pre-Fill Proyek Terjadwal Tukang, Antrean Offline Idempoten, & Penutupan Program G7–G11
+- **Branch / PR:** `feat/g11-ux-lightening-gm-review`
+- **Fase:** G11 (UX yang Meringankan & Penutupan Program `G7`–`G11`)
+- **Perubahan & Alasan:**
+  - **Model UX & Pengukur Beban Deterministik (`packages/domain/src/uxLightening.ts`):**
+    - `assertNoAccountingJargon`: menolak 14 istilah akuntansi teknis (`debit`, `kredit`, `jurnal`, `hpp`, `liabilitas`, `ekuitas`, `akrual`, `aktiva`, `pasiva`, `neraca`, `buku besar`, `posting`, `coa`, `rekonsiliasi`) dari seluruh teks layar tukang, mandor, dan keputusan pagi PM/pemilik.
+    - `selectInitialWorkerProjectId` & `buildWorkerTodayView`: memakai `resolveAttendanceProjectFromSchedule` (`hrdPayroll.ts`) untuk pre-fill proyek otomatis dari jadwal PM / penugasan hari ini (tidak pernah menebak proyek aktif pertama bila belum ditugaskan), menegakkan `tapsToCheckIn <= 2`, `requiresNumericTyping: false`, target sentuh `minTouchTargetPx >= 44`, dan transparansi upah integer rupiah (`hari × tarif − potongan kasbon = terima bersih` + `Sisa kasbon`) dalam Bahasa Indonesia sehari-hari.
+    - `createOfflineActionQueue`, `enqueueOfflineAction`, & `flushOfflineActionQueue`: antrean sinyal lemah untuk check-in/check-out/foto progres dengan `idempotencyKey`, tetap aman berstatus `'queued'` saat offline, otomatis terkirim dalam urutan kronologis menjadi `'synced'` saat sinyal pulih, dan 0 pengiriman ganda.
+    - `buildMandorTeamTodayView`: satu tampilan terpadu siapa hadir / belum hadir, persetujuan hari kerja, tombol tambah orang ke proyek, dan satu tombol lapor progres + foto dengan redaksi gaji/tarif/kasbon pekerja lain melalui `filterHrdRecordsByRole` (G8).
+    - `buildMorningDecisionsView`: menyaring lintas-tenant dan mengurutkan hanya hal yang butuh keputusan manusia (maksimal `5` item) dengan tombol 1-ketukan `Setujui` / `Tolak` + alasan ringkas, serta merangkum hal rutin agen ke `handledByAgentCount`.
+    - `measureUxBurdenReduction` & `evaluateG11UxChecklist`: membandingkan cara lama vs Froyek G11 pada 4 tugas lapangan utama dan memverifikasi otomatis seluruh 9 butir standar gerbang UX G11.
+  - **Perbaikan Pre-Fill Proyek & Target Sentuh di UI Tukang (`apps/web/src/pages/WorkerDashboard.tsx`, `apps/web/src/components/worker/WorkerWorkTimer.tsx`):**
+    - Menghubungkan `WorkerDashboard.tsx` ke `selectInitialWorkerProjectId` agar memilih proyek dari penugasan/work item pekerja hari ini terlebih dahulu dan menampilkan pilihan eksplisit `"-- Pilih Proyek Hari Ini --"` tanpa fallback diam-diam ke proyek aktif pertama bila pekerja tidak ditugaskan.
+    - Menegakkan `min-h-11` (`>= 44px`) pada tombol utama dan kontrol pilih proyek di `WorkerDashboard.tsx` maupun tombol Check-In/Check-Out di `WorkerWorkTimer.tsx`.
+  - **Protokol Uji Kegunaan Nyata & Dokumentasi Penutup:**
+    - Menerbitkan [`docs/finance/G11-USABILITY-TEST-PROTOCOL.md`](./G11-USABILITY-TEST-PROTOCOL.md) untuk uji lapangan 3–5 tukang/mandor sebelum rilis dengan integrasi pelaporan ke sistem umpan balik G7 (`ui_confused` / `user_bug_report`).
+    - Menerbitkan [`docs/finance/PHASES/G11-report.md`](./PHASES/G11-report.md), memperbarui [`docs/finance/FINAL-REPORT.md`](./FINAL-REPORT.md) (ringkasan Program F0–F4, G0–G6, G7–G11, status 16 migrasi SQL `BLOCKED remote`, & daftar tindakan pemilik), dan menandai seluruh Program **F0–F4, G0–G6, G7–G11** `DONE` / `COMPLETED` di [`docs/finance/PROGRESS.md`](./PROGRESS.md).
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru; seluruh perhitungan rincian upah menggunakan `toRupiah` dan `computeKasbonSettlement`.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada G11 (total 16 migrasi lokal F0–G10 tetap berstatus `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g11UxLighteningAndGate.test.ts` (7/7 kasus uji lulus).
+- **Dampak ke Tool Agent:** Melengkapi lapisan UX lapangan ringan di atas runtime satu pintu G10 dan HRD/PM G8–G9 tanpa mengubah jalur posting akuntansi.
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [G10-2] 2026-11-24 — Gateway Saluran Pluggable (`telegram`, `web_pwa`, `whatsapp`), Mesin Proaktif Beranggaran Gangguan, Ringkasan Pemilik 5 Baris, & Simulasi 20 Orang × 5 Proyek × 7 Hari
 - **Branch / PR:** `feat/g10-2-channel-adapters-wa-proactive-budget-sim`
 - **Fase:** G10 (`G10-2` — Gateway Saluran, Adaptor WA Non-Resmi, Orkestrator Proaktif, & Penutupan Gerbang G10)
