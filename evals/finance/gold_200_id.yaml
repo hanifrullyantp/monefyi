@@ -1,0 +1,1543 @@
+# Gold evaluation set keuangan Indonesia Froyek (F3-T2)
+- id: g_001_wajib
+  category: wajib
+  input: belanja engsel pintu proyek A 50.000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 50000
+- id: g_002_wajib
+  category: wajib
+  input: belanja Rp150.000 untuk proyek B
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 150000
+- id: g_003_wajib
+  category: wajib
+  input: beli keramik perbaikan workshop
+  expect_outcome: ask_back
+  expect_error: missing_amount
+- id: g_004_wajib
+  category: wajib
+  input: beli keramik perbaikan workshop 1.2jt
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 1200000
+- id: g_005_hpp_material
+  category: hpp_material
+  input: beli semen 10 sak @ 65rb proyek A
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 650000
+  expect_date: 2026-11-24
+- id: g_006_hpp_material
+  category: hpp_material
+  input: bl pasir 1 truk proyek B 1,5jt kemarin
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 1500000
+  expect_date: 2026-11-23
+- id: g_007_hpp_material
+  category: hpp_material
+  input: bayar cat tembok proek A 320rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 320000
+  expect_date: 2026-11-24
+- id: g_008_hpp_material
+  category: hpp_material
+  input: beli besi beton 20 btg @ 85000 untuk proyek C
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 1700000
+  expect_date: 2026-11-24
+- id: g_009_hpp_material
+  category: hpp_material
+  input: belanja paku 5 kg harga 20rb proyek A
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 100000
+  expect_date: 2026-11-24
+- id: g_010_hpp_material
+  category: hpp_material
+  input: beli keramik lantai rumah bu ana 2 juta 500 ribu
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 2500000
+  expect_date: 2026-11-24
+- id: g_011_hpp_material
+  category: hpp_material
+  input: bl hebel ruko bu ana 3,2jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 3200000
+  expect_date: 2026-11-24
+- id: g_012_hpp_material
+  category: hpp_material
+  input: belanja pipa pvc prj a 450k
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 450000
+  expect_date: 2026-11-24
+- id: g_013_hpp_material
+  category: hpp_material
+  input: beli kabel listrik 2 roll x 250rb proyek B
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 500000
+  expect_date: 2026-11-24
+- id: g_014_hpp_material
+  category: hpp_material
+  input: belanja triplek 15 lbr @ 110rb proyek C 2026-11-20
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 1650000
+  expect_date: 2026-11-20
+- id: g_015_hpp_material
+  category: hpp_material
+  input: bl kayu kaso proyek A 750.000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 750000
+  expect_date: 2026-11-24
+- id: g_016_hpp_material
+  category: hpp_material
+  input: bayar genteng metal proyek B 4.2jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 4200000
+  expect_date: 2026-11-24
+- id: g_017_hpp_material
+  category: hpp_material
+  input: beli lem aibon 6 kaleng @ 35rb prj b
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 210000
+  expect_date: 2026-11-24
+- id: g_018_hpp_material
+  category: hpp_material
+  input: belanja saklar dan stop kontak proyek C Rp285.000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 285000
+  expect_date: 2026-11-24
+- id: g_019_hpp_material
+  category: hpp_material
+  input: bl baja ringan alfa 2,8jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 2800000
+  expect_date: 2026-11-24
+- id: g_020_hpp_material
+  category: hpp_material
+  input: beli bata merah beta 1.800.000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 1800000
+  expect_date: 2026-11-24
+- id: g_021_hpp_material
+  category: hpp_material
+  input: belanja gypsum plafon rumah bu ana 950rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 950000
+  expect_date: 2026-11-24
+- id: g_022_hpp_material
+  category: hpp_material
+  input: beli thinner dan kuas cat proyek A 95rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 95000
+  expect_date: 2026-11-24
+- id: g_023_hpp_material
+  category: hpp_material
+  input: bl kran air 4 pcs @ 60rb ruko bu ana
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 240000
+  expect_date: 2026-11-24
+- id: g_024_hpp_material
+  category: hpp_material
+  input: belanja baut roofing proek B 125k
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 125000
+  expect_date: 2026-11-24
+- id: g_025_hpp_material
+  category: hpp_material
+  input: beli semen tiga roda prj c 650rb 22/11/2026
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 650000
+  expect_date: 2026-11-22
+- id: g_026_hpp_material
+  category: hpp_material
+  input: belanja spandek atap proyek A 3,5jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 3500000
+  expect_date: 2026-11-24
+- id: g_027_hpp_material
+  category: hpp_material
+  input: beli kaca jendela rumah bu ana 880rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 880000
+  expect_date: 2026-11-24
+- id: g_028_hpp_material
+  category: hpp_material
+  input: bl amplas halus 20 lbr @ 5rb proyek B
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 100000
+  expect_date: 2026-11-24
+- id: g_029_hpp_material
+  category: hpp_material
+  input: beli sekrup gypsum 3 dus @ 45rb proyek A
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 135000
+  expect_date: 2026-11-24
+- id: g_030_hpp_material
+  category: hpp_material
+  input: pengadaan kunci pintu prj a 420rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 420000
+  expect_date: 2026-11-24
+- id: g_031_hpp_material
+  category: hpp_material
+  input: belanja gembok pagar proyek C 85.000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 85000
+  expect_date: 2026-11-24
+- id: g_032_hpp_material
+  category: hpp_material
+  input: beli kusen aluminium ruko bu ana 5,5jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 5500000
+  expect_date: 2026-11-24
+- id: g_033_hpp_material
+  category: hpp_material
+  input: belanja aksesoris plafon untuk proyek B 310rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 310000
+  expect_date: 2026-11-24
+- id: g_034_hpp_material
+  category: hpp_material
+  input: bl granit lantai proyek A 4 juta 200 ribu
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 4200000
+  expect_date: 2026-11-24
+- id: g_035_hpp_material
+  category: hpp_material
+  input: beli cat dasar alkali proek a 550rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 550000
+  expect_date: 2026-11-24
+- id: g_036_hpp_material
+  category: hpp_material
+  input: belanja pipa paralon prj b 275k
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 275000
+  expect_date: 2026-11-24
+- id: g_037_hpp_material
+  category: hpp_material
+  input: beli batu split proyek C 1,4jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 1400000
+  expect_date: 2026-11-24
+- id: g_038_hpp_material
+  category: hpp_material
+  input: belanja lampu led downlight proyek A 640rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 640000
+  expect_date: 2026-11-24
+- id: g_039_hpp_material
+  category: hpp_material
+  input: bl bahan waterproofing proyek B 890rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 890000
+  expect_date: 2026-11-24
+- id: g_040_hpp_material
+  category: hpp_material
+  input: beli paku beton gamma 60rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 60000
+  expect_date: 2026-11-24
+- id: g_041_hpp_material
+  category: hpp_material
+  input: belanja perlengkapan listrik rumah bu ana 720rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 720000
+  expect_date: 2026-11-24
+- id: g_042_hpp_material
+  category: hpp_material
+  input: beli semen mortar 8 sak @ 95rb proyek B
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 760000
+  expect_date: 2026-11-24
+- id: g_043_hpp_material
+  category: hpp_material
+  input: bl engsel jendela proyek C 145rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 145000
+  expect_date: 2026-11-24
+- id: g_044_hpp_material
+  category: hpp_material
+  input: belanja kayu meranti prj a 1.950.000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_material
+  expect_amount: 1950000
+  expect_date: 2026-11-24
+- id: g_045_hpp_labor
+  category: hpp_labor
+  input: bayar tukang proyek A 1,5jt kemarin
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 1500000
+  expect_date: 2026-11-23
+- id: g_046_hpp_labor
+  category: hpp_labor
+  input: byr upah mandor proyek B 2jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 2000000
+  expect_date: 2026-11-24
+- id: g_047_hpp_labor
+  category: hpp_labor
+  input: bayar kuli angkut semen proyek C 350rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 350000
+  expect_date: 2026-11-24
+- id: g_048_hpp_labor
+  category: hpp_labor
+  input: upah borongan cat rumah bu ana 3,5jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 3500000
+  expect_date: 2026-11-24
+- id: g_049_hpp_labor
+  category: hpp_labor
+  input: bayar lembur tukang ruko bu ana 450rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 450000
+  expect_date: 2026-11-24
+- id: g_050_hpp_labor
+  category: hpp_labor
+  input: byr harian tukang batu 3 orang x 150rb proyek A
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 450000
+  expect_date: 2026-11-24
+- id: g_051_hpp_labor
+  category: hpp_labor
+  input: catat gaji lapangan kenek prj b 600k
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 600000
+  expect_date: 2026-11-24
+- id: g_052_hpp_labor
+  category: hpp_labor
+  input: bayar tenaga kerja instalasi listrik proyek C 1,2jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 1200000
+  expect_date: 2026-11-24
+- id: g_053_hpp_labor
+  category: hpp_labor
+  input: byr tukang keramik proek A 1.8jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 1800000
+  expect_date: 2026-11-24
+- id: g_054_hpp_labor
+  category: hpp_labor
+  input: bayar pekerja bongkar atap proyek B 750rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 750000
+  expect_date: 2026-11-24
+- id: g_055_hpp_labor
+  category: hpp_labor
+  input: upah pasang plafon alfa 2.400.000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 2400000
+  expect_date: 2026-11-24
+- id: g_056_hpp_labor
+  category: hpp_labor
+  input: bayar tukang las kanopi beta 1,1jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 1100000
+  expect_date: 2026-11-24
+- id: g_057_hpp_labor
+  category: hpp_labor
+  input: jasa pemasangan kusen proyek A 850rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 850000
+  expect_date: 2026-11-24
+- id: g_058_hpp_labor
+  category: hpp_labor
+  input: jasa instalasi pipa proyek B 650rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 650000
+  expect_date: 2026-11-24
+- id: g_059_hpp_labor
+  category: hpp_labor
+  input: byr mandor mingguan proyek C 3jt 2026-11-21
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 3000000
+  expect_date: 2026-11-21
+- id: g_060_hpp_labor
+  category: hpp_labor
+  input: bayar kenek harian proyek A 220rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 220000
+  expect_date: 2026-11-24
+- id: g_061_hpp_labor
+  category: hpp_labor
+  input: upah pengecatan eksterior rumah bu ana 2.75jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 2750000
+  expect_date: 2026-11-24
+- id: g_062_hpp_labor
+  category: hpp_labor
+  input: bayar tukang kayu prj b 1.350.000
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 1350000
+  expect_date: 2026-11-24
+- id: g_063_hpp_labor
+  category: hpp_labor
+  input: byr borong pasang hebel proyek A 2 juta 250 ribu
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 2250000
+  expect_date: 2026-11-24
+- id: g_064_hpp_labor
+  category: hpp_labor
+  input: catat upah tenaga kerja proyek C 900rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 900000
+  expect_date: 2026-11-24
+- id: g_065_hpp_labor
+  category: hpp_labor
+  input: bayar tukang taman ruko bu ana 500rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 500000
+  expect_date: 2026-11-24
+- id: g_066_hpp_labor
+  category: hpp_labor
+  input: jasa perakitan kanopi proyek B 1,4jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_labor
+  expect_amount: 1400000
+  expect_date: 2026-11-24
+- id: g_067_hpp_equipment
+  category: hpp_equipment
+  input: sewa molen cor proyek A 400rb kemarin
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 400000
+  expect_date: 2026-11-23
+- id: g_068_hpp_equipment
+  category: hpp_equipment
+  input: sewa scaffolding proyek B 1,2jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 1200000
+  expect_date: 2026-11-24
+- id: g_069_hpp_equipment
+  category: hpp_equipment
+  input: sewa genset lapangan proyek C 750rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 750000
+  expect_date: 2026-11-24
+- id: g_070_hpp_equipment
+  category: hpp_equipment
+  input: sewa alat potong keramik rumah bu ana 180rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 180000
+  expect_date: 2026-11-24
+- id: g_071_hpp_equipment
+  category: hpp_equipment
+  input: sewa steger ruko bu ana 900k
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 900000
+  expect_date: 2026-11-24
+- id: g_072_hpp_equipment
+  category: hpp_equipment
+  input: bayar sewa stamper prj a 350rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 350000
+  expect_date: 2026-11-24
+- id: g_073_hpp_equipment
+  category: hpp_equipment
+  input: sewa jackhammer proyek B 600rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 600000
+  expect_date: 2026-11-24
+- id: g_074_hpp_equipment
+  category: hpp_equipment
+  input: beli perkakas gerinda tangan proyek C 480rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 480000
+  expect_date: 2026-11-24
+- id: g_075_hpp_equipment
+  category: hpp_equipment
+  input: sewa excavator mini proyek A 3,5jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 3500000
+  expect_date: 2026-11-24
+- id: g_076_hpp_equipment
+  category: hpp_equipment
+  input: beli tangga aluminium proek b 850rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 850000
+  expect_date: 2026-11-24
+- id: g_077_hpp_equipment
+  category: hpp_equipment
+  input: beli gerobak dorong proyek A 520rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 520000
+  expect_date: 2026-11-24
+- id: g_078_hpp_equipment
+  category: hpp_equipment
+  input: sewa alat bor bobok prj c 250rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 250000
+  expect_date: 2026-11-24
+- id: g_079_hpp_equipment
+  category: hpp_equipment
+  input: bayar mesin potong besi proyek B 1.6jt
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 1600000
+  expect_date: 2026-11-24
+- id: g_080_hpp_equipment
+  category: hpp_equipment
+  input: sewa scaffolding 5 set @ 100rb proyek A
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 500000
+  expect_date: 2026-11-24
+- id: g_081_hpp_equipment
+  category: hpp_equipment
+  input: sewa genset cadangan ruko bu ana 650rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_equipment
+  expect_amount: 650000
+  expect_date: 2026-11-24
+- id: g_082_hpp_overhead
+  category: hpp_overhead
+  input: bayar ongkir pasir proyek A 150rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 150000
+- id: g_083_hpp_overhead
+  category: hpp_overhead
+  input: beli bensin pick up antar material proyek B 120rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 120000
+- id: g_084_hpp_overhead
+  category: hpp_overhead
+  input: bayar konsumsi tukang proyek C 85rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 85000
+- id: g_085_hpp_overhead
+  category: hpp_overhead
+  input: beli makan tukang rumah bu ana 140rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 140000
+- id: g_086_hpp_overhead
+  category: hpp_overhead
+  input: bayar solar genset proyek A 200rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 200000
+- id: g_087_hpp_overhead
+  category: hpp_overhead
+  input: bayar retribusi lingkungan ruko bu ana 100rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 100000
+- id: g_088_hpp_overhead
+  category: hpp_overhead
+  input: ongkir pengiriman keramik prj b 175rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 175000
+- id: g_089_hpp_overhead
+  category: hpp_overhead
+  input: beli air mineral galon lapangan proyek C 60rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 60000
+- id: g_090_hpp_overhead
+  category: hpp_overhead
+  input: bayar parkir & tol kurir proyek A 45rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 45000
+- id: g_091_hpp_overhead
+  category: hpp_overhead
+  input: biaya transport survei lokasi proyek B 90rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 90000
+- id: g_092_hpp_overhead
+  category: hpp_overhead
+  input: bayar kebersihan lapangan proyek A 110rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 110000
+- id: g_093_hpp_overhead
+  category: hpp_overhead
+  input: byr keamanan proyek C 300rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 300000
+- id: g_094_hpp_overhead
+  category: hpp_overhead
+  input: beli bbm truk material prj a 350rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 350000
+- id: g_095_hpp_overhead
+  category: hpp_overhead
+  input: biaya koordinasi lingkungan proyek B 250rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 250000
+- id: g_096_hpp_overhead
+  category: hpp_overhead
+  input: bayar pengiriman besi proyek C 225rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 225000
+- id: g_097_hpp_overhead
+  category: hpp_overhead
+  input: biaya overhead lapangan rumah bu ana 180rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 180000
+- id: g_098_org_rule
+  category: org_rule
+  input: fotokopi gambar kerja proyek A 75rb
+  expect_outcome: prepared
+  expect_intent: catat_biaya_proyek
+  expect_event: project_cost_overhead
+  expect_amount: 75000
+  use_org_rule: true
+- id: g_099_org_rule
+  category: org_rule
+  input: voucher token pln gudang 200rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 200000
+  use_org_rule: true
+- id: g_100_opex
+  category: opex
+  input: bayar listrik kantor pln bulan ini 850rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 850000
+- id: g_101_opex
+  category: opex
+  input: bayar wifi indihome kantor 450rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 450000
+- id: g_102_opex
+  category: opex
+  input: beli token listrik workshop 300rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 300000
+- id: g_103_opex
+  category: opex
+  input: bayar pdam air kantor 175rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 175000
+- id: g_104_opex
+  category: opex
+  input: bayar gaji admin kantor 3,5jt
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 3500000
+- id: g_105_opex
+  category: opex
+  input: bayar sewa kantor bulan ini 4jt
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 4000000
+- id: g_106_opex
+  category: opex
+  input: beli atk kertas dan tinta kantor 240rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 240000
+- id: g_107_opex
+  category: opex
+  input: beli sapu dan sabun kebersihan workshop 95rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 95000
+- id: g_108_opex
+  category: opex
+  input: bayar internet telkom workshop 390rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 390000
+- id: g_109_opex
+  category: opex
+  input: servis kecil mesin bor workshop 450rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 450000
+- id: g_110_opex
+  category: opex
+  input: beli pantry kopi gula teh kantor 125rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 125000
+- id: g_111_opex
+  category: opex
+  input: bayar bbm operasional admin kantor 180rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 180000
+- id: g_112_opex
+  category: opex
+  input: catat operasional fotokopi arsip kantor 65rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 65000
+- id: g_113_opex
+  category: opex
+  input: bayar iuran kebersihan kantor 150rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 150000
+- id: g_114_opex
+  category: opex
+  input: maintenance ac ruang kantor 350rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 350000
+- id: g_115_opex
+  category: opex
+  input: beli papan tulis ruang rapat kantor 420rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 420000
+- id: g_116_opex
+  category: opex
+  input: perbaikan pintu pagar workshop 900rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 900000
+- id: g_117_opex
+  category: opex
+  input: bayar pajak reklame & perizinan kantor 1,2jt
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 1200000
+- id: g_118_opex
+  category: opex
+  input: beli bensin ojol kurir dokumen kantor 55rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 55000
+- id: g_119_opex
+  category: opex
+  input: catat biaya bpjs karyawan admin kantor 650rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 650000
+- id: g_120_opex
+  category: opex
+  input: beli lampu penerangan workshop 210rb
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 210000
+- id: g_121_opex
+  category: opex
+  input: bayar sewa gudang alat workshop 2,5jt
+  expect_outcome: prepared
+  expect_intent: catat_opex
+  expect_event: opex_expense
+  expect_amount: 2500000
+- id: g_122_asset_ask
+  category: asset_ask
+  input: beli keramik perbaikan workshop 6jt
+  expect_outcome: needs_choice
+  expect_error: confirm_asset_vs_opex
+- id: g_123_asset_ask
+  category: asset_ask
+  input: beli laptop admin kantor 8,5jt
+  expect_outcome: needs_choice
+  expect_error: confirm_asset_vs_opex
+- id: g_124_asset_ask
+  category: asset_ask
+  input: beli mesin las baru workshop 5,5jt
+  expect_outcome: needs_choice
+  expect_error: confirm_asset_vs_opex
+- id: g_125_pemasukan
+  category: pemasukan
+  input: terima DP proyek A 30jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_dp
+  expect_amount: 30000000
+- id: g_126_pemasukan
+  category: pemasukan
+  input: masuk uang muka proyek B 25jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_dp
+  expect_amount: 25000000
+- id: g_127_pemasukan
+  category: pemasukan
+  input: dp dari klien proyek C 15jt kemarin
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_dp
+  expect_amount: 15000000
+- id: g_128_pemasukan
+  category: pemasukan
+  input: terima tanda jadi rumah bu ana 10jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_dp
+  expect_amount: 10000000
+- id: g_129_pemasukan
+  category: pemasukan
+  input: terima DP ruko bu ana 20jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_dp
+  expect_amount: 20000000
+- id: g_130_pemasukan
+  category: pemasukan
+  input: masuk termin 1 proyek A 40jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_termin
+  expect_amount: 40000000
+- id: g_131_pemasukan
+  category: pemasukan
+  input: terima termin 2 proyek B 35jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_termin
+  expect_amount: 35000000
+- id: g_132_pemasukan
+  category: pemasukan
+  input: pembayaran termin progres proyek C 28jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_termin
+  expect_amount: 28000000
+- id: g_133_pemasukan
+  category: pemasukan
+  input: masuk angsuran proyek rumah bu ana 18jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_termin
+  expect_amount: 18000000
+- id: g_134_pemasukan
+  category: pemasukan
+  input: terima termin 3 ruko bu ana 22jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_termin
+  expect_amount: 22000000
+- id: g_135_pemasukan
+  category: pemasukan
+  input: terima pelunasan proyek A 50jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_pelunasan
+  expect_amount: 50000000
+- id: g_136_pemasukan
+  category: pemasukan
+  input: klien lunasi proyek B 45jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_pelunasan
+  expect_amount: 45000000
+- id: g_137_pemasukan
+  category: pemasukan
+  input: masuk sisa bayar klien lunas proyek C 12jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_pelunasan
+  expect_amount: 12000000
+- id: g_138_pemasukan
+  category: pemasukan
+  input: pelunasan akhir rumah bu ana 15jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_pelunasan
+  expect_amount: 15000000
+- id: g_139_pemasukan
+  category: pemasukan
+  input: potong retensi proyek A 5jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_retention_hold
+  expect_amount: 5000000
+- id: g_140_pemasukan
+  category: pemasukan
+  input: tahan retensi proyek B 4jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_retention_hold
+  expect_amount: 4000000
+- id: g_141_pemasukan
+  category: pemasukan
+  input: retensi proyek C 3,5jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_retention_hold
+  expect_amount: 3500000
+- id: g_142_pemasukan
+  category: pemasukan
+  input: cairkan retensi proyek A 5jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_retention_release
+  expect_amount: 5000000
+- id: g_143_pemasukan
+  category: pemasukan
+  input: retensi proyek B cair 4jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_retention_release
+  expect_amount: 4000000
+- id: g_144_pemasukan
+  category: pemasukan
+  input: pelunasan retensi proyek C 3,5jt
+  expect_outcome: prepared
+  expect_intent: catat_pemasukan
+  expect_event: client_retention_release
+  expect_amount: 3500000
+- id: g_145_pemasukan_ambigu
+  category: pemasukan_ambigu
+  input: terima transfer klien proyek A 10jt
+  expect_outcome: needs_choice
+  expect_error: entity_ambiguous
+- id: g_146_pemasukan_ambigu
+  category: pemasukan_ambigu
+  input: masuk dp 10jt
+  expect_outcome: needs_choice
+  expect_error: missing_project
+- id: g_147_bayar_hutang
+  category: bayar_hutang
+  input: bayar hutang TB Maju Jaya 5jt
+  expect_outcome: prepared
+  expect_intent: bayar_hutang
+  expect_event: payable_payment
+  expect_amount: 5000000
+- id: g_148_bayar_hutang
+  category: bayar_hutang
+  input: byr utang UD Sinar Abadi 3,5jt
+  expect_outcome: prepared
+  expect_intent: bayar_hutang
+  expect_event: payable_payment
+  expect_amount: 3500000
+- id: g_149_bayar_hutang
+  category: bayar_hutang
+  input: lunasi hutang TB Maju Jaya 2jt
+  expect_outcome: prepared
+  expect_intent: bayar_hutang
+  expect_event: payable_payment
+  expect_amount: 2000000
+- id: g_150_bayar_hutang
+  category: bayar_hutang
+  input: cicil hutang supplier sinar abadi 1,5jt
+  expect_outcome: prepared
+  expect_intent: bayar_hutang
+  expect_event: payable_payment
+  expect_amount: 1500000
+- id: g_151_bayar_hutang
+  category: bayar_hutang
+  input: bayar tagihan supplier TB Maju Jaya 4,2jt
+  expect_outcome: prepared
+  expect_intent: bayar_hutang
+  expect_event: payable_payment
+  expect_amount: 4200000
+- id: g_152_bayar_hutang
+  category: bayar_hutang
+  input: pelunasan hutang proyek A ke TB Maju Jaya 6jt
+  expect_outcome: prepared
+  expect_intent: bayar_hutang
+  expect_event: payable_payment
+  expect_amount: 6000000
+- id: g_153_bayar_hutang
+  category: bayar_hutang
+  input: byr hutang tempo UD Sinar Abadi 2,8jt
+  expect_outcome: prepared
+  expect_intent: bayar_hutang
+  expect_event: payable_payment
+  expect_amount: 2800000
+- id: g_154_bayar_hutang
+  category: bayar_hutang
+  input: bayar hutang proyek B 1,8jt
+  expect_outcome: prepared
+  expect_intent: bayar_hutang
+  expect_event: payable_payment
+  expect_amount: 1800000
+- id: g_155_terima_piutang
+  category: terima_piutang
+  input: terima piutang proyek A 7jt
+  expect_outcome: prepared
+  expect_intent: terima_piutang
+  expect_event: receivable_receipt
+  expect_amount: 7000000
+- id: g_156_terima_piutang
+  category: terima_piutang
+  input: pelunasan piutang rumah bu ana 12jt
+  expect_outcome: prepared
+  expect_intent: terima_piutang
+  expect_event: receivable_receipt
+  expect_amount: 12000000
+- id: g_157_terima_piutang
+  category: terima_piutang
+  input: terima piutang ruko bu ana 9jt
+  expect_outcome: prepared
+  expect_intent: terima_piutang
+  expect_event: receivable_receipt
+  expect_amount: 9000000
+- id: g_158_terima_piutang
+  category: terima_piutang
+  input: klien lunasi piutang proyek B 5,5jt
+  expect_outcome: prepared
+  expect_intent: terima_piutang
+  expect_event: receivable_receipt
+  expect_amount: 5500000
+- id: g_159_terima_piutang
+  category: terima_piutang
+  input: penagihan piutang proyek C masuk 6jt
+  expect_outcome: prepared
+  expect_intent: terima_piutang
+  expect_event: receivable_receipt
+  expect_amount: 6000000
+- id: g_160_terima_piutang
+  category: terima_piutang
+  input: tagihan klien masuk proyek A 4jt
+  expect_outcome: prepared
+  expect_intent: terima_piutang
+  expect_event: receivable_receipt
+  expect_amount: 4000000
+- id: g_161_kasbon
+  category: kasbon
+  input: kasbon Pak Budi proyek A 500rb
+  expect_outcome: prepared
+  expect_intent: kasbon
+  expect_event: kasbon_disbursement
+  expect_amount: 500000
+- id: g_162_kasbon
+  category: kasbon
+  input: kasbon Pak Agus proyek B 750rb
+  expect_outcome: prepared
+  expect_intent: kasbon
+  expect_event: kasbon_disbursement
+  expect_amount: 750000
+- id: g_163_kasbon
+  category: kasbon
+  input: pinjaman tukang Pak Budi proyek C 300rb
+  expect_outcome: prepared
+  expect_intent: kasbon
+  expect_event: kasbon_disbursement
+  expect_amount: 300000
+- id: g_164_kasbon
+  category: kasbon
+  input: minta bon dulu Pak Agus 400rb
+  expect_outcome: prepared
+  expect_intent: kasbon
+  expect_event: kasbon_disbursement
+  expect_amount: 400000
+- id: g_165_kasbon
+  category: kasbon
+  input: panjar karyawan Pak Budi 600rb
+  expect_outcome: prepared
+  expect_intent: kasbon
+  expect_event: kasbon_disbursement
+  expect_amount: 600000
+- id: g_166_kasbon
+  category: kasbon
+  input: kasbon tukang Pak Agus rumah bu ana 350rb
+  expect_outcome: prepared
+  expect_intent: kasbon
+  expect_event: kasbon_disbursement
+  expect_amount: 350000
+- id: g_167_transfer_kas
+  category: transfer_kas
+  input: transfer kas dari BCA ke Kas Kecil 3jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 3000000
+- id: g_168_transfer_kas
+  category: transfer_kas
+  input: pindah saldo dari Bank Mandiri ke Bank BCA 10jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 10000000
+- id: g_169_transfer_kas
+  category: transfer_kas
+  input: pindah dana dari BCA ke Kas Kecil 2jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 2000000
+- id: g_170_transfer_kas
+  category: transfer_kas
+  input: mutasi antar kas dari Mandiri ke Kas Kecil 1,5jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 1500000
+- id: g_171_transfer_kas
+  category: transfer_kas
+  input: top up kas kecil dari BCA 2,5jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 2500000
+- id: g_172_transfer_kas
+  category: transfer_kas
+  input: transfer kas dari Kas Kecil ke BCA 1jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 1000000
+- id: g_173_transfer_kas
+  category: transfer_kas
+  input: pindah kas dari Bank BCA ke Bank Mandiri 15jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 15000000
+- id: g_174_transfer_kas
+  category: transfer_kas
+  input: mutasi antar dompet dari BCA ke Mandiri 4jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 4000000
+- id: g_175_transfer_kas
+  category: transfer_kas
+  input: transfer kas dari Mandiri ke Kas Tunai 800rb
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 800000
+- id: g_176_transfer_kas
+  category: transfer_kas
+  input: pindah dana dari BCA ke tunai 1.2jt
+  expect_outcome: prepared
+  expect_intent: transfer_kas
+  expect_event: wallet_transfer
+  expect_amount: 1200000
+- id: g_177_dividen
+  category: dividen
+  input: bagi dividen proyek A 10jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_project_cash
+  expect_amount: 10000000
+  expect_action: confirm_one_tap
+- id: g_178_dividen
+  category: dividen
+  input: dividen proyek B 8jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_project_cash
+  expect_amount: 8000000
+  expect_action: confirm_one_tap
+- id: g_179_dividen
+  category: dividen
+  input: tarik laba proyek C 5jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_project_cash
+  expect_amount: 5000000
+  expect_action: confirm_one_tap
+- id: g_180_dividen
+  category: dividen
+  input: bagi hasil rumah bu ana 6jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_project_cash
+  expect_amount: 6000000
+  expect_action: confirm_one_tap
+- id: g_181_dividen
+  category: dividen
+  input: pembagian keuntungan proyek A 12jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_project_cash
+  expect_amount: 12000000
+  expect_action: confirm_one_tap
+- id: g_182_dividen
+  category: dividen
+  input: bagi dividen bisnis 20jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_business_cash
+  expect_amount: 20000000
+  expect_action: confirm_one_tap
+- id: g_183_dividen
+  category: dividen
+  input: tarik dividen laba ditahan 15jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_business_cash
+  expect_amount: 15000000
+  expect_action: confirm_one_tap
+- id: g_184_dividen
+  category: dividen
+  input: dividen bisnis periode ini 25jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_business_cash
+  expect_amount: 25000000
+  expect_action: confirm_one_tap
+- id: g_185_dividen
+  category: dividen
+  input: bagi laba bersih perusahaan 18jt
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_business_cash
+  expect_amount: 18000000
+  expect_action: confirm_one_tap
+- id: g_186_dividen
+  category: dividen
+  input: pembagian dividen usaha 500rb
+  expect_outcome: prepared
+  expect_intent: dividen
+  expect_event: dividend_business_cash
+  expect_amount: 500000
+  expect_action: confirm_one_tap
+- id: g_187_tanya_saldo
+  category: tanya_saldo
+  input: berapa saldo kas sekarang
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_188_tanya_saldo
+  category: tanya_saldo
+  input: cek kas BCA dan Kas Kecil
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_189_tanya_saldo
+  category: tanya_saldo
+  input: lihat sisa kas perusahaan
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_190_tanya_saldo
+  category: tanya_saldo
+  input: total piutang klien saat ini
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_191_tanya_saldo
+  category: tanya_saldo
+  input: berapa total hutang supplier
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_192_tanya_saldo
+  category: tanya_saldo
+  input: cek laba bersih bulan ini
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_193_tanya_saldo
+  category: tanya_saldo
+  input: gimana posisi keuangan minggu ini
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_194_tanya_saldo
+  category: tanya_saldo
+  input: tampilkan rekap omzet proyek
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_195_tanya_saldo
+  category: tanya_saldo
+  input: info saldo dompet kas
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_196_tanya_saldo
+  category: tanya_saldo
+  input: berapa profit bersih bulan ini
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_197_tanya_saldo
+  category: tanya_saldo
+  input: cek piutang jatuh tempo
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_198_tanya_saldo
+  category: tanya_saldo
+  input: saldo kas tunai berapa
+  expect_outcome: read_snapshot
+  expect_intent: tanya_saldo
+- id: g_199_guardrail
+  category: guardrail
+  input: beli makan siang pribadi 35rb
+  expect_outcome: rejected
+  expect_error: personal_expense_blocked
+- id: g_200_guardrail
+  category: guardrail
+  input: beli bensin motor pribadi 50rb
+  expect_outcome: rejected
+  expect_error: personal_expense_blocked
+- id: g_201_guardrail
+  category: guardrail
+  input: beli pulsa pribadi 100rb
+  expect_outcome: rejected
+  expect_error: personal_expense_blocked
+- id: g_202_guardrail
+  category: guardrail
+  input: jajan ngopi pribadi 40rb
+  expect_outcome: rejected
+  expect_error: personal_expense_blocked
+- id: g_203_guardrail
+  category: guardrail
+  input: belanja baju pribadi anak sekolah 250rb
+  expect_outcome: rejected
+  expect_error: personal_expense_blocked
+- id: g_204_guardrail
+  category: guardrail
+  input: beli semen Bu Ana 500rb
+  expect_outcome: needs_choice
+  expect_error: entity_ambiguous
+- id: g_205_guardrail
+  category: guardrail
+  input: bayar tukang Bu Ana 1jt
+  expect_outcome: needs_choice
+  expect_error: entity_ambiguous
+- id: g_206_guardrail
+  category: guardrail
+  input: terima piutang Bu Ana 8jt
+  expect_outcome: needs_choice
+  expect_error: entity_ambiguous
+- id: g_207_guardrail
+  category: guardrail
+  input: beli semen 10 sak @ 65rb
+  expect_outcome: needs_choice
+  expect_error: missing_project
+- id: g_208_guardrail
+  category: guardrail
+  input: bayar tukang 300rb
+  expect_outcome: needs_choice
+  expect_error: missing_project
+- id: g_209_guardrail
+  category: guardrail
+  input: beli paku proyek A
+  expect_outcome: ask_back
+  expect_error: missing_amount
+- id: g_210_guardrail
+  category: guardrail
+  input: bayar listrik kantor bulan ini
+  expect_outcome: ask_back
+  expect_error: missing_amount
+- id: g_211_guardrail
+  category: guardrail
+  input: terima DP proyek B
+  expect_outcome: ask_back
+  expect_error: missing_amount
+- id: g_212_guardrail
+  category: guardrail
+  input: transfer kas 2jt
+  expect_outcome: needs_choice
+  expect_error: missing_wallet
+- id: g_213_guardrail
+  category: guardrail
+  input: halo apa kabar hari ini
+  expect_outcome: ask_back
+  expect_error: intent_unknown
+- id: g_214_guardrail
+  category: guardrail
+  input: cuaca cerah sekali
+  expect_outcome: ask_back
+  expect_error: intent_unknown
+- id: g_215_guardrail
+  category: guardrail
+  input: tolong buatkan jadwal rapat besok
+  expect_outcome: ask_back
+  expect_error: intent_unknown
+- id: g_216_locked
+  category: locked
+  input: beli semen proyek A 100rb 2026-10-15
+  expect_outcome: rejected
+  expect_error: periode_terkunci
+  locked_period: 2026-10-01
+- id: g_217_locked
+  category: locked
+  input: bayar listrik kantor 300rb 2026-10-20
+  expect_outcome: rejected
+  expect_error: periode_terkunci
+  locked_period: 2026-10-01
+- id: g_218_locked
+  category: locked
+  input: terima DP proyek B 5jt 2026-10-28
+  expect_outcome: rejected
+  expect_error: periode_terkunci
+  locked_period: 2026-10-01

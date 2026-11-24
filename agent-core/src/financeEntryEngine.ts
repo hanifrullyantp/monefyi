@@ -377,8 +377,14 @@ function isPersonalExpense(norm: string): boolean {
   return /\b(pribadi|keluarga|istri|suami|anak sekolah|jajan|ngopi pribadi|rokok|liburan|baju pribadi|motor pribadi|beli pulsa pribadi)\b/.test(norm);
 }
 
-function isWorkshopOrBusinessOpexCue(norm: string): boolean {
-  return /\b(workshop|kantor|office|listrik|pln|pdam|air kantor|wifi|internet|telkom|indihome|gaji admin|sewa kantor|atk|fotokopi|kebersihan|bpjs|iuran kantor|operasional|opex|pantry)\b/.test(norm);
+function isWorkshopOrBusinessOpexCue(norm: string, hasChosenProject = false): boolean {
+  if (/\b(workshop|kantor|office|gaji admin|sewa kantor|sewa gudang|operasional|opex|pantry|atk|bpjs karyawan admin|reklame)\b/.test(norm)) {
+    return true;
+  }
+  if (!hasChosenProject && /\b(listrik|pln|pdam|air kantor|wifi|internet|telkom|indihome|kebersihan|iuran|fotokopi arsip)\b/.test(norm)) {
+    return true;
+  }
+  return false;
 }
 
 function hasAssetKeyword(norm: string): boolean {
@@ -389,7 +395,7 @@ function detectIncomeSubType(norm: string): 'dp' | 'termin' | 'pelunasan' | 'ret
   if (/\b(retensi.*cair|cair.*retensi|cairkan retensi|pelunasan retensi)\b/.test(norm)) return 'retensi_cair';
   if (/\b(tahan retensi|potong retensi|retensi)\b/.test(norm)) return 'retensi_tahan';
   if (/\b(dp|uang muka|down payment|tanda jadi)\b/.test(norm)) return 'dp';
-  if (/\b(pelunasan|lunas|sisa bayar klien|penutup)\b/.test(norm)) return 'pelunasan';
+  if (/\b(pelunasan|lunasi|lunas|sisa bayar klien|penutup)\b/.test(norm)) return 'pelunasan';
   if (/\b(termin|progres|progress|angsuran proyek)\b/.test(norm)) return 'termin';
   return null;
 }
@@ -398,17 +404,21 @@ function inferRapCategory(norm: string): {
   rapType: 'material' | 'labor' | 'equipment' | 'overhead' | 'other';
   confidence: number;
 } {
-  if (/\b(semen|pasir|batu|bata|hebel|besi|engsel|pintu|keramik|granit|cat|kuas|paku|baut|sekrup|kayu|triplek|pipa|pvc|kabel|lampu|saklar|kran|lem|gypsum|baja ringan|genteng|seng|spandek|kaca|kusen|atap|plafon|thinner|amplas|material|bahan)\b/.test(norm)) {
-    return { rapType: 'material', confidence: 0.94 };
+  // 1. Overhead dulu agar "ongkir pasir", "makan tukang", "solar genset", "kebersihan lapangan" akurat
+  if (/\b(ongkir|pengiriman|kurir|bensin|solar|bbm|parkir|tol|retribusi|konsumsi|makan tukang|air mineral|kebersihan lapangan|keamanan|koordinasi|survei|transport|fotokopi gambar|overhead)\b/.test(norm)) {
+    return { rapType: 'overhead', confidence: 0.92 };
   }
-  if (/\b(tukang|mandor|pekerja|kuli|kenek|borongan upah|upah|tenaga kerja|gaji lapangan|lembur tukang|harian tukang)\b/.test(norm)) {
-    return { rapType: 'labor', confidence: 0.94 };
-  }
-  if (/\b(sewa alat|sewa molen|molen|scaffolding|steger|genset|stamper|jackhammer|excavator|alat|perkakas|gerinda|mesin potong|tangga|gerobak)\b/.test(norm)) {
+  // 2. Equipment / sewa alat sebelum material ("alat potong keramik", "mesin potong besi")
+  if (/\b(sewa alat|sewa molen|sewa scaffolding|sewa steger|sewa genset|sewa stamper|sewa jackhammer|sewa excavator|sewa|molen|scaffolding|steger|genset|stamper|jackhammer|excavator|perkakas|gerinda|mesin potong|tangga aluminium|gerobak dorong)\b/.test(norm)) {
     return { rapType: 'equipment', confidence: 0.92 };
   }
-  if (/\b(transport|bensin|solar|bbm|ongkir|pengiriman|kurir|parkir|tol|retribusi|konsumsi|makan tukang|air mineral|keamanan|kebersihan lapangan|koordinasi|overhead)\b/.test(norm)) {
-    return { rapType: 'overhead', confidence: 0.91 };
+  // 3. Tenaga kerja sebelum material ("upah borongan cat", "kuli angkut semen", "tukang keramik", "jasa pemasangan kusen")
+  if (/\b(tukang|mandor|pekerja|kuli|kenek|borongan|borong|upah|tenaga kerja|gaji lapangan|lembur|harian|jasa pemasangan|jasa instalasi|jasa perakitan)\b/.test(norm)) {
+    return { rapType: 'labor', confidence: 0.94 };
+  }
+  // 4. Material
+  if (/\b(semen|mortar|pasir|batu|split|bata|hebel|besi|engsel|pintu|keramik|granit|cat|kuas|paku|baut|sekrup|kayu|triplek|pipa|paralon|pvc|kabel|lampu|downlight|saklar|stop kontak|kran|lem|gypsum|baja ringan|genteng|spandek|seng|kaca|kusen|atap|plafon|thinner|amplas|waterproofing|gembok|kunci|aksesoris|perlengkapan|material|bahan)\b/.test(norm)) {
+    return { rapType: 'material', confidence: 0.94 };
   }
   return { rapType: 'other', confidence: 0.62 };
 }
@@ -417,25 +427,35 @@ function inferOpexCategory(norm: string): string {
   if (/\b(listrik|pln|air|pdam|token listrik)\b/.test(norm)) return 'Listrik & Air';
   if (/\b(internet|wifi|indihome|telkom|paket data kantor)\b/.test(norm)) return 'Internet & Telepon';
   if (/\b(sewa kantor|sewa gudang|sewa workshop|kontrakan kantor)\b/.test(norm)) return 'Sewa Kantor';
-  if (/\b(gaji admin|staff kantor|akuntan|admin)\b/.test(norm)) return 'Gaji Admin';
+  if (/\b(gaji admin|staff kantor|akuntan|admin|bpjs)\b/.test(norm)) return 'Gaji Admin';
   if (/\b(bensin|bbm|solar|transport|ojol|kurir kantor|tol)\b/.test(norm)) return 'Transport & BBM';
-  if (/\b(atk|kertas|tinta|alat tulis|pantry|sabun|sapu|kebersihan)\b/.test(norm)) return 'Bahan Habis Pakai';
-  if (/\b(pajak|perizinan|notaris|npwp|retribusi)\b/.test(norm)) return 'Pajak & Perizinan';
-  if (/\b(workshop|keramik|perbaikan|servis|maintenance|rehab)\b/.test(norm)) return 'Perawatan Workshop';
+  if (/\b(atk|kertas|tinta|alat tulis|pantry|sabun|sapu|kebersihan|papan tulis|kopi)\b/.test(norm)) return 'Bahan Habis Pakai';
+  if (/\b(pajak|perizinan|notaris|npwp|retribusi|reklame)\b/.test(norm)) return 'Pajak & Perizinan';
+  if (/\b(workshop|keramik|perbaikan|servis|maintenance|rehab|pintu pagar|lampu penerangan)\b/.test(norm)) return 'Perawatan Workshop';
   return 'Lainnya';
 }
 
 function detectIntent(
   norm: string,
   explicitIntent?: FinanceAgentIntent,
+  hasChosenProject = false,
 ): { intent: FinanceAgentIntent | 'unknown'; confidence: number } {
   if (explicitIntent) return { intent: explicitIntent, confidence: 0.98 };
 
-  if (/^(berapa|cek|lihat|tampilkan|info|rekap|total|gimana)\b.*\b(saldo|kas|piutang|retensi|hutang|laba|rugi|omzet|uang|keuangan|posisi)\b|\b(saldo kas|cek kas|sisa kas|posisi keuangan)\b/.test(norm)) {
+  if (/\b(berapa|brp|cek|lihat|tampilkan|info|rekap|total|gimana)\b/.test(norm) && /\b(saldo|kas|piutang|retensi|hutang|laba|profit|rugi|omzet|uang|keuangan|posisi)\b/.test(norm) && !/\d/.test(norm)) {
     return { intent: 'tanya_saldo', confidence: 0.96 };
   }
   if (/\b(dividen|bagi hasil|bagi laba|tarik laba|pembagian keuntungan)\b/.test(norm)) {
     return { intent: 'dividen', confidence: 0.92 };
+  }
+  if (/\b(bayar hutang|byr hutang|byr utang|bayar utang|lunasi hutang|cicil hutang|bayar tagihan supplier|pelunasan hutang|byr hutang tempo|bayar tempo)\b/.test(norm)) {
+    return { intent: 'bayar_hutang', confidence: 0.94 };
+  }
+  if (/\b(terima piutang|pelunasan piutang|tagihan klien.*masuk|klien lunasi piutang|lunasi piutang|bayar piutang|penagihan)\b/.test(norm)) {
+    return { intent: 'terima_piutang', confidence: 0.93 };
+  }
+  if (/\b(terima\s+transfer\s+klien|klien\s+(bayar|lunasi|lunas)|dp|uang muka|termin|pelunasan|retensi|invoice dibayar)\b/.test(norm)) {
+    return { intent: 'catat_pemasukan', confidence: 0.92 };
   }
   if (/\b(transfer|pindah kas|pindah dana|pindah saldo|mutasi antar|top ?up kas)\b/.test(norm)) {
     return { intent: 'transfer_kas', confidence: 0.94 };
@@ -443,20 +463,14 @@ function detectIntent(
   if (/\b(kasbon|bon dulu|pinjam(an)? tukang|pinjaman karyawan|panjar karyawan)\b/.test(norm)) {
     return { intent: 'kasbon', confidence: 0.94 };
   }
-  if (/\b(bayar hutang|byr hutang|byr utang|bayar utang|lunasi hutang|cicil hutang|bayar tagihan supplier|pelunasan hutang|bayar tempo)\b/.test(norm)) {
-    return { intent: 'bayar_hutang', confidence: 0.94 };
-  }
-  if (/\b(terima piutang|pelunasan piutang|tagihan klien masuk|klien lunasi piutang|bayar piutang|penagihan)\b/.test(norm)) {
-    return { intent: 'terima_piutang', confidence: 0.93 };
-  }
-  if (/\b(terima|masuk|dp|uang muka|termin|pelunasan|retensi|invoice dibayar|klien bayar)\b/.test(norm)) {
-    return { intent: 'catat_pemasukan', confidence: 0.92 };
-  }
-  if (isWorkshopOrBusinessOpexCue(norm)) {
+  if (isWorkshopOrBusinessOpexCue(norm, hasChosenProject)) {
     return { intent: 'catat_opex', confidence: 0.91 };
   }
-  if (/\b(beli|belanja|bl|bayar|byr|catat|sewa|upah|beli bahan|biaya|pengeluaran|ongkir)\b/.test(norm)) {
+  if (/\b(beli|belanja|bl|bayar|byr|catat|sewa|upah|pengadaan|borong|borongan|jasa|beli bahan|biaya|pengeluaran|ongkir)\b/.test(norm)) {
     return { intent: 'catat_biaya_proyek', confidence: 0.88 };
+  }
+  if (/\b(terima|masuk|lunasi)\b/.test(norm)) {
+    return { intent: 'catat_pemasukan', confidence: 0.9 };
   }
   return { intent: 'unknown', confidence: 0.2 };
 }
@@ -539,6 +553,11 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
     };
   }
 
+  // Pra-deteksi proyek agar kalimat biaya proyek dengan kata "listrik"/"kebersihan" tidak lari ke opex
+  const preProjects = input.projects || [];
+  const preProjMatch = resolveEntityWithAliases(rawText, preProjects, input.projectId);
+  const hasChosenProject = preProjMatch.status === 'chosen';
+
   // Tier 1: cek aturan organisasi / memori koreksi lebih dahulu
   const matchedOrgRule = (input.orgRules || []).find((rule) => {
     const kw = normalizeText(rule.keyword);
@@ -547,7 +566,7 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
 
   const detected = matchedOrgRule
     ? { intent: matchedOrgRule.intent, confidence: matchedOrgRule.confidence ?? 0.97 }
-    : detectIntent(norm, input.intent);
+    : detectIntent(norm, input.intent, hasChosenProject);
 
   if (detected.intent === 'unknown') {
     return {
@@ -645,7 +664,14 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
     };
   }
 
-  const partyMatch = resolveEntityWithAliases(rawText, parties, input.partyId);
+  const partySearchText =
+    projMatch.status === 'chosen'
+      ? rawText.replace(new RegExp(projMatch.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ')
+      : rawText;
+  let partyMatch = resolveEntityWithAliases(partySearchText, parties, input.partyId);
+  if (partyMatch.status === 'none' && partySearchText !== rawText) {
+    partyMatch = resolveEntityWithAliases(rawText, parties, input.partyId);
+  }
   if (partyMatch.status === 'needs_choice') {
     return {
       ok: false,
@@ -666,12 +692,12 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
   const walletMatch = resolveEntityWithAliases(rawText, wallets, input.walletId);
   const projectId = projMatch.status === 'chosen' ? projMatch.id : null;
   const partyId = partyMatch.status === 'chosen' ? partyMatch.id : null;
-  const walletId = walletMatch.status === 'chosen' ? walletMatch.id : (wallets[0]?.id ?? null);
+  let walletId = walletMatch.status === 'chosen' ? walletMatch.id : (wallets[0]?.id ?? null);
   let targetWalletId = input.targetWalletId ?? null;
 
   // Cek apakah biaya proyek menyebut kata kerja beli tetapi tanpa proyek dan tanpa konteks opex
   if (intent === 'catat_biaya_proyek' && !projectId && !matchedOrgRule) {
-    if (isWorkshopOrBusinessOpexCue(norm)) {
+    if (isWorkshopOrBusinessOpexCue(norm, false)) {
       // Dialihkan ke opex secara aman bila menyebut workshop/kantor
     } else {
       return {
@@ -691,14 +717,32 @@ export function prepareEntry(input: PrepareEntryInput): PrepareEntryResult {
     }
   }
 
-  // Cek transfer_kas membutuhkan dompet tujuan
+  // Cek transfer_kas membutuhkan dompet asal & tujuan terpisah (mis. "dari Mandiri ke BCA" atau "top up kas kecil dari BCA")
   if (intent === 'transfer_kas') {
+    const cleanTransfer = stripDatesAndOrdinals(rawText).replace(/\b(?:rp\.?\s*)?\d[\d.,]*(?:\s*(?:juta|jt|ribu|rb|k))?\b/gi, ' ').trim();
+    const fromToMatch = cleanTransfer.match(/\bdari\s+(.+?)\s+(?:ke|menuju)\s+(.+)$/i);
+    const reverseMatch = !fromToMatch ? cleanTransfer.match(/^(.+?)\s+\bdari\s+(.+)$/i) : null;
+
+    if (fromToMatch) {
+      const srcProbe = resolveEntityWithAliases(fromToMatch[1], wallets, input.walletId);
+      if (srcProbe.status === 'chosen') walletId = srcProbe.id;
+    } else if (reverseMatch) {
+      const srcProbe = resolveEntityWithAliases(reverseMatch[2], wallets, input.walletId);
+      if (srcProbe.status === 'chosen') walletId = srcProbe.id;
+    }
+
+    const destText = fromToMatch
+      ? fromToMatch[2]
+      : reverseMatch
+      ? reverseMatch[1]
+      : /\b(?:ke|menuju)\b/i.test(cleanTransfer)
+      ? cleanTransfer.replace(/.*?\b(?:ke|menuju)\b/i, '')
+      : '';
     const destCandidates = wallets.filter((w) => w.id !== walletId);
     if (!targetWalletId) {
-      const destProbe = resolveEntityWithAliases(
-        rawText.replace(/.*?\b(?:ke|menuju)\b/i, ''),
-        destCandidates,
-      );
+      const destProbe = destText
+        ? resolveEntityWithAliases(destText, destCandidates)
+        : ({ status: 'none' } as const);
       if (destProbe.status === 'chosen') {
         targetWalletId = destProbe.id;
       } else {
