@@ -47,10 +47,18 @@ File: `my-supabase-project/supabase/migrations/20261124142000_g0_4_immutability_
 - Memasang ulang trigger `BEFORE UPDATE OR DELETE` pada ketiga tabel buku besar: `planner_journal_entries` (`planner_journal_entries_no_mutation`), `planner_journal_lines` (`planner_journal_lines_no_mutation`), dan `planner_journal_allocations` (`planner_journal_allocations_no_mutation`).
 - Memastikan RLS aktif dan menghapus seluruh policy mutasi (`UPDATE`, `DELETE`, `ALL`) yang mungkin tersisa pada ketiga tabel jurnal.
 
+### Langkah 6 — Migrasi G0-2 (Migrasi RPC Atomik & Backfill ke Akun F1)
+File: `my-supabase-project/supabase/migrations/20261124143000_g0_2_rpc_f1_accounts.sql`
+- Menambahkan helper `IMMUTABLE` `public.planner_hpp_account_type_for_rap(p_rap_type text)` yang memetakan identik dengan `hppRoleForRapType` di `packages/domain/src/journal.ts`.
+- Memperluas constraint status `planner_project_incomes` (`invoiced`, `accrued`) & `planner_cost_realizations` (`accrued`, `unpaid`).
+- Mengganti `planner_create_project_income_atomic` (menambah `p_party_id uuid DEFAULT NULL`, membuang overload 10-argumen lama) untuk memposting ke akun F1 (`uang_muka_klien`, `piutang_retensi`, `piutang`, `pendapatan_proyek`, `kas`) tanpa menyentuh `laba`.
+- Mengganti `planner_create_cost_realization_atomic` (menambah `p_party_id uuid DEFAULT NULL`, membuang overload 11-argumen lama) untuk memposting `Dr hpp_<type>` (dengan `needs_review = (v_hpp_type = 'hpp_uncategorized')`) dan `Cr hutang_dagang` (akrual) atau `Cr kas` (tunai/transfer).
+- Memperbarui `planner_backfill_cost_journals()` agar memakai `planner_hpp_account_type_for_rap` serta mengisi `project_id` dan `needs_review` pada `planner_journal_lines`.
+
 ---
 
 ## Verifikasi Dry-Run, Rekonsiliasi Sebelum/Sesudah, & Smoke Check
-1. Setelah Langkah 1–5 terpasang pada staging atau jendela pemeliharaan produksi, jalankan mode **dry-run** lebih dahulu untuk setiap `org_id`:
+1. Setelah Langkah 1–6 terpasang pada staging atau jendela pemeliharaan produksi, jalankan mode **dry-run** lebih dahulu untuk setiap `org_id`:
    ```sql
    SELECT public.planner_migrate_f1_ledger('<ORG_UUID>'::uuid, true);
    ```

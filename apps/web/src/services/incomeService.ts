@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabase';
-import { toRupiah } from '../../../../packages/domain/src/journal';
+import { resolveProjectIncomeTemplate, toRupiah } from '../../../../packages/domain/src/journal';
 
 export type IncomeCategory = 'dp' | 'termin' | 'pelunasan' | 'retensi' | 'other';
-export type IncomeStatus = 'received' | 'pending' | 'cancelled';
+export type IncomeStatus = 'received' | 'pending' | 'invoiced' | 'accrued' | 'cancelled';
 
 export interface ProjectIncome {
   id: string;
@@ -126,7 +126,7 @@ export async function createProjectIncome(
     if (error) throw new Error(error.message);
     savedRow = data as Record<string, unknown>;
 
-    if (status === 'received' && amount > 0) {
+    if (resolveProjectIncomeTemplate(item.category, status, amount).length > 0) {
       try {
         const { postProjectIncomeJournal } = await import('./financeV2/projectJournalBridge');
         const journalEntryId = await postProjectIncomeJournal({
@@ -136,6 +136,8 @@ export async function createProjectIncome(
           referenceId: savedRow.id as string,
           entryDate: item.date,
           createdBy: item.recorded_by,
+          category: item.category,
+          status,
         });
         if (!journalEntryId) {
           throw new Error('Jurnal pemasukan proyek gagal dibuat.');

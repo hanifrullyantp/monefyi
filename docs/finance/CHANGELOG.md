@@ -4,6 +4,21 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G0-2] 2026-11-24 — Migrasi RPC Atomik ke Akun F1 & Paritas SQL vs Domain
+- **Branch / PR:** `feat/g0-2-rpc-f1-parity`
+- **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-2)
+- **Perubahan & Alasan:**
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124143000_g0_2_rpc_f1_accounts.sql` (status `BLOCKED remote`): menambahkan `public.planner_hpp_account_type_for_rap(p_rap_type text)` (`IMMUTABLE`), memperbarui `planner_create_project_income_atomic` (`+ p_party_id DEFAULT NULL`, drop overload lama) ke akun F1 (`uang_muka_klien`, `piutang_retensi`, `piutang`, `pendapatan_proyek`, `kas`), memperbarui `planner_create_cost_realization_atomic` (`+ p_party_id DEFAULT NULL`, drop overload lama) ke `Dr hpp_<type>` (`needs_review = (v_hpp_type = 'hpp_uncategorized')`) & `Cr hutang_dagang` (akrual) / `Cr kas` (tunai), serta memperbarui `planner_backfill_cost_journals()` agar memakai `planner_hpp_account_type_for_rap` dengan `project_id` & `needs_review` tanpa memakai akun legacy `laba`.
+  - Menambahkan spesifikasi paritas tunggal `resolveProjectIncomeTemplate` & `resolveProjectCostTemplate` di `packages/domain/src/journal.ts` serta memindahkan `projectExpense`/`projectIncome` agar tidak memakai `'laba'` untuk pencatatan proyek baru.
+  - Memperbarui jalur fallback TS di `apps/web/src/services/financeV2/projectJournalBridge.ts`, `apps/web/src/services/incomeService.ts`, `apps/web/src/services/costService.ts`, `apps/web/src/services/financeV2/journalService.ts`, dan `apps/web/src/types/financeV2.ts` (`needsReview`) agar memakai akun F1 yang sama, serta menyesuaikan fixture COA F1 di `apps/web/src/services/financeV2/__tests__/f0AccountingCorrectness.test.ts`.
+  - Menambahkan suite tes paritas `apps/web/src/lib/financeV2/__tests__/rpcDomainParity.test.ts` yang memverifikasi paritas 100% antara SQL di `20261124143000_g0_2_rpc_f1_accounts.sql` dan `packages/domain/src/journal.ts` + runtime `projectJournalBridge.ts`.
+  - Memperbarui `docs/finance/ACCOUNTING-MODEL.md`, `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 6), dan `docs/finance/PROGRESS.md`.
+- **Akun / Template Jurnal Tersentuh:** `uang_muka_klien`, `piutang_retensi`, `piutang`, `pendapatan_proyek`, `hpp_material`, `hpp_labor`, `hpp_equipment`, `hpp_overhead`, `hpp_other`, `hpp_uncategorized`, `hutang_dagang`, `kas`.
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124143000_g0_2_rpc_f1_accounts.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/rpcDomainParity.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool; transaksi pemasukan & biaya proyek dari UI maupun RPC kini langsung masuk ke akun F1 yang sama dengan jalur agent.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G0-4] 2026-11-24 — Jaminan Trigger Imutabilitas Jurnal & Tes Penolakan Mutasi
 - **Branch / PR:** `feat/g0-4-immutability-guard`
 - **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-4)

@@ -1,5 +1,12 @@
 import { supabase } from '../../lib/supabase';
-import { toRupiah } from '../../../../../packages/domain/src/journal';
+import {
+  hppRoleForRapType,
+  resolveProjectCostTemplate,
+  resolveProjectIncomeTemplate,
+  toRupiah,
+  type JournalAccountRole,
+} from '../../../../../packages/domain/src/journal';
+import type { AccountType } from '../../types/financeV2';
 import { ensureChartOfAccounts, findSystemAccount } from './accountService';
 import { createJournalEntry } from './journalService';
 import { getOrCreateProjectKasAccount } from './kasService';
@@ -14,8 +21,41 @@ async function resolveProjectOrg(projectId: string): Promise<{ orgId: string; na
   return { orgId: data.org_id as string, name: data.name as string };
 }
 
+async function resolveProjectAccountId(
+  orgId: string,
+  projectId: string,
+  projectName: string,
+  role: JournalAccountRole,
+): Promise<string> {
+  if (role === 'kas') {
+    const projectKas = await getOrCreateProjectKasAccount(orgId, projectId, projectName);
+    return projectKas.id;
+  }
+  const account = await findSystemAccount(orgId, role as AccountType);
+  if (!account) {
+    throw new Error(`Akun sistem F1 '${role}' tidak ditemukan.`);
+  }
+  return account.id;
+}
+
+async function resolveRapTypeById(rapItemId?: string | null): Promise<string | null> {
+  if (!rapItemId) return null;
+  const { data, error } = await supabase
+    .from('planner_rap_items')
+    .select('type')
+    .eq('id', rapItemId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return (data.type as string) || null;
+}
+
 /**
- * Post project income: Dr Kas Proyek / Cr Laba Periode
+ * Post project income using F1 COA accounts:
+ * - DP received: Dr Kas Proyek / Cr Uang Muka Klien
+ * - Retensi hold (pending/invoiced/accrued): Dr Piutang Retensi / Cr Pendapatan Proyek
+ * - Retensi release (received): Dr Kas Proyek / Cr Piutang Retensi
+ * - Termin/Pelunasan/Other received: Dr Kas Proyek / Cr Pendapatan Proyek
+ * - Termin/Pelunasan/Other invoiced/accrued: Dr Piutang Usaha / Cr Pendapatan Proyek
  */
 export async function postProjectIncomeJournal(input: {
   projectId: string;
@@ -24,15 +64,29 @@ export async function postProjectIncomeJournal(input: {
   referenceId: string;
   entryDate?: string;
   createdBy?: string;
+  category?: string | null;
+  status?: string | null;
+  partyId?: string | null;
 }): Promise<string | null> {
-  const amount = toRupiah(input.amount);
-  if (amount <= 0) return null;
+  const templateLines = resolveProjectIncomeTemplate(
+    input.category ?? 'other',
+    input.status ?? 'received',
+    input.amount,
+  );
+  if (templateLines.length === 0) return null;
 
   const { orgId, name } = await resolveProjectOrg(input.projectId);
   await ensureChartOfAccounts(orgId);
-  const projectKas = await getOrCreateProjectKasAccount(orgId, input.projectId, name);
-  const laba = await findSystemAccount(orgId, 'laba', 'periode');
-  if (!laba) throw new Error('Akun Laba Periode tidak ditemukan untuk mencatat pemasukan proyek.');
+
+  const lines = await Promise.all(
+    templateLines.map(async (line) => ({
+      accountId: await resolveProjectAccountId(orgId, input.projectId, name, line.role),
+      debit: line.debit,
+      credit: line.credit,
+      projectId: input.projectId,
+      partyId: input.partyId || undefined,
+    })),
+  );
 
   const entry = await createJournalEntry({
     orgId,
@@ -41,17 +95,16 @@ export async function postProjectIncomeJournal(input: {
     referenceType: 'project_income',
     referenceId: input.referenceId,
     createdBy: input.createdBy,
-    lines: [
-      { accountId: projectKas.id, debit: amount, credit: 0, projectId: input.projectId },
-      { accountId: laba.id, debit: 0, credit: amount, projectId: input.projectId },
-    ],
+    lines,
   });
 
   return entry.id;
 }
 
 /**
- * Post project expense: Dr Laba (HPP) / Cr Kas Proyek
+ * Post project expense using F1 COA accounts:
+ * - Cash/transfer: Dr hpp_<rapType> / Cr Kas Proyek
+ * - Accrual/credit/tempo/unpaid: Dr hpp_<rapType> / Cr Hutang Dagang
  */
 export async function postProjectExpenseJournal(input: {
   projectId: string;
@@ -60,15 +113,38 @@ export async function postProjectExpenseJournal(input: {
   referenceId: string;
   entryDate?: string;
   createdBy?: string;
+  rapItemId?: string | null;
+  rapType?: string | null;
+  paymentMethod?: string | null;
+  status?: string | null;
+  partyId?: string | null;
 }): Promise<string | null> {
-  const amount = toRupiah(input.amount);
-  if (amount <= 0) return null;
+  const rapType = input.rapType !== undefined
+    ? input.rapType
+    : await resolveRapTypeById(input.rapItemId);
+  const templateLines = resolveProjectCostTemplate(
+    rapType,
+    input.paymentMethod,
+    input.status ?? 'recorded',
+    input.amount,
+  );
+  if (templateLines.length === 0) return null;
 
   const { orgId, name } = await resolveProjectOrg(input.projectId);
   await ensureChartOfAccounts(orgId);
-  const projectKas = await getOrCreateProjectKasAccount(orgId, input.projectId, name);
-  const laba = await findSystemAccount(orgId, 'laba', 'periode');
-  if (!laba) throw new Error('Akun Laba Periode tidak ditemukan untuk mencatat biaya proyek.');
+
+  const needsReview = hppRoleForRapType(rapType) === 'hpp_uncategorized';
+
+  const lines = await Promise.all(
+    templateLines.map(async (line) => ({
+      accountId: await resolveProjectAccountId(orgId, input.projectId, name, line.role),
+      debit: line.debit,
+      credit: line.credit,
+      projectId: input.projectId,
+      partyId: line.role === 'hutang_dagang' ? (input.partyId || undefined) : undefined,
+      needsReview: line.role.startsWith('hpp_') ? needsReview : false,
+    })),
+  );
 
   const entry = await createJournalEntry({
     orgId,
@@ -77,10 +153,7 @@ export async function postProjectExpenseJournal(input: {
     referenceType: 'project_expense',
     referenceId: input.referenceId,
     createdBy: input.createdBy,
-    lines: [
-      { accountId: laba.id, debit: amount, credit: 0, projectId: input.projectId },
-      { accountId: projectKas.id, debit: 0, credit: amount, projectId: input.projectId },
-    ],
+    lines,
   });
 
   return entry.id;
@@ -229,12 +302,15 @@ export async function backfillProjectJournalsForOrg(orgId: string, createdBy?: s
     .from('planner_project_incomes')
     .select('*')
     .in('project_id', projectIds)
-    .eq('status', 'received')
+    .in('status', ['received', 'pending', 'invoiced', 'accrued'])
     .is('journal_entry_id', null);
 
   for (const row of incomes || []) {
+    if (row.deleted_at != null) continue;
     const amount = Number(row.amount) || 0;
-    if (amount <= 0) continue;
+    const category = (row.category as string) || 'other';
+    const status = (row.status as string) || 'received';
+    if (resolveProjectIncomeTemplate(category, status, amount).length === 0) continue;
     try {
       const journalId = await postProjectIncomeJournal({
         projectId: row.project_id as string,
@@ -243,6 +319,8 @@ export async function backfillProjectJournalsForOrg(orgId: string, createdBy?: s
         referenceId: row.id as string,
         entryDate: row.date as string,
         createdBy,
+        category,
+        status,
       });
       if (journalId) {
         await supabase
@@ -275,6 +353,9 @@ export async function backfillProjectJournalsForOrg(orgId: string, createdBy?: s
         referenceId: row.id as string,
         entryDate: row.date as string,
         createdBy,
+        rapItemId: (row.rap_item_id as string) || null,
+        paymentMethod: (row.payment_method as string) || null,
+        status,
       });
       if (journalId) {
         await supabase

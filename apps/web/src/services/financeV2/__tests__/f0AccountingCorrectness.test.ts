@@ -51,6 +51,15 @@ function createInitialDb(): MockDbState {
       { id: 'acc-modal', org_id: 'org-1', type: 'modal_disetor', category: 'pasiva', name: 'Modal Disetor', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
       { id: 'acc-laba-ditahan', org_id: 'org-1', type: 'laba_ditahan', category: 'pasiva', name: 'Laba Ditahan', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
       { id: 'acc-laba', org_id: 'org-1', type: 'laba', category: 'pasiva', name: 'Laba Periode Berjalan', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 13_200_000, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-uang-muka', org_id: 'org-1', type: 'uang_muka_klien', category: 'pasiva', name: 'Uang Muka Klien', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-piutang-retensi', org_id: 'org-1', type: 'piutang_retensi', category: 'aktiva', name: 'Piutang Retensi', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-pendapatan-proyek', org_id: 'org-1', type: 'pendapatan_proyek', category: 'pendapatan', name: 'Pendapatan Proyek', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-hpp-material', org_id: 'org-1', type: 'hpp_material', category: 'beban', name: 'HPP Proyek - Material', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-hpp-labor', org_id: 'org-1', type: 'hpp_labor', category: 'beban', name: 'HPP Proyek - Tenaga Kerja', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-hpp-equipment', org_id: 'org-1', type: 'hpp_equipment', category: 'beban', name: 'HPP Proyek - Peralatan', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-hpp-overhead', org_id: 'org-1', type: 'hpp_overhead', category: 'beban', name: 'HPP Proyek - Overhead', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-hpp-other', org_id: 'org-1', type: 'hpp_other', category: 'beban', name: 'HPP Proyek - Lainnya', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
+      { id: 'acc-hpp-uncategorized', org_id: 'org-1', type: 'hpp_uncategorized', category: 'beban', name: 'HPP Proyek - Belum Dikategorikan', project_id: null, parent_id: null, is_system: true, is_active: true, current_balance: 0, metadata: {}, created_at: '', updated_at: '' },
     ],
     journalEntries: [],
     journalLines: [],
@@ -297,7 +306,7 @@ const mockRpc = vi.fn(async (fn: string, params: Record<string, unknown>) => {
       });
       const acc = db.accounts.find((a) => a.id === l.account_id);
       if (acc) {
-        const delta = acc.category === 'aktiva' ? l.debit - l.credit : l.credit - l.debit;
+        const delta = acc.category === 'aktiva' || acc.category === 'beban' ? l.debit - l.credit : l.credit - l.debit;
         acc.current_balance = Number(acc.current_balance) + delta;
       }
     }

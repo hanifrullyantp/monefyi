@@ -95,10 +95,10 @@ export function eventCodeForRapType(rapType?: string | null): FinanceEventCode {
   return 'project_cost_uncategorized';
 }
 
-/** Template biaya proyek berdasarkan sub-akun HPP (F1) atau legacy Laba (F0). */
+/** Template biaya proyek berbasis kas berdasarkan sub-akun HPP (F1). */
 export function projectExpense(amount: number, rapType?: string | null): TemplateLine[] {
   const value = toRupiah(amount);
-  const role = rapType === undefined ? 'laba' : hppRoleForRapType(rapType);
+  const role = hppRoleForRapType(rapType);
   return [
     { role, debit: value, credit: 0 },
     { role: 'kas', debit: 0, credit: value },
@@ -109,8 +109,71 @@ export function projectIncome(amount: number): TemplateLine[] {
   const value = toRupiah(amount);
   return [
     { role: 'kas', debit: value, credit: 0 },
-    { role: 'laba', debit: 0, credit: value },
+    { role: 'pendapatan_proyek', debit: 0, credit: value },
   ];
+}
+
+/**
+ * Spesifikasi paritas kanonis pemasukan proyek (TS <-> SQL `planner_create_project_income_atomic`).
+ * Mengembalikan array kosong bila status tidak memicu posting jurnal (mis. DP pending/cancelled).
+ */
+export function resolveProjectIncomeTemplate(
+  category?: string | null,
+  status?: string | null,
+  amount = 0,
+): TemplateLine[] {
+  const value = toRupiah(amount);
+  if (value <= 0) return [];
+
+  const cat = String(category || 'other').trim().toLowerCase() || 'other';
+  const st = String(status || 'received').trim().toLowerCase() || 'received';
+  if (st === 'cancelled') return [];
+
+  if (cat === 'dp') {
+    return st === 'received' ? clientDownPayment(value) : [];
+  }
+  if (cat === 'retensi') {
+    if (st === 'received') return clientRetentionRelease(value);
+    if (st === 'pending' || st === 'invoiced' || st === 'accrued') {
+      return clientRetentionHold(value);
+    }
+    return [];
+  }
+  if (st === 'received') {
+    return projectIncome(value);
+  }
+  if (st === 'invoiced' || st === 'accrued') {
+    return receivableAccrual(value);
+  }
+  return [];
+}
+
+/**
+ * Spesifikasi paritas kanonis biaya proyek (TS <-> SQL `planner_create_cost_realization_atomic`).
+ * Mengembalikan array kosong bila nominal <= 0 atau status dividend/cancelled.
+ */
+export function resolveProjectCostTemplate(
+  rapType?: string | null,
+  paymentMethod?: string | null,
+  status?: string | null,
+  amount = 0,
+): TemplateLine[] {
+  const value = toRupiah(amount);
+  const st = String(status || 'recorded').trim().toLowerCase() || 'recorded';
+  if (value <= 0 || st === 'dividend' || st === 'cancelled') return [];
+
+  const method = String(paymentMethod || '').trim().toLowerCase();
+  const isAccrual =
+    method === 'credit'
+    || method === 'hutang'
+    || method === 'tempo'
+    || st === 'accrued'
+    || st === 'unpaid';
+
+  if (isAccrual) {
+    return payableAccrual(value, rapType);
+  }
+  return projectExpense(value, rapType);
 }
 
 export function clientDownPayment(amount: number): TemplateLine[] {
