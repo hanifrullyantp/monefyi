@@ -10,6 +10,7 @@ function mapPayable(row: Record<string, unknown>): Payable {
     creditor_type: row.creditor_type as string,
     creditor_name: row.creditor_name as string,
     creditor_project_id: (row.creditor_project_id as string) || null,
+    party_id: (row.party_id as string) || null,
     category: (row.category as PayableCategory) || null,
     amount: Number(row.amount) || 0,
     paid_amount: Number(row.paid_amount) || 0,
@@ -61,6 +62,7 @@ export async function createPayable(input: {
   creditorType: string;
   creditorName: string;
   creditorProjectId?: string;
+  partyId?: string;
   category?: PayableCategory;
   amount: number;
   dueDate?: string;
@@ -71,6 +73,7 @@ export async function createPayable(input: {
   if (input.amount <= 0) throw new Error('Nominal hutang harus lebih dari 0.');
 
   const category = input.category || 'dagang';
+  const partyId = input.partyId?.trim() || undefined;
 
   const { data, error } = await supabase
     .from('planner_payables')
@@ -79,6 +82,7 @@ export async function createPayable(input: {
       creditor_type: input.creditorType,
       creditor_name: input.creditorName.trim(),
       creditor_project_id: input.creditorProjectId || null,
+      ...(partyId ? { party_id: partyId } : {}),
       category,
       amount: input.amount,
       paid_amount: 0,
@@ -103,8 +107,19 @@ export async function createPayable(input: {
         referenceId: payable.id,
         createdBy: input.createdBy,
         lines: [
-          { accountId: laba.id, debit: input.amount, credit: 0 },
-          { accountId: hutang.id, debit: 0, credit: input.amount },
+          {
+            accountId: laba.id,
+            debit: input.amount,
+            credit: 0,
+            ...(input.creditorProjectId ? { projectId: input.creditorProjectId } : {}),
+          },
+          {
+            accountId: hutang.id,
+            debit: 0,
+            credit: input.amount,
+            ...(partyId ? { partyId } : {}),
+            ...(input.creditorProjectId ? { projectId: input.creditorProjectId } : {}),
+          },
         ],
       });
     }
@@ -118,6 +133,7 @@ export async function recordPayablePayment(input: {
   payableId: string;
   amount: number;
   kasAccountId?: string;
+  partyId?: string;
   entryDate?: string;
   notes?: string;
   createdBy?: string;
@@ -146,6 +162,8 @@ export async function recordPayablePayment(input: {
   const hutang = await findSystemAccount(input.orgId, hutangAccountType(pay.category));
   if (!kas || !hutang) throw new Error('Akun kas atau hutang tidak ditemukan.');
 
+  const resolvedPartyId = input.partyId?.trim() || pay.party_id || undefined;
+
   await createJournalEntry({
     orgId: input.orgId,
     entryDate: input.entryDate,
@@ -154,8 +172,19 @@ export async function recordPayablePayment(input: {
     referenceId: input.payableId,
     createdBy: input.createdBy,
     lines: [
-      { accountId: hutang.id, debit: input.amount, credit: 0 },
-      { accountId: kas.id, debit: 0, credit: input.amount },
+      {
+        accountId: hutang.id,
+        debit: input.amount,
+        credit: 0,
+        ...(resolvedPartyId ? { partyId: resolvedPartyId } : {}),
+        ...(pay.creditor_project_id ? { projectId: pay.creditor_project_id } : {}),
+      },
+      {
+        accountId: kas.id,
+        debit: 0,
+        credit: input.amount,
+        ...(pay.creditor_project_id ? { projectId: pay.creditor_project_id } : {}),
+      },
     ],
   });
 

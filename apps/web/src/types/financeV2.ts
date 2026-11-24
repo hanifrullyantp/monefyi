@@ -48,7 +48,9 @@ export type JournalReferenceType =
   | 'receivable_receipt'
   | 'dividend'
   | 'f1_migration'
-  | 'revenue_recognition';
+  | 'revenue_recognition'
+  | 'interproject_loan'
+  | 'interproject_loan_repayment';
 
 export interface FinanceAccount {
   id: string;
@@ -174,6 +176,7 @@ export interface Receivable {
   debtor_type: DebtorType;
   debtor_name: string;
   debtor_project_id: string | null;
+  party_id?: string | null;
   amount: number;
   paid_amount: number;
   due_date: string | null;
@@ -188,6 +191,7 @@ export interface Payable {
   creditor_type: string;
   creditor_name: string;
   creditor_project_id: string | null;
+  party_id?: string | null;
   category: PayableCategory | null;
   amount: number;
   paid_amount: number;

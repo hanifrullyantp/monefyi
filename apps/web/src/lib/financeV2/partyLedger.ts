@@ -1,3 +1,4 @@
+import { normalizePartyName } from '../../../../../packages/domain/src/party';
 import type { Payable, Receivable } from '../../types/financeV2';
 
 export type PartyLedgerLine = {
@@ -9,11 +10,13 @@ export type PartyLedgerLine = {
   dueDate: string | null;
   status: string;
   projectId: string | null;
+  partyId: string | null;
   notes: string | null;
 };
 
 export type PartyAccount = {
   partyKey: string;
+  partyId: string | null;
   displayName: string;
   piutang: number;
   hutang: number;
@@ -22,7 +25,13 @@ export type PartyAccount = {
 };
 
 export function normalizePartyKey(name: string): string {
-  return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return normalizePartyName(name);
+}
+
+export function partyAccountKey(partyId: string | null | undefined, name: string): string {
+  const cleanId = partyId ? String(partyId).trim() : '';
+  if (cleanId) return `id:${cleanId}`;
+  return normalizePartyKey(name);
 }
 
 export function buildPartyAccounts(input: {
@@ -31,13 +40,15 @@ export function buildPartyAccounts(input: {
 }): PartyAccount[] {
   const map = new Map<string, PartyAccount>();
 
-  const ensure = (name: string): PartyAccount => {
-    const displayName = name.trim() || 'Tanpa nama';
-    const partyKey = normalizePartyKey(displayName);
+  const ensure = (partyId: string | null | undefined, name: string): PartyAccount => {
+    const cleanId = partyId ? String(partyId).trim() : null;
+    const displayName = name.trim() || cleanId || 'Tanpa nama';
+    const partyKey = partyAccountKey(cleanId, displayName);
     const existing = map.get(partyKey);
     if (existing) return existing;
     const created: PartyAccount = {
       partyKey,
+      partyId: cleanId,
       displayName,
       piutang: 0,
       hutang: 0,
@@ -51,7 +62,7 @@ export function buildPartyAccounts(input: {
   for (const rec of input.receivables) {
     const outstanding = Math.max(0, rec.amount - rec.paid_amount);
     if (outstanding <= 0 && rec.status === 'paid') continue;
-    const acc = ensure(rec.debtor_name);
+    const acc = ensure(rec.party_id, rec.debtor_name);
     acc.piutang += outstanding;
     acc.lines.push({
       id: rec.id,
@@ -62,6 +73,7 @@ export function buildPartyAccounts(input: {
       dueDate: rec.due_date,
       status: rec.status,
       projectId: rec.debtor_project_id,
+      partyId: rec.party_id ?? null,
       notes: rec.notes,
     });
   }
@@ -69,7 +81,7 @@ export function buildPartyAccounts(input: {
   for (const pay of input.payables) {
     const outstanding = Math.max(0, pay.amount - pay.paid_amount);
     if (outstanding <= 0 && pay.status === 'paid') continue;
-    const acc = ensure(pay.creditor_name);
+    const acc = ensure(pay.party_id, pay.creditor_name);
     acc.hutang += outstanding;
     acc.lines.push({
       id: pay.id,
@@ -80,6 +92,7 @@ export function buildPartyAccounts(input: {
       dueDate: pay.due_date,
       status: pay.status,
       projectId: pay.creditor_project_id,
+      partyId: pay.party_id ?? null,
       notes: pay.notes,
     });
   }
@@ -89,7 +102,25 @@ export function buildPartyAccounts(input: {
     .sort((a, b) => (b.piutang + b.hutang) - (a.piutang + a.hutang));
 }
 
-export function findPartyAccount(accounts: PartyAccount[], name: string): PartyAccount | null {
-  const key = normalizePartyKey(name);
-  return accounts.find(a => a.partyKey === key) || null;
+export function findPartyAccount(
+  accounts: PartyAccount[],
+  nameOrQuery: string | { partyId?: string | null; name?: string | null },
+): PartyAccount | null {
+  if (typeof nameOrQuery === 'object' && nameOrQuery !== null) {
+    const cleanId = nameOrQuery.partyId ? String(nameOrQuery.partyId).trim() : '';
+    if (cleanId) {
+      return accounts.find(a => a.partyId === cleanId || a.partyKey === `id:${cleanId}`) || null;
+    }
+    const key = normalizePartyKey(nameOrQuery.name || '');
+    if (!key) return null;
+    const matches = accounts.filter(a => normalizePartyKey(a.displayName) === key || a.partyKey === key);
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  const key = normalizePartyKey(nameOrQuery);
+  if (!key) return null;
+  const byLegacyKey = accounts.find(a => a.partyKey === key);
+  if (byLegacyKey) return byLegacyKey;
+  const byDisplay = accounts.filter(a => normalizePartyKey(a.displayName) === key);
+  return byDisplay.length === 1 ? byDisplay[0] : null;
 }

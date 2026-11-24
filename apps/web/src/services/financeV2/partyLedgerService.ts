@@ -20,11 +20,11 @@ export async function loadProjectPartyLedger(orgId: string, projectId: string): 
 
 export async function loadPartyAccount(
   orgId: string,
-  partyName: string,
+  partyNameOrQuery: string | { partyId?: string | null; name?: string | null },
   projectId?: string,
 ): Promise<PartyAccount | null> {
   const accounts = projectId
     ? await loadProjectPartyLedger(orgId, projectId)
     : await loadOrgPartyLedger(orgId);
-  return findPartyAccount(accounts, partyName);
+  return findPartyAccount(accounts, partyNameOrQuery);
 }

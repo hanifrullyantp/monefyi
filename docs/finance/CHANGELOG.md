@@ -4,6 +4,23 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G0-6] 2026-11-24 — Identitas Pihak via `party_id` & Pinjaman Antar Proyek via Jurnal Double-Entry
+- **Branch / PR:** `feat/g0-6-party-id-interproject-loan`
+- **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-6)
+- **Perubahan & Alasan:**
+  - Menambahkan `'interproject_loan_disbursement'` dan `'interproject_loan_repayment'` ke `FINANCE_EVENT_CODES` & `buildJournalTemplate` serta helper 4-baris seimbang `interprojectLoanDisbursement(amount)` & `interprojectLoanRepayment(amount)` (`side: 'from' | 'to'`) di `packages/domain/src/journal.ts`.
+  - Membuat modul domain `packages/domain/src/party.ts` (`normalizePartyName`, `resolvePartyId` yang mendahulukan `partyId` lalu exact normalized name/alias sambil menolak ambigu, `aggregatePartyBalancesById`, dan `aggregatePartyBalancesFromJournalLines` berbasis `party_id`).
+  - Memperbarui `apps/web/src/lib/financeV2/partyLedger.ts` & `apps/web/src/services/financeV2/partyLedgerService.ts` agar mengelompokkan dan mencari pihak berdasarkan `party_id` (dengan fallback `normalizePartyKey` hanya untuk data legacy tanpa `party_id`), serta memperbarui `payableService.ts`, `receivableService.ts`, dan `apps/web/src/types/financeV2.ts` agar menyimpan & meneruskan `partyId` ke baris jurnal hutang/piutang dan mendukung `JournalReferenceType` `'interproject_loan'` & `'interproject_loan_repayment'`.
+  - Menambahkan layanan `apps/web/src/services/financeV2/interprojectLoanService.ts` (`postInterprojectLoan`, `postInterprojectLoanRepayment`, `computeInterprojectLoanBalancesFromLines`, `loadInterprojectLoanBalances`) yang membaca & menulis langsung ke buku besar (via RPC dengan fallback `postJournalEntry`).
+  - Menambahkan migrasi SQL lokal `my-supabase-project/supabase/migrations/20261124145000_g0_6_party_id_and_interproject_loans.sql` (`BLOCKED remote`): memperluas `planner_journal_entries_reference_type_check`, menambah kolom + indeks `party_id` secara idempoten pada `planner_payables`, `planner_receivables`, `planner_project_incomes`, `planner_cost_realizations`, dan membuat RPC append-only `public.planner_post_interproject_loan(...)`.
+  - Menambahkan suite pengujian `apps/web/src/lib/financeV2/__tests__/partyAndInterprojectLoan.test.ts` (jurnal 4-baris seimbang pencairan & pelunasan, dampak L/R = 0 & kas konsolidasi = 0, penolakan proyek sama / nominal <= 0, resolusi & agregasi `party_id`, `validateJournalDimensions`, layanan `payableService`/`receivableService`/`interprojectLoanService`, serta uji struktural SQL).
+  - Memperbarui `docs/finance/ACCOUNTING-MODEL.md`, `docs/finance/DECISIONS.md` (`D-G0-03`), `docs/finance/DEPLOY-RUNBOOK.md` (Langkah 8), dan `docs/finance/PROGRESS.md`.
+- **Akun / Template Jurnal Tersentuh:** `piutang`, `hutang_lain`, `kas`, `kas_tujuan`, `hutang_dagang`, `hutang_pajak` (`interproject_loan_disbursement`, `interproject_loan_repayment`, `reference_type = 'interproject_loan' | 'interproject_loan_repayment'`).
+- **Migrasi SQL:** `my-supabase-project/supabase/migrations/20261124145000_g0_6_party_id_and_interproject_loans.sql` (lokal saja, `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/partyAndInterprojectLoan.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada perubahan signature tool; identitas pihak kini deterministik via `party_id` dan pinjaman antar proyek tercatat penuh di buku besar.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G0-5] 2026-11-24 — Pengakuan Pendapatan DP Berbasis Progres / Termin Terjadwal
 - **Branch / PR:** `feat/g0-5-revenue-recognition`
 - **Fase:** G0 (Koreksi Fondasi Kebenaran — G0-5)

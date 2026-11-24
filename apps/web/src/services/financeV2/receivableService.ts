@@ -10,6 +10,7 @@ function mapReceivable(row: Record<string, unknown>): Receivable {
     debtor_type: row.debtor_type as DebtorType,
     debtor_name: row.debtor_name as string,
     debtor_project_id: (row.debtor_project_id as string) || null,
+    party_id: (row.party_id as string) || null,
     amount: Number(row.amount) || 0,
     paid_amount: Number(row.paid_amount) || 0,
     due_date: (row.due_date as string) || null,
@@ -54,6 +55,7 @@ export async function createReceivable(input: {
   debtorType: DebtorType;
   debtorName: string;
   debtorProjectId?: string;
+  partyId?: string;
   amount: number;
   dueDate?: string;
   notes?: string;
@@ -62,6 +64,8 @@ export async function createReceivable(input: {
 }): Promise<Receivable> {
   if (input.amount <= 0) throw new Error('Nominal piutang harus lebih dari 0.');
 
+  const partyId = input.partyId?.trim() || undefined;
+
   const { data, error } = await supabase
     .from('planner_receivables')
     .insert({
@@ -69,6 +73,7 @@ export async function createReceivable(input: {
       debtor_type: input.debtorType,
       debtor_name: input.debtorName.trim(),
       debtor_project_id: input.debtorProjectId || null,
+      ...(partyId ? { party_id: partyId } : {}),
       amount: input.amount,
       paid_amount: 0,
       due_date: input.dueDate || null,
@@ -92,8 +97,19 @@ export async function createReceivable(input: {
         referenceId: receivable.id,
         createdBy: input.createdBy,
         lines: [
-          { accountId: piutang.id, debit: input.amount, credit: 0 },
-          { accountId: laba.id, debit: 0, credit: input.amount },
+          {
+            accountId: piutang.id,
+            debit: input.amount,
+            credit: 0,
+            ...(partyId ? { partyId } : {}),
+            ...(input.debtorProjectId ? { projectId: input.debtorProjectId } : {}),
+          },
+          {
+            accountId: laba.id,
+            debit: 0,
+            credit: input.amount,
+            ...(input.debtorProjectId ? { projectId: input.debtorProjectId } : {}),
+          },
         ],
       });
     }
@@ -107,6 +123,7 @@ export async function recordReceivablePayment(input: {
   receivableId: string;
   amount: number;
   kasAccountId?: string;
+  partyId?: string;
   entryDate?: string;
   notes?: string;
   createdBy?: string;
@@ -138,6 +155,8 @@ export async function recordReceivablePayment(input: {
     const piutang = await findSystemAccount(input.orgId, 'piutang');
     if (!kas || !piutang) throw new Error('Akun kas atau piutang tidak ditemukan.');
 
+    const resolvedPartyId = input.partyId?.trim() || rec.party_id || undefined;
+
     await createJournalEntry({
       orgId: input.orgId,
       entryDate: input.entryDate,
@@ -146,8 +165,19 @@ export async function recordReceivablePayment(input: {
       referenceId: input.receivableId,
       createdBy: input.createdBy,
       lines: [
-        { accountId: kas.id, debit: input.amount, credit: 0 },
-        { accountId: piutang.id, debit: 0, credit: input.amount },
+        {
+          accountId: kas.id,
+          debit: input.amount,
+          credit: 0,
+          ...(rec.debtor_project_id ? { projectId: rec.debtor_project_id } : {}),
+        },
+        {
+          accountId: piutang.id,
+          debit: 0,
+          credit: input.amount,
+          ...(resolvedPartyId ? { partyId: resolvedPartyId } : {}),
+          ...(rec.debtor_project_id ? { projectId: rec.debtor_project_id } : {}),
+        },
       ],
     });
   }

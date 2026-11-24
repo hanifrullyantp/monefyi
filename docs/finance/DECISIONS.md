@@ -76,3 +76,11 @@ Catatan keputusan teknis dan akuntansi ringkas per fase.
   3. Menyimpan jadwal dan keunikan bulanan per proyek pada `planner_revenue_recognition_schedules` (`UNIQUE(project_id, period_month)`) serta memposting jurnal lewat RPC idempoten `planner_recognize_project_dp_revenue` (`reference_type = 'revenue_recognition'`) tanpa melanggar imutabilitas jurnal.
 - **Alasan:** Menjamin pengakuan pendapatan akrual sesuai kemajuan proyek, menjaga total pengakuan kumulatif tidak pernah melampaui kewajiban DP yang diterima, serta memastikan eksekusi jadwal bulanan aman dijalankan berulang kali (idempoten).
 
+## D-G0-03 — Identitas Pihak via `party_id` & Pinjaman Antar Proyek via Jurnal Double-Entry 4-Baris
+- **Tanggal:** 2026-11-24
+- **Konteks:** Sebelumnya ledger pihak (`partyLedger.ts`) mengelompokkan hutang/piutang hanya memakai teks nama ternormalisasi sehingga dua pihak bernama mirip/beda kapitalisasi berisiko tercampur, dan pinjaman antar proyek dicatat di tabel transfer terpisah tanpa entri buku besar double-entry.
+- **Pilihan:**
+  1. Menjadikan `party_id` (UUID `planner_parties`) sebagai kunci identitas dan agregasi saldo hutang/piutang di `packages/domain/src/party.ts` (`resolvePartyId`, `aggregatePartyBalancesById`, `aggregatePartyBalancesFromJournalLines`), memperluas `planner_payables`, `planner_receivables`, `planner_project_incomes`, dan `planner_cost_realizations` dengan kolom `party_id`, serta menyertakan `partyId` pada baris jurnal di `payableService.ts` dan `receivableService.ts`.
+  2. Mencatat dan menghitung pinjaman antar proyek langsung di buku besar melalui jurnal 4-baris seimbang (`interprojectLoanDisbursement` / `interprojectLoanRepayment` dengan `reference_type = 'interproject_loan' | 'interproject_loan_repayment'` dan RPC `planner_post_interproject_loan`), tanpa tabel pinjaman terpisah yang mem-bypass buku besar.
+- **Alasan:** Menjamin identitas pihak deterministik bebas salah-gabung nama, serta memastikan setiap pinjaman antar proyek memiliki dampak Laba/Rugi = 0, dampak Kas konsolidasi = 0, dan saldo piutang/hutang tiap proyek terukur langsung dari buku besar.
+
