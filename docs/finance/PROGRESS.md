@@ -1,6 +1,6 @@
 # PROGRESS — Papan Kerja Keuangan Froyek (F0–F4, G0–G6, & G7–G11)
 
-**Fase Aktif:** Program `G7`–`G11` — Fase **`G8`, `G7`, & `G9` `DONE`**; siap masuk Fase **`G10`** sesuai urutan `G8 → G7 → G9 → G10 → G11` (migrasi SQL lokal `F0`–`G8` & `G7` berstatus `BLOCKED remote` dan siap dijalankan manual via `DEPLOY-RUNBOOK.md`)  
+**Fase Aktif:** Program `G7`–`G11` — Fase **`G8`, `G7`, & `G9` `DONE`**; sedang mengerjakan Fase **`G10`** (`G10-1` selesai) sesuai urutan `G8 → G7 → G9 → G10 → G11` (migrasi SQL lokal `F0`–`G8` & `G7` berstatus `BLOCKED remote` dan siap dijalankan manual via `DEPLOY-RUNBOOK.md`)  
 **Orkestrator:** Argon (Mode Otonom)  
 **Terakhir Diperbarui:** 2026-11-24
 
@@ -113,7 +113,7 @@
 | **G7** | Sistem Umpan Balik Terpadu, Observabilitas Lintas Aplikasi, Anonimisasi PII, Penggabungan Laporan Otomatis, & Dasbor Mutu | `DONE` | `feat/g7-unified-feedback-observability` | `packages/domain/src/feedbackObservability.ts` (5 modul, 8 kategori sinyal, `anonymizeFeedbackPayload`, `ingestFeedbackSignal` + opt-out `behavior_friction` + `autoModifyCodeOrPromptAllowed: false`, `aggregateFeedbackQueue`, `buildEvalCandidateFromFailedAgent` status `'pending_human_review'`, `computeQualityDashboard` + rekomendasi `L2 -> L1`), `feedbackObservabilityService.ts`, SQL lokal `20261124193000_g7_unified_feedback_events.sql` (`BLOCKED remote`), `D-G7-01`, `DEPLOY-RUNBOOK.md` Langkah 15, & `g7FeedbackObservability.test.ts`. |
 | **G7-Gate** | Laporan Gerbang Fase G7 (`G7-report.md`) | `DONE` | `feat/g7-unified-feedback-observability` | Fase **G7** seluruhnya `DONE`; laporan gerbang `docs/finance/PHASES/G7-report.md` terbit; urutan lanjut menuju **G9**. |
 | **G9** | Agen Project Manager, Guard Foto 100% UI Karyawan, & Simulasi 30 Hari End-to-End | `DONE` | `feat/g9-project-manager-agent-30d-sim` | `packages/domain/src/projectManagerAgent.ts` (`deriveDailyPlanFromSchedule`, `evaluateProgressUpdateRequest`, `evaluateLaborProductivityAndEac`, `evaluateMaterialAndPurchaseDrafts`, `buildDailyProjectReport`, `evaluateDelayAndTerminImpact`, `createTodoFromIssue`, `closeTodoWithProof`), `apps/web/src/lib/workerProgressGuard.ts` + `WorkerDashboard.tsx`, `g9ProjectManager30DaySim.test.ts` (simulasi 30 hari paritas HRD–Buku Besar–PM EAC `Rp 13.200.000`), `D-G9-01`, & `G9-report.md`. |
-| **G10** | Otomasi Operasional & Adapter Produksi | `READY` | — | Fase berikutnya sesuai urutan `G8 → G7 → G9 → G10 → G11`. |
+| **G10** | Otomasi Operasional & Adapter Produksi | `IN_PROGRESS` | `feat/g10-1-unified-agent-prepare-commit-18-actions` | `G10-1`: Satu pintu input (`routeSingleDoorInput` text/voice/OCR) + penyatuan 18 aksi `managerAgentService.ts` (`UNIFIED_MANAGER_ACTIONS`) ke runtime tunggal `prepareUnifiedAction`/`commitUnifiedAction` (`packages/domain/src/unifiedAgentGateway.ts`), gerbang `prepareManagerAction`/`commitManagerAction` di `managerAgentService.ts`, & `g10UnifiedAgentParity.test.ts`. |
 | **G11** | Stabilisasi & Verifikasi Akhir Lintas Modul | `PENDING` | — | Menyusul setelah G10. |
 
 ### Daftar Tugas Program G7–G11 (Urutan G8 → G7 → G9 → G10 → G11)
@@ -122,5 +122,5 @@
 - [x] `G8-3`: Anti-kecurangan kehadiran (`evaluateAttendanceFraudSignals`), RBAC 4 peran HRD (`filterHrdRecordsByRole`), uji gerbang penuh G8 (`g8AntiFraudRbacAndGate.test.ts`), & laporan gerbang `docs/finance/PHASES/G8-report.md` (Fase **G8** seluruhnya `DONE`).
 - [x] `G7`: Sistem Umpan Balik Terpadu, Observabilitas Lintas Aplikasi, Anonimisasi PII, Penggabungan Laporan Otomatis, Dasbor Mutu, migrasi lokal `20261124193000_g7_unified_feedback_events.sql` (`BLOCKED remote`), `feedbackObservabilityService.ts`, `g7FeedbackObservability.test.ts`, & laporan gerbang `docs/finance/PHASES/G7-report.md` (Fase **G7** seluruhnya `DONE`).
 - [x] `G9`: Agen Project Manager (`projectManagerAgent.ts`), guard bukti foto wajib 100% di `WorkerDashboard.tsx` (`workerProgressGuard.ts`), simulasi proyek 30 hari terpadu PM–HRD–Keuangan (`g9ProjectManager30DaySim.test.ts`), `D-G9-01`, & laporan gerbang `docs/finance/PHASES/G9-report.md` (Fase **G9** seluruhnya `DONE`).
-- [ ] `G10`: Otomasi Operasional & Adapter Produksi (**Berikutnya** sesuai urutan `G8 → G7 → G9 → G10 → G11`).
+- [ ] `G10`: Otomasi Operasional & Adapter Produksi (`G10-1` Satu Pintu & 18 Aksi Runtime Tunggal selesai; menunggu sub-tugas G10 berikutnya).
 - [ ] `G11`: Stabilisasi & Verifikasi Akhir Lintas Modul.

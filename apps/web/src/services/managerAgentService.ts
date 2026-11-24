@@ -22,6 +22,23 @@ import { createProject, updateProject } from './projectService';
 import type { OrgMember } from '../types/onboarding';
 import type { Estimation, PricelistCategory } from '../types/estimator';
 import type { PlannerTodo } from '../types/plannerTodo';
+import type { ActorRole } from '../../../../packages/domain/src/autonomyGovernance';
+import { detectPromptInjection } from '../../../../packages/domain/src/receiptExtraction';
+import {
+  UNIFIED_MANAGER_ACTIONS,
+  UNIFIED_MANAGER_ACTION_TYPES,
+  commitUnifiedAction,
+  prepareUnifiedAction,
+  routeSingleDoorInput,
+  type InputModality,
+  type PreparedActionStore,
+  type PreparedUnifiedActionRecord,
+  type RouteSingleDoorResult,
+  type UnifiedCommitAuditRecord,
+  type UnifiedDailyUsage,
+  type UnifiedGatewayPolicy,
+  type UnifiedManagerActionType,
+} from '../../../../packages/domain/src/unifiedAgentGateway';
 import {
   callUnifiedAI,
   extractJson,
@@ -81,25 +98,8 @@ export const DIVISIONS: Record<
   },
 };
 
-export type ActionType =
-  | 'record_cost'
-  | 'record_income'
-  | 'record_transfer'
-  | 'update_progress'
-  | 'add_worker_log'
-  | 'add_project'
-  | 'add_rap_item'
-  | 'add_work_item'
-  | 'update_project_status'
-  | 'review_bon'
-  | 'assign_todo'
-  | 'complete_todo'
-  | 'generate_payroll'
-  | 'add_employee'
-  | 'record_attendance'
-  | 'upsert_pricelist'
-  | 'create_estimation'
-  | 'convert_estimation';
+export type ActionType = UnifiedManagerActionType;
+export const MANAGER_ACTION_TYPES = UNIFIED_MANAGER_ACTION_TYPES;
 
 const ACTION_DIVISION: Record<ActionType, DivisionId> = {
   record_cost: 'finance',
@@ -132,6 +132,11 @@ export interface AgentAction {
   status: 'pending' | 'running' | 'done' | 'failed' | 'rejected';
   resultMessage?: string;
   navigateTo?: string;
+  prepareToken?: string;
+  idempotencyKey?: string;
+  preparedBy?: string;
+  expiresAt?: string;
+  auditRecord?: UnifiedCommitAuditRecord;
 }
 
 export interface DelegationReport {
@@ -1068,6 +1073,16 @@ export function localSmartManagerTurn(
   userText: string,
   config: AIConfig,
 ): ManagerTurn {
+  const injectionHits = detectPromptInjection(userText);
+  if (injectionHits.length > 0) {
+    return {
+      reply: `Permintaan ditolak karena terdeteksi instruksi berisiko/prompt injection (${injectionHits[0]}). Tidak ada aksi yang disiapkan atau dijalankan.`,
+      delegations: [],
+      actions: [],
+      followUps: ['Briefing kondisi semua proyek hari ini'],
+    };
+  }
+
   const lower = userText.toLowerCase();
 
   // 1. Cek instruksi kerja (multi-clause / perintah operasional)
@@ -1340,6 +1355,16 @@ export async function runManagerTurn(
   userText: string,
   config: AIConfig,
 ): Promise<ManagerTurn> {
+  const injectionHits = detectPromptInjection(userText);
+  if (injectionHits.length > 0) {
+    return {
+      reply: `Permintaan ditolak karena terdeteksi instruksi berisiko/prompt injection (${injectionHits[0]}). Tidak ada aksi yang disiapkan atau dijalankan.`,
+      delegations: [],
+      actions: [],
+      followUps: ['Briefing kondisi semua proyek hari ini'],
+    };
+  }
+
   if (!hasActiveKey(config)) {
     return localSmartManagerTurn(context, userText, config);
   }
@@ -1475,6 +1500,253 @@ export interface ExecResult {
   ok: boolean;
   message: string;
   navigateTo?: string;
+  code?: string;
+  prepareToken?: string;
+  idempotencyKey?: string;
+  auditRecord?: UnifiedCommitAuditRecord;
+  duplicate?: boolean;
+}
+
+export interface ManagerGovernanceOptions {
+  actorId?: string;
+  actorRole?: ActorRole;
+  approvedBy?: string | null;
+  approverRole?: ActorRole | null;
+  prepareToken?: string;
+  idempotencyKey?: string;
+  requirePreparedToken?: boolean;
+  policy?: UnifiedGatewayPolicy;
+  dailyUsage?: UnifiedDailyUsage;
+  preparedStore?: PreparedActionStore;
+  modality?: InputModality;
+  rawText?: string;
+  attachmentHash?: string;
+  nowMs?: number;
+}
+
+export type PrepareManagerActionResult =
+  | {
+      ok: true;
+      prepareToken: string;
+      idempotencyKey: string;
+      expiresAt: string;
+      requiresApproval: boolean;
+      preparedRecord: PreparedUnifiedActionRecord;
+      action: AgentAction;
+    }
+  | {
+      ok: false;
+      code: string;
+      message: string;
+    };
+
+const defaultManagerPreparedStore: Map<string, PreparedUnifiedActionRecord> = new Map();
+
+function buildDefaultGatewayPolicy(orgId: string): UnifiedGatewayPolicy {
+  return {
+    orgId,
+    killSwitchEnabled: false,
+    autonomyLevel: 'L1',
+    dailyAgentCapRupiah: 100_000_000_000,
+    outboundHighRiskThresholdRupiah: 5_000_000,
+    approvalThresholdRupiah: 5_000_000,
+  };
+}
+
+function buildDefaultDailyUsage(): UnifiedDailyUsage {
+  return {
+    committedRupiahToday: 0,
+  };
+}
+
+/**
+ * Gerbang Satu Pintu Manager Agent: menerima ketik/suara/OCR foto tanpa memilih modul,
+ * mengembalikan hasil routing peran + kandidat `AgentAction` yang siap di-`prepare`.
+ */
+export function routeManagerSingleDoorInput(input: {
+  modality: InputModality;
+  rawText: string;
+  orgId: string;
+  actorId: string;
+  actorRole?: ActorRole;
+  attachmentHash?: string;
+  projectHint?: string;
+  nowMs?: number;
+}): {
+  routing: RouteSingleDoorResult;
+  actions: AgentAction[];
+} {
+  const routing = routeSingleDoorInput({
+    modality: input.modality,
+    rawText: input.rawText,
+    orgId: input.orgId,
+    actorId: input.actorId,
+    actorRole: input.actorRole ?? 'manager',
+    attachmentHash: input.attachmentHash,
+    projectHint: input.projectHint,
+    nowMs: input.nowMs,
+  });
+
+  if (!routing.ok) {
+    return { routing, actions: [] };
+  }
+
+  const actions: AgentAction[] = routing.candidates.map((candidate, idx) => ({
+    id: `sd-${input.nowMs ?? Date.now()}-${idx}-${actionSeq++}`,
+    type: candidate.actionType,
+    division: ACTION_DIVISION[candidate.actionType],
+    params: { ...candidate.params },
+    summary: candidate.summary || UNIFIED_MANAGER_ACTIONS[candidate.actionType].description,
+    needsApproval:
+      UNIFIED_MANAGER_ACTIONS[candidate.actionType].alwaysRequiresApproval
+      || candidate.amountRupiah > 5_000_000,
+    status: 'pending',
+  }));
+
+  return { routing, actions };
+}
+
+/**
+ * Tahap PREPARE wajib sebelum eksekusi Manager Agent:
+ * tidak menulis data apapun, menerbitkan `prepareToken` TTL 10 menit + `idempotencyKey`.
+ */
+export function prepareManagerAction(
+  action: AgentAction,
+  _ctx: ContextPack,
+  env: ManagerEnv,
+  options?: ManagerGovernanceOptions,
+): PrepareManagerActionResult {
+  const policy = options?.policy ?? buildDefaultGatewayPolicy(env.orgId);
+  const dailyUsage = options?.dailyUsage ?? buildDefaultDailyUsage();
+  const store = options?.preparedStore ?? defaultManagerPreparedStore;
+  const actorId = options?.actorId ?? 'agent:gm';
+  const actorRole = options?.actorRole ?? 'manager';
+  const idempotencyKey =
+    options?.idempotencyKey
+    ?? action.idempotencyKey
+    ?? (action.id ? `idemp_act_${action.id}` : undefined);
+
+  const spec = UNIFIED_MANAGER_ACTIONS[action.type];
+  const prep = prepareUnifiedAction(
+    {
+      orgId: env.orgId,
+      actorId,
+      actorRole,
+      actionType: action.type,
+      roles: spec ? [...spec.roles] : ['pm'],
+      modality: options?.modality ?? 'text',
+      rawText: options?.rawText ?? action.summary ?? action.type,
+      params: action.params,
+      amountRupiah: actionAmount(action),
+      summary: action.summary || action.type,
+      attachmentHash: options?.attachmentHash,
+      idempotencyKey,
+      requiresApproval: action.needsApproval,
+      nowMs: options?.nowMs,
+    },
+    policy,
+    dailyUsage,
+    store,
+  );
+
+  if (!prep.ok) {
+    return {
+      ok: false,
+      code: prep.code,
+      message: prep.reason,
+    };
+  }
+
+  return {
+    ok: true,
+    prepareToken: prep.prepareToken,
+    idempotencyKey: prep.idempotencyKey,
+    expiresAt: prep.expiresAt,
+    requiresApproval: prep.requiresApproval,
+    preparedRecord: prep.preparedRecord,
+    action: {
+      ...action,
+      prepareToken: prep.prepareToken,
+      idempotencyKey: prep.idempotencyKey,
+      preparedBy: actorId,
+      expiresAt: prep.expiresAt,
+      needsApproval: prep.requiresApproval,
+    },
+  };
+}
+
+/**
+ * Tahap COMMIT wajib Manager Agent:
+ * memvalidasi `prepareToken`, idempotensi, kill switch, SoD, dan persetujuan manusia
+ * melalui `commitUnifiedAction` sebelum menjalankan mutasi nyata.
+ */
+export async function commitManagerAction(
+  action: AgentAction,
+  ctx: ContextPack,
+  env: ManagerEnv,
+  options?: ManagerGovernanceOptions,
+): Promise<ExecResult> {
+  const policy = options?.policy ?? buildDefaultGatewayPolicy(env.orgId);
+  const dailyUsage = options?.dailyUsage ?? buildDefaultDailyUsage();
+  const store = options?.preparedStore ?? defaultManagerPreparedStore;
+  const prepareToken = String(options?.prepareToken ?? action.prepareToken ?? '').trim();
+  const idempotencyKey = options?.idempotencyKey ?? action.idempotencyKey;
+
+  const commitRes = commitUnifiedAction(
+    {
+      prepareToken,
+      idempotencyKey,
+      orgId: env.orgId,
+      approvedBy: options?.approvedBy,
+      approverRole: options?.approverRole,
+      nowMs: options?.nowMs,
+    },
+    store,
+    policy,
+    dailyUsage,
+  );
+
+  if (!commitRes.ok) {
+    return {
+      ok: false,
+      code: commitRes.code,
+      message: commitRes.reason,
+    };
+  }
+
+  if (commitRes.duplicate) {
+    return {
+      ok: true,
+      duplicate: true,
+      code: 'duplicate_commit_prevented',
+      message: commitRes.reason,
+      prepareToken: commitRes.prepareToken,
+      idempotencyKey: commitRes.idempotencyKey,
+      auditRecord: commitRes.auditRecord,
+    };
+  }
+
+  const execRes = await executePreparedActionBody(action, ctx, env);
+  if (!execRes.ok) {
+    const rec = store instanceof Map ? store.get(prepareToken) : store[prepareToken];
+    if (rec) {
+      rec.committedResult = undefined;
+    }
+    return {
+      ...execRes,
+      prepareToken: commitRes.prepareToken,
+      idempotencyKey: commitRes.idempotencyKey,
+    };
+  }
+
+  return {
+    ...execRes,
+    code: 'committed',
+    duplicate: false,
+    prepareToken: commitRes.prepareToken,
+    idempotencyKey: commitRes.idempotencyKey,
+    auditRecord: commitRes.auditRecord,
+  };
 }
 
 async function runIntent(
@@ -1503,7 +1775,50 @@ async function runIntent(
   };
 }
 
+/**
+ * Gerbang eksekusi tunggal Manager Agent:
+ * - Jika `requirePreparedToken: true` atau token disertakan secara eksplisit, memvalidasi token via `commitManagerAction` (tanpa auto-prepare).
+ * - Jika dipanggil langsung oleh UI/legacy 3-argumen tanpa token terlampir, menjalankan `prepareManagerAction` -> `commitManagerAction` secara eksplisit sebelum mutasi.
+ */
 export async function executeAgentAction(
+  action: AgentAction,
+  ctx: ContextPack,
+  env: ManagerEnv,
+  options?: ManagerGovernanceOptions,
+): Promise<ExecResult> {
+  const hasExplicitToken =
+    options?.requirePreparedToken === true
+    || options?.prepareToken !== undefined
+    || action.prepareToken !== undefined;
+
+  if (hasExplicitToken) {
+    return commitManagerAction(action, ctx, env, options);
+  }
+
+  const prep = prepareManagerAction(action, ctx, env, options);
+  if (!prep.ok) {
+    return {
+      ok: false,
+      code: prep.code,
+      message: prep.message,
+    };
+  }
+
+  const resolvedApprovedBy =
+    options?.approvedBy !== undefined
+      ? options.approvedBy
+      : env.userId || 'owner:human';
+
+  return commitManagerAction(prep.action, ctx, env, {
+    ...options,
+    prepareToken: prep.prepareToken,
+    idempotencyKey: prep.idempotencyKey,
+    approvedBy: resolvedApprovedBy,
+    approverRole: options?.approverRole ?? 'owner',
+  });
+}
+
+async function executePreparedActionBody(
   action: AgentAction,
   ctx: ContextPack,
   env: ManagerEnv,
