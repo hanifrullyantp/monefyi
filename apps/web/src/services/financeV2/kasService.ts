@@ -83,8 +83,8 @@ export async function closeProjectFinance(input: {
   const labaDitahan = await findSystemAccount(input.orgId, 'laba_ditahan');
   if (!laba || !labaDitahan) throw new Error('Akun laba tidak ditemukan.');
 
-  const kasRemainder = Math.max(0, preview.kasBalance);
-  const finalProfit = preview.finalProfit;
+  const kasRemainder = Math.max(0, Math.round(preview.kasBalance));
+  const finalProfit = Math.round(preview.finalProfit);
 
   if (kasRemainder > 0) {
     await createJournalEntry({
@@ -100,7 +100,18 @@ export async function closeProjectFinance(input: {
     });
   }
 
-  if (finalProfit > 0) {
+  // Jangan pindahkan melebihi saldo Laba Periode yang masih belum ditutup bila sudah ada tutup periode sebelumnya.
+  const { data: closedSnapshots } = await supabase
+    .from('planner_finance_period_snapshots')
+    .select('id')
+    .eq('org_id', input.orgId)
+    .limit(1);
+  const hasPriorPeriodClose = (closedSnapshots?.length ?? 0) > 0;
+  const unclosedProfitToMove = hasPriorPeriodClose && finalProfit > 0
+    ? Math.min(finalProfit, Math.max(0, Math.round(laba.current_balance)))
+    : finalProfit;
+
+  if (unclosedProfitToMove > 0) {
     await createJournalEntry({
       orgId: input.orgId,
       description: `Pengakuan laba proyek ${preview.projectName}`,
@@ -108,23 +119,27 @@ export async function closeProjectFinance(input: {
       referenceId: input.projectId,
       createdBy: input.createdBy,
       lines: [
-        { accountId: laba.id, debit: finalProfit, credit: 0 },
-        { accountId: labaDitahan.id, debit: 0, credit: finalProfit },
+        { accountId: laba.id, debit: unclosedProfitToMove, credit: 0 },
+        { accountId: labaDitahan.id, debit: 0, credit: unclosedProfitToMove },
       ],
     });
-  } else if (finalProfit < 0) {
-    const loss = Math.abs(finalProfit);
-    await createJournalEntry({
-      orgId: input.orgId,
-      description: `Pencatatan defisit proyek ${preview.projectName}`,
-      referenceType: 'project_close',
-      referenceId: input.projectId,
-      createdBy: input.createdBy,
-      lines: [
-        { accountId: labaDitahan.id, debit: loss, credit: 0 },
-        { accountId: laba.id, debit: 0, credit: loss },
-      ],
-    });
+  } else if (unclosedProfitToMove < 0 && (!hasPriorPeriodClose || laba.current_balance < 0)) {
+    const loss = hasPriorPeriodClose
+      ? Math.min(Math.abs(unclosedProfitToMove), Math.max(0, -Math.round(laba.current_balance)))
+      : Math.abs(unclosedProfitToMove);
+    if (loss > 0) {
+      await createJournalEntry({
+        orgId: input.orgId,
+        description: `Pencatatan defisit proyek ${preview.projectName}`,
+        referenceType: 'project_close',
+        referenceId: input.projectId,
+        createdBy: input.createdBy,
+        lines: [
+          { accountId: labaDitahan.id, debit: loss, credit: 0 },
+          { accountId: laba.id, debit: 0, credit: loss },
+        ],
+      });
+    }
   }
 
   const { error } = await supabase
