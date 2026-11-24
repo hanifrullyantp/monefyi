@@ -4,6 +4,24 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G3-1] 2026-11-24 — Mesin Analisis Deterministik Financial Advisor (Forecast 13 Minggu, Analisis Margin Proyek, Rekomendasi Harga, What-If, & Prioritas Bayar)
+- **Branch / PR:** `feat/g3-1-forecast-margin-pricing-whatif`
+- **Fase:** G3 (Financial Advisor Deterministik & Simulasi — G3-1)
+- **Perubahan & Alasan:**
+  - Menambahkan modul domain deterministik `packages/domain/src/financialAdvisor.ts` dengan seluruh nominal integer rupiah (`toRupiah`), `provenance` (sumber data, periode, `asOfDate`, `assumptions`), dan disclaimer wajib `"Bukan nasihat hukum/pajak berlisensi"` (`FINANCIAL_ADVISOR_DISCLAIMER`):
+    - `forecastCashFlow13Weeks(input)`: proyeksi arus kas 13 minggu (91 hari) dalam 3 skenario (`base`, `worst`, `best`) dari `openingCash`, `receivables`, `payables`, `monthlyOpexPlan` (dibagi mingguan `× 3/13`), dan `scheduledProjectTermins`, menghasilkan 13 baris mingguan (`weekIndex: 1..13`, `weekStart`, `weekEnd`, `inflows`, `outflows`, `netCashFlow`, `endingCash`), `firstNegativeCashDate`, `minEndingCash`, `endingCashWeek13`, `assumptions`, dan `provenance`.
+    - `analyzeProjectMargin(input)`: analisis 6 kategori RAP vs realisasi (`material`, `labor`, `equipment`, `overhead`, `other`, `uncategorized`) dengan `variance`, `variancePct`, **EAC** (`cpi_performance` `actualTotal / (progressPct / 100)` saat `progressPct >= 10` & `actualTotal > 0`, atau `baseline_remaining_rap` saat `< 10%`), `projectedFinalMargin`, `projectedMarginPct`, dan `topVarianceDrivers` terurut dari selisih over-budget terbesar.
+    - `recommendProjectPricing(input)`: menghitung margin historis (`minMarginPct`, `medianMarginPct`, `maxMarginPct`) dan rentang harga penawaran (`lowPrice`, `recommendedPrice`, `highPrice`) saat `similarProjects.length >= minSampleSize` (default `3`), serta fallback margin katalog (`-5% / 0% / +5%`, `usedFallback: true`, catatan `"Sampel proyek serupa < 3; menggunakan margin katalog"`) saat sampel kurang dari 3.
+    - `runAdvisorWhatIf(baseForecastInput, scenario)`: simulasi 3 skenario (`client_delay`, `take_new_project`, `pay_payable_early`) terhadap forecast `base`, mengembalikan `cashImpactWeek13`, `minCashDelta`, `beforeFirstNegativeDate`, `afterFirstNegativeDate`, `profitImpact`, `assumptions`, dan `provenance`.
+    - `prioritizePayables(payables, availableCash, asOfDate)`: penentuan skor prioritas deterministik (`sudah jatuh tempo > segera jatuh tempo > tagihan proyek aktif/kritis > denda/pajak`) dan alokasi kas utuh (`recommendedPayNow`, `deferOrNegotiate`, `remainingCashAfterPriority`) tanpa pernah melebihi `availableCash`.
+  - Menambahkan suite TDD `apps/web/src/lib/financeV2/__tests__/financialAdvisor.test.ts` yang menguji seluruh 5 fungsi domain deterministik beserta invarian `worst <= base <= best`, 6 kategori margin & EAC, cabang pricing historis vs fallback, 3 skenario what-if, dan hierarki alokasi hutang.
+  - Memperbarui `docs/finance/PROGRESS.md` & `docs/finance/CHANGELOG.md`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template atau mutasi tabel jurnal; modul advisor bersifat murni read-only & deterministik.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada PR ini.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/financialAdvisor.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah signature tool agent; menyediakan mesin analisis deterministik yang bebas perhitungan oleh LLM serta menyertakan `provenance` dan disclaimer wajib.
+- **Cara Rollback:** `git revert` commit merge PR ini.
+
 ## [G2-2] 2026-11-24 — Mesin Pengingat Multitenant (Cron), Draf Penagihan (WA/Email), Jejak Audit, & Laporan Gerbang G2
 - **Branch / PR:** `feat/g2-2-cron-reminders-collection-drafts-audit`
 - **Fase:** G2 (Keuangan Proaktif & Penutupan Periode — G2-2 & Gerbang G2)

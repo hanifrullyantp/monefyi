@@ -64,6 +64,7 @@
 | **G2-1** | Umur Piutang/Hutang (Aging), Skor Risiko Klien, Peringatan Proyek/Kas, & Checklist Tutup Bulan Otomatis | `DONE` | `feat/g2-1-aging-risk-alerts-month-close` | Modul deterministik `packages/domain/src/proactiveFinance.ts` (`computeAgingSchedule` 5 bucket + `byParty`, `scoreClientCollectionRisk`, `evaluateProjectProactiveAlerts`, `evaluateMonthCloseChecklist` 6 butir wajib) dengan integer rupiah + `provenance`, serta suite TDD `proactiveFinance.test.ts`. |
 | **G2-2** | Mesin Pengingat Multitenant (Cron), Draf Penagihan (WA/Email), & Jejak Audit | `DONE` | `feat/g2-2-cron-reminders-collection-drafts-audit` | `packages/domain/src/reminderScheduler.ts` (5 jenis pengingat + `dedupeKey` + filter ketat `orgId` + `buildCollectionMessageDraft` L0/L1 wajib approval + `approveAndDispatchCollectionDraft` SoD & `auditLogId`), `proactiveAssistantService.ts`, SQL lokal `20261124160000_g2_proactive_reminders_audit.sql` (`BLOCKED remote`), & `proactiveMultitenantAudit.test.ts`. |
 | **G2-Gate** | Laporan Gerbang Fase G2 (`G2-report.md`) | `DONE` | `feat/g2-2-cron-reminders-collection-drafts-audit` | Ringkasan `G2-1` & `G2-2`, bukti isolasi multi-tenant & jejak audit/SoD, bukti output aktual `typecheck`/`vitest`/`gate:docs`/`gate:rebrand`, status migrasi `BLOCKED remote`, & sisa risiko menuju `G3`. |
+| **G3-1** | Mesin Analisis Deterministik Financial Advisor (Forecast 13 Minggu, Margin Proyek, Harga, What-If, & Prioritas Bayar) | `DONE` | `feat/g3-1-forecast-margin-pricing-whatif` | Modul domain `packages/domain/src/financialAdvisor.ts` (`forecastCashFlow13Weeks` 3 skenario, `analyzeProjectMargin` 6 kategori + EAC, `recommendProjectPricing` historis vs fallback katalog, `runAdvisorWhatIf` 3 skenario, `prioritizePayables` dengan alokasi `availableCash`, `provenance` & disclaimer `"Bukan nasihat hukum/pajak berlisensi"`) & suite TDD `financialAdvisor.test.ts`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
@@ -82,7 +83,7 @@
 - [x] `G2-1`: Domain proaktif deterministik (`proactiveFinance.ts`: `computeAgingSchedule`, `scoreClientCollectionRisk`, `evaluateProjectProactiveAlerts`, `evaluateMonthCloseChecklist`, & `proactiveFinance.test.ts`).
 - [x] `G2-2`: Mesin pengingat multitenant (cron), draf penagihan WA/Email, & jejak audit (`reminderScheduler.ts`, `proactiveAssistantService.ts`, `20261124160000_g2_proactive_reminders_audit.sql`, & `proactiveMultitenantAudit.test.ts`).
 - [x] `G2-Report`: Terbitkan `docs/finance/PHASES/G2-report.md` (Fase **G2** seluruhnya `DONE`).
+- [x] `G3-1`: Mesin analisis deterministik Financial Advisor (`packages/domain/src/financialAdvisor.ts`: `forecastCashFlow13Weeks`, `analyzeProjectMargin`, `recommendProjectPricing`, `runAdvisorWhatIf`, `prioritizePayables`, & `financialAdvisor.test.ts`).
 
-### Status Fase Berikutnya (`G3` — Antarmuka Review Terpadu, Eksekusi UI Proaktif, & Validasi Dataset Nyata)
-- [ ] `G3-1`: Antarmuka review terpadu pada aplikasi web (draf nota OCR, antrean duplikat/anomali, pencocokan mutasi bank, briefing aging/risiko/pengingat proaktif, persetujuan SoD draf penagihan WA/Email, & checklist tutup bulan).
-- [ ] `G3-2`: Integrasi cron/edge scheduler & kanal pengiriman WA/Email nyata dengan gate `audit_log_id` + validasi dataset nyata anonim dari pemilik pasca-migrasi SQL `F0`–`G2` (`BLOCKED remote`).
+### Status Fase Berikutnya (`G3` — Lanjutan Advisor, Antarmuka Review Terpadu, & Validasi Dataset Nyata)
+- [ ] `G3-2`: Antarmuka review terpadu & eksekusi cron/kanal pengiriman WA/Email nyata dengan gate `audit_log_id` + validasi dataset nyata anonim dari pemilik pasca-migrasi SQL `F0`–`G2` (`BLOCKED remote`).
