@@ -1,6 +1,6 @@
 import { supabase } from '../../supabase';
 import type { JournalLineEnriched, ReportFilters } from './types';
-import type { AccountType } from '../../../types/financeV2';
+import type { AccountCategory, AccountType } from '../../../types/financeV2';
 
 export interface EnrichedJournalEntry {
   id: string;
@@ -59,7 +59,7 @@ export async function loadEnrichedJournalLines(filters: ReportFilters): Promise<
         accountId: acc.id as string,
         accountName: acc.name as string,
         accountType: acc.type as AccountType,
-        accountCategory: acc.category as 'aktiva' | 'pasiva',
+        accountCategory: acc.category as AccountCategory,
         projectId,
         partyId,
         debit: Number(line.debit) || 0,
@@ -108,7 +108,7 @@ export async function loadAllJournalLinesUpTo(orgId: string, asOfDate: string): 
         accountId: acc.id as string,
         accountName: acc.name as string,
         accountType: acc.type as AccountType,
-        accountCategory: acc.category as 'aktiva' | 'pasiva',
+        accountCategory: acc.category as AccountCategory,
         projectId: (acc.project_id as string) || null,
         debit: Number(line.debit) || 0,
         credit: Number(line.credit) || 0,

@@ -22,9 +22,9 @@ Dokumen ini adalah spesifikasi hidup (*living specification*) untuk buku besar d
 1. **Keseimbangan Jurnal:** Untuk setiap entri jurnal, $\sum \text{Debit} = \sum \text{Kredit} > 0$, tidak ada baris dengan debit dan kredit positif sekaligus, dan tidak ada nilai negatif.
 2. **Imutabilitas Jurnal (*Append-Only*):** Baris `planner_journal_entries` dan `planner_journal_lines` tidak boleh di-`UPDATE` atau di-`DELETE` (ditegakkan trigger `planner_reject_journal_mutation`). Koreksi hanya melalui jurnal pembalik (`reference_type = 'reversal'`) + posting jurnal baru.
 3. **Saldo Akun Turunan Jurnal:** Kolom `current_balance` pada `planner_finance_accounts` hanya berubah melalui trigger `planner_apply_line_balance`:
-   - Kategori `aktiva`: $\Delta = \text{debit} - \text{kredit}$
-   - Kategori `pasiva`: $\Delta = \text{kredit} - \text{debit}$
-4. **Neraca Seimbang:** $\sum \text{Aktiva} = \sum \text{Pasiva}$ setiap saat.
+   - Kategori saldo normal debit (`aktiva`, `beban`): $\Delta = \text{debit} - \text{kredit}$
+   - Kategori saldo normal kredit (`pasiva`, `pendapatan`): $\Delta = \text{kredit} - \text{debit}$
+4. **Neraca Seimbang:** $\sum \text{Aktiva} = \sum \text{Pasiva} + (\sum \text{Pendapatan} - \sum \text{Beban})$ setiap saat. Akun berkategori `pendapatan` dan `beban` tidak pernah dimasukkan ke daftar `aktiva[]` maupun `pasiva[]`, melainkan digulung menjadi baris ekuitas `Laba Periode Berjalan (Dari Buku Besar)` pada sisi `pasiva`.
 5. **Konsistensi Kas:** Saldo akun `Kas Proyek` di buku besar sama dengan kas operasional proyek (`dana masuk - biaya realisasi - piutang di luar kontrak +/- transfer - dividen kas`).
 6. **Laba Tunggal (Anti Double-Count):** Laba periode hanya dipindahkan **satu kali** ke `Laba Ditahan`. Penutupan proyek (`project_close`) tidak dihitung sebagai beban di laporan Laba/Rugi, dan tutup periode (`period_close`) hanya memindahkan sisa laba yang belum ditutup oleh `project_close`.
 7. **Periode Terkunci:** Jurnal dengan `entry_date` pada bulan yang sudah ada di `planner_finance_period_snapshots` ditolak (kecuali entri penutup `period_close` saat penutupan berlangsung).
@@ -51,15 +51,15 @@ Dokumen ini adalah spesifikasi hidup (*living specification*) untuk buku besar d
 | `modal_disetor` | `pasiva` | Kredit | `Modal Disetor` | — |
 | `dividen` | `pasiva` | Debit (kontra ekuitas) | `Dividen / Prive` | `project_id` (jika dividen proyek) |
 | `laba_ditahan` | `pasiva` | Kredit | `Laba Ditahan` | — |
-| `pendapatan_proyek` | `pasiva` | Kredit | `Pendapatan Proyek` | `project_id` |
-| `hpp_material` | `aktiva` | Debit | `HPP Proyek - Material` | `project_id` |
-| `hpp_labor` | `aktiva` | Debit | `HPP Proyek - Tenaga Kerja` | `project_id` |
-| `hpp_equipment` | `aktiva` | Debit | `HPP Proyek - Peralatan` | `project_id` |
-| `hpp_overhead` | `aktiva` | Debit | `HPP Proyek - Overhead` | `project_id` |
-| `hpp_other` | `aktiva` | Debit | `HPP Proyek - Lainnya` | `project_id` |
-| `hpp_uncategorized` | `aktiva` | Debit | `HPP Proyek - Belum Dikategorikan` | `project_id` (`needs_review`) |
-| `beban_opex` | `aktiva` | Debit | `Beban Operasional` | — |
-| `beban_penyusutan` | `aktiva` | Debit | `Beban Penyusutan` | — |
+| `pendapatan_proyek` | `pendapatan` | Kredit | `Pendapatan Proyek` | `project_id` |
+| `hpp_material` | `beban` | Debit | `HPP Proyek - Material` | `project_id` |
+| `hpp_labor` | `beban` | Debit | `HPP Proyek - Tenaga Kerja` | `project_id` |
+| `hpp_equipment` | `beban` | Debit | `HPP Proyek - Peralatan` | `project_id` |
+| `hpp_overhead` | `beban` | Debit | `HPP Proyek - Overhead` | `project_id` |
+| `hpp_other` | `beban` | Debit | `HPP Proyek - Lainnya` | `project_id` |
+| `hpp_uncategorized` | `beban` | Debit | `HPP Proyek - Belum Dikategorikan` | `project_id` (`needs_review`) |
+| `beban_opex` | `beban` | Debit | `Beban Operasional` | — |
+| `beban_penyusutan` | `beban` | Debit | `Beban Penyusutan` | — |
 | `laba` | `pasiva` | Kredit | `Laba Periode Berjalan` | Legacy F0 (kompatibilitas mundur) |
 
 *(Laba periode dihitung dari akun: $\text{Pendapatan Proyek} - \sum \text{HPP} - \text{Beban Operasional} - \text{Beban Penyusutan}$.)*

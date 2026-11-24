@@ -164,15 +164,26 @@ export function computePeriodProfitFromAccounts(
   return Math.round(profit);
 }
 
-export function rollupByCategory(accounts: FinanceAccount[]): { aktiva: number; pasiva: number } {
+export function rollupByCategory(accounts: FinanceAccount[]): {
+  aktiva: number;
+  pasiva: number;
+  pendapatan: number;
+  beban: number;
+} {
   let aktiva = 0;
   let pasiva = 0;
+  let pendapatan = 0;
+  let beban = 0;
   for (const a of accounts) {
     if (a.category === 'aktiva') aktiva += a.current_balance;
-    else pasiva += a.current_balance;
+    else if (a.category === 'pasiva') pasiva += a.current_balance;
+    else if (a.category === 'pendapatan') pendapatan += a.current_balance;
+    else if (a.category === 'beban') beban += a.current_balance;
   }
   return {
     aktiva: Math.round(aktiva * 100) / 100,
     pasiva: Math.round(pasiva * 100) / 100,
+    pendapatan: Math.round(pendapatan * 100) / 100,
+    beban: Math.round(beban * 100) / 100,
   };
 }

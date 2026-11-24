@@ -1,4 +1,4 @@
-import type { AccountType } from '../../../types/financeV2';
+import type { AccountCategory, AccountType } from '../../../types/financeV2';
 
 export type ReportKind = 'pl' | 'neraca' | 'cashflow' | 'project' | 'investor';
 
@@ -22,7 +22,7 @@ export interface JournalLineEnriched {
   accountId: string;
   accountName: string;
   accountType: AccountType;
-  accountCategory: 'aktiva' | 'pasiva';
+  accountCategory: AccountCategory;
   projectId: string | null;
   partyId?: string | null;
   debit: number;

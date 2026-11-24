@@ -49,6 +49,8 @@
 | Fase / Tugas | Nama | Status | Branch / PR | Catatan |
 |---|---|---|---|---|
 | **G0-1** | Perbaikan Rekonsiliasi Migrasi F1 Nyata | `DONE` | `feat/g0-1-real-migration-reconciliation` | Jurnal reklasifikasi append-only seimbang & idempoten, perhitungan `after` independen di `reconciliation.ts` + SQL lokal `20261124140000_g0_1_real_f1_migration.sql` (`BLOCKED remote`, dry-run rollback subtransaksi, tanpa mutasi `planner_journal_lines`). |
+| **G0-3** | Perbaikan Taksonomi Kategori Akun (`pendapatan`/`beban`) & Neraca | `DONE` | `feat/g0-3-account-taxonomy-neraca` | 4 kategori COA (`aktiva`, `pasiva`, `pendapatan`, `beban`), `buildBalanceSheetFromBalances` bebas akun beban/pendapatan + laba berjalan tergulung ke pasiva, SQL lokal `20261124141000_g0_3_account_taxonomy.sql` (`BLOCKED remote`), & `D-G0-01`. |
 
 ### Daftar Tugas Program G0–G6
 - [x] `G0-1`: Perbaikan rekonsiliasi migrasi F1 nyata (`reconciliation.ts`, `20261124140000_g0_1_real_f1_migration.sql`, & tes TDD di `reconciliation.test.ts`).
+- [x] `G0-3`: Perbaikan taksonomi kategori akun (`pendapatan`/`beban`) & Neraca (`20261124141000_g0_3_account_taxonomy.sql`, `balanceSheetReport.ts`, `balanceSheetService.ts`, `balanceSheetTaxonomy.test.ts`, & `D-G0-01`).

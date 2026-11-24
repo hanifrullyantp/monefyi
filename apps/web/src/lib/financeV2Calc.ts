@@ -44,7 +44,7 @@ export function validateBalancedEntry(lines: JournalLineInput[]): { ok: boolean;
 
 /** Net effect on stored current_balance after a journal line. */
 export function balanceDelta(category: AccountCategory, debit: number, credit: number): number {
-  if (category === 'aktiva') return debit - credit;
+  if (category === 'aktiva' || category === 'beban') return debit - credit;
   return credit - debit;
 }
 

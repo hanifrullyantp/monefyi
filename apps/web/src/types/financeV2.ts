@@ -27,7 +27,7 @@ export type AccountType =
   | 'beban_penyusutan'
   | 'laba';
 
-export type AccountCategory = 'aktiva' | 'pasiva';
+export type AccountCategory = 'aktiva' | 'pasiva' | 'pendapatan' | 'beban';
 
 export type JournalReferenceType =
   | 'project_expense'
