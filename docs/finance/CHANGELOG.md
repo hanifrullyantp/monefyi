@@ -4,6 +4,32 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [G8-3] 2026-11-24 — Anti-Kecurangan Kehadiran, Hak Akses (RBAC) 4 Peran HRD, Uji Gerbang Penuh G8, & Laporan Gerbang `G8-report.md`
+- **Branch / PR:** `feat/g8-3-antifraud-rbac-g8-report`
+- **Fase:** G8 (Hardening HRD, Payroll Jujur, & Kebenaran Buku Besar Gaji — G8-3 & Gerbang G8)
+- **Perubahan & Alasan:**
+  - **Domain Anti-Kecurangan Kehadiran & RBAC HRD (`packages/domain/src/hrdGovernance.ts`):**
+    - `evaluateAttendanceFraudSignals(record, context)`: mendeteksi 4 pola kecurangan secara deterministik:
+      1. `buddy_punch_suspected` (`deviceId` sama dipakai `>= 2` pekerja berbeda dalam jendela `<= 15` menit tanpa otorisasi `isSharedMandorDevice` yang disahkan);
+      2. `impossible_location_jump` (jarak Haversine antar check-in pekerja yang sama menghasilkan kecepatan `> 120 km/jam` atau di luar `radiusMeters` geofence proyek);
+      3. `abnormal_work_hours` (check-in rentang `00:00–04:30` tanpa izin shift malam, durasi kerja `> 16` jam dalam 1 hari, atau `checkOut <= checkIn`);
+      4. `reused_photo_hash` (`photoSha256` identik sudah pernah dipakai pada catatan kehadiran sebelumnya).
+    - **Aturan keras tanpa penolakan diam-diam:** setiap catatan yang memicu flag tetap diterima (`silentlyRejected: false`, `acceptedForReview: true`) dengan `verificationStatus: 'flagged_for_review'`, daftar `flags`, `reasons`, dan `requiresMandorOrOwnerReview: true`. Catatan bersih bertanda `verificationStatus: 'verified'` dengan `0` flag.
+    - `filterHrdRecordsByRole(viewer, records)`: menegakkan RBAC 4 peran eksplisit (`worker`, `mandor`, `pm`, `owner` | `finance`) + isolasi ketat lintas `orgId`:
+      - `worker`: hanya melihat baris miliknya sendiri (`workerId === viewer.userId`) lengkap dengan tarif, upah, dan kasbon sendiri.
+      - `mandor`: melihat dirinya sendiri (lengkap) + anggota timnya (`teamWorkerIds`), dengan redaksi wajib (`null`) pada `dailyRate`, `grossSalary`, `netSalary`, dan `kasbonBalance` milik orang lain.
+      - `pm`: melihat hari kerja (`dayFraction`, `regularHours`, `overtimeHours`, `projectId`) seluruh pekerja pada proyeknya (`projectIds`), dengan seluruh field tarif & nominal gaji/kasbon wajib di-redact (`null`).
+      - `owner` | `finance`: melihat seluruh data & nominal lengkap dalam organisasinya sambil tetap menolak baris lintas `orgId`.
+  - **Uji Gerbang Penuh G8 (`apps/web/src/lib/financeV2/__tests__/g8AntiFraudRbacAndGate.test.ts`):**
+    - Menguji seluruh 4 sinyal anti-kecurangan (termasuk pengecualian perangkat mandor sah, shift malam berizin, dan multi-flag), RBAC 4 peran + isolasi lintas `orgId`, serta uji integrasi ujung-ke-ujung G8-1 + G8-2 + G8-3 (paritas total upah proyek === total debit `hpp_labor`, pembagian hari ke 2 proyek `0.5 + 0.5`, kasbon bersaldo, tarif kosong `missing_rate`, dan larangan status `"lunas"` tanpa konfirmasi nyata).
+  - **Laporan Gerbang & Papan Kerja (`docs/finance/PHASES/G8-report.md`, `docs/finance/PROGRESS.md`, `docs/finance/CHANGELOG.md`):**
+    - Menerbitkan laporan gerbang `G8-report.md`, menandai Fase **G8** seluruhnya `DONE`, dan menyiapkan Fase **G7** sebagai fase berikutnya sesuai urutan `G8 → G7 → G9 → G10 → G11`.
+- **Akun / Template Jurnal Tersentuh:** Tidak menambah akun/template baru; menguji integrasi penuh dengan `hpp_labor`, `hutang_gaji`, `project_labor_accrual`, dan `payroll_liability_settlement`.
+- **Migrasi SQL:** Tidak ada migrasi SQL baru pada `G8-3` (migrasi G8 tetap `20261124190000_g8_hrd_project_labor_accrual.sql` berstatus `BLOCKED remote`).
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/g8AntiFraudRbacAndGate.test.ts`.
+- **Dampak ke Tool Agent:** Tidak mengubah kontrak tool agent; menyediakan fungsi domain deterministik untuk pemeriksaan anti-kecurangan kehadiran dan penyaringan RBAC HRD.
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [G8-2] 2026-11-24 — Model Kehadiran `day_fraction`, Tarif Beriwayat `effectiveFrom`, Akrual Harian Upah Proyek (`Dr hpp_labor / Cr hutang_gaji`), Gaji Kantor Opex, BPJS/PPh 21 Konfigurabel, & Kasbon Bersaldo
 - **Branch / PR:** `feat/g8-2-project-labor-accrual-day-fraction-kasbon`
 - **Fase:** G8 (Hardening HRD, Payroll Jujur, & Kebenaran Buku Besar Gaji — G8-2)
