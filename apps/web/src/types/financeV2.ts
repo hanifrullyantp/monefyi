@@ -32,7 +32,8 @@ export type JournalReferenceType =
   | 'period_close'
   | 'reversal'
   | 'payable_payment'
-  | 'receivable_receipt';
+  | 'receivable_receipt'
+  | 'dividend';
 
 export interface FinanceAccount {
   id: string;

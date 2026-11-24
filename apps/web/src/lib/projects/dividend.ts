@@ -17,6 +17,8 @@ export type DividendPayout = {
   cashPaid: number;
   date: string;
   note?: string;
+  journalEntryId?: string;
+  offsetJournalEntryId?: string;
 };
 
 export type DividendConfig = {
@@ -64,6 +66,8 @@ export function parseDividendConfig(raw: unknown): DividendConfig {
         cashPaid: Number(row.cashPaid) || 0,
         date: String(row.date || ''),
         note: row.note ? String(row.note) : undefined,
+        journalEntryId: row.journalEntryId ? String(row.journalEntryId) : undefined,
+        offsetJournalEntryId: row.offsetJournalEntryId ? String(row.offsetJournalEntryId) : undefined,
       };
     }),
   };

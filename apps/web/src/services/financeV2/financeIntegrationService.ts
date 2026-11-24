@@ -33,6 +33,8 @@ export async function getFinanceIntegrationStatus(orgId: string): Promise<Financ
         .from('planner_cost_realizations')
         .select('id', { count: 'exact', head: true })
         .in('project_id', projectIds)
+        .neq('status', 'dividend')
+        .neq('status', 'cancelled')
         .is('journal_entry_id', null),
     ]);
 
