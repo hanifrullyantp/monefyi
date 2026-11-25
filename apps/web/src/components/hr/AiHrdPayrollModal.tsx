@@ -33,6 +33,7 @@ import {
   type DisbursementBatchRecord,
 } from '../../services/aiHrdPayrollService';
 import { showToast } from '../../store/uiStore';
+import { isMoneyFeatureEnabled } from '../../lib/productionFeatureFlags';
 
 interface AiHrdPayrollModalProps {
   open: boolean;
@@ -110,6 +111,10 @@ export default function AiHrdPayrollModal({
 
   // Tahap 1: Siapkan Daftar Payout (status awaiting_payment_confirmation; agen tidak mengeksekusi transfer uang)
   const handleExecuteDisbursement = async () => {
+    if (!isMoneyFeatureEnabled('money_payroll') || !isMoneyFeatureEnabled('money_disbursement')) {
+      showToast('Fitur penggajian & pencairan dinonaktifkan secara default di produksi.', 'error');
+      return;
+    }
     if (!analysis) return;
     if (!confirmedTruth.approvalAck) {
       showToast('Mohon centang konfirmasi persetujuan penyusunan daftar gaji', 'error');
