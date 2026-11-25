@@ -53,6 +53,40 @@ export async function GET(req: NextRequest) {
       ? data.advanced_params
       : {}) as Record<string, unknown>;
 
+    const rawStoredAccounts = Array.isArray(adv.metaAccounts) ? adv.metaAccounts : [];
+    const normalizedAccounts = [0, 1].map((idx) => {
+      const slotId = `meta_${idx + 1}`;
+      const existing = rawStoredAccounts[idx] as Record<string, unknown> | undefined;
+      if (existing && typeof existing === "object") {
+        return {
+          id: String(existing.id || slotId),
+          label: String(existing.label || (idx === 0 ? "Akun Meta 1 (Utama)" : "Akun Meta 2 (Baru)")),
+          adAccountId: String(existing.adAccountId || (idx === 0 ? data.ad_account_id || "" : "")),
+          pixelId: String(existing.pixelId || (idx === 0 ? data.meta_pixel_id || "1530674178146899" : "")),
+          metaAccessToken: fmtToken(String(existing.metaAccessToken || (idx === 0 ? data.meta_access_token || "" : ""))),
+          capiAccessToken: fmtToken(String(existing.capiAccessToken || (idx === 0 ? data.meta_capi_token || "" : ""))),
+        };
+      }
+      return idx === 0
+        ? {
+            id: "meta_1",
+            label: "Akun Meta 1 (Utama)",
+            adAccountId: data.ad_account_id || "",
+            pixelId: data.meta_pixel_id || "1530674178146899",
+            metaAccessToken: fmtToken(data.meta_access_token),
+            capiAccessToken: fmtToken(data.meta_capi_token),
+          }
+        : {
+            id: "meta_2",
+            label: "Akun Meta 2 (Baru)",
+            adAccountId: "",
+            pixelId: "",
+            metaAccessToken: "",
+            capiAccessToken: "",
+          };
+    });
+    const activeMetaAccountId = String(adv.activeMetaAccountId || "meta_1");
+
     return NextResponse.json({
       ok: true,
       config: {
@@ -85,6 +119,8 @@ export async function GET(req: NextRequest) {
         metaAccessToken: fmtToken(data.meta_access_token),
         metaCapiToken: fmtToken(data.meta_capi_token),
         metaPixelId: data.meta_pixel_id || "1530674178146899",
+        activeMetaAccountId,
+        metaAccounts: normalizedAccounts,
         openRouterApiKey: fmtToken(data.openrouter_api_key),
         strategistModel: data.strategist_model || "anthropic/claude-3.5-sonnet",
         processorModel: data.openrouter_processor_model || "openai/gpt-6-luna-pro",
@@ -140,26 +176,77 @@ export async function POST(req: NextRequest) {
       "learningHardStopSpend", "minLinkClicksToJudge", "breakEvenCpa", "contributionMarginPct",
       "killMaxMultipleOfTarget", "winProbabilityToScale", "lossProbabilityToPause", "priorStrengthClicks",
     ];
-    if (advKeys.some((k) => body[k] !== undefined)) {
+    const isUnmasked = (v: unknown) => typeof v === "string" && !v.includes("••••");
+    const hasMetaAccountsUpdate = Array.isArray(body.metaAccounts) || body.activeMetaAccountId !== undefined;
+    if (advKeys.some((k) => body[k] !== undefined) || hasMetaAccountsUpdate) {
       const { data: existing } = await supabase
         .from("winning_engine_config")
-        .select("advanced_params")
+        .select("advanced_params, ad_account_id, meta_pixel_id, meta_access_token, meta_capi_token")
         .eq("id", "default")
         .maybeSingle();
-      const mergedAdv: Record<string, number> = {
-        ...((existing?.advanced_params && typeof existing.advanced_params === "object") ? existing.advanced_params : {}),
-      };
+      const existingAdv =
+        existing?.advanced_params && typeof existing.advanced_params === "object" && !Array.isArray(existing.advanced_params)
+          ? (existing.advanced_params as Record<string, any>)
+          : {};
+      const mergedAdv: Record<string, any> = { ...existingAdv };
+
       for (const k of advKeys) {
         if (body[k] !== undefined) {
           const val = Number(body[k]);
           if (Number.isFinite(val)) mergedAdv[k] = val;
         }
       }
+
+      if (body.activeMetaAccountId !== undefined) {
+        mergedAdv.activeMetaAccountId = String(body.activeMetaAccountId || "meta_1");
+      }
+
+      if (Array.isArray(body.metaAccounts)) {
+        const prevAccounts: any[] = Array.isArray(existingAdv.metaAccounts) ? existingAdv.metaAccounts : [];
+        mergedAdv.metaAccounts = body.metaAccounts.slice(0, 2).map((acc: any, idx: number) => {
+          const id = String(acc?.id || `meta_${idx + 1}`);
+          const prev = prevAccounts.find((p) => p?.id === id) || prevAccounts[idx] || {};
+          const fallbackAccess = idx === 0 ? existing?.meta_access_token || "" : "";
+          const fallbackCapi = idx === 0 ? existing?.meta_capi_token || "" : "";
+
+          const metaAccessToken =
+            acc?.metaAccessToken === undefined
+              ? String(prev.metaAccessToken || fallbackAccess)
+              : isUnmasked(acc.metaAccessToken)
+              ? String(acc.metaAccessToken).trim()
+              : String(prev.metaAccessToken || fallbackAccess);
+
+          const capiAccessToken =
+            acc?.capiAccessToken === undefined
+              ? String(prev.capiAccessToken || fallbackCapi)
+              : isUnmasked(acc.capiAccessToken)
+              ? String(acc.capiAccessToken).trim()
+              : String(prev.capiAccessToken || fallbackCapi);
+
+          return {
+            id,
+            label: String(acc?.label || prev.label || (idx === 0 ? "Akun Meta 1 (Utama)" : "Akun Meta 2 (Baru)")).trim(),
+            adAccountId: String(acc?.adAccountId ?? prev.adAccountId ?? "").trim(),
+            pixelId: String(acc?.pixelId ?? prev.pixelId ?? "").trim(),
+            metaAccessToken,
+            capiAccessToken,
+          };
+        });
+
+        const activeId = String(mergedAdv.activeMetaAccountId || "meta_1");
+        const activeAcc = mergedAdv.metaAccounts.find((a: any) => a.id === activeId) || mergedAdv.metaAccounts[0];
+        if (activeAcc) {
+          payload.ad_account_id = activeAcc.adAccountId;
+          payload.meta_pixel_id = activeAcc.pixelId || "1530674178146899";
+          if (activeAcc.metaAccessToken) payload.meta_access_token = activeAcc.metaAccessToken;
+          if (activeAcc.capiAccessToken) payload.meta_capi_token = activeAcc.capiAccessToken;
+        }
+      }
+
       payload.advanced_params = mergedAdv;
     }
 
     // Kredensial Meta & OpenRouter Cloud (Abaikan nilai ter-masking ••••)
-    const isUnmasked = (v: unknown) => typeof v === "string" && !v.includes("••••");
     if (isUnmasked(body.metaAccessToken)) payload.meta_access_token = String(body.metaAccessToken).trim();
     if (isUnmasked(body.metaCapiToken)) payload.meta_capi_token = String(body.metaCapiToken).trim();
     if (body.metaPixelId !== undefined) payload.meta_pixel_id = String(body.metaPixelId).trim();

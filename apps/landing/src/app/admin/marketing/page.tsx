@@ -43,6 +43,7 @@ export default function MarketingAdminPage() {
     rules,
     discoveredAccounts,
     selectAdAccount,
+    switchMetaAccount,
     winningEngineConfig,
     winningOverallScore,
     winningPlans,
@@ -130,6 +131,27 @@ export default function MarketingAdminPage() {
               {isLiveMeta ? metaAccountName || "Meta Live" : "Sandbox"}
             </span>
           </div>
+
+          {Array.isArray(apiConfig.metaAccounts) &&
+            apiConfig.metaAccounts.filter((a) => a.adAccountId || a.metaAccessToken).length > 1 && (
+              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-xl px-2 py-1 max-w-[160px]">
+                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0">BM:</span>
+                <select
+                  value={apiConfig.activeMetaAccountId || "meta_1"}
+                  onChange={(e) => switchMetaAccount(e.target.value)}
+                  className="bg-transparent text-[11px] font-bold text-blue-800 dark:text-blue-200 focus:outline-none cursor-pointer truncate w-full"
+                  title="Ganti Akun Meta (Slot 1 / Slot 2)"
+                >
+                  {apiConfig.metaAccounts
+                    .filter((a) => a.adAccountId || a.metaAccessToken)
+                    .map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.label}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
 
           {discoveredAccounts.length > 0 && (
             <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1 max-w-[150px]">

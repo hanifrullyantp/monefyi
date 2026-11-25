@@ -18,10 +18,19 @@ import {
   Sparkles,
   Sliders,
   CreditCard,
+  ExternalLink,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Wifi,
 } from "lucide-react";
 import { MayarSettingsCard } from "@/components/admin/MayarSettingsCard";
 import { useSettingsStore } from "@/lib/store/settingsStore";
-import { useMarketingStore } from "@/lib/store/marketingStore";
+import { useMarketingStore, type MetaAccountCredential } from "@/lib/store/marketingStore";
+import { authedFetch } from "@/lib/auth/authedFetch";
 import { LlmProviderType } from "@/lib/engine/llmRouter";
 import { cn } from "@/lib/utils/cn";
 
@@ -95,11 +104,45 @@ function SettingsContent() {
   const [tempSettings, setTempSettings] = useState(settings);
   const [saved, setSaved] = useState(false);
 
-  // Meta & AI States
-  const [adAccountId, setAdAccountId] = useState(apiConfig.adAccountId || "");
-  const [pixelId, setPixelId] = useState(apiConfig.pixelId || "");
-  const [metaToken, setMetaToken] = useState(apiConfig.metaAccessToken || "");
-  const [capiToken, setCapiToken] = useState(apiConfig.capiAccessToken || "");
+  // Meta & AI States (2 Akun Meta)
+  const buildDefaultMetaAccounts = (api: typeof apiConfig): MetaAccountCredential[] => {
+    if (Array.isArray(api.metaAccounts) && api.metaAccounts.length >= 2) {
+      return api.metaAccounts.slice(0, 2);
+    }
+    const first = api.metaAccounts?.[0];
+    return [
+      {
+        id: first?.id || "meta_1",
+        label: first?.label || "Akun Meta 1 (Utama)",
+        adAccountId: first?.adAccountId || api.adAccountId || "",
+        pixelId: first?.pixelId || api.pixelId || "",
+        metaAccessToken: first?.metaAccessToken || api.metaAccessToken || "",
+        capiAccessToken: first?.capiAccessToken || api.capiAccessToken || "",
+      },
+      {
+        id: "meta_2",
+        label: "Akun Meta 2 (Baru)",
+        adAccountId: "",
+        pixelId: "",
+        metaAccessToken: "",
+        capiAccessToken: "",
+      },
+    ];
+  };
+
+  const [metaAccounts, setMetaAccounts] = useState<MetaAccountCredential[]>(() =>
+    buildDefaultMetaAccounts(apiConfig)
+  );
+  const [activeMetaAccountId, setActiveMetaAccountId] = useState<string>(
+    apiConfig.activeMetaAccountId || "meta_1"
+  );
+  const [showMetaTokens, setShowMetaTokens] = useState<Record<string, boolean>>({});
+  const [showCapiTokens, setShowCapiTokens] = useState<Record<string, boolean>>({});
+  const [testingMetaId, setTestingMetaId] = useState<string | null>(null);
+  const [metaTestResults, setMetaTestResults] = useState<
+    Record<string, { ok: boolean; message: string }>
+  >({});
+  const [showMetaTutorial, setShowMetaTutorial] = useState(true);
 
   // OpenRouter Master Key (Loaded securely from Cloud / Store, never hardcoded)
   const [openRouterKey, setOpenRouterKey] = useState(
@@ -136,8 +179,6 @@ function SettingsContent() {
 
   const [showStrategistKey, setShowStrategistKey] = useState(false);
   const [showTechnicalKey, setShowTechnicalKey] = useState(false);
-  const [showMetaToken, setShowMetaToken] = useState(false);
-  const [showCapiToken, setShowCapiToken] = useState(false);
 
   useEffect(() => {
     loadConfigFromCloud().then(() => {
@@ -149,9 +190,8 @@ function SettingsContent() {
         setStrategistKey((k) => k || cfg.llmRouting.openRouterApiKey || "");
         setTechnicalKey((k) => k || cfg.llmRouting.openRouterApiKey || "");
       }
-      if (api.metaAccessToken) setMetaToken(api.metaAccessToken);
-      if (api.capiAccessToken) setCapiToken(api.capiAccessToken);
-      if (api.adAccountId) setAdAccountId(api.adAccountId);
+      setMetaAccounts(buildDefaultMetaAccounts(api));
+      if (api.activeMetaAccountId) setActiveMetaAccountId(api.activeMetaAccountId);
     });
   }, []);
 
@@ -161,6 +201,85 @@ function SettingsContent() {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
+
+  const updateMetaAccountField = (
+    slotId: string,
+    field: keyof MetaAccountCredential,
+    value: string
+  ) => {
+    setMetaAccounts((prev) =>
+      prev.map((acc) => (acc.id === slotId ? { ...acc, [field]: value } : acc))
+    );
+  };
+
+  const handleTestMetaAccount = async (acc: MetaAccountCredential) => {
+    const activeToken = acc.metaAccessToken.trim() || acc.capiAccessToken.trim();
+    if (!activeToken) {
+      setMetaTestResults((prev) => ({
+        ...prev,
+        [acc.id]: {
+          ok: false,
+          message: "Masukkan Access Token terlebih dahulu untuk mengetes koneksi.",
+        },
+      }));
+      return;
+    }
+
+    setTestingMetaId(acc.id);
+    setMetaTestResults((prev) => {
+      const next = { ...prev };
+      delete next[acc.id];
+      return next;
+    });
+
+    try {
+      const res = await authedFetch("/api/meta/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken: acc.metaAccessToken.trim(),
+          capiAccessToken: acc.capiAccessToken.trim(),
+          adAccountId: acc.adAccountId.trim(),
+          pixelId: acc.pixelId.trim() || "1530674178146899",
+          testOnly: true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
+        const resolvedId = data.account?.id || acc.adAccountId;
+        if (resolvedId && resolvedId !== acc.adAccountId) {
+          updateMetaAccountField(acc.id, "adAccountId", resolvedId);
+        }
+        setMetaTestResults((prev) => ({
+          ...prev,
+          [acc.id]: {
+            ok: true,
+            message:
+              data.message ||
+              `Terhubung ke ${data.account?.name || resolvedId} (${data.account?.currency || "IDR"})`,
+          },
+        }));
+      } else {
+        setMetaTestResults((prev) => ({
+          ...prev,
+          [acc.id]: {
+            ok: false,
+            message: data.error || "Gagal menghubungkan ke Meta Graph API.",
+          },
+        }));
+      }
+    } catch (err: any) {
+      setMetaTestResults((prev) => ({
+        ...prev,
+        [acc.id]: {
+          ok: false,
+          message: err?.message || "Gagal menghubungi server proxy Meta.",
+        },
+      }));
+    } finally {
+      setTestingMetaId(null);
+    }
+  };
 
   const handleSaveAll = async () => {
     // 1. Simpan General Settings
@@ -173,12 +292,25 @@ function SettingsContent() {
       winningEngineConfig.llmRouting.openRouterApiKey ||
       "";
 
-    // 2. Simpan Meta API Config
+    const sanitizedAccounts = metaAccounts.map((acc) => ({
+      ...acc,
+      label: acc.label.trim() || (acc.id === "meta_1" ? "Akun Meta 1 (Utama)" : "Akun Meta 2 (Baru)"),
+      adAccountId: acc.adAccountId.trim(),
+      pixelId: acc.pixelId.trim(),
+      metaAccessToken: acc.metaAccessToken.trim(),
+      capiAccessToken: acc.capiAccessToken.trim(),
+    }));
+    const activeAcc =
+      sanitizedAccounts.find((a) => a.id === activeMetaAccountId) || sanitizedAccounts[0];
+
+    // 2. Simpan Meta API Config (2 Akun + Akun Aktif)
     updateApiConfig({
-      metaAccessToken: metaToken.trim() || undefined,
-      adAccountId: adAccountId.trim() || undefined,
-      pixelId: pixelId.trim() || undefined,
-      capiAccessToken: capiToken.trim() || undefined,
+      metaAccessToken: activeAcc?.metaAccessToken || undefined,
+      adAccountId: activeAcc?.adAccountId || undefined,
+      pixelId: activeAcc?.pixelId || undefined,
+      capiAccessToken: activeAcc?.capiAccessToken || undefined,
+      activeMetaAccountId,
+      metaAccounts: sanitizedAccounts,
       aiProvider: strategistProvider,
       aiApiKey: finalOpenRouterKey,
     });
@@ -209,14 +341,16 @@ function SettingsContent() {
 
     // Simpan permanen ke Supabase Cloud Database (Sinkron Multi-Device)
     try {
-      await fetch("/api/engine/config", {
+      await authedFetch("/api/engine/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          adAccountId: adAccountId.trim() || undefined,
-          metaAccessToken: metaToken.trim() || undefined,
-          metaCapiToken: capiToken.trim() || undefined,
-          metaPixelId: pixelId.trim() || "1530674178146899",
+          adAccountId: activeAcc?.adAccountId || "",
+          metaAccessToken: activeAcc?.metaAccessToken || "",
+          metaCapiToken: activeAcc?.capiAccessToken || "",
+          metaPixelId: activeAcc?.pixelId || "1530674178146899",
+          activeMetaAccountId,
+          metaAccounts: sanitizedAccounts,
           openRouterApiKey: finalOpenRouterKey,
           strategistModel: strategistModel,
           processorModel: technicalModel.includes("luna")
@@ -688,90 +822,391 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* TAB 2: META ADS API & CAPI */}
+      {/* TAB 2: META ADS API & CAPI (DUKUNG 2 AKUN META + TUTORIAL) */}
       {activeTab === "meta" && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-7 space-y-5 shadow-xs">
-          <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
-            <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <Key className="w-4 h-4 text-blue-600" />
-              <span>Kredensial Meta Marketing Graph API &amp; CAPI</span>
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Hubungkan akun iklan Meta Anda untuk monitoring real-time, scale otomatis, dan integrasi server-side Conversions API (CAPI).
-            </p>
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-7 space-y-5 shadow-xs">
+            <div className="border-b border-slate-100 dark:border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <Key className="w-4 h-4 text-blue-600" />
+                  <span>Kredensial Meta Marketing Graph API &amp; CAPI (2 Akun)</span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Simpan hingga <strong>2 akun Meta</strong> (Utama &amp; Cadangan/Baru). Pilih salah satu sebagai akun aktif yang dipakai oleh Meta Ads Commander &amp; Winning Engine, lalu klik <strong>Simpan Perubahan</strong>.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMetaTutorial((v) => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer shrink-0"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Tutorial Ambil Token</span>
+                {showMetaTutorial ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {metaAccounts.map((acc, index) => {
+                const isActive = activeMetaAccountId === acc.id;
+                const testResult = metaTestResults[acc.id];
+                const isTesting = testingMetaId === acc.id;
+                const showToken = Boolean(showMetaTokens[acc.id]);
+                const showCapi = Boolean(showCapiTokens[acc.id]);
+
+                return (
+                  <div
+                    key={acc.id}
+                    className={cn(
+                      "rounded-2xl border p-4 sm:p-5 space-y-4 transition-all",
+                      isActive
+                        ? "bg-blue-50/40 dark:bg-blue-950/20 border-blue-300 dark:border-blue-700 shadow-xs"
+                        : "bg-slate-50/50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800"
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200/70 dark:border-slate-800">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span
+                          className={cn(
+                            "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shrink-0",
+                            isActive
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                          )}
+                        >
+                          Akun {index + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={acc.label}
+                          onChange={(e) => updateMetaAccountField(acc.id, "label", e.target.value)}
+                          placeholder={index === 0 ? "Akun Meta 1 (Utama)" : "Akun Meta 2 (Baru)"}
+                          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 min-w-0 flex-1"
+                        />
+                      </div>
+
+                      {isActive ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Aktif
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setActiveMetaAccountId(acc.id)}
+                          className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer shrink-0"
+                        >
+                          Jadikan Aktif
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Ad Account ID
+                          </label>
+                          <a
+                            href="https://business.facebook.com/settings/ad-accounts"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5"
+                          >
+                            Ambil ID <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
+                        <input
+                          type="text"
+                          value={acc.adAccountId}
+                          onChange={(e) => updateMetaAccountField(acc.id, "adAccountId", e.target.value)}
+                          placeholder="act_5763154810473541"
+                          className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Meta Pixel / Dataset ID
+                          </label>
+                          <a
+                            href="https://business.facebook.com/events_manager2/list/pixel"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5"
+                          >
+                            Ambil Pixel <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
+                        <input
+                          type="text"
+                          value={acc.pixelId}
+                          onChange={(e) => updateMetaAccountField(acc.id, "pixelId", e.target.value)}
+                          placeholder="1530674178146899"
+                          className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Meta User / System User Access Token
+                          </label>
+                          <a
+                            href="https://business.facebook.com/settings/system-users"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5"
+                          >
+                            Ambil System Token <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type={showToken ? "text" : "password"}
+                            value={acc.metaAccessToken}
+                            onChange={(e) => updateMetaAccountField(acc.id, "metaAccessToken", e.target.value)}
+                            placeholder="EAA..."
+                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowMetaTokens((prev) => ({ ...prev, [acc.id]: !prev[acc.id] }))
+                            }
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Conversions API (CAPI) Server Token
+                          </label>
+                          <a
+                            href="https://business.facebook.com/events_manager2/list/pixel"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-0.5"
+                          >
+                            Ambil CAPI Token <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type={showCapi ? "text" : "password"}
+                            value={acc.capiAccessToken}
+                            onChange={(e) => updateMetaAccountField(acc.id, "capiAccessToken", e.target.value)}
+                            placeholder="EAA..."
+                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowCapiTokens((prev) => ({ ...prev, [acc.id]: !prev[acc.id] }))
+                            }
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          >
+                            {showCapi ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={isTesting}
+                        onClick={() => handleTestMetaAccount(acc)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-60"
+                      >
+                        {isTesting ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Wifi className="w-3.5 h-3.5" />
+                        )}
+                        <span>{isTesting ? "Mengetes..." : "Tes Koneksi Akun"}</span>
+                      </button>
+
+                      {acc.metaAccessToken && (
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                          Token terisi
+                        </span>
+                      )}
+                    </div>
+
+                    {testResult && (
+                      <div
+                        className={cn(
+                          "p-2.5 rounded-xl text-xs flex items-start gap-2 border",
+                          testResult.ok
+                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800"
+                            : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800"
+                        )}
+                      >
+                        {testResult.ok ? (
+                          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                        )}
+                        <span className="leading-relaxed">{testResult.message}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Ad Account ID
-              </label>
-              <input
-                type="text"
-                value={adAccountId}
-                onChange={(e) => setAdAccountId(e.target.value)}
-                placeholder="act_5763154810473541"
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500"
-              />
-            </div>
+          {/* TUTORIAL LANGKAH DEMI LANGKAH + LINK LANGSUNG META */}
+          {showMetaTutorial && (
+            <div className="bg-white dark:bg-slate-900 border border-blue-200 dark:border-blue-900/60 rounded-2xl sm:rounded-3xl p-5 sm:p-7 space-y-5 shadow-xs">
+              <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-blue-600" />
+                  <span>Tutorial Mengambil ID &amp; Token Meta (Dengan Link Langsung)</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Klik tombol link biru pada tiap langkah di bawah untuk langsung membuka halaman Meta Business Suite / Developers yang sesuai.
+                </p>
+              </div>
 
-            <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Meta Pixel ID
-              </label>
-              <input
-                type="text"
-                value={pixelId}
-                onChange={(e) => setPixelId(e.target.value)}
-                placeholder="1530674178146899"
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500"
-              />
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Langkah 1: Ad Account ID */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      1. Ambil Ad Account ID (<code className="font-mono text-blue-600 dark:text-blue-400">act_...</code>)
+                    </span>
+                  </div>
+                  <ol className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-decimal list-inside leading-relaxed">
+                    <li>Buka halaman <strong>Ad Accounts</strong> di Business Settings atau Ads Manager.</li>
+                    <li>Pilih akun iklan yang ingin dihubungkan.</li>
+                    <li>Salin deretan angka ID-nya (tambahkan awalan <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">act_</code>, contoh: <code className="font-mono">act_5763154810473541</code>).</li>
+                  </ol>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <a
+                      href="https://business.facebook.com/settings/ad-accounts"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                    >
+                      Buka Business Ad Accounts <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a
+                      href="https://adsmanager.facebook.com/adsmanager/manage/campaigns"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-500 transition-colors"
+                    >
+                      Buka Ads Manager <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
 
-            <div className="md:col-span-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Meta User / System User Access Token
-              </label>
-              <div className="relative">
-                <input
-                  type={showMetaToken ? "text" : "password"}
-                  value={metaToken}
-                  onChange={(e) => setMetaToken(e.target.value)}
-                  placeholder="EAA..."
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowMetaToken(!showMetaToken)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  {showMetaToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                {/* Langkah 2: Pixel / Dataset ID */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      2. Ambil Meta Pixel / Dataset ID
+                    </span>
+                  </div>
+                  <ol className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-decimal list-inside leading-relaxed">
+                    <li>Buka <strong>Events Manager (Data Sources)</strong> atau menu <strong>Datasets</strong>.</li>
+                    <li>Pilih Pixel yang terpasang pada website/landing page Anda.</li>
+                    <li>Masuk ke tab <strong>Settings</strong>, lalu salin angka <strong>Dataset ID / Pixel ID</strong> (15–16 digit).</li>
+                  </ol>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <a
+                      href="https://business.facebook.com/events_manager2/list/pixel"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                    >
+                      Buka Events Manager <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a
+                      href="https://business.facebook.com/settings/datasets"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-500 transition-colors"
+                    >
+                      Buka Business Datasets <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Langkah 3: System User / Access Token */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      3. Ambil System User Access Token (Permanen)
+                    </span>
+                  </div>
+                  <ol className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-decimal list-inside leading-relaxed">
+                    <li>Buka <strong>System Users</strong> di Business Settings → klik <strong>Add</strong> (role: <em>Admin</em>).</li>
+                    <li>Klik <strong>Assign Assets</strong> → pilih <strong>Ad Accounts</strong> (centang <em>Full Control / Manage Campaigns</em>) &amp; <strong>Datasets</strong>.</li>
+                    <li>Klik <strong>Generate New Token</strong> → pilih App → centang <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">ads_management</code>, <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">ads_read</code>, <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">business_management</code> → pilih masa berlaku <strong>Never</strong> → salin token (<code className="font-mono">EAA...</code>).</li>
+                  </ol>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <a
+                      href="https://business.facebook.com/settings/system-users"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                    >
+                      Buka System Users <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a
+                      href="https://developers.facebook.com/tools/explorer/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-500 transition-colors"
+                    >
+                      Graph API Explorer (Tes Cepat) <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <a
+                      href="https://developers.facebook.com/tools/debug/accesstoken/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-500 transition-colors"
+                    >
+                      Cek Expired Token <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Langkah 4: CAPI Server Token */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      4. Ambil Conversions API (CAPI) Server Token
+                    </span>
+                  </div>
+                  <ol className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-decimal list-inside leading-relaxed">
+                    <li>Buka <strong>Events Manager (Data Sources)</strong> dan pilih Pixel Anda.</li>
+                    <li>Klik tab <strong>Settings</strong> lalu scroll ke bagian <strong>Conversions API</strong>.</li>
+                    <li>Di bawah <em>Set up direct integration</em>, klik <strong>Generate access token</strong>, lalu salin token (<code className="font-mono">EAA...</code>) ke kolom CAPI di atas.</li>
+                  </ol>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <a
+                      href="https://business.facebook.com/events_manager2/list/pixel"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                    >
+                      Generate CAPI Token di Events Manager <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <div className="md:col-span-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Conversions API (CAPI) Server Token
-              </label>
-              <div className="relative">
-                <input
-                  type={showCapiToken ? "text" : "password"}
-                  value={capiToken}
-                  onChange={(e) => setCapiToken(e.target.value)}
-                  placeholder="EAA..."
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCapiToken(!showCapiToken)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  {showCapiToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       )}
 

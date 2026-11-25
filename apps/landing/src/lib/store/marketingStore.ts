@@ -35,11 +35,22 @@ import {
   runFivePillarDiagnostics,
 } from '../engine/winningEngine';
 
+export interface MetaAccountCredential {
+  id: string;
+  label: string;
+  adAccountId: string;
+  pixelId: string;
+  metaAccessToken: string;
+  capiAccessToken: string;
+}
+
 interface MarketingApiConfig {
   metaAccessToken?: string;
   adAccountId?: string;
   pixelId?: string;
   capiAccessToken?: string;
+  activeMetaAccountId?: string;
+  metaAccounts?: MetaAccountCredential[];
   aiProvider: 'gemini' | 'openai' | 'claude' | 'groq' | 'openrouter';
   aiApiKey?: string;
 }
@@ -119,6 +130,7 @@ interface MarketingStore {
   winningEngineConfig: WinningEngineConfig;
   updateWinningEngineConfig: (updates: Partial<WinningEngineConfig>) => void;
   loadConfigFromCloud: () => Promise<void>;
+  switchMetaAccount: (accountSlotId: string) => Promise<void>;
   winningOverallScore: number;
   winningPillars: PillarHealthScore[];
   winningPlans: WinningActionPlan[];
@@ -319,6 +331,10 @@ export const useMarketingStore = create<MarketingStore>()(
                 metaAccessToken: c.metaAccessToken || state.apiConfig.metaAccessToken,
                 capiAccessToken: c.metaCapiToken || state.apiConfig.capiAccessToken,
                 pixelId: c.metaPixelId || state.apiConfig.pixelId,
+                activeMetaAccountId: c.activeMetaAccountId || state.apiConfig.activeMetaAccountId || 'meta_1',
+                metaAccounts: Array.isArray(c.metaAccounts) && c.metaAccounts.length > 0
+                  ? c.metaAccounts
+                  : state.apiConfig.metaAccounts,
                 aiProvider: c.openRouterApiKey ? 'openrouter' : state.apiConfig.aiProvider,
                 aiApiKey: c.openRouterApiKey || state.apiConfig.aiApiKey,
               },
@@ -752,6 +768,37 @@ export const useMarketingStore = create<MarketingStore>()(
         set((state) => ({
           apiConfig: { ...state.apiConfig, adAccountId: accountId },
         }));
+        await Promise.all([get().refreshCampaigns(), get().refreshInsights()]);
+      },
+
+      switchMetaAccount: async (accountSlotId: string) => {
+        const accounts = get().apiConfig.metaAccounts || [];
+        const target = accounts.find((a) => a.id === accountSlotId);
+        if (!target) return;
+
+        set((state) => ({
+          apiConfig: {
+            ...state.apiConfig,
+            activeMetaAccountId: target.id,
+            adAccountId: target.adAccountId || '',
+            pixelId: target.pixelId || '1530674178146899',
+            metaAccessToken: target.metaAccessToken || '',
+            capiAccessToken: target.capiAccessToken || '',
+          },
+        }));
+
+        await authedFetch('/api/engine/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            activeMetaAccountId: target.id,
+            adAccountId: target.adAccountId || '',
+            metaPixelId: target.pixelId || '1530674178146899',
+            metaAccessToken: target.metaAccessToken || '',
+            metaCapiToken: target.capiAccessToken || '',
+          }),
+        }).catch(() => undefined);
+
         await Promise.all([get().refreshCampaigns(), get().refreshInsights()]);
       },
 
