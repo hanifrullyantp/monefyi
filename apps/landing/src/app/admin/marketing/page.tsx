@@ -44,6 +44,8 @@ export default function MarketingAdminPage() {
     discoveredAccounts,
     selectAdAccount,
     switchMetaAccount,
+    metaViewMode,
+    setMetaViewMode,
     winningEngineConfig,
     winningOverallScore,
     winningPlans,
@@ -133,17 +135,27 @@ export default function MarketingAdminPage() {
           </div>
 
           {Array.isArray(apiConfig.metaAccounts) &&
-            apiConfig.metaAccounts.filter((a) => a.adAccountId || a.metaAccessToken).length > 1 && (
-              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-xl px-2 py-1 max-w-[160px]">
-                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0">BM:</span>
+            apiConfig.metaAccounts.some((a) => a.adAccountId || a.metaAccessToken || a.capiAccessToken) && (
+              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-xl px-2 py-1 max-w-[190px]">
+                <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0">Meta:</span>
                 <select
-                  value={apiConfig.activeMetaAccountId || "meta_1"}
-                  onChange={(e) => switchMetaAccount(e.target.value)}
+                  value={metaViewMode === "all" ? "__all__" : apiConfig.activeMetaAccountId || "meta_1"}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "__all__") {
+                      setMetaViewMode("all");
+                    } else {
+                      switchMetaAccount(val);
+                    }
+                  }}
                   className="bg-transparent text-[11px] font-bold text-blue-800 dark:text-blue-200 focus:outline-none cursor-pointer truncate w-full"
-                  title="Ganti Akun Meta (Slot 1 / Slot 2)"
+                  title="Tampilkan semua akun Meta atau pilih salah satu"
                 >
+                  {apiConfig.metaAccounts.filter((a) => a.adAccountId || a.metaAccessToken || a.capiAccessToken).length > 1 && (
+                    <option value="__all__">Semua Akun (2)</option>
+                  )}
                   {apiConfig.metaAccounts
-                    .filter((a) => a.adAccountId || a.metaAccessToken)
+                    .filter((a) => a.adAccountId || a.metaAccessToken || a.capiAccessToken)
                     .map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.label}

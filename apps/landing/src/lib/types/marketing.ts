@@ -151,6 +151,8 @@ export interface MetaCampaign {
   targetAudience: string;
   creativeHook: string;
   lastUpdated: string;
+  metaAccountSlotId?: string;
+  metaAccountLabel?: string;
   adsets?: MetaAdSet[];
 
   // Metadata jendela analisa (ditambahkan untuk otonomi & learning phase)

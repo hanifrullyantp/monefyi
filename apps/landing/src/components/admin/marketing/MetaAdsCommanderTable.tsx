@@ -955,8 +955,13 @@ export function MetaAdsCommanderTable({
                   <div className="flex items-center gap-1 text-[9px] text-slate-400 font-extrabold uppercase tracking-wider mb-0.5">
                     <span>Ad:</span>
                   </div>
-                  <h4 className="font-black text-xs text-slate-900 dark:text-white leading-tight">
-                    {camp.name}
+                  <h4 className="font-black text-xs text-slate-900 dark:text-white leading-tight flex items-center gap-1.5 flex-wrap">
+                    <span>{camp.name}</span>
+                    {camp.metaAccountLabel && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        {camp.metaAccountLabel}
+                      </span>
+                    )}
                   </h4>
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     {/* Delivery */}
@@ -1716,12 +1721,19 @@ export function MetaAdsCommanderTable({
                           )}
                         >
                           <div className="max-w-[260px]">
-                            <span
-                              className="font-bold text-xs text-slate-900 dark:text-white truncate block"
-                              title={camp.name}
-                            >
-                              {camp.name}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className="font-bold text-xs text-slate-900 dark:text-white truncate block"
+                                title={camp.name}
+                              >
+                                {camp.name}
+                              </span>
+                              {camp.metaAccountLabel && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0">
+                                  {camp.metaAccountLabel}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[10px] text-slate-400 truncate block mt-0.5">
                               {camp.targetAudience}
                             </span>

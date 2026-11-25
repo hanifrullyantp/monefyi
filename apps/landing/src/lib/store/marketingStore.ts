@@ -85,6 +85,8 @@ interface MarketingStore {
   isLiveMeta: boolean;
   metaAccountName?: string;
   metaSyncError?: string | null;
+  metaViewMode: 'selected' | 'all';
+  setMetaViewMode: (mode: 'selected' | 'all') => Promise<void>;
   datePreset: string;
   discoveredAccounts: DiscoveredMetaAccount[];
   accountBilling?: {
@@ -219,6 +221,7 @@ export const useMarketingStore = create<MarketingStore>()(
       isLiveMeta: false,
       metaAccountName: undefined,
       metaSyncError: null,
+      metaViewMode: 'selected',
       datePreset: 'data_maximum',
       discoveredAccounts: [],
       insightsData: null,
@@ -324,20 +327,25 @@ export const useMarketingStore = create<MarketingStore>()(
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.ok && data.config) {
             const c = data.config;
-            set((state) => ({
-              apiConfig: {
-                ...state.apiConfig,
-                adAccountId: c.adAccountId || state.apiConfig.adAccountId,
-                metaAccessToken: c.metaAccessToken || state.apiConfig.metaAccessToken,
-                capiAccessToken: c.metaCapiToken || state.apiConfig.capiAccessToken,
-                pixelId: c.metaPixelId || state.apiConfig.pixelId,
-                activeMetaAccountId: c.activeMetaAccountId || state.apiConfig.activeMetaAccountId || 'meta_1',
-                metaAccounts: Array.isArray(c.metaAccounts) && c.metaAccounts.length > 0
+            set((state) => {
+              const cloudAccounts: MetaAccountCredential[] | undefined =
+                Array.isArray(c.metaAccounts) && c.metaAccounts.length > 0
                   ? c.metaAccounts
-                  : state.apiConfig.metaAccounts,
-                aiProvider: c.openRouterApiKey ? 'openrouter' : state.apiConfig.aiProvider,
-                aiApiKey: c.openRouterApiKey || state.apiConfig.aiApiKey,
-              },
+                  : state.apiConfig.metaAccounts;
+              const nextActiveId = c.activeMetaAccountId || state.apiConfig.activeMetaAccountId || 'meta_1';
+              const activeSlot = cloudAccounts?.find((a) => a.id === nextActiveId);
+              return {
+                apiConfig: {
+                  ...state.apiConfig,
+                  adAccountId: activeSlot?.adAccountId ?? c.adAccountId ?? state.apiConfig.adAccountId,
+                  metaAccessToken: activeSlot?.metaAccessToken ?? c.metaAccessToken ?? state.apiConfig.metaAccessToken,
+                  capiAccessToken: activeSlot?.capiAccessToken ?? c.metaCapiToken ?? state.apiConfig.capiAccessToken,
+                  pixelId: activeSlot?.pixelId ?? c.metaPixelId ?? state.apiConfig.pixelId,
+                  activeMetaAccountId: nextActiveId,
+                  metaAccounts: cloudAccounts,
+                  aiProvider: c.openRouterApiKey ? 'openrouter' : state.apiConfig.aiProvider,
+                  aiApiKey: c.openRouterApiKey || state.apiConfig.aiApiKey,
+                },
               winningEngineConfig: {
                 ...state.winningEngineConfig,
                 mode: c.mode || state.winningEngineConfig.mode,
@@ -411,7 +419,8 @@ export const useMarketingStore = create<MarketingStore>()(
                     c.telegramChatId || state.winningEngineConfig.notifications.telegramChatId,
                 },
               },
-            }));
+              };
+            });
           }
 
           // Sinkronisasi status batch dari Supabase Cloud (Multi-device tracking)
@@ -771,12 +780,18 @@ export const useMarketingStore = create<MarketingStore>()(
         await Promise.all([get().refreshCampaigns(), get().refreshInsights()]);
       },
 
+      setMetaViewMode: async (mode: 'selected' | 'all') => {
+        set({ metaViewMode: mode });
+        await Promise.all([get().refreshCampaigns(), get().refreshInsights()]);
+      },
+
       switchMetaAccount: async (accountSlotId: string) => {
         const accounts = get().apiConfig.metaAccounts || [];
         const target = accounts.find((a) => a.id === accountSlotId);
         if (!target) return;
 
         set((state) => ({
+          metaViewMode: 'selected',
           apiConfig: {
             ...state.apiConfig,
             activeMetaAccountId: target.id,
@@ -805,8 +820,85 @@ export const useMarketingStore = create<MarketingStore>()(
       refreshCampaigns: async () => {
         set({ isRefreshingCampaigns: true, metaSyncError: null });
         try {
-          const { metaAccessToken, adAccountId, capiAccessToken, pixelId } = get().apiConfig;
-          const { datePreset } = get();
+          const { apiConfig, datePreset, metaViewMode } = get();
+          const allSlots = (apiConfig.metaAccounts || []).filter(
+            (a) => Boolean(a.metaAccessToken?.trim() || a.capiAccessToken?.trim())
+          );
+
+          if (metaViewMode === 'all' && allSlots.length > 0) {
+            const results = await Promise.all(
+              allSlots.map(async (slot) => ({
+                slot,
+                res: await fetchMetaCampaigns(
+                  slot.metaAccessToken,
+                  slot.adAccountId,
+                  slot.capiAccessToken,
+                  slot.pixelId,
+                  datePreset
+                ),
+              }))
+            );
+
+            const seenIds = new Set<string>();
+            const mergedCampaigns: MetaCampaign[] = [];
+            const mergedDiscovered: DiscoveredMetaAccount[] = [];
+            const seenDiscovered = new Set<string>();
+            const liveNames: string[] = [];
+            const errors: string[] = [];
+            let activeBilling: any = undefined;
+
+            for (const { slot, res } of results) {
+              if (res.isLive) {
+                liveNames.push(res.accountName || slot.label);
+                if (slot.id === apiConfig.activeMetaAccountId && res.accountBilling) {
+                  activeBilling = res.accountBilling;
+                } else if (!activeBilling && res.accountBilling) {
+                  activeBilling = res.accountBilling;
+                }
+              } else if (res.error) {
+                errors.push(`${slot.label}: ${res.error}`);
+              }
+
+              for (const camp of res.campaigns) {
+                if (seenIds.has(camp.id)) continue;
+                seenIds.add(camp.id);
+                mergedCampaigns.push({
+                  ...camp,
+                  metaAccountSlotId: slot.id,
+                  metaAccountLabel: slot.label,
+                });
+              }
+
+              for (const acc of res.discoveredAccounts || []) {
+                if (!seenDiscovered.has(acc.id)) {
+                  seenDiscovered.add(acc.id);
+                  mergedDiscovered.push(acc);
+                }
+              }
+            }
+
+            const anyLive = results.some((r) => r.res.isLive);
+            set((state) => ({
+              campaigns: mergedCampaigns,
+              isLiveMeta: anyLive,
+              metaAccountName:
+                liveNames.length > 1
+                  ? `Semua Akun (${liveNames.length})`
+                  : liveNames[0] || undefined,
+              metaSyncError: anyLive ? (errors.length > 0 ? errors.join(' | ') : null) : errors[0] || null,
+              discoveredAccounts:
+                mergedDiscovered.length > 0 ? mergedDiscovered : state.discoveredAccounts,
+              accountBilling: activeBilling || state.accountBilling,
+            }));
+            return;
+          }
+
+          const activeSlot = allSlots.find((a) => a.id === apiConfig.activeMetaAccountId);
+          const metaAccessToken = activeSlot?.metaAccessToken ?? apiConfig.metaAccessToken;
+          const adAccountId = activeSlot?.adAccountId ?? apiConfig.adAccountId;
+          const capiAccessToken = activeSlot?.capiAccessToken ?? apiConfig.capiAccessToken;
+          const pixelId = activeSlot?.pixelId ?? apiConfig.pixelId;
+
           const result = await fetchMetaCampaigns(
             metaAccessToken,
             adAccountId,
@@ -814,24 +906,27 @@ export const useMarketingStore = create<MarketingStore>()(
             pixelId,
             datePreset
           );
-          set((state) => {
-            return {
-              campaigns: result.campaigns,
-              isLiveMeta: result.isLive,
-              metaAccountName: result.accountName,
-              metaSyncError: result.error || null,
-              discoveredAccounts:
-                result.discoveredAccounts && result.discoveredAccounts.length > 0
-                  ? result.discoveredAccounts
-                  : state.discoveredAccounts,
-              accountBilling: result.accountBilling || state.accountBilling,
-              apiConfig:
-                result.resolvedAccountId &&
-                  result.resolvedAccountId !== state.apiConfig.adAccountId
-                  ? { ...state.apiConfig, adAccountId: result.resolvedAccountId }
-                  : state.apiConfig,
-            };
-          });
+          const taggedCampaigns = result.campaigns.map((camp) => ({
+            ...camp,
+            metaAccountSlotId: activeSlot?.id || apiConfig.activeMetaAccountId || 'meta_1',
+            metaAccountLabel: activeSlot?.label,
+          }));
+          set((state) => ({
+            campaigns: taggedCampaigns,
+            isLiveMeta: result.isLive,
+            metaAccountName: result.accountName,
+            metaSyncError: result.error || null,
+            discoveredAccounts:
+              result.discoveredAccounts && result.discoveredAccounts.length > 0
+                ? result.discoveredAccounts
+                : state.discoveredAccounts,
+            accountBilling: result.accountBilling || state.accountBilling,
+            apiConfig:
+              result.resolvedAccountId &&
+              result.resolvedAccountId !== state.apiConfig.adAccountId
+                ? { ...state.apiConfig, adAccountId: result.resolvedAccountId }
+                : state.apiConfig,
+          }));
         } finally {
           set({ isRefreshingCampaigns: false });
         }
@@ -877,7 +972,11 @@ export const useMarketingStore = create<MarketingStore>()(
         if (!target) return false;
 
         const newStatus: CampaignStatus = target.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-        const token = apiConfig.metaAccessToken || apiConfig.capiAccessToken;
+        const slot = target.metaAccountSlotId
+          ? apiConfig.metaAccounts?.find((a) => a.id === target.metaAccountSlotId)
+          : undefined;
+        const token =
+          slot?.metaAccessToken || slot?.capiAccessToken || apiConfig.metaAccessToken || apiConfig.capiAccessToken;
         const result = await updateRemoteCampaignStatus(
           campaignId,
           newStatus,
@@ -926,7 +1025,12 @@ export const useMarketingStore = create<MarketingStore>()(
         if (!targetAd) return false;
 
         const newStatus = targetAd.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
-        const token = apiConfig.metaAccessToken || apiConfig.capiAccessToken;
+        const parentCamp = campaigns.find((c) => c.id === parentCampaignId);
+        const slot = parentCamp?.metaAccountSlotId
+          ? apiConfig.metaAccounts?.find((a) => a.id === parentCamp.metaAccountSlotId)
+          : undefined;
+        const token =
+          slot?.metaAccessToken || slot?.capiAccessToken || apiConfig.metaAccessToken || apiConfig.capiAccessToken;
         const result = await updateRemoteAdStatus(
           adId,
           newStatus,
@@ -971,7 +1075,11 @@ export const useMarketingStore = create<MarketingStore>()(
       ) => {
         const { campaigns, apiConfig, addActionLog } = get();
         const target = campaigns.find((c) => c.id === campaignId);
-        const token = apiConfig.metaAccessToken || apiConfig.capiAccessToken;
+        const slot = target?.metaAccountSlotId
+          ? apiConfig.metaAccounts?.find((a) => a.id === target.metaAccountSlotId)
+          : undefined;
+        const token =
+          slot?.metaAccessToken || slot?.capiAccessToken || apiConfig.metaAccessToken || apiConfig.capiAccessToken;
         const result = await updateRemoteCampaignBudget(
           campaignId,
           newBudget,
