@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { authedFetch } from "@/lib/auth/authedFetch";
 import { useMarketingStore } from "@/lib/store/marketingStore";
 import { LlmProviderType } from "@/lib/engine/llmRouter";
@@ -18,9 +19,9 @@ import {
   Zap,
   Headphones,
   Cpu,
-  Eye,
-  EyeOff,
   Send,
+  ExternalLink,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -76,6 +77,7 @@ const TECHNICAL_MODEL_PRESETS: Record<LlmProviderType, { id: string; label: stri
 };
 
 export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalProps) {
+  const router = useRouter();
   const {
     apiConfig,
     updateApiConfig,
@@ -85,14 +87,9 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     updateWinningEngineConfig,
     customAgentNames,
     updateAgentNames,
+    switchMetaAccount,
     refreshCampaigns,
-    refreshInsights,
   } = useMarketingStore();
-
-  const [metaToken, setMetaToken] = useState(apiConfig.metaAccessToken || "");
-  const [adAccountId, setAdAccountId] = useState(apiConfig.adAccountId || "act_5763154810473541");
-  const [pixelId, setPixelId] = useState(apiConfig.pixelId || "1530674178146899");
-  const [capiToken, setCapiToken] = useState(apiConfig.capiAccessToken || "");
 
   const [openRouterKey, setOpenRouterKey] = useState(
     winningEngineConfig.llmRouting.openRouterApiKey || apiConfig.aiApiKey || ""
@@ -121,9 +118,6 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
     winningEngineConfig.notifications.telegramChatId || ""
   );
 
-  const [showMetaToken, setShowMetaToken] = useState(false);
-  const [showCapiToken, setShowCapiToken] = useState(false);
-
   const [maxCpa, setMaxCpa] = useState(rules.maxCpaThreshold);
   const [minRoas, setMinRoas] = useState(rules.minRoasScaleThreshold);
   const [scaleBudgetPct, setScaleBudgetPct] = useState(rules.scaleBudgetPercentage);
@@ -137,20 +131,9 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
   const [csName, setCsName] = useState(customAgentNames?.cs || "Mbak Esti");
 
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [isTestingMeta, setIsTestingMeta] = useState(false);
-  const [metaTestMsg, setMetaTestMsg] = useState<{
-    ok: boolean;
-    message: string;
-    details?: any;
-  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setMetaToken(apiConfig.metaAccessToken || "");
-      setAdAccountId(apiConfig.adAccountId || "act_5763154810473541");
-      setPixelId(apiConfig.pixelId || "1530674178146899");
-      setCapiToken(apiConfig.capiAccessToken || "");
-
       setOpenRouterKey(
         winningEngineConfig.llmRouting.openRouterApiKey || apiConfig.aiApiKey || ""
       );
@@ -173,85 +156,8 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
 
   if (!isOpen) return null;
 
-  const handleTestMeta = async () => {
-    const activeToken = metaToken.trim() || capiToken.trim();
-    const activeAccountId = adAccountId.trim() || "act_5763154810473541";
-
-    if (!activeToken) {
-      setMetaTestMsg({
-        ok: false,
-        message: "Masukkan Access Token terlebih dahulu untuk mengetes koneksi.",
-      });
-      return;
-    }
-
-    setIsTestingMeta(true);
-    setMetaTestMsg(null);
-
-    try {
-      const res = await authedFetch("/api/meta/campaigns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accessToken: metaToken.trim(),
-          capiAccessToken: capiToken.trim(),
-          adAccountId: activeAccountId,
-          pixelId: pixelId.trim() || "1530674178146899",
-          testOnly: true,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        const resolvedToken = data.resolvedToken || activeToken;
-        const resolvedActId = data.account?.id || activeAccountId;
-
-        setMetaToken(resolvedToken);
-        setAdAccountId(resolvedActId);
-
-        updateApiConfig({
-          metaAccessToken: resolvedToken,
-          adAccountId: resolvedActId,
-          pixelId: pixelId.trim() || "1530674178146899",
-          capiAccessToken: capiToken.trim() || resolvedToken,
-          aiProvider: "openrouter",
-          aiApiKey: openRouterKey.trim(),
-        });
-
-        await Promise.all([refreshCampaigns(), refreshInsights()]);
-
-        setMetaTestMsg({
-          ok: true,
-          message:
-            data.message ||
-            `Terhubung sukses ke ${data.account?.name} (${data.account?.currency})! Data kampanye telah disinkronkan.`,
-          details: data.account,
-        });
-      } else {
-        setMetaTestMsg({
-          ok: false,
-          message: data.error || "Gagal menghubungkan ke Meta Graph API.",
-        });
-      }
-    } catch (err: any) {
-      setMetaTestMsg({
-        ok: false,
-        message: err.message || "Gagal menghubungi server proxy Meta.",
-      });
-    } finally {
-      setIsTestingMeta(false);
-    }
-  };
-
   const handleSave = async () => {
-    const cleanToken = metaToken.trim() || capiToken.trim();
-    const cleanActId = adAccountId.trim() || "act_5763154810473541";
-
     updateApiConfig({
-      metaAccessToken: cleanToken,
-      adAccountId: cleanActId,
-      pixelId: pixelId.trim() || "1530674178146899",
-      capiAccessToken: capiToken.trim() || cleanToken,
       aiProvider: "openrouter",
       aiApiKey: openRouterKey.trim(),
     });
@@ -294,10 +200,6 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          adAccountId: cleanActId,
-          metaAccessToken: cleanToken,
-          metaCapiToken: capiToken.trim() || cleanToken,
-          metaPixelId: pixelId.trim() || "1530674178146899",
           openRouterApiKey: openRouterKey.trim(),
           strategistModel: strategistModel.trim() || "anthropic/claude-3.5-sonnet",
           processorModel: processorModel.trim() || "openai/gpt-6-luna-pro",
@@ -374,150 +276,86 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
         )}
 
         <div className="space-y-6">
-          {/* Section 1: Meta Marketing API */}
+          {/* Section 1: Meta Marketing API (Single Source of Truth -> /admin/settings?tab=meta) */}
           <div className="space-y-3">
-            <h3 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5" />
-              <span>1. Kredensial Meta Marketing Graph API &amp; CAPI</span>
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5" />
+                <span>1. Akun Meta Marketing Graph API &amp; CAPI</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  router.push("/admin/settings?tab=meta");
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer"
+              >
+                <span>Kelola 2 Akun &amp; Token di Pengaturan</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Ad Account ID
-                </label>
-                <input
-                  type="text"
-                  placeholder="act_1234567890"
-                  value={adAccountId}
-                  onChange={(e) => setAdAccountId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Pixel ID
-                </label>
-                <input
-                  type="text"
-                  placeholder="1530674178146899"
-                  value={pixelId}
-                  onChange={(e) => setPixelId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Meta User / System User Access Token
-                  </label>
-                  {metaToken && (
-                    <button
-                      type="button"
-                      onClick={() => setMetaToken("")}
-                      className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
-                    >
-                      Bersihkan Token
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    type={showMetaToken ? "text" : "password"}
-                    placeholder="EAA... (Token dengan scope ads_read, ads_management)"
-                    value={metaToken}
-                    onChange={(e) => setMetaToken(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowMetaToken((v) => !v)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-                  >
-                    {showMetaToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Meta Conversions API (CAPI) Server Token
-                  </label>
-                  {capiToken && (
-                    <button
-                      type="button"
-                      onClick={() => setCapiToken("")}
-                      className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
-                    >
-                      Bersihkan Token
-                    </button>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    type={showCapiToken ? "text" : "password"}
-                    placeholder="EAA... (Token CAPI server dari Events Manager)"
-                    value={capiToken}
-                    onChange={(e) => setCapiToken(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 pr-10 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCapiToken((v) => !v)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-                  >
-                    {showCapiToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="md:col-span-2 pt-1 flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleTestMeta}
-                    disabled={isTestingMeta}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
-                  >
-                    <Key className="w-3.5 h-3.5" />
-                    <span>
-                      {isTestingMeta ? "Menguji Koneksi ke Meta..." : "Tes Koneksi Meta Sekarang"}
-                    </span>
-                  </button>
-                  <span className="text-[11px] text-slate-500">
-                    Memverifikasi langsung ke server Facebook Graph API v20.0.
-                  </span>
-                </div>
-
-                {metaTestMsg && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(apiConfig.metaAccounts && apiConfig.metaAccounts.length > 0
+                ? apiConfig.metaAccounts
+                : [
+                    {
+                      id: "meta_1",
+                      label: "Akun Meta 1 (Utama)",
+                      adAccountId: apiConfig.adAccountId || "",
+                      pixelId: apiConfig.pixelId || "",
+                      metaAccessToken: apiConfig.metaAccessToken || "",
+                      capiAccessToken: apiConfig.capiAccessToken || "",
+                    },
+                  ]
+              ).map((acc) => {
+                const isActive = (apiConfig.activeMetaAccountId || "meta_1") === acc.id;
+                const hasToken = Boolean(acc.metaAccessToken?.trim() || acc.capiAccessToken?.trim());
+                return (
                   <div
+                    key={acc.id}
                     className={cn(
-                      "p-3 rounded-xl border text-xs leading-relaxed flex items-start gap-2",
-                      metaTestMsg.ok
-                        ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
-                        : "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300"
+                      "p-3.5 rounded-2xl border space-y-2 transition-all",
+                      isActive
+                        ? "bg-blue-50/50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700"
+                        : "bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800"
                     )}
                   >
-                    {metaTestMsg.ok ? (
-                      <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    ) : (
-                      <X className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    )}
-                    <div>
-                      <p className="font-bold">{metaTestMsg.message}</p>
-                      {metaTestMsg.details && (
-                        <p className="text-[11px] opacity-80 mt-1 font-mono">
-                          Akun: {metaTestMsg.details.name} | ID: {metaTestMsg.details.id} | Mata Uang:{" "}
-                          {metaTestMsg.details.currency} | Status: {metaTestMsg.details.status}
-                        </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                        {acc.label}
+                      </span>
+                      {isActive ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Aktif
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => switchMetaAccount(acc.id)}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-500 cursor-pointer shrink-0"
+                        >
+                          Aktifkan
+                        </button>
                       )}
                     </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono space-y-0.5">
+                      <div>Ad Account: {acc.adAccountId || <span className="italic text-slate-400 font-sans">Belum diisi</span>}</div>
+                      <div>Pixel ID: {acc.pixelId || <span className="italic text-slate-400 font-sans">Belum diisi</span>}</div>
+                      <div>
+                        Token:{" "}
+                        {hasToken ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-sans font-bold">Terisi</span>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 font-sans font-bold">Kosong</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
           </div>
 

@@ -85,7 +85,9 @@ export default function MarketingAdminPage() {
   };
 
   const hasConfiguredCredentials = Boolean(
-    apiConfig.metaAccessToken || apiConfig.capiAccessToken
+    apiConfig.metaAccessToken ||
+      apiConfig.capiAccessToken ||
+      (apiConfig.metaAccounts || []).some((a) => a.metaAccessToken || a.capiAccessToken)
   );
 
   return (
@@ -348,10 +350,10 @@ export default function MarketingAdminPage() {
           </div>
           <button
             type="button"
-            onClick={() => setIsConfigOpen(true)}
+            onClick={() => router.push("/admin/settings?tab=meta")}
             className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all shrink-0 cursor-pointer text-xs"
           >
-            Hubungkan Meta Ads
+            Kelola Akun Meta
           </button>
         </div>
       )}
