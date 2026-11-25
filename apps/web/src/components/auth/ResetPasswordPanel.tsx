@@ -66,8 +66,8 @@ export default function ResetPasswordPanel({ onUpdated }: ResetPasswordPanelProp
       setError(
         decodeURIComponent(
           hashError ||
-            searchError ||
-            'Tautan reset password tidak valid atau telah kedaluwarsa.',
+          searchError ||
+          'Tautan reset password tidak valid atau telah kedaluwarsa.',
         ),
       );
       setReady(true);
