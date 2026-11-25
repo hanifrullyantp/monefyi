@@ -4,6 +4,25 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [DEPLOY-GATE-1] 2026-11-25 — Feature Flag Produksi Default-OFF untuk 6 Fitur Uang & Otonomi L2+
+- **Branch / PR:** `feat/deploy-gate1-money-feature-flags`
+- **Fase:** Gerbang 1 Pra-Deploy Produksi
+- **Perubahan & Alasan:**
+  - Menambahkan modul deterministik `packages/domain/src/productionFeatureFlags.ts` dan adapter Vite `apps/web/src/lib/productionFeatureFlags.ts` untuk 6 flag produksi yang **WAJIB ber-default `false` (MATI)** pada deploy produksi pertama:
+    - `money_payroll` (`VITE_ENABLE_MONEY_PAYROLL=false`)
+    - `money_disbursement` (`VITE_ENABLE_MONEY_DISBURSEMENT=false`)
+    - `money_dividend` (`VITE_ENABLE_MONEY_DIVIDEND=false`)
+    - `money_bon` (`VITE_ENABLE_MONEY_BON=false`)
+    - `channel_whatsapp` (`VITE_ENABLE_CHANNEL_WHATSAPP=false`)
+    - `agent_autonomy_l2_plus` (`VITE_ENABLE_AGENT_AUTONOMY_L2_PLUS=false`)
+  - Memasang guard `isMoneyFeatureEnabled` pada `AiHrdPayrollModal.tsx` agar fitur penggajian/pencairan tidak dapat dijalankan saat flag nonaktif.
+  - Mendokumentasikan seluruh 6 flag dengan nilai `false` di `apps/web/.env.example`.
+- **Akun / Template Jurnal Tersentuh:** Tidak ada.
+- **Migrasi SQL:** Tidak ada.
+- **Tes Ditambah:** `apps/web/src/lib/financeV2/__tests__/productionMoneyFeatureFlags.test.ts` (4/4 kasus uji memverifikasi default `false` di produksi, `MoneyFeatureDisabledError`, aktivasi selektif, dan paritas `.env.example`).
+- **Dampak ke Tool Agent:** Mengunci otonomi L2+ dan saluran WhatsApp tetap nonaktif secara default pada deploy produksi pertama.
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [G11] 2026-11-24 — UX yang Meringankan (Tinjauan GM), Pre-Fill Proyek Terjadwal Tukang, Antrean Offline Idempoten, & Penutupan Program G7–G11
 - **Branch / PR:** `feat/g11-ux-lightening-gm-review`
 - **Fase:** G11 (UX yang Meringankan & Penutupan Program `G7`–`G11`)
