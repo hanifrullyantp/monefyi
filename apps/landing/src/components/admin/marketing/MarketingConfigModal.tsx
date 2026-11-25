@@ -300,15 +300,15 @@ export function MarketingConfigModal({ isOpen, onClose }: MarketingConfigModalPr
               {(apiConfig.metaAccounts && apiConfig.metaAccounts.length > 0
                 ? apiConfig.metaAccounts
                 : [
-                    {
-                      id: "meta_1",
-                      label: "Akun Meta 1 (Utama)",
-                      adAccountId: apiConfig.adAccountId || "",
-                      pixelId: apiConfig.pixelId || "",
-                      metaAccessToken: apiConfig.metaAccessToken || "",
-                      capiAccessToken: apiConfig.capiAccessToken || "",
-                    },
-                  ]
+                  {
+                    id: "meta_1",
+                    label: "Akun Meta 1 (Utama)",
+                    adAccountId: apiConfig.adAccountId || "",
+                    pixelId: apiConfig.pixelId || "",
+                    metaAccessToken: apiConfig.metaAccessToken || "",
+                    capiAccessToken: apiConfig.capiAccessToken || "",
+                  },
+                ]
               ).map((acc) => {
                 const isActive = (apiConfig.activeMetaAccountId || "meta_1") === acc.id;
                 const hasToken = Boolean(acc.metaAccessToken?.trim() || acc.capiAccessToken?.trim());

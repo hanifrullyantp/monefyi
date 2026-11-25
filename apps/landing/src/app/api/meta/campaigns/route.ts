@@ -673,6 +673,31 @@ async function fetchRealCampaignsForAccount(
   };
 }
 
+async function fetchAccountPixels(
+  actId: string,
+  token: string,
+  appSecret?: string
+): Promise<{ id: string; name: string }[]> {
+  if (!actId || !token) return [];
+  try {
+    const url = buildGraphUrl(
+      `https://graph.facebook.com/v20.0/${actId}/adspixels?fields=id,name&limit=10`,
+      token,
+      appSecret
+    );
+    const res = await fetch(url, { cache: "no-store" });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && Array.isArray(json.data)) {
+      return json.data
+        .filter((p: any) => p?.id)
+        .map((p: any) => ({ id: String(p.id), name: String(p.name || p.id) }));
+    }
+  } catch {
+    // Abaikan jika gagal mengambil daftar pixel
+  }
+  return [];
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireEngineAuth(req, { allowCron: true });
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
@@ -822,11 +847,15 @@ export async function POST(req: NextRequest) {
           : firstActive || verifiedAccount;
 
       const clientProvidedToken = Boolean(body.accessToken || body.capiAccessToken);
+      const detectedPixels = await fetchAccountPixels(preferredAccount.id, workingToken, appSecret);
+      const resolvedPixelId = detectedPixels[0]?.id;
       return NextResponse.json({
         ok: true,
         isLive: true,
         syncMode: "live_graph",
         ...(clientProvidedToken ? { resolvedToken: workingToken } : {}),
+        ...(resolvedPixelId ? { resolvedPixelId } : {}),
+        detectedPixels,
         account: {
           id: preferredAccount.id,
           name: preferredAccount.name,
@@ -900,10 +929,15 @@ export async function POST(req: NextRequest) {
     const paymentFailed =
       accountStatus === 3 || accountStatus === 9 || (accountStatus === 2 && disableReason === 3);
 
+    const detectedPixels = await fetchAccountPixels(selectedAcc.id, workingToken, appSecret);
+    const resolvedPixelId = detectedPixels[0]?.id;
+
     return NextResponse.json({
       ok: true,
       isLive: true,
       syncMode: "live_graph",
+      ...(resolvedPixelId ? { resolvedPixelId } : {}),
+      detectedPixels,
       account: {
         id: selectedAcc.id,
         name: selectedAcc.name,

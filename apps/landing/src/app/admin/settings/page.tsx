@@ -240,7 +240,7 @@ function SettingsContent() {
           accessToken: acc.metaAccessToken.trim(),
           capiAccessToken: acc.capiAccessToken.trim(),
           adAccountId: acc.adAccountId.trim(),
-          pixelId: acc.pixelId.trim() || "1530674178146899",
+          pixelId: acc.pixelId.trim(),
           testOnly: true,
         }),
       });
@@ -250,13 +250,21 @@ function SettingsContent() {
         if (resolvedId && resolvedId !== acc.adAccountId) {
           updateMetaAccountField(acc.id, "adAccountId", resolvedId);
         }
+        const resolvedPixel = data.resolvedPixelId;
+        if (resolvedPixel && !acc.pixelId.trim()) {
+          updateMetaAccountField(acc.id, "pixelId", resolvedPixel);
+        }
+        const pixelInfo = resolvedPixel
+          ? ` Pixel terdeteksi: ${resolvedPixel}${!acc.pixelId.trim() ? " (otomatis terisi)" : ""}.`
+          : "";
         setMetaTestResults((prev) => ({
           ...prev,
           [acc.id]: {
             ok: true,
-            message:
+            message: `${
               data.message ||
-              `Terhubung ke ${data.account?.name || resolvedId} (${data.account?.currency || "IDR"})`,
+              `Terhubung ke ${data.account?.name || resolvedId} (${data.account?.currency || "IDR"})`
+            }${pixelInfo}`,
           },
         }));
       } else {
@@ -292,14 +300,43 @@ function SettingsContent() {
       winningEngineConfig.llmRouting.openRouterApiKey ||
       "";
 
-    const sanitizedAccounts = metaAccounts.map((acc) => ({
-      ...acc,
-      label: acc.label.trim() || (acc.id === "meta_1" ? "Akun Meta 1 (Utama)" : "Akun Meta 2 (Baru)"),
-      adAccountId: acc.adAccountId.trim(),
-      pixelId: acc.pixelId.trim(),
-      metaAccessToken: acc.metaAccessToken.trim(),
-      capiAccessToken: acc.capiAccessToken.trim(),
-    }));
+    const sanitizedAccounts = await Promise.all(
+      metaAccounts.map(async (acc) => {
+        let nextPixelId = acc.pixelId.trim();
+        let nextAdAccountId = acc.adAccountId.trim();
+        const hasToken = Boolean(acc.metaAccessToken.trim() || acc.capiAccessToken.trim());
+        if (hasToken && !nextPixelId) {
+          try {
+            const res = await authedFetch("/api/meta/campaigns", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                accessToken: acc.metaAccessToken.trim(),
+                capiAccessToken: acc.capiAccessToken.trim(),
+                adAccountId: nextAdAccountId,
+                testOnly: true,
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.ok) {
+              if (data.resolvedPixelId) nextPixelId = String(data.resolvedPixelId);
+              if (!nextAdAccountId && data.account?.id) nextAdAccountId = String(data.account.id);
+            }
+          } catch {
+            // Abaikan jika offline saat auto-detect pixel
+          }
+        }
+        return {
+          ...acc,
+          label: acc.label.trim() || (acc.id === "meta_1" ? "Akun Meta 1 (Utama)" : "Akun Meta 2 (Baru)"),
+          adAccountId: nextAdAccountId,
+          pixelId: nextPixelId,
+          metaAccessToken: acc.metaAccessToken.trim(),
+          capiAccessToken: acc.capiAccessToken.trim(),
+        };
+      })
+    );
+    setMetaAccounts(sanitizedAccounts);
     const activeAcc =
       sanitizedAccounts.find((a) => a.id === activeMetaAccountId) || sanitizedAccounts[0];
 

@@ -20,20 +20,40 @@ export function TrackingScripts() {
     const gtm = settings.gtmId?.trim();
     const cleanFb = fb ? fb.replace(/'/g, "") : "";
 
-    // Inisialisasi Meta Pixel tambahan jika menggunakan custom Pixel ID dari settings
-    if (cleanFb && typeof window !== "undefined") {
+    // Inisialisasi seluruh Meta Pixel aktif (dari settings + akun Meta terdaftar)
+    const initPixelIfNeeded = (pixelId: string) => {
+      const cleanId = pixelId.replace(/[^0-9]/g, "");
+      if (!cleanId || typeof window === "undefined") return;
       const w = window as unknown as {
         fbq?: (...args: unknown[]) => void;
+        __initializedMetaPixels?: Set<string>;
       };
-      if (w.fbq && cleanFb !== "1530674178146899") {
+      if (!w.__initializedMetaPixels) {
+        w.__initializedMetaPixels = new Set(["1530674178146899", "1037107426097758"]);
+      }
+      if (w.fbq && !w.__initializedMetaPixels.has(cleanId)) {
         try {
-          w.fbq("init", cleanFb);
+          w.fbq("init", cleanId);
           w.fbq("track", "PageView");
+          w.__initializedMetaPixels.add(cleanId);
         } catch {
           /* ignore */
         }
       }
-    }
+    };
+
+    if (cleanFb) initPixelIfNeeded(cleanFb);
+
+    fetch("/api/meta/pixels")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.ok && Array.isArray(data.pixelIds)) {
+          for (const id of data.pixelIds) {
+            initPixelIfNeeded(String(id));
+          }
+        }
+      })
+      .catch(() => undefined);
 
     // Stage 2: Muat script pihak ketiga (fbevents.js, gtm.js, gtag.js) setelah interaksi pertama atau saat idle
     let loadedSdk = false;
