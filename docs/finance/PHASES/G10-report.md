@@ -33,7 +33,7 @@
 
 ### D. Migrasi SQL Lokal (`BLOCKED remote`)
 - `my-supabase-project/supabase/migrations/20261124200000_g10_channel_gateway_proactive.sql`:
-  - `planner_channel_identities` (`UNIQUE(channel_type, external_handle)`).
+  - `planner_channel_gateway_identities` (`UNIQUE(channel_type, external_handle)`).
   - `planner_outbound_message_logs` (tabel append-only dengan trigger `planner_outbound_message_logs_no_mutation` `ERRCODE = '55000'`).
   - `planner_org_proactive_budgets` (`org_id UNIQUE`, `max_questions_per_person_per_day`, `quiet_start_hour`, `quiet_end_hour`, `kill_switch_enabled`).
   - RLS ketat `public.is_org_member(org_id, ...)` pada seluruh tabel baru tanpa menyentuh/memutasi tabel jurnal.

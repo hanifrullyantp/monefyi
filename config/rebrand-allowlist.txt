@@ -26,6 +26,7 @@ planner_contracts
 planner_finance
 planner_budget
 planner_channel_identities
+planner_channel_gateway_identities
 planner_outbound_message_logs
 planner_org_proactive_budgets
 

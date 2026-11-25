@@ -1,10 +1,10 @@
 -- Fase G10-2: Gateway Saluran & Mesin Proaktif Beranggaran Gangguan (BLOCKED remote — jangan push ke produksi)
--- 1) Membuat tabel planner_channel_identities untuk penautan (channel_type, external_handle) ke (org_id, member_id) secara unik lintas tenant.
+-- 1) Membuat tabel planner_channel_gateway_identities untuk penautan (channel_type, external_handle) ke (org_id, member_id) secara unik lintas tenant (terpisah dari planner_channel_identities Telegram Fase 9).
 -- 2) Membuat tabel append-only planner_outbound_message_logs sebagai jejak pesan keluar wajib per penerima dan question_keys.
 -- 3) Membuat tabel planner_org_proactive_budgets untuk anggaran gangguan per organisasi (max_questions_per_person_per_day, quiet_start_hour, quiet_end_hour, kill_switch_enabled).
 -- 4) Mengaktifkan RLS ketat berbasis is_org_member(org_id, ...) tanpa menyentuh atau memutasi tabel jurnal buku besar.
 
-CREATE TABLE IF NOT EXISTS planner_channel_identities (
+CREATE TABLE IF NOT EXISTS planner_channel_gateway_identities (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id uuid NOT NULL REFERENCES planner_organizations(id) ON DELETE CASCADE,
   member_id uuid NOT NULL,
@@ -20,24 +20,24 @@ CREATE TABLE IF NOT EXISTS planner_channel_identities (
   UNIQUE (channel_type, external_handle)
 );
 
-CREATE INDEX IF NOT EXISTS idx_planner_channel_identities_org_member
-  ON planner_channel_identities(org_id, member_id);
+CREATE INDEX IF NOT EXISTS idx_planner_channel_gateway_identities_org_member
+  ON planner_channel_gateway_identities(org_id, member_id);
 
-ALTER TABLE planner_channel_identities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE planner_channel_gateway_identities ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS planner_channel_identities_select ON planner_channel_identities;
-DROP POLICY IF EXISTS planner_channel_identities_insert ON planner_channel_identities;
-DROP POLICY IF EXISTS planner_channel_identities_update ON planner_channel_identities;
+DROP POLICY IF EXISTS planner_channel_gateway_identities_select ON planner_channel_gateway_identities;
+DROP POLICY IF EXISTS planner_channel_gateway_identities_insert ON planner_channel_gateway_identities;
+DROP POLICY IF EXISTS planner_channel_gateway_identities_update ON planner_channel_gateway_identities;
 
-CREATE POLICY planner_channel_identities_select ON planner_channel_identities
+CREATE POLICY planner_channel_gateway_identities_select ON planner_channel_gateway_identities
   FOR SELECT TO authenticated
   USING (public.is_org_member(org_id, 'worker'));
 
-CREATE POLICY planner_channel_identities_insert ON planner_channel_identities
+CREATE POLICY planner_channel_gateway_identities_insert ON planner_channel_gateway_identities
   FOR INSERT TO authenticated
   WITH CHECK (public.is_org_member(org_id, 'manager'));
 
-CREATE POLICY planner_channel_identities_update ON planner_channel_identities
+CREATE POLICY planner_channel_gateway_identities_update ON planner_channel_gateway_identities
   FOR UPDATE TO authenticated
   USING (public.is_org_member(org_id, 'worker'))
   WITH CHECK (public.is_org_member(org_id, 'worker'));

@@ -4,6 +4,18 @@ Setiap PR yang menyentuh `apps/web/src/services/finance*`, `apps/web/src/service
 
 ---
 
+## [DEPLOY-GATE-3-FIX] 2026-11-25 — Resolusi Benturan Nama Tabel Migrasi #16 (`planner_channel_gateway_identities`)
+- **Branch / PR:** `fix/deploy-gate3-g10-channel-table-name`
+- **Fase:** Gerbang 3 Migrasi SQL
+- **Perubahan & Alasan:**
+  - Migrasi lama Fase 9 (`20261105090000_planner_phase9_channel.sql`) sudah lebih dulu membuat tabel `planner_channel_identities` (Telegram) sehingga migrasi #16 (`20261124200000_g10_channel_gateway_proactive.sql`) gagal pada indeks `member_id` dan di-rollback otomatis oleh `--single-transaction`.
+  - Mengganti nama tabel baru G10-2 pada migrasi #16 menjadi `planner_channel_gateway_identities` beserta indeks, policy RLS, allowlist `config/rebrand-allowlist.txt`, tes struktural `g10ChannelsAndProactiveSim.test.ts`, dan `G10-report.md` tanpa menyentuh tabel Telegram Fase 9.
+- **Akun / Template Jurnal Tersentuh:** Tidak ada.
+- **Migrasi SQL:** Memperbarui `my-supabase-project/supabase/migrations/20261124200000_g10_channel_gateway_proactive.sql` (`BLOCKED remote` hingga dikonfirmasi ulang oleh pemilik).
+- **Tes Ditambah / Diperbarui:** `apps/web/src/lib/financeV2/__tests__/g10ChannelsAndProactiveSim.test.ts`.
+- **Dampak ke Tool Agent:** Tidak ada.
+- **Cara Rollback:** `git revert` commit PR ini.
+
 ## [DEPLOY-GATE-1] 2026-11-25 — Feature Flag Produksi Default-OFF untuk 6 Fitur Uang & Otonomi L2+
 - **Branch / PR:** `feat/deploy-gate1-money-feature-flags`
 - **Fase:** Gerbang 1 Pra-Deploy Produksi

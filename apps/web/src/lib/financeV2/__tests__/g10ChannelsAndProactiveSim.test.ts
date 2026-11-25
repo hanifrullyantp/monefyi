@@ -865,7 +865,7 @@ describe('G10-2: Gateway Saluran, Adaptor WA Non-Resmi, Mesin Proaktif Anggaran 
     const sql = readFileSync(MIGRATION_PATH, 'utf8');
     expect(sql).toMatch(/BLOCKED remote/i);
 
-    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS planner_channel_identities/i);
+    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS planner_channel_gateway_identities/i);
     expect(sql).toMatch(/UNIQUE\s*\(\s*channel_type\s*,\s*external_handle\s*\)/i);
 
     expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS planner_outbound_message_logs/i);
@@ -879,7 +879,7 @@ describe('G10-2: Gateway Saluran, Adaptor WA Non-Resmi, Mesin Proaktif Anggaran 
     expect(sql).toMatch(/quiet_end_hour/i);
     expect(sql).toMatch(/kill_switch_enabled/i);
 
-    expect(sql).toMatch(/ALTER TABLE planner_channel_identities ENABLE ROW LEVEL SECURITY/i);
+    expect(sql).toMatch(/ALTER TABLE planner_channel_gateway_identities ENABLE ROW LEVEL SECURITY/i);
     expect(sql).toMatch(/ALTER TABLE planner_outbound_message_logs ENABLE ROW LEVEL SECURITY/i);
     expect(sql).toMatch(/ALTER TABLE planner_org_proactive_budgets ENABLE ROW LEVEL SECURITY/i);
     expect(sql).toMatch(/public\.is_org_member\s*\(/i);
