@@ -1151,8 +1151,36 @@ function SettingsContent() {
                   <ol className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-decimal list-inside leading-relaxed">
                     <li>Buka <strong>System Users</strong> di Business Settings → klik <strong>Add</strong> (role: <em>Admin</em>).</li>
                     <li>Klik <strong>Assign Assets</strong> → pilih <strong>Ad Accounts</strong> (centang <em>Full Control / Manage Campaigns</em>) &amp; <strong>Datasets</strong>.</li>
-                    <li>Klik <strong>Generate New Token</strong> → pilih App → centang <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">ads_management</code>, <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">ads_read</code>, <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">business_management</code> → pilih masa berlaku <strong>Never</strong> → salin token (<code className="font-mono">EAA...</code>).</li>
+                    <li>Klik <strong>Buat token / Generate New Token</strong> → pilih App → centang <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">ads_management</code>, <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">ads_read</code>, <code className="font-mono bg-slate-200 dark:bg-slate-800 px-1 rounded">business_management</code> → pilih masa berlaku <strong>Never</strong> → salin token (<code className="font-mono">EAA...</code>).</li>
                   </ol>
+                  <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 space-y-1.5">
+                    <p className="text-[11px] font-black text-amber-900 dark:text-amber-200">
+                      Tombol &ldquo;Buat token&rdquo; abu-abu / muncul pesan &ldquo;aplikasi harus menjadi bagian dari portofolio bisnis ini&rdquo;?
+                    </p>
+                    <ol className="text-[11px] text-amber-800 dark:text-amber-300 space-y-1 list-decimal list-inside leading-relaxed">
+                      <li>Buka <strong>Business Settings → Accounts → Apps</strong> pada Business Portfolio yang sama.</li>
+                      <li>Klik <strong>Add → Connect an app ID</strong> (masukkan App ID Meta Anda) atau buat App baru bertipe <em>Business</em> di <strong>Meta for Developers</strong> lalu hubungkan ke Business Portfolio ini.</li>
+                      <li>Setelah App masuk ke daftar portofolio, kembali ke <strong>System Users</strong> dan refresh halaman — tombol <strong>Buat token</strong> akan aktif.</li>
+                    </ol>
+                    <div className="flex flex-wrap gap-2 pt-0.5">
+                      <a
+                        href="https://business.facebook.com/settings/apps"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-600 hover:bg-amber-500 text-white transition-colors"
+                      >
+                        Tambahkan App di Business Settings <ExternalLink className="w-3 h-3" />
+                      </a>
+                      <a
+                        href="https://developers.facebook.com/apps/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:border-amber-500 transition-colors"
+                      >
+                        Buat App di Meta Developers <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-2 pt-1">
                     <a
                       href="https://business.facebook.com/settings/system-users"
