@@ -15,8 +15,35 @@ export async function sendAdminPush(payload: {
   body: string;
   tag?: string;
   url?: string;
-}): Promise<{ sent: number; failed: number; skipped?: string }> {
-  if (!pushConfigured()) return { sent: 0, failed: 0, skipped: "VAPID belum dikonfigurasi" };
+}): Promise<{ sent: number; failed: number; fcmSent?: number; skipped?: string }> {
+  let fcmSent = 0;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (supabaseUrl && serviceKey) {
+    try {
+      const fcmRes = await fetch(`${supabaseUrl.replace(/\/$/, "")}/functions/v1/planner-push-notify`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: payload.title,
+          body: payload.body,
+          tag: payload.tag,
+          url: payload.url || "/admin/marketing",
+        }),
+      });
+      const fcmJson = await fcmRes.json().catch(() => ({}));
+      if (fcmRes.ok && typeof fcmJson.sent === "number") {
+        fcmSent = fcmJson.sent;
+      }
+    } catch {
+      // Abaikan jika Edge Function FCM belum dideploy
+    }
+  }
+
+  if (!pushConfigured()) return { sent: 0, failed: 0, fcmSent, skipped: "VAPID belum dikonfigurasi" };
   webpush.setVapidDetails(
     process.env.VAPID_SUBJECT || "mailto:admin@froyek.com",
     process.env.VAPID_PUBLIC_KEY as string,
@@ -41,6 +68,6 @@ export async function sendAdminPush(payload: {
       }
     }
   }
-  return { sent, failed };
+  return { sent, failed, fcmSent };
 }
 

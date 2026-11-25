@@ -170,16 +170,15 @@ export function JoinByTokenPage() {
           <div>
             <label htmlFor="join-token-password" className="block text-sm font-medium text-slate-700 mb-1">Password</label>
             {isLogin ? (
-              <input
+              <PasswordField
                 id="join-token-password"
                 name="password"
-                type="password"
                 autoComplete="current-password"
-                value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
-                placeholder="Password"
+                showRequirements={false}
                 required
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm"
+                value={form.password}
+                onChange={password => setForm({ ...form, password })}
+                placeholder="Password"
               />
             ) : (
               <PasswordField

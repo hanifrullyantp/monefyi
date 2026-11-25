@@ -241,13 +241,13 @@ export default function ResetPasswordPanel({ onUpdated }: ResetPasswordPanelProp
       </div>
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1.5" htmlFor="confirm-password">Ulangi password</label>
-        <input
+        <PasswordField
           id="confirm-password"
           name="confirmPassword"
-          type="password"
           autoComplete="new-password"
+          showRequirements={false}
           value={confirm}
-          onChange={e => setConfirm(e.target.value)}
+          onChange={setConfirm}
           placeholder="Ulangi password baru"
           className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none text-sm"
         />

@@ -18,6 +18,7 @@ import { AuthHydrator } from "@/components/landing/AuthHydrator";
 import { useUIStore } from "@/lib/store/uiStore";
 import { isEstimatorHost } from "@/lib/config/publicHosts";
 import { AdminPwaInstallPrompt } from "@/components/admin/AdminPwaInstallPrompt";
+import { initFcmNativePush } from "@/lib/fcmNative";
 import { MayarStatusBanner } from "@/components/admin/MayarStatusBanner";
 import { AdminInAppToast } from "@/components/admin/AdminInAppToast";
 import { MarketingConfigModal } from "@/components/admin/marketing/MarketingConfigModal";
@@ -40,13 +41,25 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
       window.location.replace(target);
     }
 
-    // Wire up accessTokenProvider untuk route engine & marketing
+    // Wire up accessTokenProvider untuk route engine & marketing + inisialisasi FCM native (Android APK)
     setAccessTokenProvider(async () => {
       const client = getSupabaseClient();
       if (!client) return null;
       const { data } = await client.auth.getSession();
+      if (data.session?.user?.id) {
+        void initFcmNativePush(data.session.user.id, client);
+      }
       return data.session?.access_token ?? null;
     });
+
+    const client = getSupabaseClient();
+    if (client) {
+      void client.auth.getSession().then(({ data }) => {
+        if (data.session?.user?.id) {
+          void initFcmNativePush(data.session.user.id, client);
+        }
+      });
+    }
 
     // Register admin-sw.js khusus untuk scope /admin/
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {

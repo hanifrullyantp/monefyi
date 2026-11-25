@@ -23,3 +23,8 @@ apps/*/.env.local
 .env*
 monefyi-autonomous-ads*
 *.zip
+# Android & Firebase secrets (never commit)
+android/app/google-services.json
+*firebase-adminsdk*.json
+*.keystore
+*.jks

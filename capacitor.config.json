@@ -1,0 +1,16 @@
+{
+  "appId": "com.froyek.app",
+  "appName": "froyek",
+  "webDir": "apps/web/dist",
+  "server": {
+    "url": "https://froyek.com",
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "plugins": {
+    "FirebaseMessaging": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}
+
