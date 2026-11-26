@@ -35,13 +35,13 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
     return false;
   });
 
-  // Pengaturan Batas Tagihan & Waktu Peringatan (Default: Batas Rp 500.000, Waktu 6 Jam)
+  // Pengaturan Batas Tagihan & Waktu Peringatan (Ikuti threshold Meta secara dinamis; fallback manual opsional)
   const [billingThreshold, setBillingThreshold] = useState<number>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("monefyi_billing_threshold");
-      return saved ? Number(saved) : 500000;
+      const saved = Number(localStorage.getItem("monefyi_billing_threshold") || 0);
+      return Number.isFinite(saved) && saved > 0 ? saved : 0;
     }
-    return 500000;
+    return 0;
   });
 
   const [alertHours, setAlertHours] = useState<number>(() => {
@@ -84,6 +84,14 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
     ? accountBilling.thresholdAmount
     : 0;
   const activeThreshold = metaThreshold || billingThreshold;
+
+  // Sinkronkan threshold dinamis dari Meta ke localStorage agar notifikasi & popup selalu mengikuti nilai terbaru Meta
+  useEffect(() => {
+    if (metaThreshold > 0 && typeof window !== "undefined") {
+      localStorage.setItem("monefyi_billing_threshold", String(metaThreshold));
+      setTempThreshold(metaThreshold);
+    }
+  }, [metaThreshold]);
   const cardName = accountBilling?.fundingSource || "kartu belum terbaca";
   const paymentFailed = Boolean(accountBilling?.paymentFailed);
 
@@ -124,7 +132,7 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
 
   const alertCopy = useMemo(() => {
     const bill = `Rp ${currentBill.toLocaleString("id-ID")}`;
-    const limit = `Rp ${activeThreshold.toLocaleString("id-ID")}`;
+    const limit = activeThreshold > 0 ? `Rp ${activeThreshold.toLocaleString("id-ID")}` : "ambang Meta (otomatis)";
     const when = nextBill
       ? nextBill.toLocaleDateString("id-ID", { day: "numeric", month: "long" })
       : "tanggal penagihan";
@@ -148,7 +156,9 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
     }
     return {
       title: "Pembayaran Meta aman",
-      body: `Tagihan ${bill} dari ambang ${limit}. Penarikan mengikuti ambang atau tanggal ${when}, mana yang lebih dulu.`,
+      body: activeThreshold > 0
+        ? `Tagihan ${bill} dari ambang ${limit}. Penarikan mengikuti ambang dinamis Meta atau tanggal ${when}, mana yang lebih dulu.`
+        : `Tagihan berjalan ${bill}. Ambang penarikan mengikuti pengaturan pembayaran Meta secara dinamis (atau tanggal ${when}).`,
     };
   }, [kind, currentBill, activeThreshold, nextBill, daysLeft, cardName]);
 
@@ -284,9 +294,11 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                 <span>
                   Ambang:{" "}
                   <strong className="text-slate-900 dark:text-white font-black">
-                    Rp {activeThreshold.toLocaleString("id-ID")}
+                    {activeThreshold > 0
+                      ? `Rp ${activeThreshold.toLocaleString("id-ID")}`
+                      : "Otomatis Meta (belum terbaca)"}
                   </strong>
-                  {metaThreshold > 0 ? " (dari Meta)" : ""}
+                  {metaThreshold > 0 ? " (sinkron Meta)" : activeThreshold > 0 ? " (manual)" : ""}
                   {" · "}
                   Tanggal:{" "}
                   <strong className="text-slate-900 dark:text-white font-black">
@@ -325,7 +337,7 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
             <button
               type="button"
               onClick={() => {
-                setTempThreshold(billingThreshold);
+                setTempThreshold(metaThreshold || billingThreshold);
                 setTempAlertHours(alertHours);
                 setTempBillDay(billDay);
                 setTempLeadDays(leadDays);
@@ -424,7 +436,9 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                   Batas Penagihan Meta (Billing Threshold)
                 </label>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
-                  Nominal saat Meta otomatis menarik dana dari kartu debit Anda (sesuai pengaturan di Pengaturan Pembayaran Meta).
+                  {metaThreshold > 0
+                    ? `Otomatis mengikuti ambang Meta saat ini: Rp ${metaThreshold.toLocaleString("id-ID")} (berubah dinamis sesuai Pengaturan Pembayaran Meta).`
+                    : "Otomatis mengikuti Pengaturan Pembayaran Meta. Jika belum terbaca (misal akun prabayar), Anda dapat mengisi fallback manual di bawah."}
                 </p>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 font-bold text-slate-400">Rp</span>

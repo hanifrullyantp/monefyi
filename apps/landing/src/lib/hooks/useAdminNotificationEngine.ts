@@ -14,6 +14,7 @@ import {
   sendAdminNotification,
   playNotificationSound,
 } from "@/lib/services/notificationService";
+import { useMarketingStore } from "@/lib/store/marketingStore";
 
 export function useAdminNotificationEngine() {
   const [permission, setPermission] = useState<NotificationPermission>("default");
@@ -255,16 +256,19 @@ export function useAdminNotificationEngine() {
   };
 
   const testBillingAlert = async () => {
-    const threshold = Number(
-      (typeof window !== "undefined" && localStorage.getItem("monefyi_billing_threshold")) || 500000
+    const liveThreshold = useMarketingStore.getState().accountBilling?.thresholdAmount || 0;
+    const savedThreshold = Number(
+      (typeof window !== "undefined" && localStorage.getItem("monefyi_billing_threshold")) || 0
     );
+    const threshold = liveThreshold > 0 ? liveThreshold : savedThreshold;
     const alertHrs = Number(
       (typeof window !== "undefined" && localStorage.getItem("monefyi_billing_alert_hours")) || 6
     );
+    const limitLabel = threshold > 0 ? `Rp ${threshold.toLocaleString("id-ID")}` : "ambang pembayaran Meta";
     await sendAdminNotification({
       type: "api_alert",
       title: `⚠️ [TES] PENARIKAN META ADS DALAM ${alertHrs} JAM!`,
-      body: `Total tagihan saat ini Rp 450.000 mendekati batas Rp ${threshold.toLocaleString("id-ID")}. Pastikan saldo kartu debit Anda sudah terisi sebelum jam penarikan agar akun iklan tidak dinonaktifkan!`,
+      body: `Total tagihan saat ini mendekati batas ${limitLabel}. Pastikan saldo kartu debit Anda sudah terisi sebelum jam penarikan agar akun iklan tidak dinonaktifkan!`,
       url: "/admin/marketing",
     });
   };
