@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Preview Wizard Tenaga — Mobile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/modal-wizard-tenaga.css" />
+  <style>
+    body.wz-preview { max-width: 430px; margin: 0 auto; background: #1f2937; min-height: 100vh; }
+    .wz-preview-toolbar { font-size: 12px; }
+  </style>
+</head>
+<body class="wz-preview">
+  <div class="wz-preview-toolbar">
+    <strong>Mobile</strong>
+    <button type="button" class="active" data-step="1">Step 1</button>
+    <button type="button" data-step="2">Step 2</button>
+    <button type="button" data-step="3">Step 3</button>
+    <a href="preview-wizard-tenaga-desktop.html" style="margin-left:auto;font-size:12px;">Desktop →</a>
+  </div>
+
+  <div class="wz-backdrop mobile" id="backdrop">
+    <div class="wz-modal" id="modal">
+      <div class="wz-drag-handle"></div>
+      <header class="wz-header">
+        <div class="wz-header-row">
+          <button type="button" class="wz-icon-btn"><i data-lucide="arrow-left"></i></button>
+          <h1 class="wz-header-title">Tambah Tenaga Kerja</h1>
+          <button type="button" class="wz-icon-btn"><i data-lucide="x"></i></button>
+        </div>
+        <div class="wz-steps" id="steps">
+          <div class="wz-step-item active" data-s="1"><div class="wz-step-circle">1</div><span class="wz-step-label">Pekerja</span></div>
+          <div class="wz-step-item" data-s="2"><div class="wz-step-circle">2</div><span class="wz-step-label">Tarif</span></div>
+          <div class="wz-step-item" data-s="3"><div class="wz-step-circle">3</div><span class="wz-step-label">Jadwal</span></div>
+        </div>
+        <div class="wz-progress"><div class="wz-progress-fill" id="progress" style="width:33%"></div></div>
+      </header>
+
+      <div class="wz-content">
+        <div class="wz-step-panel active" data-panel="1">
+          <h2 class="wz-heading">Pilih Pekerja</h2>
+          <div class="wz-search-wrap"><i data-lucide="search"></i><input class="wz-search" placeholder="Cari nama..." /></div>
+          <div class="wz-emp-list">
+            <div class="wz-emp-row"><div class="wz-avatar">HR</div><div class="wz-emp-info"><div class="wz-emp-name">Hanif Rullyanto</div><div class="wz-emp-role">Owner</div></div><i data-lucide="database" class="wz-db-badge"></i></div>
+            <div class="wz-emp-row"><div class="wz-avatar">IS</div><div class="wz-emp-info"><div class="wz-emp-name">Indra Setiawan</div><div class="wz-emp-role">Manager</div></div><i data-lucide="database" class="wz-db-badge"></i></div>
+            <div class="wz-emp-row"><i data-lucide="user-plus"></i><span style="font-weight:700;color:var(--wz-primary)">Tambah baru</span></div>
+          </div>
+          <div class="wz-selected-card">
+            <div class="wz-avatar" style="width:44px;height:44px">BS</div>
+            <div style="flex:1"><div style="font-weight:800">Budi Santoso</div><div style="font-size:12px;color:var(--wz-gray-500)">Tukang Kayu</div></div>
+            <button class="wz-icon-btn"><i data-lucide="x"></i></button>
+          </div>
+        </div>
+
+        <div class="wz-step-panel" data-panel="2">
+          <h2 class="wz-heading">Atur Tarif</h2>
+          <div class="wz-worker-recap"><div class="wz-avatar" style="width:28px;height:28px;font-size:10px">BS</div><span>Budi Santoso</span></div>
+          <div class="wz-label-upper">TIPE PEMBAYARAN</div>
+          <div class="wz-rate-grid">
+            <div class="wz-rate-card active"><i data-lucide="clock"></i><span class="wz-rate-title">HARIAN</span></div>
+            <div class="wz-rate-card"><i data-lucide="hourglass"></i><span class="wz-rate-title">JAM</span></div>
+            <div class="wz-rate-card"><i data-lucide="calendar"></i><span class="wz-rate-title">BULAN</span></div>
+          </div>
+          <div class="wz-label-upper">NOMINAL</div>
+          <div class="wz-amount-box"><span class="wz-amount-prefix">Rp</span><input class="wz-amount-input" value="200.000" /><span>/hari</span></div>
+          <div class="wz-chips"><button class="wz-chip">150k</button><button class="wz-chip">200k</button><button class="wz-chip">250k</button><button class="wz-chip">300k</button></div>
+          <div class="wz-tip-card"><i data-lucide="lightbulb"></i><span>Tip: Rata-rata Rp 200–250rb/hari</span></div>
+        </div>
+
+        <div class="wz-step-panel" data-panel="3">
+          <h2 class="wz-heading">Pilih Jadwal</h2>
+          <div class="wz-worker-recap"><span>Budi · Rp 200k/hari</span></div>
+          <div class="wz-mode-toggle">
+            <button class="wz-mode-btn active planned"><i data-lucide="calendar"></i> Planning</button>
+            <button class="wz-mode-btn"><i data-lucide="check-circle-2"></i> Realisasi</button>
+          </div>
+          <div class="wz-cal-nav">
+            <button class="wz-icon-btn"><i data-lucide="chevron-left"></i></button>
+            <strong>Juli 2026</strong>
+            <button class="wz-icon-btn"><i data-lucide="chevron-right"></i></button>
+          </div>
+          <div class="wz-cal-grid">
+            <div class="wz-cal-dow">M</div><div class="wz-cal-dow">S</div><div class="wz-cal-dow">S</div><div class="wz-cal-dow">R</div><div class="wz-cal-dow">K</div><div class="wz-cal-dow">J</div><div class="wz-cal-dow">S</div>
+            <div></div><div></div><div class="wz-cal-cell">1</div><div class="wz-cal-cell">2</div><div class="wz-cal-cell">3</div><div class="wz-cal-cell">4</div><div class="wz-cal-cell">5</div>
+            <div class="wz-cal-cell">6</div><div class="wz-cal-cell">7</div><div class="wz-cal-cell">8</div><div class="wz-cal-cell selected">9</div><div class="wz-cal-cell selected">10</div><div class="wz-cal-cell selected">11</div><div class="wz-cal-cell selected">12</div>
+          </div>
+          <div class="wz-date-chips">
+            <span class="wz-date-chip">Rab 9·8h</span>
+            <span class="wz-date-chip">Kam 10·8h</span>
+            <span class="wz-date-chip">Jum 11·8h</span>
+          </div>
+          <div class="wz-summary">
+            <div class="wz-summary-metrics">
+              <span class="wz-summary-metric"><i data-lucide="calendar-check"></i> 8 hari</span>
+              <span class="wz-summary-metric"><i data-lucide="clock"></i> 64 jam</span>
+            </div>
+            <div class="wz-summary-total">Rp 1.600.000</div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="wz-footer single" id="footer">
+        <button class="wz-btn-ghost" id="btn-back" style="display:none">← Back</button>
+        <button class="wz-btn-primary" id="btn-next" style="width:100%;margin:0">Lanjut →</button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    lucide.createIcons();
+    let step = 1;
+    const panels = document.querySelectorAll('[data-panel]');
+    const stepItems = document.querySelectorAll('.wz-step-item');
+    const toolbarBtns = document.querySelectorAll('[data-step]');
+    const progress = document.getElementById('progress');
+    const btnBack = document.getElementById('btn-back');
+    const btnNext = document.getElementById('btn-next');
+    const footer = document.getElementById('footer');
+
+    function setStep(n) {
+      step = n;
+      panels.forEach(p => p.classList.toggle('active', +p.dataset.panel === n));
+      stepItems.forEach(s => {
+        const sn = +s.dataset.s;
+        s.classList.toggle('active', sn === n);
+        s.classList.toggle('done', sn < n);
+      });
+      toolbarBtns.forEach(b => b.classList.toggle('active', +b.dataset.step === n));
+      progress.style.width = (n / 3 * 100) + '%';
+      if (n === 1) {
+        footer.classList.add('single');
+        btnBack.style.display = 'none';
+        btnNext.style.width = '100%';
+        btnNext.textContent = 'Lanjut →';
+      } else if (n === 3) {
+        footer.classList.add('single');
+        btnBack.style.display = 'block';
+        btnNext.style.width = '100%';
+        btnNext.textContent = 'Simpan ke RAP';
+      } else {
+        footer.classList.remove('single');
+        btnBack.style.display = 'block';
+        btnNext.style.width = '';
+        btnNext.textContent = 'Lanjut →';
+      }
+      lucide.createIcons();
+    }
+    toolbarBtns.forEach(b => b.addEventListener('click', () => setStep(+b.dataset.step)));
+    btnBack.addEventListener('click', () => setStep(Math.max(1, step - 1)));
+    btnNext.addEventListener('click', () => setStep(Math.min(3, step + 1)));
+    setStep(1);
+  </script>
+</body>
+</html>

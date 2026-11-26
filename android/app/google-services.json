@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "383391622805",
+    "project_id": "froyek-ba693",
+    "storage_bucket": "froyek-ba693.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:383391622805:android:76c054fbdfaafdc7fbdd9c",
+        "android_client_info": {
+          "package_name": "com.froyek.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaaCpFh_3tM-mlv7YJ6h_uhyN9-Mg5nao"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

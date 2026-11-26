@@ -1,0 +1,6 @@
+[
+	{
+		"pkg": "@capacitor-firebase/messaging",
+		"classpath": "io.capawesome.capacitorjs.plugins.firebase.messaging.FirebaseMessagingPlugin"
+	}
+]
