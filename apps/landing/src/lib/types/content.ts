@@ -333,13 +333,17 @@ export interface FooterContent {
 }
 
 export interface ToastNotification {
+  id?: string;
   name: string;
   action: string;
   product: string;
   location: string;
   timeAgo: string;
-  /** Hanya tampil di LP jika `live_purchase` (data pembelian nyata). */
-  source?: "live_purchase" | "cms";
+  occurredAt?: string;
+  category?: "standard" | "pro" | "bundle" | "upgrade" | "free";
+  quantity?: number;
+  /** Sumber data notifikasi: `crm` (data nyata), `live_purchase` (event checkout sesi), atau `cms`. */
+  source?: "crm" | "live_purchase" | "cms";
 }
 
 export interface ToastConfig {
@@ -348,6 +352,9 @@ export interface ToastConfig {
   intervalMax: number;
   autoDismiss: number;
   sound: boolean;
+  includeFree?: boolean;
+  maskCustomerName?: boolean;
+  maxItems?: number;
   notifications: ToastNotification[];
 }
 

@@ -533,14 +533,36 @@ export default function ConversationalCheckout({
           triggerPurchasePixel(paymentData.amount || finalPrice, paymentData.paymentId);
           sendAutoResendEmails(false);
           if (typeof window !== 'undefined') {
+            const toastAction =
+              product === 'standard' && takeOrderBump
+                ? 'baru saja membeli Standard + upgrade'
+                : 'baru saja membeli';
+            const toastProduct =
+              product === 'pro' && takeOrderBump
+                ? '2 Akun Estimator PRO'
+                : product === 'pro' || takeOrderBump
+                ? 'Estimator PRO'
+                : 'Estimator Standard';
+            const toastCategory =
+              product === 'pro' && takeOrderBump
+                ? 'bundle'
+                : product === 'standard' && takeOrderBump
+                ? 'upgrade'
+                : product === 'pro'
+                ? 'pro'
+                : 'standard';
+
             window.dispatchEvent(
               new CustomEvent('monefyi_user_toast', {
                 detail: {
                   name: fullName.trim() || 'Pengguna',
-                  action: 'baru saja membeli',
-                  product: product === 'pro' || takeOrderBump ? 'Estimator Pro' : 'Estimator Standard',
-                  location: 'Baru saja',
+                  action: toastAction,
+                  product: toastProduct,
+                  location: '',
+                  occurredAt: new Date().toISOString(),
                   timeAgo: 'Baru saja',
+                  category: toastCategory,
+                  quantity: product === 'pro' && takeOrderBump ? 2 : 1,
                   source: 'live_purchase',
                 },
               }),
@@ -813,14 +835,36 @@ export default function ConversationalCheckout({
         triggerPurchasePixel(paymentData.amount || finalPrice, paymentData.paymentId);
         sendAutoResendEmails(false);
         if (typeof window !== 'undefined') {
+          const toastAction =
+            product === 'standard' && takeOrderBump
+              ? 'baru saja membeli Standard + upgrade'
+              : 'baru saja membeli';
+          const toastProduct =
+            product === 'pro' && takeOrderBump
+              ? '2 Akun Estimator PRO'
+              : product === 'pro' || takeOrderBump
+              ? 'Estimator PRO'
+              : 'Estimator Standard';
+          const toastCategory =
+            product === 'pro' && takeOrderBump
+              ? 'bundle'
+              : product === 'standard' && takeOrderBump
+              ? 'upgrade'
+              : product === 'pro'
+              ? 'pro'
+              : 'standard';
+
           window.dispatchEvent(
             new CustomEvent('monefyi_user_toast', {
               detail: {
                 name: fullName.trim() || 'Pengguna',
-                action: 'baru saja membeli',
-                product: product === 'pro' || takeOrderBump ? 'Estimator Pro' : 'Estimator Standard',
-                location: 'Baru saja',
+                action: toastAction,
+                product: toastProduct,
+                location: '',
+                occurredAt: new Date().toISOString(),
                 timeAgo: 'Baru saja',
+                category: toastCategory,
+                quantity: product === 'pro' && takeOrderBump ? 2 : 1,
                 source: 'live_purchase',
               },
             }),

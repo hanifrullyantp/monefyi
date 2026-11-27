@@ -237,21 +237,19 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
   return (
     <>
       <div
-        className={`rounded-2xl p-3.5 transition-all duration-300 border shadow-xs ${
-          isUrgent
+        className={`rounded-2xl p-3.5 transition-all duration-300 border shadow-xs ${isUrgent
             ? "bg-gradient-to-r from-rose-950/60 via-slate-900 to-amber-950/60 border-rose-500/40 text-white"
             : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
-        }`}
+          }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Sisi Kiri: Status Kartu & Tagihan */}
           <div className="flex items-start sm:items-center gap-3 min-w-0">
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                isUrgent
+              className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isUrgent
                   ? "bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse"
                   : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-              }`}
+                }`}
             >
               <CreditCard className="w-5 h-5" />
             </div>
@@ -320,12 +318,12 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                   {kind === "payment_failed"
                     ? "Kartu ditolak"
                     : kind === "date_soon"
-                    ? daysLeft === 0
-                      ? "Ditarik hari ini"
-                      : `Ditarik ${daysLeft} hari lagi`
-                    : estimatedHoursLeft == null
-                    ? "Menunggu tanggal atau ambang"
-                    : `Ambang ~${estimatedHoursLeft} jam lagi`}
+                      ? daysLeft === 0
+                        ? "Ditarik hari ini"
+                        : `Ditarik ${daysLeft} hari lagi`
+                      : estimatedHoursLeft == null
+                        ? "Menunggu tanggal atau ambang"
+                        : `Ambang ~${estimatedHoursLeft} jam lagi`}
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 max-w-[220px]">
@@ -389,13 +387,12 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
         <div className="mt-2.5">
           <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
             <div
-              className={`h-full transition-all duration-500 rounded-full ${
-                progressPercent >= 85
+              className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 85
                   ? "bg-rose-500 animate-pulse"
                   : progressPercent >= 60
-                  ? "bg-amber-500"
-                  : "bg-emerald-500"
-              }`}
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+                }`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -456,11 +453,10 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                       key={val}
                       type="button"
                       onClick={() => setTempThreshold(val)}
-                      className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${
-                        tempThreshold === val
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${tempThreshold === val
                           ? "bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-400"
                           : "border-slate-200 dark:border-slate-700 text-slate-500"
-                      }`}
+                        }`}
                     >
                       Rp {(val / 1000).toLocaleString("id-ID")}k
                     </button>
@@ -496,11 +492,10 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                       key={d}
                       type="button"
                       onClick={() => setTempLeadDays(d)}
-                      className={`py-2 rounded-xl font-bold text-xs border text-center ${
-                        tempLeadDays === d
+                      className={`py-2 rounded-xl font-bold text-xs border text-center ${tempLeadDays === d
                           ? "bg-emerald-500 text-slate-950 border-emerald-500"
                           : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                      }`}
+                        }`}
                     >
                       H-{d}
                     </button>
@@ -537,11 +532,10 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                       key={hrs}
                       type="button"
                       onClick={() => setTempAlertHours(hrs)}
-                      className={`py-2 rounded-xl font-bold text-xs border text-center transition-all ${
-                        tempAlertHours === hrs
+                      className={`py-2 rounded-xl font-bold text-xs border text-center transition-all ${tempAlertHours === hrs
                           ? "bg-emerald-500 text-slate-950 border-emerald-500 shadow-sm"
                           : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-                      }`}
+                        }`}
                     >
                       {hrs} Jam {hrs === 6 ? "(Default)" : ""}
                     </button>

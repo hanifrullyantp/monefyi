@@ -1,222 +1,141 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useContentStore } from "@/lib/store/contentStore";
 import type { ToastNotification as ToastItem } from "@/lib/types/content";
+import {
+  formatToastCustomerName,
+  formatToastRelativeTime,
+  type ToastCategory,
+} from "@/lib/crm/toastFeedMapper";
 
-/**
- * Daftar default notifikasi aktivitas pengguna nyata:
- * - Pembelian paket Pro & Standard
- * - Pengguna baru yang mencoba/mengaktifkan akun (TANPA kata "gratis")
- */
-const FALLBACK_NOTIFICATIONS: ToastItem[] = [
-  {
-    name: "Hendro Wibowo",
-    action: "baru saja membeli",
-    product: "Estimator Pro — Sekali Bayar",
-    location: "Surabaya",
-    timeAgo: "2 menit lalu",
-    source: "live_purchase",
+const CATEGORY_STYLES: Record<
+  ToastCategory,
+  { avatar: string; productText: string; badge?: { label: string; className: string } }
+> = {
+  bundle: {
+    avatar: "from-amber-500 to-orange-600 shadow-amber-500/20",
+    productText: "text-amber-700",
+    badge: { label: "2+ Akun", className: "bg-amber-100 text-amber-800" },
   },
-  {
-    name: "Rian Pratama",
-    action: "baru saja mulai menggunakan",
-    product: "Froyek Estimator",
-    location: "Semarang",
-    timeAgo: "4 menit lalu",
-    source: "live_purchase",
+  pro: {
+    avatar: "from-indigo-500 to-purple-600 shadow-indigo-500/20",
+    productText: "text-indigo-700",
+    badge: { label: "PRO", className: "bg-indigo-100 text-indigo-700" },
   },
-  {
-    name: "Faisal Rahman",
-    action: "baru saja upgrade ke",
-    product: "Paket Pro (Custom Branding)",
-    location: "Bandung",
-    timeAgo: "6 menit lalu",
-    source: "live_purchase",
+  upgrade: {
+    avatar: "from-purple-500 to-emerald-600 shadow-purple-500/20",
+    productText: "text-purple-700",
+    badge: { label: "Upgrade", className: "bg-purple-100 text-purple-700" },
   },
-  {
-    name: "Agus Setiawan",
-    action: "baru saja membuat estimasi pertama di",
-    product: "Froyek Estimator",
-    location: "Bekasi",
-    timeAgo: "9 menit lalu",
-    source: "live_purchase",
+  standard: {
+    avatar: "from-emerald-500 to-teal-600 shadow-emerald-500/20",
+    productText: "text-emerald-700",
   },
-  {
-    name: "Budi Santoso",
-    action: "baru saja membeli",
-    product: "Estimator Standard",
-    location: "Jakarta Barat",
-    timeAgo: "12 menit lalu",
-    source: "live_purchase",
+  free: {
+    avatar: "from-teal-500 to-cyan-600 shadow-teal-500/20",
+    productText: "text-teal-700",
+    badge: { label: "Free", className: "bg-teal-100 text-teal-800" },
   },
-  {
-    name: "Wahyu Hidayat",
-    action: "baru saja mengaktifkan akun",
-    product: "Estimator Mobile",
-    location: "Malang",
-    timeAgo: "15 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Dimas Anggara",
-    action: "baru saja mengaktifkan lisensi",
-    product: "Estimator Pro",
-    location: "Tangerang Selatan",
-    timeAgo: "18 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Deni Kurniawan",
-    action: "baru saja bergabung ke",
-    product: "Froyek Estimator",
-    location: "Depok",
-    timeAgo: "21 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Eko Prasetyo",
-    action: "baru saja checkout",
-    product: "Estimator Standard Promo",
-    location: "Sidoarjo",
-    timeAgo: "26 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Taufik Hidayat",
-    action: "baru saja mulai menghitung proyek di",
-    product: "Aplikasi Estimator",
-    location: "Denpasar",
-    timeAgo: "30 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Bambang Wijaya",
-    action: "baru saja membeli",
-    product: "Estimator Pro (SPK & Kwitansi)",
-    location: "Medan",
-    timeAgo: "34 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Kevin Sanjaya",
-    action: "baru saja mengaktifkan akses",
-    product: "Froyek Estimator",
-    location: "Jakarta Utara",
-    timeAgo: "39 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Danang Kusuma",
-    action: "baru saja upgrade ke",
-    product: "Estimator Pro",
-    location: "Yogyakarta",
-    timeAgo: "43 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Ilham Akbar",
-    action: "baru saja membuat penawaran kilat di",
-    product: "Estimator Mobile",
-    location: "Palembang",
-    timeAgo: "47 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "H. Rahmat",
-    action: "baru saja aktivasi",
-    product: "Estimator Standard",
-    location: "Makassar",
-    timeAgo: "51 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Rizky Maulana",
-    action: "baru saja mulai menggunakan",
-    product: "Froyek Estimator",
-    location: "Bogor",
-    timeAgo: "56 menit lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Antonius Salim",
-    action: "baru saja membeli",
-    product: "Estimator Pro",
-    location: "Surabaya",
-    timeAgo: "1 jam lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Arif Wicaksono",
-    action: "baru saja mengaktifkan workspace",
-    product: "Froyek Estimator",
-    location: "Solo",
-    timeAgo: "1 jam lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Suryadi",
-    action: "baru saja membeli",
-    product: "Estimator Standard",
-    location: "Tangerang",
-    timeAgo: "1 jam lalu",
-    source: "live_purchase",
-  },
-  {
-    name: "Bayu Nugroho",
-    action: "baru saja mulai menghitung RAB di",
-    product: "Froyek Estimator",
-    location: "Yogyakarta",
-    timeAgo: "1 jam lalu",
-    source: "live_purchase",
-  },
-];
-
-function livePurchaseNotifications(items: ToastItem[]): ToastItem[] {
-  if (!items || items.length === 0) return FALLBACK_NOTIFICATIONS;
-  const filtered = items.filter((n) => !n.source || n.source === "live_purchase");
-  return filtered.length > 0 ? filtered : FALLBACK_NOTIFICATIONS;
-}
+};
 
 export function ToastNotification() {
   const { content } = useContentStore();
-  const { toast: toastConfig } = content;
-  const configuredItems = livePurchaseNotifications(toastConfig?.notifications || []);
+  const toastConfig = content.toast;
+  const isEnabled = toastConfig?.enabled !== false;
+  const includeFree = toastConfig?.includeFree !== false;
+  const maskCustomerName = toastConfig?.maskCustomerName !== false;
+  const maxItems = toastConfig?.maxItems || 30;
+
+  const [crmItems, setCrmItems] = useState<ToastItem[]>([]);
   const [extraItems, setExtraItems] = useState<ToastItem[]>([]);
-  const liveItems = [...extraItems, ...configuredItems];
   const [visible, setVisible] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const displayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nextScheduleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isManuallyClosedRef = useRef(false);
 
-  // Tangkap event registrasi live dari FreeTrialPopup atau Checkout
+  const liveItems = useMemo(() => {
+    const seen = new Set<string>();
+    const combined: ToastItem[] = [];
+    for (const item of [...extraItems, ...crmItems]) {
+      const key = item.id || `${item.name}|${item.product}|${item.occurredAt || item.timeAgo}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      combined.push(item);
+    }
+    return combined;
+  }, [extraItems, crmItems]);
+
+  // Ambil data transaksi & aktivasi nyata dari CRM (/api/landing/toast-feed)
+  useEffect(() => {
+    if (!isEnabled) {
+      setCrmItems([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchFeed = async () => {
+      try {
+        const params = new URLSearchParams({
+          includeFree: includeFree ? "true" : "false",
+          maskName: maskCustomerName ? "true" : "false",
+          limit: String(maxItems),
+        });
+        const res = await fetch(`/api/landing/toast-feed?${params.toString()}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && json?.ok && Array.isArray(json.items)) {
+          setCrmItems(json.items);
+        }
+      } catch {
+        // Jika gagal memuat CRM, tetap kosong (jangan tampilkan data fiktif)
+      }
+    };
+
+    void fetchFeed();
+    const refreshInterval = setInterval(fetchFeed, 5 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(refreshInterval);
+    };
+  }, [isEnabled, includeFree, maskCustomerName, maxItems]);
+
+  // Tangkap event registrasi / pembelian live dari FreeTrialPopup atau Checkout sesi ini
   useEffect(() => {
     const onUserEvent = (e: Event) => {
       const custom = e as CustomEvent<ToastItem>;
-      if (custom.detail) {
-        setExtraItems((prev) => [custom.detail, ...prev]);
-        setCurrentIndex(0);
-        setVisible(true);
-        if (displayTimerRef.current) clearTimeout(displayTimerRef.current);
-        displayTimerRef.current = setTimeout(() => {
-          setVisible(false);
-        }, 7000);
-      }
+      if (!custom.detail) return;
+      const detail = custom.detail;
+      const sanitized: ToastItem = {
+        ...detail,
+        name: formatToastCustomerName(detail.name || "", maskCustomerName) || "Pengguna",
+        location:
+          detail.location && detail.location.toLowerCase() !== "baru saja"
+            ? detail.location
+            : "",
+        occurredAt: detail.occurredAt || new Date().toISOString(),
+        timeAgo: detail.timeAgo || "Baru saja",
+      };
+      setExtraItems((prev) => [sanitized, ...prev].slice(0, 10));
+      setCurrentIndex(0);
+      setVisible(true);
+      if (displayTimerRef.current) clearTimeout(displayTimerRef.current);
+      displayTimerRef.current = setTimeout(() => {
+        setVisible(false);
+      }, 7000);
     };
     window.addEventListener("monefyi_user_toast", onUserEvent);
     return () => window.removeEventListener("monefyi_user_toast", onUserEvent);
-  }, []);
+  }, [maskCustomerName]);
 
   const clearAllTimers = useCallback(() => {
     if (displayTimerRef.current) clearTimeout(displayTimerRef.current);
     if (nextScheduleTimerRef.current) clearTimeout(nextScheduleTimerRef.current);
   }, []);
 
-  // Hitung interval waktu acak (default 9-22 detik)
   const getRandomInterval = useCallback(() => {
     const min = toastConfig?.intervalMin || 9000;
     const max = toastConfig?.intervalMax || 22000;
@@ -229,16 +148,13 @@ export function ToastNotification() {
       nextScheduleTimerRef.current = setTimeout(() => {
         if (!liveItems.length) return;
 
-        // Pilih item berikutnya secara berurutan atau acak
         setCurrentIndex((prev) => (prev + 1) % liveItems.length);
         setVisible(true);
 
         const autoDismiss = toastConfig?.autoDismiss || 6000;
         displayTimerRef.current = setTimeout(() => {
           setVisible(false);
-          // Setelah tertutup, jadwalkan notifikasi berikutnya dengan jeda random
-          const nextInterval = getRandomInterval();
-          scheduleNext(nextInterval);
+          scheduleNext(getRandomInterval());
         }, autoDismiss);
       }, delayMs);
     },
@@ -246,50 +162,56 @@ export function ToastNotification() {
   );
 
   useEffect(() => {
-    // Aktifkan default: true jika belum di-set eksplisit false
-    const isEnabled = toastConfig?.enabled !== false;
     if (!isEnabled || liveItems.length === 0) {
       setVisible(false);
       clearAllTimers();
       return;
     }
 
-    // Delay awal acak saat pengunjung pertama kali membuka halaman (3.5 - 6.5 detik)
     const initialDelay = Math.floor(Math.random() * 3000) + 3500;
     scheduleNext(initialDelay);
 
     return () => {
       clearAllTimers();
     };
-  }, [clearAllTimers, liveItems.length, scheduleNext, toastConfig?.enabled]);
+  }, [clearAllTimers, isEnabled, liveItems.length, scheduleNext]);
 
   const close = () => {
-    isManuallyClosedRef.current = true;
     setVisible(false);
     clearAllTimers();
-    // Jika ditutup manual oleh user, beri jeda lebih lama (25 detik) sebelum memunculkan lagi
     scheduleNext(25000);
   };
 
-  const isEnabled = toastConfig?.enabled !== false;
   if (!isEnabled || liveItems.length === 0) return null;
 
-  const notification = liveItems[currentIndex] || liveItems[0];
+  const notification = liveItems[currentIndex % liveItems.length] || liveItems[0];
   if (!notification) return null;
 
   const initials = notification.name
+    .replace(/\./g, " ")
     .split(" ")
+    .filter(Boolean)
     .slice(0, 2)
     .map((n) => n[0])
     .join("")
     .toUpperCase();
+
+  const category: ToastCategory = notification.category || "standard";
+  const style = CATEGORY_STYLES[category] || CATEGORY_STYLES.standard;
+  const displayTime = notification.occurredAt
+    ? formatToastRelativeTime(notification.occurredAt)
+    : notification.timeAgo;
+  const displayLocation =
+    notification.location && notification.location.toLowerCase() !== "baru saja"
+      ? notification.location
+      : "";
 
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[90] w-[calc(100%-32px)] max-w-[340px] pointer-events-none">
       <AnimatePresence mode="wait">
         {visible && (
           <motion.div
-            key={currentIndex}
+            key={notification.id || currentIndex}
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -306,7 +228,9 @@ export function ToastNotification() {
             </button>
 
             <div className="flex items-start gap-3 pr-5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md shadow-emerald-500/20">
+              <div
+                className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.avatar} text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-md`}
+              >
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
@@ -314,21 +238,30 @@ export function ToastNotification() {
                   <p className="font-bold text-slate-900 text-[13px] leading-tight">
                     {notification.name}
                   </p>
-                  {notification.location && (
+                  {style.badge && (
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${style.badge.className}`}
+                    >
+                      {category === "bundle" && notification.quantity && notification.quantity >= 2
+                        ? `${notification.quantity}x Akun`
+                        : style.badge.label}
+                    </span>
+                  )}
+                  {displayLocation && (
                     <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">
-                      {notification.location}
+                      {displayLocation}
                     </span>
                   )}
                 </div>
                 <p className="text-slate-600 text-[12px] leading-snug mt-1">
                   {notification.action}{" "}
-                  <span className="font-semibold text-emerald-600">
+                  <span className={`font-semibold ${style.productText}`}>
                     {notification.product}
                   </span>
                 </p>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>{notification.timeAgo}</span>
+                  <span>{displayTime}</span>
                 </div>
               </div>
             </div>

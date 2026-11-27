@@ -451,7 +451,10 @@ export async function GET(req: NextRequest) {
                 }
               }
             } else {
-              const newTier = txAmount >= 290000 ? "pro" : "standard";
+              const newTier: "pro" | "standard" = txAmount >= 185000 ? "pro" : "standard";
+              const inferredBump =
+                (newTier === "pro" && txAmount >= 280000) ||
+                (newTier === "standard" && txAmount >= 135000 && txAmount < 185000);
               const newLead = {
                 id: txId,
                 sessionId: txId,
@@ -459,7 +462,7 @@ export async function GET(req: NextRequest) {
                 email: txEmail,
                 phone: txPhone,
                 planTier: newTier,
-                bumpTaken: false,
+                bumpTaken: inferredBump,
                 paymentMethod: txMethod,
                 amount: txAmount,
                 paymentId: txId,
