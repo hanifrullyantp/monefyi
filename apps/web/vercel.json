@@ -3,6 +3,19 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null,
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "3d.froyek.com"
+        }
+      ],
+      "destination": "https://3d.intero.id/:splat*",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/sw.js",
@@ -23,7 +36,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://estimator.froyek.com https://froyek.com https://estimator.monefyi.com https://planner.monefyi.com https://*.vercel.app http://localhost:* http://127.0.0.1:*"
+          "value": "frame-ancestors 'self' https://estimator.froyek.com https://froyek.com https://3d.froyek.com https://estimator.monefyi.com https://planner.monefyi.com https://*.vercel.app http://localhost:* http://127.0.0.1:*"
         }
       ]
     },

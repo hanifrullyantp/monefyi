@@ -109,8 +109,8 @@ export async function POST(req: NextRequest) {
     const formattedMobile = cleanMobile.startsWith("62")
       ? cleanMobile
       : cleanMobile.startsWith("0")
-      ? `62${cleanMobile.slice(1)}`
-      : `62${cleanMobile}`;
+        ? `62${cleanMobile.slice(1)}`
+        : `62${cleanMobile}`;
 
     // JIKA PAKET FREE TANPA ORDER BUMP (TOTAL RP 0)
     // Kumpulkan data lead & berikan akses instan tanpa invoice bayar
@@ -150,8 +150,8 @@ export async function POST(req: NextRequest) {
       product === "pro"
         ? 199000 + (bumpTaken ? 49000 : 0)
         : product === "standard"
-        ? 93000 + (bumpTaken ? 49000 : 0)
-        : 49000; // product === "free" && bumpTaken
+          ? 93000 + (bumpTaken ? 49000 : 0)
+          : 49000; // product === "free" && bumpTaken
 
     if (numericAmount < minRequiredAmount) {
       return NextResponse.json(

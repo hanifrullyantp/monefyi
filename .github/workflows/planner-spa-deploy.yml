@@ -36,6 +36,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+          VITE_INTERO_3D_DOMAIN: https://3d.intero.id
 
       - name: Deploy to Vercel
         if: github.ref == 'refs/heads/main'
@@ -47,3 +48,4 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_MONEFYI_PLANNER_PROJECT_ID }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || secrets.SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+          VITE_INTERO_3D_DOMAIN: https://3d.intero.id

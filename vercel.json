@@ -4,6 +4,17 @@
   "outputDirectory": "dist",
   "redirects": [
     {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "3d.froyek.com"
+        }
+      ],
+      "destination": "https://3d.intero.id/:splat*",
+      "permanent": true
+    },
+    {
       "source": "/app",
       "destination": "/app/",
       "permanent": true

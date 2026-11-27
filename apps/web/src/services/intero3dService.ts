@@ -288,7 +288,10 @@ export function buildInteroWizardLaunch(
 /** URL yang dibaca 3D Intero sebagai wizard, lalu digambar mesin layout. */
 export function generateInteroLaunchUrl(
   launch: InteroWizardLaunch,
-  domain: string = 'https://3d.intero.id',
+  domain: string = (() => {
+    const env = import.meta.env as Record<string, string | undefined> | undefined;
+    return (env?.VITE_INTERO_3D_DOMAIN as string | undefined)?.trim() || 'https://3d.intero.id';
+  })(),
 ): string {
   const compressed = compressToEncodedURIComponent(JSON.stringify(launch));
   const cleanDomain = domain.replace(/\/+$/, '');

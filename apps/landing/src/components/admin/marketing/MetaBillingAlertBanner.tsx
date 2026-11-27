@@ -240,8 +240,8 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
     <>
       <div
         className={`rounded-2xl p-3.5 transition-all duration-300 border shadow-xs ${isUrgent
-            ? "bg-gradient-to-r from-rose-950/60 via-slate-900 to-amber-950/60 border-rose-500/40 text-white"
-            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
+          ? "bg-gradient-to-r from-rose-950/60 via-slate-900 to-amber-950/60 border-rose-500/40 text-white"
+          : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100"
           }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -249,8 +249,8 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
           <div className="flex items-start sm:items-center gap-3 min-w-0">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isUrgent
-                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse"
-                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                ? "bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse"
+                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                 }`}
             >
               <CreditCard className="w-5 h-5" />
@@ -297,18 +297,18 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                     {isPrepay
                       ? "Akun Prabayar (Prepay)"
                       : activeThreshold > 0
-                      ? `Rp ${activeThreshold.toLocaleString("id-ID")}`
-                      : "Tidak tersedia dari Meta"}
+                        ? `Rp ${activeThreshold.toLocaleString("id-ID")}`
+                        : "Tidak tersedia dari Meta"}
                   </strong>
                   {metaThreshold > 0
                     ? " (sinkron Meta)"
                     : isPrepay
-                    ? " (tanpa threshold)"
-                    : billingDiagnostic
-                    ? ` (${billingDiagnostic})`
-                    : activeThreshold > 0
-                    ? " (manual)"
-                    : ""}
+                      ? " (tanpa threshold)"
+                      : billingDiagnostic
+                        ? ` (${billingDiagnostic})`
+                        : activeThreshold > 0
+                          ? " (manual)"
+                          : ""}
                   {" · "}
                   Tanggal:{" "}
                   <strong className="text-slate-900 dark:text-white font-black">
@@ -400,10 +400,10 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
           <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-500 rounded-full ${progressPercent >= 85
-                  ? "bg-rose-500 animate-pulse"
-                  : progressPercent >= 60
-                    ? "bg-amber-500"
-                    : "bg-emerald-500"
+                ? "bg-rose-500 animate-pulse"
+                : progressPercent >= 60
+                  ? "bg-amber-500"
+                  : "bg-emerald-500"
                 }`}
               style={{ width: `${progressPercent}%` }}
             />
@@ -466,8 +466,8 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                       type="button"
                       onClick={() => setTempThreshold(val)}
                       className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${tempThreshold === val
-                          ? "bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-400"
-                          : "border-slate-200 dark:border-slate-700 text-slate-500"
+                        ? "bg-emerald-500/20 border-emerald-500 text-emerald-600 dark:text-emerald-400"
+                        : "border-slate-200 dark:border-slate-700 text-slate-500"
                         }`}
                     >
                       Rp {(val / 1000).toLocaleString("id-ID")}k
@@ -505,8 +505,8 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                       type="button"
                       onClick={() => setTempLeadDays(d)}
                       className={`py-2 rounded-xl font-bold text-xs border text-center ${tempLeadDays === d
-                          ? "bg-emerald-500 text-slate-950 border-emerald-500"
-                          : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                        ? "bg-emerald-500 text-slate-950 border-emerald-500"
+                        : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
                         }`}
                     >
                       H-{d}
@@ -545,8 +545,8 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                       type="button"
                       onClick={() => setTempAlertHours(hrs)}
                       className={`py-2 rounded-xl font-bold text-xs border text-center transition-all ${tempAlertHours === hrs
-                          ? "bg-emerald-500 text-slate-950 border-emerald-500 shadow-sm"
-                          : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                        ? "bg-emerald-500 text-slate-950 border-emerald-500 shadow-sm"
+                        : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
                         }`}
                     >
                       {hrs} Jam {hrs === 6 ? "(Default)" : ""}

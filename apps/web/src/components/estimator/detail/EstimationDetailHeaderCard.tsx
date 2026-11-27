@@ -123,7 +123,7 @@ export default function EstimationDetailHeaderCard({
               <button
                 type="button"
                 onClick={onLaunchIntero3D}
-                title="Buka 3D Instant di 3d.intero.id (Eksklusif Super Admin)"
+                title="Buka 3D Instant (3d.intero.id / 3d.froyek.com, Eksklusif Super Admin)"
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-400/20 to-emerald-400/20 hover:from-amber-400/30 hover:to-emerald-400/30 border border-amber-300/40 text-amber-200 hover:text-white rounded-xl text-xs font-black backdrop-blur-md shadow-sm transition-all active:scale-95"
               >
                 <Box className="w-3.5 h-3.5 text-amber-300" />

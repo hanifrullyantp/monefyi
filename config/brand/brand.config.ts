@@ -4,6 +4,8 @@ export const BRAND = {
   tagline: 'Agent for your project',
   domain: 'froyek.com',
   estimatorDomain: 'estimator.froyek.com',
+  intero3dDomain: 'https://3d.intero.id',
+  intero3dFroyekDomain: 'https://3d.froyek.com',
   supportEmail: 'support@froyek.com',
   senderEmail: 'noreply@froyek.com',
   urls: {

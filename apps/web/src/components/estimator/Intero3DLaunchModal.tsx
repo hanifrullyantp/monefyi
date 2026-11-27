@@ -22,7 +22,12 @@ interface Props {
 
 export default function Intero3DLaunchModal({ open, onClose, draft, items }: Props) {
   const [proposal, setProposal] = useState<InteroDimensionProposal | null>(null);
-  const [targetDomain, setTargetDomain] = useState<'cloud' | 'local'>('cloud');
+  const [targetDomain, setTargetDomain] = useState<'intero' | 'froyek' | 'local'>('intero');
+
+  const interoDomain = (import.meta.env as Record<string, string | undefined> | undefined)?.VITE_INTERO_3D_DOMAIN?.trim() || 'https://3d.intero.id';
+  const froyekDomain = 'https://3d.froyek.com';
+
+  const cloudDomain = targetDomain === 'froyek' ? froyekDomain : interoDomain;
 
   useEffect(() => {
     if (open) {
@@ -56,7 +61,7 @@ export default function Intero3DLaunchModal({ open, onClose, draft, items }: Pro
 
   const handleLaunch3D = () => {
     const launch = buildInteroWizardLaunch(draft, proposal);
-    const domain = targetDomain === 'local' ? 'http://localhost:5173' : 'https://3d.intero.id';
+    const domain = targetDomain === 'local' ? 'http://localhost:5173' : cloudDomain;
     const url = generateInteroLaunchUrl(launch, domain);
     window.open(url, '_blank', 'noopener,noreferrer');
     onClose();
@@ -84,7 +89,7 @@ export default function Intero3DLaunchModal({ open, onClose, draft, items }: Pro
                 </span>
               </div>
               <p className="text-xs text-emerald-200 mt-0.5">
-                Konversi otomatis hasil estimasi RAB menjadi visualisasi 3D di 3d.intero.id
+                Konversi otomatis hasil estimasi RAB menjadi visualisasi 3D di {interoDomain.replace(/^https?:\/\//, '')}
               </p>
             </div>
           </div>
@@ -334,16 +339,26 @@ export default function Intero3DLaunchModal({ open, onClose, draft, items }: Pro
           {/* Opsi Target Lingkungan */}
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
             <span>Buka ke server:</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-1">
               <label className="flex items-center gap-1 cursor-pointer">
                 <input
                   type="radio"
                   name="domain"
-                  checked={targetDomain === 'cloud'}
-                  onChange={() => setTargetDomain('cloud')}
+                  checked={targetDomain === 'intero'}
+                  onChange={() => setTargetDomain('intero')}
                   className="accent-emerald-600"
                 />
                 <span>3d.intero.id (Cloud)</span>
+              </label>
+              <label className="flex items-center gap-1 cursor-pointer ml-2">
+                <input
+                  type="radio"
+                  name="domain"
+                  checked={targetDomain === 'froyek'}
+                  onChange={() => setTargetDomain('froyek')}
+                  className="accent-emerald-600"
+                />
+                <span>3d.froyek.com (Cloud Froyek)</span>
               </label>
               <label className="flex items-center gap-1 cursor-pointer ml-2">
                 <input

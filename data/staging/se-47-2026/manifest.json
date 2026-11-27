@@ -1,0 +1,85 @@
+{
+  "generatedAt": "2026-11-27",
+  "berkas": [
+    {
+      "file": "se-47-2026-10892.pdf",
+      "downloadId": "10892",
+      "dokumen": "Batang Tubuh",
+      "size": 1051423,
+      "halamanPdf": 13,
+      "halamanCetakAwal": null,
+      "halamanCetakAkhir": null,
+      "halamanTerEkstrak": 13
+    },
+    {
+      "file": "se-47-2026-10894.pdf",
+      "downloadId": "10894",
+      "dokumen": "Lampiran I",
+      "size": 5246337,
+      "halamanPdf": 109,
+      "halamanCetakAwal": null,
+      "halamanCetakAkhir": null,
+      "halamanTerEkstrak": 109
+    },
+    {
+      "file": "se-47-2026-10897.pdf",
+      "downloadId": "10897",
+      "dokumen": "Lampiran II",
+      "size": 3752154,
+      "halamanPdf": 85,
+      "halamanCetakAwal": null,
+      "halamanCetakAkhir": null,
+      "halamanTerEkstrak": 85
+    },
+    {
+      "file": "se-47-2026-10899.pdf",
+      "downloadId": "10899",
+      "dokumen": "Lampiran III",
+      "size": 1501664,
+      "halamanPdf": 74,
+      "halamanCetakAwal": null,
+      "halamanCetakAkhir": null,
+      "halamanTerEkstrak": 74
+    },
+    {
+      "file": "se-47-2026-10901.pdf",
+      "downloadId": "10901",
+      "dokumen": "Lampiran IV",
+      "size": 40188115,
+      "halamanPdf": 1689,
+      "halamanCetakAwal": null,
+      "halamanCetakAkhir": null,
+      "halamanTerEkstrak": 1689
+    },
+    {
+      "file": "se-47-2026-10903.pdf",
+      "downloadId": "10903",
+      "dokumen": "Lampiran V",
+      "size": 21577263,
+      "halamanPdf": 3125,
+      "halamanCetakAwal": null,
+      "halamanCetakAkhir": "5093",
+      "halamanTerEkstrak": 3125
+    },
+    {
+      "file": "se-47-2026-10904.pdf",
+      "downloadId": "10904",
+      "dokumen": "Lampiran VI",
+      "size": 56624433,
+      "halamanPdf": 1563,
+      "halamanCetakAwal": null,
+      "halamanCetakAkhir": "6656",
+      "halamanTerEkstrak": 1563
+    },
+    {
+      "file": "se-47-2026-10906.pdf",
+      "downloadId": "10906",
+      "dokumen": "Lampiran VII",
+      "size": 1305832,
+      "halamanPdf": 42,
+      "halamanCetakAwal": null,
+      "halamanCetakAkhir": null,
+      "halamanTerEkstrak": 42
+    }
+  ]
+}
