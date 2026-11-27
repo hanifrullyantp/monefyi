@@ -83,7 +83,7 @@ export function formatPlanPriceIdr(amount: number): string {
 /** Map legacy org plan_type ke slug paket baru */
 export function normalizePlanSlug(planType?: string): string {
   if (!planType || planType === 'free') return 'free';
-  if (planType === 'starter') return 'starter';
+  if (planType === 'starter' || planType === 'standard' || planType === 'estimator') return 'starter';
   if (planType === 'pro_plus') return 'pro_plus';
   if (planType === 'pro' || planType === 'enterprise' || planType === 'lifetime') return 'pro';
   return planType;

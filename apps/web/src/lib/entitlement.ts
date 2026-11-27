@@ -29,6 +29,8 @@ export function mapLegacyOrgPlan(plan?: string | null): SubscriptionTier | null 
     case 'enterprise':
       return 'enterprise';
     case 'starter':
+    case 'standard':
+    case 'estimator':
       return 'estimator';
     default:
       return null;
@@ -298,6 +300,16 @@ export type PlannerNavModule = 'home' | 'projects' | 'database' | 'estimator' | 
 /** Paket Estimator Standard/Pro — modul Planner terbatas (proyek + estimator). */
 export function isEstimatorOnlyPlan(snapshot: Pick<EntitlementSnapshot, 'isEstimator'>): boolean {
   return snapshot.isEstimator;
+}
+
+export function entitlementPlanLabel(
+  snapshot: Pick<EntitlementSnapshot, 'isEstimator' | 'isEstimatorPro' | 'isPro' | 'isEnterprise'>,
+): string {
+  if (snapshot.isEstimatorPro) return 'Estimator Pro';
+  if (snapshot.isEstimator) return 'Estimator Standard';
+  if (snapshot.isEnterprise) return 'Enterprise';
+  if (snapshot.isPro) return 'Froyek Pro';
+  return 'Gratis';
 }
 
 export function canAccessPlannerNavModule(

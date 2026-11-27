@@ -33,7 +33,7 @@ import ErrorTraceDiagnosticsPanel from '../components/settings/ErrorTraceDiagnos
 import { formatPlanPriceIdr, planForOrg, type PricingPlan } from '../lib/pricingPlans';
 import { countProjectsCreatedThisMonth, loadPricingPlans } from '../services/pricingPlanService';
 import { useEntitlement } from '../hooks/useEntitlement';
-import { isAdminFullAccess } from '../lib/entitlement';
+import { entitlementPlanLabel, isAdminFullAccess, isEstimatorOnlyPlan } from '../lib/entitlement';
 import { hasEstimatorLicenseAccess } from '../lib/appProductBrand';
 import { canAccessManagerFeatures } from '../utils/platformUi';
 
@@ -78,7 +78,10 @@ function roleLabel(role?: string) {
 function planLabel(plan?: string | null): string {
   const map: Record<string, string> = {
     free: 'Gratis',
-    starter: 'Starter',
+    starter: 'Estimator Standard',
+    standard: 'Estimator Standard',
+    estimator: 'Estimator Standard',
+    estimator_pro: 'Estimator Pro',
     pro: 'Pro',
     pro_plus: 'Pro+',
     enterprise: 'Enterprise',
@@ -112,7 +115,11 @@ export default function Settings() {
   const showAdminLink = isPlatformAdmin(platformRole, user?.email);
   const entitlement = useEntitlement();
   const adminFullAccess = isAdminFullAccess(platformRole, user?.email, entitlementPreviewMode);
+  const estimatorOnly = !adminFullAccess && isEstimatorOnlyPlan(entitlement);
   const hasEstimatorAccess = hasEstimatorLicenseAccess(entitlement, adminFullAccess);
+  const resolvedPlanLabel = entitlement.isLoading
+    ? planLabel(tenant?.plan)
+    : entitlementPlanLabel(entitlement);
 
   const [tab, setTab] = useState<SettingsTab>('profil');
   const [loading, setLoading] = useState(true);
@@ -155,10 +162,11 @@ export default function Settings() {
   const isTabRestricted = useCallback((candidate: SettingsTab) => {
     if (OWNER_ONLY_TABS.includes(candidate) && !isOwner) return true;
     if (ADMIN_ONLY_TABS.includes(candidate) && !showAdminLink) return true;
+    if (estimatorOnly && (candidate === 'koordinasi' || candidate === 'pricelist' || candidate === 'domain')) return true;
     if (candidate === 'koordinasi' && !canManageTeam) return true;
     if (candidate === 'estimator' && !entitlement.isLoading && !hasEstimatorAccess) return true;
     return false;
-  }, [isOwner, showAdminLink, canManageTeam, entitlement.isLoading, hasEstimatorAccess]);
+  }, [isOwner, showAdminLink, estimatorOnly, canManageTeam, entitlement.isLoading, hasEstimatorAccess]);
 
   useEffect(() => {
     const rawSt = searchParams.get('st') || searchParams.get('tab');
@@ -438,10 +446,10 @@ export default function Settings() {
     { id: 'profil', label: 'Profil', icon: User, show: true },
     { id: 'estimator', label: 'Estimator', icon: FileSpreadsheet, show: hasEstimatorAccess },
     { id: 'akun', label: 'Akun & AI', icon: Sparkles, show: true },
-    { id: 'koordinasi', label: 'Koordinasi AI & Bot Telegram', icon: Bot, show: canManageTeam },
+    { id: 'koordinasi', label: 'Koordinasi AI & Bot Telegram', icon: Bot, show: canManageTeam && !estimatorOnly },
     { id: 'organisasi', label: 'Organisasi', icon: Building2, show: canEditOrg },
-    { id: 'pricelist', label: 'Pricelist', icon: CreditCard, show: canEditOrg },
-    { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg },
+    { id: 'pricelist', label: 'Pricelist', icon: CreditCard, show: canEditOrg && !estimatorOnly },
+    { id: 'domain', label: 'Custom Domain', icon: Globe, show: canEditOrg && !estimatorOnly },
     { id: 'notifikasi', label: 'Notifikasi', icon: Bell, show: true },
     { id: 'keamanan', label: 'Keamanan', icon: Shield, show: true },
     { id: 'diagnostik', label: 'Trace & Error', icon: Bug, show: showAdminLink },
@@ -492,8 +500,10 @@ export default function Settings() {
             { label: 'Organisasi', value: tenant?.name || '—', sub: tenant?.slug },
             {
               label: 'Paket',
-              value: currentPlan.label,
-              sub: currentPlan.projects_per_month != null && projectsThisMonth != null
+              value: resolvedPlanLabel,
+              sub: estimatorOnly
+                ? 'Aktif seumur hidup'
+                : currentPlan.projects_per_month != null && projectsThisMonth != null
                 ? `${projectsThisMonth}/${currentPlan.projects_per_month} proyek bulan ini`
                 : `${projects.length} proyek`,
             },
@@ -753,19 +763,27 @@ export default function Settings() {
             <div>
               <h4 className="font-bold text-slate-800">Paket langganan</h4>
               <p className="text-sm text-slate-500">
-                {currentPlan.label} · {formatPlanPriceIdr(currentPlan.price_monthly_idr)}/bulan
-                {currentPlan.projects_per_month != null && projectsThisMonth != null && (
-                  <> · {projectsThisMonth}/{currentPlan.projects_per_month} proyek bulan ini</>
+                {estimatorOnly ? (
+                  <>{resolvedPlanLabel} · Aktif seumur hidup</>
+                ) : (
+                  <>
+                    {resolvedPlanLabel} · {formatPlanPriceIdr(currentPlan.price_monthly_idr)}/bulan
+                    {currentPlan.projects_per_month != null && projectsThisMonth != null && (
+                      <> · {projectsThisMonth}/{currentPlan.projects_per_month} proyek bulan ini</>
+                    )}
+                  </>
                 )}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => selectTab('pricelist')}
-              className="px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl"
-            >
-              Lihat pricelist & upgrade
-            </button>
+            {!estimatorOnly && (
+              <button
+                type="button"
+                onClick={() => selectTab('pricelist')}
+                className="px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl"
+              >
+                Lihat pricelist &amp; upgrade
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
@@ -773,15 +791,19 @@ export default function Settings() {
               {savingOrg && <Loader2 className="w-4 h-4 animate-spin" />}
               Simpan Organisasi
             </button>
-            <button type="button" onClick={goToHr} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 flex items-center gap-1.5 hover:bg-slate-50">
-              <Users className="w-4 h-4" /> HR & Karyawan
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            {!estimatorOnly && (
+              <button type="button" onClick={goToHr} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 flex items-center gap-1.5 hover:bg-slate-50">
+                <Users className="w-4 h-4" /> HR &amp; Karyawan
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-500">
-            Kelola anggota, undangan, dan akses join di halaman <button type="button" onClick={goToHr} className="text-emerald-600 font-semibold">HR & Karyawan</button>.
-          </div>
+          {!estimatorOnly && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-500">
+              Kelola anggota, undangan, dan akses join di halaman <button type="button" onClick={goToHr} className="text-emerald-600 font-semibold">HR &amp; Karyawan</button>.
+            </div>
+          )}
         </div>
       )}
 
@@ -906,7 +928,7 @@ export default function Settings() {
               <AboutRow label="Aplikasi" value="Froyek" />
               <AboutRow label="Versi" value="0.1.0 MVP" />
               <AboutRow label="Mode" value={isDemoMode ? 'Demo' : 'Production'} />
-              <AboutRow label="Paket" value={planLabel(tenant?.plan)} />
+              <AboutRow label="Paket" value={resolvedPlanLabel} />
             </div>
           </div>
 

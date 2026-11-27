@@ -46,6 +46,7 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "src"),
         "@domain": path.resolve(__dirname, "../../packages/domain/src"),
         "@agent-core": path.resolve(__dirname, "../../agent-core/src"),
+        "@supabase/supabase-js": path.resolve(__dirname, "node_modules/@supabase/supabase-js"),
       },
     },
     test: {
