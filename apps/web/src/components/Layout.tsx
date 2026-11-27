@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Home, FolderOpen, Wallet, Settings, Bell, Menu, X, ArrowLeft, LogOut,
   Sparkles, Wifi, WifiOff, Clock, Users, Receipt,
-  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User, Eye, BookOpen,
+  BarChart3, Shield, ChevronRight, Database, PanelRightClose, PanelRight, Lock, User, Eye, BookOpen, ClipboardList,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUiStore } from '../store/uiStore';
 import { isPlatformAdmin } from '../services/adminService';
 import { showWorkerShell, canAccessManagerFeatures } from '../utils/platformUi';
+import { isRabEnabled, isRabSuperAdmin } from '../lib/rab';
 import { AppHeader, AccountMenu, BottomNav } from './common';
 import CommandModal from './CommandModal';
 import NotificationPanel from './NotificationPanel';
@@ -46,7 +47,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const {
-    user, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
+    user, emailVerified, tenant, activeTab, setActiveTab, financeVersion, setFinanceVersionPreference,
     migrationFlags, setMigrationFlags,
     syncStatus, pendingSyncCount, isOnline, lastSynced, unreadCount, commandModalOpen,
     setCommandModalOpen, sidebarOpen, setSidebarOpen, navSidebarCollapsed, toggleNavSidebarCollapsed,
@@ -144,6 +145,9 @@ export default function Layout({ children }: LayoutProps) {
     if (tabId === 'database') {
       return location.pathname.startsWith('/app/database');
     }
+    if (tabId === 'rab') {
+      return location.pathname.startsWith('/app/rab');
+    }
     if (tabId === 'home') {
       return activeTab === 'home'
         && !location.pathname.startsWith('/app/estimator')
@@ -165,10 +169,13 @@ export default function Layout({ children }: LayoutProps) {
       { id: 'projects', label: 'Proyek', icon: FolderOpen },
       { id: 'database', label: 'Database', icon: Database },
       ...(hasEstimatorAccess ? [{ id: 'estimator', label: 'Estimator', icon: Receipt }] : []),
-      { id: 'finance', label: 'Keuangan Bisnis', icon: Wallet },
-      ...(canAccessHr
-        ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
-        : []),
+        { id: 'finance', label: 'Keuangan Bisnis', icon: Wallet },
+        ...(isRabEnabled() && isRabSuperAdmin(user?.email, emailVerified)
+          ? [{ id: 'rab', label: 'RAB', icon: ClipboardList }]
+          : []),
+        ...(canAccessHr
+          ? [{ id: 'hr', label: 'HR & Karyawan', icon: Users }]
+          : []),
     ];
 
   const workerSidebarItems = [
@@ -241,6 +248,9 @@ export default function Layout({ children }: LayoutProps) {
     } else if (tabId === 'finance') {
       setActiveTab('finance');
       navigate(isSandboxFinance(financeVersion) ? '/app/finance-v2' : '/app?tab=finance');
+    } else if (tabId === 'rab') {
+      setActiveTab('rab');
+      navigate('/app/rab');
     } else {
       setActiveTab(tabId);
       navigate(`/app?tab=${tabId}`);

@@ -32,6 +32,8 @@ interface StoreRow {
   updatedAt: string;
 }
 
+export type { StoreRow };
+
 class EstimatorDatabase extends Dexie {
   store!: Table<StoreRow, string>;
   constructor() {
@@ -40,7 +42,7 @@ class EstimatorDatabase extends Dexie {
   }
 }
 
-const database = new EstimatorDatabase();
+export const database = new EstimatorDatabase();
 
 export type { Komponen };
 

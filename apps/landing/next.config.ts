@@ -104,6 +104,12 @@ const nextConfig: NextConfig = {
         destination: "https://froyek.com/admin/:path*",
         permanent: false,
       },
+      {
+        source: "/:path*",
+        has: [{ type: "host" as const, value: "3d.froyek.com" }],
+        destination: "https://3d.intero.id/:path*",
+        permanent: true,
+      },
     ];
   },
   async rewrites() {

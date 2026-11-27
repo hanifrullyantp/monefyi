@@ -1,0 +1,306 @@
+{
+  "sumberAhsp": "SE 47/SE/Dk/2026 Lampiran VI",
+  "versiKatalog": "SE-47-2026",
+  "tanggal": "2026-11-27",
+  "catatan": "Pemetaan kode pekerjaan modul (CONTOH) ke kode AHSP resmi. Pekerjaan yang tidak ada padanan AHSP ditandai \"belum terpetakan\" dan TIDAK dihitung dalam RAB. Pemetaan ini adalah usulan dan harus dikonfirmasi super admin lewat layar AhspImport (diff + konfirmasi) sebelum dipakai.",
+  "pemetaan": [
+    {
+      "modulKode": "persiapan.bersih",
+      "modulAnalisisId": "A.PSP.BERSIH",
+      "modulUraian": "Pembersihan lahan",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP resmi yang cocok di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "persiapan.ukur",
+      "modulAnalisisId": "A.PSP.UKUR",
+      "modulUraian": "Pengukuran & papan ukur",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP resmi yang cocok di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "tanah.galian",
+      "modulAnalisisId": "A.TNH.GALI",
+      "modulUraian": "Galian tanah pondasi",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": "Penggalian 1 m3 tanah biasa sedalam s.d. 1 m untuk volume s.d. 200 m3",
+      "status": "belum terpetakan",
+      "halamanAhsp": "5271",
+      "alasan": "Kode AHSP tidak ditemukan di analisis yang lolos validasi"
+    },
+    {
+      "modulKode": "tanah.urug",
+      "modulAnalisisId": "A.TNH.URUG",
+      "modulUraian": "Urugan bawah lantai",
+      "ahspKode": "1.3.1.1",
+      "ahspUraian": "1 m Urukan Kembali Galian Tanah (>0 s.d. 200 m3) tanpa",
+      "status": "terpetakan",
+      "halamanAhsp": "5293"
+    },
+    {
+      "modulKode": "pondasi.batu",
+      "modulAnalisisId": "A.PDS.BATU",
+      "modulUraian": "Pondasi batu belah",
+      "ahspKode": "2.2.2.1.4",
+      "ahspUraian": "Pemasangan 1 m3 Fondasi Batu Belah Mortar Tipe S (12,5",
+      "status": "terpetakan",
+      "halamanAhsp": "5378"
+    },
+    {
+      "modulKode": "struktur.sloof",
+      "modulAnalisisId": "A.STR.SLOOF",
+      "modulUraian": "Sloof beton bertulang",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "AHSP yang terbaca hanya penuangan pracetak / pemadatan, tidak ada sloop bertulang persis"
+    },
+    {
+      "modulKode": "struktur.kolom",
+      "modulAnalisisId": "A.STR.KOLOM",
+      "modulUraian": "Kolom praktis",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "AHSP yang terbaca adalah cetakan/erekksi kolom pracetak, basis perhitungan berbeda"
+    },
+    {
+      "modulKode": "struktur.balok",
+      "modulAnalisisId": "A.STR.BALOK",
+      "modulUraian": "Balok & ring balk",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "AHSP yang terbaca adalah balok pracetak, basis perhitungan berbeda"
+    },
+    {
+      "modulKode": "struktur.plat",
+      "modulAnalisisId": "A.STR.PLAT",
+      "modulUraian": "Plat lantai beton",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "AHSP yang terbaca adalah plat pracetak, basis perhitungan berbeda"
+    },
+    {
+      "modulKode": "dinding.pasangan",
+      "modulAnalisisId": "A.DND.PSG",
+      "modulUraian": "Pasangan dinding bata ringan",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP bata ringan di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "dinding.plester",
+      "modulAnalisisId": "A.DND.PLS",
+      "modulUraian": "Plesteran dua sisi",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP plesteran di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "dinding.acian",
+      "modulAnalisisId": "A.DND.ACI",
+      "modulUraian": "Acian dua sisi",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP acian di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "dinding.waterproof",
+      "modulAnalisisId": "A.DND.WPF",
+      "modulUraian": "Pelapis kedap air area basah",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP pelapis kedap air di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "dinding.keramik_basah",
+      "modulAnalisisId": "A.DND.KRD",
+      "modulUraian": "Keramik dinding area basah",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "AHSP yang terbaca adalah lantai keramik, tidak dinding keramik area basah"
+    },
+    {
+      "modulKode": "lantai.keramik",
+      "modulAnalisisId": "A.LNT.KRM.{finishing}",
+      "modulUraian": "Keramik lantai",
+      "ahspKode": "3.9.8.7",
+      "ahspUraian": "Pemasangan 1 m2 Lantai Keramik Ukuran 30 cm x 30 cm untuk",
+      "status": "terpetakan",
+      "halamanAhsp": "5533"
+    },
+    {
+      "modulKode": "lantai.rabat",
+      "modulAnalisisId": "A.LNT.RABAT",
+      "modulUraian": "Rabat beton teras & carport",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP rabat di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "kusen.pintu",
+      "modulAnalisisId": "A.KSN.PINTU.{finishing}",
+      "modulUraian": "Kusen & daun pintu",
+      "ahspKode": "3.11.1.14",
+      "ahspUraian": "Pembuatan dan Pemasangan 1 buah Pintu Panel Kayu Lapis",
+      "status": "terpetakan",
+      "halamanAhsp": "5567"
+    },
+    {
+      "modulKode": "kusen.jendela",
+      "modulAnalisisId": "A.KSN.JENDELA",
+      "modulUraian": "Kusen & jendela",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP jendela di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "atap.rangka",
+      "modulAnalisisId": "A.ATP.RANGKA",
+      "modulUraian": "Rangka atap baja ringan",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "AHSP baja profil ada (2.3.1.x) namun basis per kg, belum dipastikan cocok rangka atap"
+    },
+    {
+      "modulKode": "atap.penutup",
+      "modulAnalisisId": "A.ATP.PENUTUP",
+      "modulUraian": "Penutup atap",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP penutup atap di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "atap.lisplang",
+      "modulAnalisisId": "A.ATP.LSP",
+      "modulUraian": "Lisplang & talang",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP lisplang di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "plafon.gipsum",
+      "modulAnalisisId": "A.PLF.GPS",
+      "modulUraian": "Plafon gipsum",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP plafon gipsum di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "cat.dinding",
+      "modulAnalisisId": "A.CAT.{finishing}",
+      "modulUraian": "Pengecatan dinding (dalam & luar)",
+      "ahspKode": "3.8.11.2",
+      "ahspUraian": "Pengecatan 1 m2 Tembok Lama Eksterior (1 Lapis Cat Dasar, 2",
+      "status": "terpetakan",
+      "halamanAhsp": "5495"
+    },
+    {
+      "modulKode": "cat.plafon",
+      "modulAnalisisId": "A.CAT.{finishing}",
+      "modulUraian": "Pengecatan plafon",
+      "ahspKode": "3.8.20.1",
+      "ahspUraian": "Pengecatan 1 m2 Plafond Interior (1 Lapis Cat Dasar dan 2 Lapis",
+      "status": "terpetakan",
+      "halamanAhsp": "5499"
+    },
+    {
+      "modulKode": "sanitair.set",
+      "modulAnalisisId": "A.SNT.SET.{finishing}",
+      "modulUraian": "Set sanitair kamar mandi",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP set sanitair di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "sanitair.septictank",
+      "modulAnalisisId": "A.SNT.SPT",
+      "modulUraian": "Septic tank & resapan",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP septic tank di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "sanitair.air",
+      "modulAnalisisId": "A.SNT.AIR",
+      "modulUraian": "Titik air bersih & buangan",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP titik air di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "listrik.titik",
+      "modulAnalisisId": "A.LST.TITIK",
+      "modulUraian": "Titik listrik",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP titik listrik di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "listrik.panel",
+      "modulAnalisisId": "A.LST.PANEL",
+      "modulUraian": "Panel & grounding",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP panel listrik di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "kitchen.set",
+      "modulAnalisisId": "A.KTC.SET.{finishing}",
+      "modulUraian": "Kitchen set bawah & atas",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP kitchen set di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "tampak.kanopi",
+      "modulAnalisisId": "A.TMP.KANOPI",
+      "modulUraian": "Kanopi depan",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP kanopi di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "tampak.balkon",
+      "modulAnalisisId": "A.TMP.BALKON",
+      "modulUraian": "Balkon + railing",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP balkon di Lampiran VI yang terbaca"
+    },
+    {
+      "modulKode": "tampak.skin",
+      "modulAnalisisId": "A.TMP.SKIN",
+      "modulUraian": "Secondary skin",
+      "ahspKode": "belum terpetakan",
+      "ahspUraian": null,
+      "status": "belum terpetakan",
+      "alasan": "Tidak ada padanan AHSP secondary skin di Lampiran VI yang terbaca"
+    }
+  ]
+}

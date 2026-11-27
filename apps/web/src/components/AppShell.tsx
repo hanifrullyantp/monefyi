@@ -11,6 +11,8 @@ import Settings from '../pages/Settings';
 import HrEmployees from '../pages/HrEmployees';
 import WorkerDashboard from '../pages/WorkerDashboard';
 import EstimatorRoutes from '../pages/estimator/EstimatorRoutes';
+import RabGuard from './rab/RabGuard';
+import RabPage from '../pages/rab/RabPage';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useAppStore } from '../store/appStore';
 import { isSandboxFinance } from '../lib/financeVersion';
@@ -229,6 +231,16 @@ function SettingsShell() {
   );
 }
 
+function RabShell() {
+  return (
+    <Layout>
+      <RabGuard>
+        <RabPage />
+      </RabGuard>
+    </Layout>
+  );
+}
+
 export default function AppShell() {
   return (
     <Routes>
@@ -236,6 +248,7 @@ export default function AppShell() {
         <Route path="projects/:id" element={<AppContent />} />
         <Route path="database" element={<DatabaseShell />} />
         <Route path="settings" element={<SettingsShell />} />
+        <Route path="rab/*" element={<RabShell />} />
         <Route path="estimator/*" element={<EstimatorShell />} />
         <Route path="finance-v2/*" element={<FinanceV2Shell />} />
         <Route path="uji-agen" element={<Layout><AgentTrialPage /></Layout>} />

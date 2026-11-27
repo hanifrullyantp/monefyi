@@ -1,5 +1,5 @@
-/* Monefyi Planner — service worker (offline shell + stale-while-revalidate assets) */
-const CACHE = 'monefyi-planner-v1';
+/* froyek — service worker (offline shell + stale-while-revalidate assets) */
+const CACHE = 'froyek-web-v1';
 const SHELL = [
   '/',
   '/index.html',
