@@ -8,6 +8,7 @@ import {
 import { defaultContent } from "@/data/defaultContent";
 import { loadFroyekPromos } from "@/lib/froyek/loadContent";
 import { resolveFroyekCharge } from "@/lib/froyek/pricing";
+import { sendPurchaseCapiToAllConfiguredPixels } from "@/lib/services/metaCapiService";
 
 interface MayarCheckoutPayload {
   product: "free" | "standard" | "pro";
@@ -511,7 +512,23 @@ export async function GET(req: NextRequest) {
           if (matched && matched.length > 0) {
             const row = matched[0];
             const raw = row.raw_payload || {};
-            if (raw.status !== "won" || raw.status !== "paid") {
+            let capiSent = Boolean(raw.capiPurchaseSent);
+            if (!capiSent) {
+              const paidAmount = Number(raw.amount || json?.data?.amount || 0);
+              if (paidAmount > 0) {
+                const capiRes = await sendPurchaseCapiToAllConfiguredPixels(supabase, {
+                  orderId: paymentId,
+                  amount: paidAmount,
+                  email: raw.email,
+                  phone: raw.phone,
+                  contentName: `Estimator ${String(raw.planTier || "standard").toUpperCase()}`,
+                  contentIds: [String(raw.planTier || "estimator")],
+                  eventSourceUrl: "https://froyek.com/checkout",
+                });
+                if (capiRes.sent > 0) capiSent = true;
+              }
+            }
+            if (raw.status !== "won" || raw.status !== "paid" || capiSent !== Boolean(raw.capiPurchaseSent)) {
               await supabase
                 .from("orders")
                 .update({
@@ -519,8 +536,9 @@ export async function GET(req: NextRequest) {
                   raw_payload: {
                     ...raw,
                     status: "won",
-                    paidAt: new Date().toISOString(),
+                    paidAt: raw.paidAt || new Date().toISOString(),
                     verifiedViaMayar: true,
+                    capiPurchaseSent: capiSent,
                   },
                 })
                 .eq("id", row.id);

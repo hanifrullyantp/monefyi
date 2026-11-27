@@ -254,6 +254,8 @@ export async function fetchMetaCampaigns(
     amountSpent: number;
     spendCap: number;
     thresholdAmount: number;
+    isPrepayAccount?: boolean;
+    billingDiagnostic?: string;
     fundingSource: string;
     currency: string;
     accountStatus: number;
@@ -298,6 +300,8 @@ export async function fetchMetaCampaigns(
               amountSpent: Number(data.account.amountSpent || 0),
               spendCap: Number(data.account.spendCap || 0),
               thresholdAmount: Number(data.account.thresholdAmount || 0),
+              isPrepayAccount: Boolean(data.account.isPrepayAccount),
+              billingDiagnostic: data.account.billingDiagnostic || "",
               fundingSource: data.account.fundingSource || "",
               currency: data.account.currency || "IDR",
               accountStatus: Number(data.account.accountStatus || 0),

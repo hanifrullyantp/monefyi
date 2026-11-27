@@ -494,6 +494,98 @@ export async function processPlannerPurchaseActivation(
     }
   }
 
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value.trim().toLowerCase());
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function sendWebhookPurchaseCapi(
+  supa: SupabaseClient,
+  params: {
+    orderId: string;
+    amount: number;
+    email: string;
+    phone?: string;
+    productLabel: string;
+    productKey: string;
+  },
+): Promise<void> {
+  if (!params.amount || params.amount <= 0) return;
+  try {
+    const { data } = await supa
+      .from("winning_engine_config")
+      .select("meta_pixel_id, meta_capi_token, meta_access_token, advanced_params")
+      .eq("id", "default")
+      .maybeSingle();
+
+    const targets = new Map<string, string>();
+    let fallbackToken = (Deno.env.get("META_CAPI_TOKEN") ?? Deno.env.get("META_ACCESS_TOKEN") ?? "").trim();
+
+    if (data) {
+      const topToken = String(data.meta_capi_token || data.meta_access_token || "").trim();
+      if (topToken) fallbackToken = topToken;
+      const topPixel = String(data.meta_pixel_id || "").replace(/[^0-9]/g, "");
+      if (topPixel && topToken) targets.set(topPixel, topToken);
+      const adv = (data.advanced_params && typeof data.advanced_params === "object")
+        ? data.advanced_params as Record<string, unknown>
+        : {};
+      if (Array.isArray(adv.metaAccounts)) {
+        for (const acc of adv.metaAccounts as Record<string, unknown>[]) {
+          const pId = String(acc?.pixelId || "").replace(/[^0-9]/g, "");
+          const tok = String(acc?.capiAccessToken || acc?.metaAccessToken || topToken || fallbackToken).trim();
+          if (pId && tok) targets.set(pId, tok);
+        }
+      }
+    }
+
+    if (fallbackToken) {
+      if (!targets.has("1530674178146899")) targets.set("1530674178146899", fallbackToken);
+      if (!targets.has("1037107426097758")) targets.set("1037107426097758", fallbackToken);
+    }
+    if (targets.size === 0) return;
+
+    const em = params.email ? await sha256Hex(params.email) : undefined;
+    let cleanPhone = (params.phone || "").replace(/[^0-9]/g, "");
+    if (cleanPhone.startsWith("0")) cleanPhone = `62${cleanPhone.slice(1)}`;
+    const ph = cleanPhone ? await sha256Hex(cleanPhone) : undefined;
+
+    for (const [pixelId, token] of targets.entries()) {
+      await fetch(`https://graph.facebook.com/v20.0/${pixelId}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          data: [
+            {
+              event_name: "Purchase",
+              event_id: params.orderId,
+              event_time: Math.floor(Date.now() / 1000),
+              action_source: "website",
+              event_source_url: "https://froyek.com/checkout",
+              user_data: {
+                ...(em ? { em: [em] } : {}),
+                ...(ph ? { ph: [ph] } : {}),
+              },
+              custom_data: {
+                currency: "IDR",
+                value: params.amount,
+                content_name: params.productLabel,
+                content_ids: [params.productKey],
+                order_id: params.orderId,
+              },
+            },
+          ],
+          access_token: token,
+        }),
+      }).catch(() => undefined);
+    }
+  } catch {
+    // Non-blocking: jangan menggagalkan aktivasi pembelian jika CAPI error
+  }
+}
+
   let setupPasswordUrl: string | null = null;
   if (isNewUser) {
     setupPasswordUrl = await generateSetupPasswordUrl(
@@ -503,6 +595,17 @@ export async function processPlannerPurchaseActivation(
         ? `${appBaseUrl}/estimator?payment=success`
         : `${appBaseUrl}?payment=success`,
     );
+  }
+
+  if (!alreadyProcessed && amount > 0) {
+    await sendWebhookPurchaseCapi(supa, {
+      orderId: refId || messageId,
+      amount,
+      email: customerEmail,
+      phone: customerPhone,
+      productLabel: mapped.label,
+      productKey: mapped.tier,
+    });
   }
 
   const emailRes = await sendPurchaseConfirmation({

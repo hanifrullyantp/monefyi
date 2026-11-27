@@ -30,6 +30,23 @@ export function usePaymentReturn() {
       } else {
         analytics.estimatorPurchased({ product: 'estimator', paymentProvider });
       }
+      try {
+        const fbq = (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq;
+        const dedupKey = `froyek_purchase_fbq_${product}`;
+        if (fbq && !sessionStorage.getItem(dedupKey)) {
+          sessionStorage.setItem(dedupKey, '1');
+          const fallbackValue = product === 'pro' ? 199000 : 99000;
+          fbq('track', 'Purchase', {
+            content_name: product === 'pro' ? 'Estimator PRO' : 'Estimator Standard',
+            content_ids: [product],
+            value: fallbackValue,
+            currency: 'IDR',
+            num_items: 1,
+          });
+        }
+      } catch {
+        // Non-blocking
+      }
       setModal({ kind: 'success', product });
     } else {
       setModal({ kind: 'failure' });

@@ -159,17 +159,22 @@ export function trackMetaPurchase(params: {
     const ltvValue = params.ltv !== undefined ? params.ltv : params.value;
     const predictedLtv = params.predicted_ltv !== undefined ? params.predicted_ltv : ltvValue;
 
-    window.fbq?.("track", "Purchase", {
-      content_name: params.content_name || "Froyek Estimator",
-      content_category: params.content_category || "SaaS / Digital",
-      content_ids: params.content_ids || ["estimator"],
-      value: params.value,
-      currency: params.currency ?? "IDR",
-      num_items: params.num_items ?? 1,
-      ...(params.order_id ? { order_id: params.order_id } : {}),
-      ltv: ltvValue,
-      predicted_ltv: predictedLtv,
-    });
+    window.fbq?.(
+      "track",
+      "Purchase",
+      {
+        content_name: params.content_name || "Froyek Estimator",
+        content_category: params.content_category || "SaaS / Digital",
+        content_ids: params.content_ids || ["estimator"],
+        value: params.value,
+        currency: params.currency ?? "IDR",
+        num_items: params.num_items ?? 1,
+        ...(params.order_id ? { order_id: params.order_id } : {}),
+        ltv: ltvValue,
+        predicted_ltv: predictedLtv,
+      },
+      params.order_id ? { eventID: params.order_id } : undefined,
+    );
   } catch {
     /* ignore */
   }

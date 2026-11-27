@@ -16,6 +16,7 @@ async function sha256Hash(value: string): Promise<string> {
 
 export interface CapiEventPayload {
   eventName: 'PageView' | 'ViewContent' | 'InitiateCheckout' | 'AddPaymentInfo' | 'Purchase';
+  eventId?: string;
   eventSourceUrl?: string;
   userData?: {
     email?: string;
@@ -56,6 +57,7 @@ export async function sendMetaCapiEvent(
       data: [
         {
           event_name: event.eventName,
+          ...(event.eventId ? { event_id: event.eventId } : {}),
           event_time: Math.floor(Date.now() / 1000),
           action_source: 'website',
           event_source_url: event.eventSourceUrl || (typeof window !== 'undefined' ? window.location.href : 'https://estimator.froyek.com'),
@@ -88,6 +90,85 @@ export async function sendMetaCapiEvent(
   } catch (err: any) {
     return { success: false, error: err.message || 'Network error CAPI' };
   }
+}
+
+export async function sendPurchaseCapiToAllConfiguredPixels(
+  supabase: any,
+  params: {
+    orderId: string;
+    amount: number;
+    email?: string;
+    phone?: string;
+    contentName?: string;
+    contentIds?: string[];
+    eventSourceUrl?: string;
+  }
+): Promise<{ sent: number; failed: number }> {
+  if (!params.amount || params.amount <= 0) return { sent: 0, failed: 0 };
+
+  const targets = new Map<string, string>();
+  let fallbackToken = (process.env.META_CAPI_TOKEN || process.env.META_ACCESS_TOKEN || '').trim();
+
+  try {
+    if (supabase) {
+      const { data } = await supabase
+        .from('winning_engine_config')
+        .select('meta_pixel_id, meta_capi_token, meta_access_token, advanced_params')
+        .eq('id', 'default')
+        .maybeSingle();
+
+      if (data) {
+        const topToken = String(data.meta_capi_token || data.meta_access_token || '').trim();
+        if (topToken) fallbackToken = topToken;
+        const topPixel = String(data.meta_pixel_id || '').replace(/[^0-9]/g, '');
+        if (topPixel && topToken) targets.set(topPixel, topToken);
+
+        const adv =
+          data.advanced_params && typeof data.advanced_params === 'object'
+            ? (data.advanced_params as Record<string, unknown>)
+            : {};
+        if (Array.isArray(adv.metaAccounts)) {
+          for (const acc of adv.metaAccounts as Record<string, unknown>[]) {
+            const pId = String(acc?.pixelId || '').replace(/[^0-9]/g, '');
+            const tok = String(acc?.capiAccessToken || acc?.metaAccessToken || topToken || fallbackToken).trim();
+            if (pId && tok) targets.set(pId, tok);
+          }
+        }
+      }
+    }
+  } catch {
+    // Tetap gunakan env fallback jika query gagal
+  }
+
+  if (fallbackToken) {
+    if (!targets.has('1530674178146899')) targets.set('1530674178146899', fallbackToken);
+    if (!targets.has('1037107426097758')) targets.set('1037107426097758', fallbackToken);
+  }
+
+  let sent = 0;
+  let failed = 0;
+  for (const [pixelId, token] of targets.entries()) {
+    const res = await sendMetaCapiEvent(pixelId, token, {
+      eventName: 'Purchase',
+      eventId: params.orderId,
+      eventSourceUrl: params.eventSourceUrl || 'https://froyek.com/checkout',
+      userData: {
+        email: params.email,
+        phone: params.phone,
+      },
+      customData: {
+        currency: 'IDR',
+        value: params.amount,
+        contentName: params.contentName || 'Froyek Estimator',
+        contentIds: params.contentIds || ['estimator'],
+        orderId: params.orderId,
+      },
+    });
+    if (res.success) sent += 1;
+    else failed += 1;
+  }
+
+  return { sent, failed };
 }
 
 export function getMockCapiStatus(pixelId: string = '1530674178146899'): MetaCapiStatus {

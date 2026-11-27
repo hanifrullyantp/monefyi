@@ -94,6 +94,8 @@ interface MarketingStore {
     amountSpent: number;
     spendCap: number;
     thresholdAmount: number;
+    isPrepayAccount?: boolean;
+    billingDiagnostic?: string;
     fundingSource: string;
     currency: string;
     accountStatus: number;

@@ -80,6 +80,8 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
   const [tempEmail, setTempEmail] = useState(alertEmail);
 
   const currentBill = accountBilling?.balance && accountBilling.balance > 0 ? accountBilling.balance : 0;
+  const isPrepay = Boolean(accountBilling?.isPrepayAccount);
+  const billingDiagnostic = accountBilling?.billingDiagnostic || "";
   const metaThreshold = accountBilling?.thresholdAmount && accountBilling.thresholdAmount > 0
     ? accountBilling.thresholdAmount
     : 0;
@@ -292,11 +294,21 @@ export function MetaBillingAlertBanner({ totalSpendToday = 0 }: MetaBillingAlert
                 <span>
                   Ambang:{" "}
                   <strong className="text-slate-900 dark:text-white font-black">
-                    {activeThreshold > 0
+                    {isPrepay
+                      ? "Akun Prabayar (Prepay)"
+                      : activeThreshold > 0
                       ? `Rp ${activeThreshold.toLocaleString("id-ID")}`
-                      : "Otomatis Meta (belum terbaca)"}
+                      : "Tidak tersedia dari Meta"}
                   </strong>
-                  {metaThreshold > 0 ? " (sinkron Meta)" : activeThreshold > 0 ? " (manual)" : ""}
+                  {metaThreshold > 0
+                    ? " (sinkron Meta)"
+                    : isPrepay
+                    ? " (tanpa threshold)"
+                    : billingDiagnostic
+                    ? ` (${billingDiagnostic})`
+                    : activeThreshold > 0
+                    ? " (manual)"
+                    : ""}
                   {" · "}
                   Tanggal:{" "}
                   <strong className="text-slate-900 dark:text-white font-black">

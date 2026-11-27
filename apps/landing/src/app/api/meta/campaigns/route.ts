@@ -903,15 +903,20 @@ export async function POST(req: NextRequest) {
     }
 
     let billingExtra: any = null;
+    let billingDiagnostic = "";
     try {
       const billingUrl = buildGraphUrl(
-        `https://graph.facebook.com/v20.0/${selectedAcc.id}?fields=account_status,disable_reason,balance,amount_spent,spend_cap,currency,funding_source_details,is_prepay_account,adspaymentcycle{threshold_amount,requested_threshold_amount,multiplier}`,
+        `https://graph.facebook.com/v20.0/${selectedAcc.id}?fields=account_status,disable_reason,balance,amount_spent,spend_cap,currency,funding_source_details,is_prepay_account,min_billing_threshold,adspaymentcycle{threshold_amount,requested_threshold_amount,multiplier}`,
         workingToken,
         appSecret
       );
       const billingRes = await fetch(billingUrl, { cache: "no-store" });
       const billingJson = await billingRes.json().catch(() => ({}));
-      if (billingRes.ok && billingJson && !billingJson.error) billingExtra = billingJson;
+      if (billingRes.ok && billingJson && !billingJson.error) {
+        billingExtra = billingJson;
+      } else if (billingJson?.error?.message) {
+        billingDiagnostic = String(billingJson.error.message);
+      }
     } catch {
       billingExtra = null;
     }
@@ -928,6 +933,8 @@ export async function POST(req: NextRequest) {
         const cycleJson = await cycleRes.json().catch(() => ({}));
         if (cycleRes.ok && Array.isArray(cycleJson?.data) && cycleJson.data.length > 0) {
           cycleRow = cycleJson.data[0];
+        } else if (!billingDiagnostic && cycleJson?.error?.message) {
+          billingDiagnostic = String(cycleJson.error.message);
         }
       } catch {
         // Abaikan jika endpoint adspaymentcycle tidak tersedia
@@ -941,7 +948,12 @@ export async function POST(req: NextRequest) {
       if (!Number.isFinite(n)) return 0;
       return zeroDecimal.has(currency) ? n : Math.round(n) / 100;
     };
-    const rawThreshold = cycleRow?.threshold_amount ?? cycleRow?.requested_threshold_amount ?? 0;
+    const isPrepayAccount = Boolean(billingExtra?.is_prepay_account);
+    const rawThreshold =
+      cycleRow?.threshold_amount ??
+      cycleRow?.requested_threshold_amount ??
+      billingExtra?.min_billing_threshold?.amount ??
+      0;
     const accountStatus = Number(billingExtra?.account_status ?? selectedAcc.account_status ?? 0);
     const disableReason = Number(billingExtra?.disable_reason ?? 0);
     const paymentFailed =
@@ -968,6 +980,8 @@ export async function POST(req: NextRequest) {
         amountSpent: toMajor(billingExtra?.amount_spent ?? selectedAcc.amount_spent),
         spendCap: toMajor(billingExtra?.spend_cap ?? selectedAcc.spend_cap),
         thresholdAmount: toMajor(rawThreshold),
+        isPrepayAccount,
+        billingDiagnostic,
         fundingSource:
           billingExtra?.funding_source_details?.display_string ||
           selectedAcc.funding_source_details?.display_string ||
