@@ -66,7 +66,7 @@ struct SummaryView: View {
                     Spacer()
                 }
                 .padding(12)
-                .background(CaffeinateManager.shared.isWorking ? Color.orange.opacity(0.15) : Color(NSColor.secondarySystemBackground))
+                .background(CaffeinateManager.shared.isWorking ? Color.orange.opacity(0.15) : Color.secondary.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 Spacer(minLength: 20)

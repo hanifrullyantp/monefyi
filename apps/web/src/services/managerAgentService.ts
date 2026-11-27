@@ -40,6 +40,7 @@ import {
   type UnifiedGatewayPolicy,
   type UnifiedManagerActionType,
 } from '../../../../packages/domain/src/unifiedAgentGateway';
+import { enrichContextPackWithSemantic } from '../../../../agent-core/src/profile.ts';
 import {
   callUnifiedAI,
   extractJson,
@@ -164,12 +165,14 @@ export interface ContextPack {
   rapItems: Map<string, { projectId: string; item: RapItem }>;
   pricelist: Map<string, string>;
   activeProjectCode: string | null;
+  semanticContext?: Array<{ content: string; similarity: number; content_type: string }>;
 }
 
 export interface ManagerEnv {
   userId: string;
   orgId: string;
   userName: string;
+  accessToken: string;
   projects: Project[];
   currentProject: Project | null;
   onNavigate: (path: string) => void;
@@ -310,6 +313,27 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     });
   }
 
+  // Semantic search enrichment untuk konteks relevan tambahan
+  let semanticContext: Array<{ content: string; similarity: number; content_type: string }> | undefined;
+  try {
+    const enriched = await enrichContextPackWithSemantic({
+      orgId: env.orgId,
+      query: lines.join('\n').slice(0, 2000), // gunakan konteks yang sudah dibangun sebagai query
+      accessToken: env.accessToken || '',
+      limit: 5,
+      threshold: 0.65,
+    });
+    if (enriched.semanticContext.length > 0) {
+      semanticContext = enriched.semanticContext;
+      lines.push('', 'KONTEKS RELEN (PENCARIAN SEMANTIK):');
+      for (const sc of semanticContext) {
+        lines.push(`- [${sc.content_type}] ${sc.content} (relevansi: ${Math.round(sc.similarity * 100)}%)`);
+      }
+    }
+  } catch {
+    // Semantic search gagal tidak boleh mengganggu alur utama
+  }
+
   return {
     text: lines.join('\n'),
     projects,
@@ -321,6 +345,7 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     rapItems,
     pricelist,
     activeProjectCode,
+    semanticContext,
   };
 }
 

@@ -5,14 +5,14 @@
   "framework": null,
   "redirects": [
     {
-      "source": "/(.*)",
+      "source": "/:splat*",
       "has": [
         {
           "type": "host",
           "value": "3d.froyek.com"
         }
       ],
-      "destination": "https://3d.intero.id/:splat*",
+      "destination": "https://3d.intero.id/:splat",
       "permanent": true
     }
   ],

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { getActiveMayarApiKey, getActiveMayarApiUrl } from "@/lib/services/mayarHealthService";
+import { sendPurchaseCapiToAllConfiguredPixels } from "@/lib/services/metaCapiService";
 import { isTestAdminLead } from "@/lib/config/admin";
 
 /**
@@ -115,6 +116,19 @@ export async function GET(req: NextRequest) {
                   if (mayarStatus === "paid" || mayarStatus === "settled" || mayarStatus === "success") {
                     // Update order di Supabase
                     const amt = Number(orderRow.grand_total || orderRow.raw_payload?.amount || 0);
+                    let capiSent = Boolean(orderRow.raw_payload?.capiPurchaseSent);
+                    if (!capiSent && amt > 0) {
+                      const capiRes = await sendPurchaseCapiToAllConfiguredPixels(supabase, {
+                        orderId: String(payId || orderRow.id),
+                        amount: amt,
+                        email: orderRow.customer_email || orderRow.raw_payload?.email,
+                        phone: orderRow.raw_payload?.phone,
+                        contentName: `Estimator ${String(orderRow.raw_payload?.planTier || "standard").toUpperCase()}`,
+                        contentIds: [String(orderRow.raw_payload?.planTier || "estimator")],
+                        eventSourceUrl: "https://froyek.com/checkout",
+                      });
+                      if (capiRes.sent > 0) capiSent = true;
+                    }
                     await supabase
                       .from("orders")
                       .update({
@@ -122,8 +136,9 @@ export async function GET(req: NextRequest) {
                         raw_payload: {
                           ...(orderRow.raw_payload || {}),
                           status: "won",
-                          paidAt: new Date().toISOString(),
+                          paidAt: orderRow.raw_payload?.paidAt || new Date().toISOString(),
                           verifiedViaMayarSync: true,
+                          capiPurchaseSent: capiSent,
                         },
                       })
                       .eq("id", orderRow.id);

@@ -22,3 +22,5 @@ refined-project-planner-prompt/
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*

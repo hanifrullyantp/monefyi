@@ -1,6 +1,7 @@
 import { structuredError, type StructuredError } from '../../packages/domain/src/errors.ts';
 import { resolveParameters } from './flow.ts';
 import type { SopDefinition } from './sopSchema.ts';
+import { semanticSearch, type SemanticSearchResult } from './semanticSearch.ts';
 
 export const PLATFORM_LOCKS = {
   jurnal_seimbang: true,
@@ -220,4 +221,37 @@ export function buildContextPack(input: {
   }
   if (estimateTokens({ ...body, notes }) <= budget) body.notes = notes;
   return { tier: input.tier, tokenBudget: budget, tokens: estimateTokens(body), body };
+}
+
+/**
+ * Enrich Context Pack dengan hasil semantic search untuk retrieval konteks
+ * yang lebih akurat. Dipanggil sebelum buildContextPack untuk menambahkan
+ * relevant knowledge dari agent_embeddings.
+ */
+export async function enrichContextPackWithSemantic(
+  opts: {
+    orgId: string;
+    query: string;
+    accessToken: string;
+    contentType?: string;
+    limit?: number;
+    threshold?: number;
+  },
+): Promise<{ semanticContext: SemanticSearchResult[]; error?: string }> {
+  try {
+    const results = await semanticSearch({
+      orgId: opts.orgId,
+      query: opts.query,
+      contentType: opts.contentType,
+      limit: opts.limit ?? 5,
+      threshold: opts.threshold ?? 0.7,
+      accessToken: opts.accessToken,
+    });
+    return { semanticContext: results };
+  } catch (error) {
+    return {
+      semanticContext: [],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

@@ -80,14 +80,14 @@ struct ChartView: View {
         .padding(14)
         .background(
             LinearGradient(
-                colors: [Color(.secondarySystemBackground), Color(.tertiarySystemBackground)],
+                colors: [Color.gray.opacity(0.10), Color.gray.opacity(0.04)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color(.separator).opacity(0.4), lineWidth: 1)
+                .stroke(Color.gray.opacity(0.30), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }

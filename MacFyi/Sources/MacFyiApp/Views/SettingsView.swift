@@ -43,7 +43,7 @@ struct SettingsView: View {
                         Spacer()
                         Toggle("", isOn: Binding(
                             get: { CaffeinateManager.shared.workModeEnabled },
-                            set: { monitor.toggleCaffeinate() }
+                            set: { _, _ in monitor.toggleCaffeinate() }
                         ))
                     }
                     .padding()

@@ -4,6 +4,7 @@ import { admitRun, decideActionStatus, explainAction, routeRequest, type Autonom
 import { screenFlowBody } from "../_shared/agent/flow.ts";
 import { writeAudit } from "../_shared/audit.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { monitorEvent, monitorError, monitorAsync } from "../_shared/monitoring.ts";
 
 function logAgentEvent(
   orgId: string,
@@ -11,16 +12,13 @@ function logAgentEvent(
   action: string,
   metadata: Record<string, unknown>,
 ) {
-  console.log(
-    JSON.stringify({
-      event: "agent_run",
-      org_id: orgId,
-      user_id: userId,
-      action,
-      timestamp: new Date().toISOString(),
-      ...metadata,
-    }),
-  );
+  monitorEvent({
+    level: "info",
+    message: action,
+    org_id: orgId,
+    user_id: userId,
+    ...(metadata),
+  });
 }
 
 // Rate limiter sederhana per user (sliding window 1 menit, max 60 request)
@@ -136,7 +134,15 @@ serve(async (req) => {
       .eq("usage_date", v_date)
       .maybeSingle();
 
-    const route = routeRequest(text, failures, "prepare");
+    const route = await monitorAsync(
+      () => Promise.resolve(routeRequest(text, failures, "prepare")),
+      {
+        operation: "route_request",
+        org_id: orgId,
+        user_id: userId,
+        metadata: { input: text, failures },
+      },
+    );
     logAgentEvent(orgId, userId, "route_request", {
       input: text,
       sop_id: route.sopId,
@@ -145,21 +151,42 @@ serve(async (req) => {
       escalate: route.escalate,
       failures,
     });
-    const gate = admitRun({
-      killSwitch: Boolean(settings?.kill_switch),
-      planType: String(org?.plan_type || "free"),
-      usedRuns: usage?.runs ?? 0,
-      usedTokens: usage?.tokens ?? 0,
-      iteration: 1,
-      tokens: 32,
-      costIdr: 0,
-    });
+    const gate = await monitorAsync(
+      () => Promise.resolve(admitRun({
+        killSwitch: Boolean(settings?.kill_switch),
+        planType: String(org?.plan_type || "free"),
+        usedRuns: usage?.runs ?? 0,
+        usedTokens: usage?.tokens ?? 0,
+        iteration: 1,
+        tokens: 32,
+        costIdr: 0,
+      })),
+      {
+        operation: "admit_run",
+        org_id: orgId,
+        user_id: userId,
+        metadata: { plan_type: org?.plan_type, kill_switch: settings?.kill_switch },
+      },
+    );
     if (!gate.ok) {
-      logAgentEvent(orgId, userId, "quota_rejected", { error: gate.error.code });
+      monitorEvent({
+        level: "warn",
+        message: "quota_rejected",
+        org_id: orgId,
+        user_id: userId,
+        error_code: gate.error.code,
+        metadata: { gate_error: gate.error.code },
+      });
       return json(gate.error, 429);
     }
     if (!route.sopId) {
-      logAgentEvent(orgId, userId, "sop_not_matched", { input: text });
+      monitorEvent({
+        level: "warn",
+        message: "sop_not_matched",
+        org_id: orgId,
+        user_id: userId,
+        metadata: { input: text },
+      });
       return json({
         code: "sop_belum_yakin",
         message_id: "sop_belum_yakin",
@@ -169,14 +196,17 @@ serve(async (req) => {
         escalate: route.escalate,
       }, 422);
     }
-    const quota = await userClient.rpc("planner_agent_consume_quota", { p_org_id: orgId, p_tokens: 32 });
-    if (quota.error || quota.data?.ok === false) {
-      const code = quota.data?.code || "kuota_gagal";
-      return json({ code, message_id: code, fix_hint: "Coba lagi besok atau minta pemilik menaikkan paket.", valid_options: [] }, 429);
-    }
-    if (quota.error || quota.data?.ok === false) {
-      const code = quota.data?.code || "kuota_gagal";
-      logAgentEvent(orgId, userId, "quota_consume_rejected", { code });
+    const quotaResult = await userClient.rpc("planner_agent_consume_quota", { p_org_id: orgId, p_tokens: 32 });
+    if (quotaResult.error || quotaResult.data?.ok === false) {
+      const code = quotaResult.data?.code || "kuota_gagal";
+      monitorEvent({
+        level: "warn",
+        message: "quota_consume_rejected",
+        org_id: orgId,
+        user_id: userId,
+        error_code: code,
+        metadata: { quota_code: code },
+      });
       return json({ code, message_id: code, fix_hint: "Coba lagi besok atau minta pemilik menaikkan paket.", valid_options: [] }, 429);
     }
     const status = decideActionStatus(autonomy, "prepare", null, 0);
@@ -190,6 +220,11 @@ serve(async (req) => {
       status: "active",
     }).select("id").single();
     if (runErr || !run) {
+      monitorError(runErr ?? new Error("run_insert_null"), {
+        org_id: orgId,
+        user_id: userId,
+        message: "run_gagal_simpan",
+      });
       return json({ code: "run_gagal_simpan", message_id: "run_gagal_simpan", fix_hint: "Coba lagi.", valid_options: [] }, 500);
     }
     const step = "cari_proyek";
@@ -226,7 +261,7 @@ serve(async (req) => {
       penjelasan: explanation,
     });
   } catch (error) {
-    console.error("planner-agent-run gagal:", error);
+    monitorError(error, { org_id: orgId, user_id: userId, message: "planner-agent-run gagal" });
     return json({ code: "agen_gagal", message_id: "agen_gagal", fix_hint: "Coba lagi.", valid_options: [] }, 500);
   }
 });

@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { sendResendEmail } from "@/lib/services/resendService";
 import { activateFroyekPurchase } from "@/lib/froyek/activatePurchase";
+import { sendPurchaseCapiToAllConfiguredPixels } from "@/lib/services/metaCapiService";
 import type { LeadEmailLog } from "@/lib/types/leads";
 
 function getSupabaseAdminClient() {
@@ -235,6 +236,25 @@ export async function POST(req: NextRequest) {
           });
         }
 
+        let capiSent = Boolean(currentRaw.capiPurchaseSent);
+        if (!capiSent && Number(finalAmount) > 0) {
+          const eventOrderId = String(
+            currentRaw.paymentId || paymentId || transactionId || matchedOrder.id
+          );
+          const capiRes = await sendPurchaseCapiToAllConfiguredPixels(supabase, {
+            orderId: eventOrderId,
+            amount: Number(finalAmount),
+            email: recipientEmail,
+            phone: String(matchedOrder.phone || customerMobile || ""),
+            contentName: isFroyekOrder
+              ? `Froyek ${String(currentRaw.froyekPlan || "pro")}`
+              : `Estimator ${resolvedPlanTier.toUpperCase()}`,
+            contentIds: [isFroyekOrder ? String(currentRaw.froyekPlan || "froyek") : resolvedPlanTier],
+            eventSourceUrl: isFroyekOrder ? "https://froyek.com/pilih" : "https://froyek.com/checkout",
+          });
+          if (capiRes.sent > 0) capiSent = true;
+        }
+
         await supabase
           .from("orders")
           .update({
@@ -242,14 +262,27 @@ export async function POST(req: NextRequest) {
             raw_payload: {
               ...currentRaw,
               status: "won",
-              paidAt: new Date().toISOString(),
+              paidAt: currentRaw.paidAt || new Date().toISOString(),
               transactionId: transactionId || currentRaw.paymentId,
               accountPassword,
               welcomeEmailSent: true,
+              capiPurchaseSent: capiSent,
               emails: [...newEmailLogs, ...existingEmails],
             },
           })
           .eq("id", matchedOrder.id);
+      } else if (amount > 0) {
+        // Pembayaran masuk langsung dari Mayar tanpa record order sebelumnya: tetap kirim CAPI Purchase
+        const fallbackOrderId = String(paymentId || transactionId || `mayar_${Date.now()}`);
+        await sendPurchaseCapiToAllConfiguredPixels(supabase, {
+          orderId: fallbackOrderId,
+          amount,
+          email: customerEmail,
+          phone: customerMobile,
+          contentName: "Froyek Estimator",
+          contentIds: ["estimator"],
+          eventSourceUrl: "https://froyek.com/checkout",
+        });
       }
     }
 

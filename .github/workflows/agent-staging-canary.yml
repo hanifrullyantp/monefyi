@@ -9,7 +9,9 @@ on:
       - "packages/domain/**"
       - "my-supabase-project/supabase/functions/planner-agent-run/**"
       - "my-supabase-project/supabase/functions/planner-agent-health/**"
+      - "my-supabase-project/supabase/functions/planner-agent-monitoring/**"
       - "my-supabase-project/supabase/functions/_shared/agent/**"
+      - "my-supabase-project/supabase/functions/_shared/monitoring.ts"
       - ".github/workflows/agent-staging-canary.yml"
   pull_request:
     branches: [main]
@@ -19,7 +21,9 @@ on:
       - "packages/domain/**"
       - "my-supabase-project/supabase/functions/planner-agent-run/**"
       - "my-supabase-project/supabase/functions/planner-agent-health/**"
+      - "my-supabase-project/supabase/functions/planner-agent-monitoring/**"
       - "my-supabase-project/supabase/functions/_shared/agent/**"
+      - "my-supabase-project/supabase/functions/_shared/monitoring.ts"
   workflow_dispatch:
 
 jobs:
@@ -49,38 +53,67 @@ jobs:
       - uses: supabase/cli@v1
         with:
           version: latest
-      - name: Link Supabase project (staging)
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+      - name: Link Supabase STAGING project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - name: Push agent migrations (staging)
+      - name: Push agent migrations to STAGING
         run: supabase db push --remote --yes --include-all
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - name: Deploy agent edge functions (staging)
+      - name: Deploy agent edge functions to STAGING
         run: |
           supabase functions deploy planner-agent-run
           supabase functions deploy planner-agent-health
+          supabase functions deploy planner-agent-monitoring
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - name: Run health check against staging
+      - name: Run health check against STAGING
         run: |
           curl -sf https://api.supabase.co/functions/v1/planner-agent-health \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_STAGING_ANON_KEY }}" \
             | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);process.exit(j.status==='healthy'||j.status==='degraded'?0:1)})"
         env:
-          SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_STAGING_ANON_KEY: ${{ secrets.SUPABASE_STAGING_ANON_KEY }}
+      - name: Run monitoring smoke test against STAGING
+        run: |
+          curl -sf https://api.supabase.co/functions/v1/planner-agent-monitoring \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_STAGING_ANON_KEY }}" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);process.exit(j.status===200?0:1)})"
+        env:
+          SUPABASE_STAGING_ANON_KEY: ${{ secrets.SUPABASE_STAGING_ANON_KEY }}
 
-  canary-promote:
+  production-promote:
     needs: staging-deploy
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: my-supabase-project
     steps:
       - uses: actions/checkout@v4
-      - name: Promote to production (canary)
-        run: |
-          echo "Canary deploy to production approved."
-          echo "Agent functions are already deployed to the same Supabase project."
-          echo "Health check passed. Ready for production traffic."
+      - uses: supabase/cli@v1
+        with:
+          version: latest
+      - name: Link Supabase PRODUCTION project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Push agent migrations to PRODUCTION
+        run: supabase db push --remote --yes --include-all
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Deploy agent edge functions to PRODUCTION
+        run: |
+          supabase functions deploy planner-agent-run
+          supabase functions deploy planner-agent-health
+          supabase functions deploy planner-agent-monitoring
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Run health check against PRODUCTION
+        run: |
+          curl -sf https://api.supabase.co/functions/v1/planner-agent-health \
+            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);process.exit(j.status==='healthy'||j.status==='degraded'?0:1)})"
+        env:
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

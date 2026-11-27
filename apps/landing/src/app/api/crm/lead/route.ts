@@ -6,6 +6,7 @@ import {
 } from "@/lib/services/mayarHealthService";
 import { randomUUID } from "crypto";
 import { mapMayarTransactionStatus } from "@/lib/crm/mayarTransactionStatus";
+import { sendPurchaseCapiToAllConfiguredPixels } from "@/lib/services/metaCapiService";
 
 export interface CrmLeadPayload {
   sessionId: string;
@@ -267,6 +268,20 @@ export async function GET(req: NextRequest) {
                   const mayarStatus = String(checkJson?.data?.status ?? "unpaid").toLowerCase();
                   if (mayarStatus === "paid" || mayarStatus === "settled" || mayarStatus === "success") {
                     currentStatus = "won";
+                    let capiSent = Boolean(raw.capiPurchaseSent);
+                    const paidAmount = Number(r.grand_total || raw.amount || checkJson?.data?.amount || 0);
+                    if (!capiSent && paidAmount > 0) {
+                      const capiRes = await sendPurchaseCapiToAllConfiguredPixels(supabase, {
+                        orderId: String(raw.paymentId || r.id),
+                        amount: paidAmount,
+                        email: r.email || raw.email,
+                        phone: r.phone || raw.phone,
+                        contentName: `Estimator ${String(planTier || "standard").toUpperCase()}`,
+                        contentIds: [String(planTier || "estimator")],
+                        eventSourceUrl: "https://froyek.com/checkout",
+                      });
+                      if (capiRes.sent > 0) capiSent = true;
+                    }
                     // Update ke database Supabase
                     await supabase
                       .from("orders")
@@ -275,8 +290,9 @@ export async function GET(req: NextRequest) {
                         raw_payload: {
                           ...raw,
                           status: "won",
-                          paidAt: new Date().toISOString(),
+                          paidAt: raw.paidAt || new Date().toISOString(),
                           verifiedViaMayar: true,
+                          capiPurchaseSent: capiSent,
                         },
                       })
                       .eq("id", r.id);
@@ -310,6 +326,7 @@ export async function GET(req: NextRequest) {
               productId: raw.productId || (raw.paymentId ? "b8cd23" : null),
               paymentName: raw.paymentName || (raw.paymentId ? "Penagihan" : null),
               verifiedViaMayar: Boolean(raw.verifiedViaMayar || (r.status === "paid" && raw.paymentId)),
+              capiPurchaseSent: Boolean(raw.capiPurchaseSent),
               checkoutStep: raw.checkoutStep || (currentStatus === "won" || currentStatus === "free_active" ? 5 : 3),
               status: currentStatus,
               emails: Array.isArray(raw.emails) ? raw.emails : [],
@@ -432,6 +449,19 @@ export async function GET(req: NextRequest) {
 
               if (supabase && existing.id && (mapped.isPaid || existing.status !== "won")) {
                 try {
+                  let capiSent = Boolean(existing.raw_payload?.capiPurchaseSent || existing.capiPurchaseSent);
+                  if (mapped.isPaid && !capiSent && Number(updatedLead.amount || 0) > 0) {
+                    const capiRes = await sendPurchaseCapiToAllConfiguredPixels(supabase, {
+                      orderId: String(updatedLead.paymentId || existing.id),
+                      amount: Number(updatedLead.amount),
+                      email: updatedLead.email,
+                      phone: updatedLead.phone,
+                      contentName: `Estimator ${String(updatedLead.planTier || "standard").toUpperCase()}`,
+                      contentIds: [String(updatedLead.planTier || "estimator")],
+                      eventSourceUrl: "https://froyek.com/checkout",
+                    });
+                    if (capiRes.sent > 0) capiSent = true;
+                  }
                   await supabase
                     .from("orders")
                     .update({
@@ -442,7 +472,7 @@ export async function GET(req: NextRequest) {
                         ...updatedLead,
                         status: nextStatus,
                         verifiedViaMayar: mapped.isPaid,
-                        ...(mapped.isPaid ? { paidAt: txCreatedAt } : {}),
+                        ...(mapped.isPaid ? { paidAt: existing.raw_payload?.paidAt || txCreatedAt, capiPurchaseSent: capiSent } : {}),
                       },
                     })
                     .eq("id", existing.id);
@@ -478,6 +508,19 @@ export async function GET(req: NextRequest) {
 
               if (supabase && txId && (mapped.isPaid || txAmount > 0)) {
                 try {
+                  let capiSent = false;
+                  if (mapped.isPaid && txAmount > 0) {
+                    const capiRes = await sendPurchaseCapiToAllConfiguredPixels(supabase, {
+                      orderId: txId,
+                      amount: txAmount,
+                      email: txEmail,
+                      phone: txPhone,
+                      contentName: `Estimator ${newTier.toUpperCase()}`,
+                      contentIds: [newTier],
+                      eventSourceUrl: "https://froyek.com/checkout",
+                    });
+                    if (capiRes.sent > 0) capiSent = true;
+                  }
                   await supabase.from("orders").upsert(
                     [
                       {
@@ -488,7 +531,7 @@ export async function GET(req: NextRequest) {
                         product_title: `Froyek Estimator ${newTier.toUpperCase()}`,
                         grand_total: txAmount,
                         status: mapped.orderStatus,
-                        raw_payload: newLead,
+                        raw_payload: { ...newLead, ...(mapped.isPaid ? { capiPurchaseSent: capiSent } : {}) },
                       },
                     ],
                     { onConflict: "id" }
