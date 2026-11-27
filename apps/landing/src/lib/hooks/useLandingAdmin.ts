@@ -11,14 +11,13 @@ export function useLandingAdmin(): {
   setAdmin: (enabled: boolean) => void;
 } {
   const userIsAdmin = useAuthStore((s) => Boolean(s.user?.isAdmin));
-  const uiIsAdmin = useUIStore((s) => s.isAdmin);
   const isEditMode = useUIStore((s) => s.isEditMode);
   const setEditMode = useUIStore((s) => s.setEditMode);
   const setAdmin = useUIStore((s) => s.setAdmin);
 
   return {
-    isAdmin: userIsAdmin || uiIsAdmin,
-    isEditMode,
+    isAdmin: userIsAdmin,
+    isEditMode: userIsAdmin && isEditMode,
     setEditMode,
     setAdmin,
   };

@@ -98,7 +98,7 @@ export default function Layout({ children }: LayoutProps) {
   const defaultSettingsTab = canEditOrg ? 'organisasi' : 'profil';
   const canAccessHr = canAccessManagerFeatures(user?.role, platformRole, user?.email, uiViewMode);
   const isEstimatorShell = location.pathname.startsWith('/app/estimator');
-  const hideMobileProductNav = estimatorOnly && isEstimatorShell;
+  const hideMobileProductNav = estimatorOnly;
   const hasEstimatorAccess = hasEstimatorLicenseAccess(entitlement, adminFullAccess);
   const showEstimatorBrand =
     !adminFullAccess && shouldShowEstimatorProductBrand(entitlement);
@@ -163,6 +163,7 @@ export default function Layout({ children }: LayoutProps) {
     ? [
       { id: 'projects', label: 'Proyek', icon: FolderOpen },
       { id: 'estimator', label: 'Estimator', icon: Receipt },
+      { id: 'estimator-settings', label: 'Pengaturan', icon: Settings },
     ]
     : [
       { id: 'home', label: 'Dashboard', icon: Home },
@@ -239,6 +240,10 @@ export default function Layout({ children }: LayoutProps) {
       return;
     }
 
+    if (tabId === 'estimator-settings') {
+      await goSettingsTab('estimator');
+      return;
+    }
     if (tabId === 'estimator') {
       setActiveTab('estimator');
       navigate('/app/estimator');
@@ -407,27 +412,29 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={openCommandModal}
-            className={`mt-3 relative flex items-center justify-center shadow-sm hover:opacity-95 transition-all ${navSidebarCollapsed
-              ? 'w-11 h-11 mx-auto rounded-xl'
-              : 'w-full h-11 rounded-xl gap-2'
-              }`}
-            style={{ background: 'linear-gradient(135deg, #0A3A2E 0%, #047857 55%, #10B981 100%)' }}
-            aria-label="Buka Agent"
-            title="Agent"
-          >
-            <Sparkles className="w-5 h-5 text-white shrink-0" />
-            {!navSidebarCollapsed && (
-              <span className="text-sm font-bold text-white">Agent</span>
-            )}
-            {pendingSyncCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {pendingSyncCount > 9 ? '9+' : pendingSyncCount}
-              </span>
-            )}
-          </button>
+          {!estimatorOnly && (
+            <button
+              type="button"
+              onClick={openCommandModal}
+              className={`mt-3 relative flex items-center justify-center shadow-sm hover:opacity-95 transition-all ${navSidebarCollapsed
+                ? 'w-11 h-11 mx-auto rounded-xl'
+                : 'w-full h-11 rounded-xl gap-2'
+                }`}
+              style={{ background: 'linear-gradient(135deg, #0A3A2E 0%, #047857 55%, #10B981 100%)' }}
+              aria-label="Buka Agent"
+              title="Agent"
+            >
+              <Sparkles className="w-5 h-5 text-white shrink-0" />
+              {!navSidebarCollapsed && (
+                <span className="text-sm font-bold text-white">Agent</span>
+              )}
+              {pendingSyncCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {pendingSyncCount > 9 ? '9+' : pendingSyncCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {tenant && !navSidebarCollapsed && (
             <div className="mt-3 px-3 py-2 bg-[#F4F7F5] border border-[#E5EAE8] rounded-xl">
@@ -558,6 +565,7 @@ export default function Layout({ children }: LayoutProps) {
         }}
         isOnline={isOnline}
         isEstimator={showEstimatorBrand}
+        estimatorOnly={estimatorOnly}
         showEstimator={hasEstimatorAccess}
       />
 
@@ -638,8 +646,9 @@ export default function Layout({ children }: LayoutProps) {
           </header>
         )}
 
-        {/* Desktop Top Bar (Shared across all pages) */}
-        <header className="hidden lg:flex shell-header px-6 h-14 items-center justify-between shrink-0 z-20">
+        {/* Desktop Top Bar (Shared across non-estimator pages; hidden for estimator-only users) */}
+        {!estimatorOnly && (
+          <header className="hidden lg:flex shell-header px-6 h-14 items-center justify-between shrink-0 z-20">
           <div className="text-sm font-bold text-[#0F172A] capitalize flex items-center flex-wrap gap-1">
             {headerTitle}
           </div>
@@ -736,6 +745,7 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           </div>
         </header>
+        )}
 
         {/* Mobile Notification Panel overlay */}
         <div className="lg:hidden">

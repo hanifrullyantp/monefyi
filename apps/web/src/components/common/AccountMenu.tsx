@@ -42,6 +42,7 @@ type Props = {
   onLogout?: () => void;
   isOnline?: boolean;
   isEstimator?: boolean;
+  estimatorOnly?: boolean;
   showEstimator?: boolean;
 };
 
@@ -63,18 +64,24 @@ export default function AccountMenu({
   onLogout,
   isOnline = true,
   isEstimator = false,
+  estimatorOnly = false,
   showEstimator = false,
 }: Props) {
   const initial = userName.charAt(0).toLowerCase() || 'u';
 
-  const menuItems = [
-    { id: 'home' as const, label: 'Dashboard', icon: Home },
-    { id: 'projects' as const, label: 'Proyek', icon: FolderOpen },
-    { id: 'database' as const, label: 'Database', icon: Database },
-    ...(showEstimator ? [{ id: 'estimator' as const, label: 'Estimator', icon: Receipt }] : []),
-    { id: 'finance' as const, label: 'Keuangan Bisnis', icon: Wallet },
-    { id: 'hr' as const, label: 'HR & Karyawan', icon: Users },
-  ];
+  const menuItems = estimatorOnly
+    ? [
+        { id: 'projects' as const, label: 'Proyek', icon: FolderOpen },
+        ...(showEstimator ? [{ id: 'estimator' as const, label: 'Estimator', icon: Receipt }] : []),
+      ]
+    : [
+        { id: 'home' as const, label: 'Dashboard', icon: Home },
+        { id: 'projects' as const, label: 'Proyek', icon: FolderOpen },
+        { id: 'database' as const, label: 'Database', icon: Database },
+        ...(showEstimator ? [{ id: 'estimator' as const, label: 'Estimator', icon: Receipt }] : []),
+        { id: 'finance' as const, label: 'Keuangan Bisnis', icon: Wallet },
+        { id: 'hr' as const, label: 'HR & Karyawan', icon: Users },
+      ];
 
   return (
     <AnimatePresence>
@@ -169,51 +176,55 @@ export default function AccountMenu({
                   AKUN & ALAT
                 </div>
                 <div className="flex flex-col gap-1 mt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOpenPreviewMode?.();
-                      onClose();
-                    }}
-                    className="min-h-[52px] w-full rounded-xl flex items-center justify-between gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Eye className="w-5 h-5 shrink-0 text-emerald-600" />
-                      <div className="min-w-0">
-                        <div className="font-bold text-sm text-[#0F172A]">Mode Pratinjau Admin</div>
-                        <div className="text-[11px] text-[#5B6B7A] truncate">
-                          Ganti peran tampilan (Auto/Owner/Worker)
+                  {isSuperAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onOpenPreviewMode?.();
+                        onClose();
+                      }}
+                      className="min-h-[52px] w-full rounded-xl flex items-center justify-between gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Eye className="w-5 h-5 shrink-0 text-emerald-600" />
+                        <div className="min-w-0">
+                          <div className="font-bold text-sm text-[#0F172A]">Mode Pratinjau Admin</div>
+                          <div className="text-[11px] text-[#5B6B7A] truncate">
+                            Ganti peran tampilan (Auto/Owner/Worker)
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase shrink-0">
-                      {uiViewMode}
-                    </span>
-                  </button>
+                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase shrink-0">
+                        {uiViewMode}
+                      </span>
+                    </button>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenTelegramSettings) {
-                        onOpenTelegramSettings();
-                      } else {
-                        onOpenSettings?.();
-                      }
-                      onClose();
-                    }}
-                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
-                  >
-                    <Send className="w-5 h-5 shrink-0 text-sky-600" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-sm text-[#0F172A] flex items-center gap-1.5">
-                        <span>Bot Telegram &amp; Tim</span>
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 uppercase">Cloud</span>
+                  {!estimatorOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onOpenTelegramSettings) {
+                          onOpenTelegramSettings();
+                        } else {
+                          onOpenSettings?.();
+                        }
+                        onClose();
+                      }}
+                      className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                    >
+                      <Send className="w-5 h-5 shrink-0 text-sky-600" />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-sm text-[#0F172A] flex items-center gap-1.5">
+                          <span>Bot Telegram &amp; Tim</span>
+                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 uppercase">Cloud</span>
+                        </div>
+                        <div className="text-[11px] text-[#5B6B7A] truncate">
+                          Bot Token, Chat ID &amp; notifikasi
+                        </div>
                       </div>
-                      <div className="text-[11px] text-[#5B6B7A] truncate">
-                        Bot Token, Chat ID &amp; notifikasi
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                  )}
 
                   {showEstimator && (
                     <>
@@ -256,26 +267,28 @@ export default function AccountMenu({
                     </>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenFullSettings) {
-                        onOpenFullSettings();
-                      } else {
-                        onOpenSettings?.();
-                      }
-                      onClose();
-                    }}
-                    className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
-                  >
-                    <Sliders className="w-5 h-5 shrink-0 text-slate-600" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-sm text-[#0F172A]">Semua Pengaturan</div>
-                      <div className="text-[11px] text-[#5B6B7A] truncate">
-                        Profil, AI provider, domain &amp; notifikasi
+                  {!estimatorOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onOpenFullSettings) {
+                          onOpenFullSettings();
+                        } else {
+                          onOpenSettings?.();
+                        }
+                        onClose();
+                      }}
+                      className="min-h-[52px] w-full rounded-xl flex items-center gap-3 px-3 py-1.5 text-left text-[#334155] hover:bg-[#F4F7F5] transition-colors"
+                    >
+                      <Sliders className="w-5 h-5 shrink-0 text-slate-600" />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-sm text-[#0F172A]">Semua Pengaturan</div>
+                        <div className="text-[11px] text-[#5B6B7A] truncate">
+                          Profil, AI provider, domain &amp; notifikasi
+                        </div>
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                  )}
 
                   {isSuperAdmin && (
                     <button
