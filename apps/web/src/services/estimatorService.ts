@@ -69,6 +69,14 @@ function summaryToHeader(
   };
 }
 
+function isOrgCodeDuplicateError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  return (
+    error.code === '23505'
+    || String(error.message || '').includes('planner_estimations_org_code_unique')
+  );
+}
+
 export async function generateEstimationCode(orgId: string): Promise<string> {
   const { data, error } = await supabase
     .from('planner_estimations')
@@ -218,37 +226,59 @@ export async function createEstimation(
   const items = draft.items.filter(i => i.name.trim());
   const header = summaryToHeader(draft, items);
 
-  const { data: est, error } = await supabase
-    .from('planner_estimations')
-    .insert({
-      org_id: orgId,
-      code: draft.code,
-      title: draft.title,
-      customer_name: draft.customer_name || null,
-      customer_phone: draft.customer_phone || null,
-      customer_address: draft.customer_address || null,
-      project_id: draft.project_id,
-      overhead_pct: draft.overhead_pct,
-      discount_pct: draft.discount_pct,
-      discount_amount: draft.discount_amount,
-      adjustments: draft.adjustments.filter(a => a.label.trim() && a.amount > 0),
-      tax_pct: draft.tax_pct,
-      notes: draft.notes || null,
-      terms_conditions: draft.terms_conditions || null,
-      validity_days: draft.validity_days,
-      status: draft.status,
-      pdf_template: normalizePdfTemplate(draft.pdf_template),
-      pdf_invoice_template: normalizePdfTemplate(draft.pdf_invoice_template),
-      pdf_primary_color: draft.pdf_primary_color || null,
-      pdf_secondary_color: draft.pdf_secondary_color || null,
-      billing_config: draft.billing_config?.milestones ? billingConfigToDb(draft.billing_config) : null,
-      created_by: userId,
-      ...imagesToDbFields(draft.images),
-      ...header,
-    })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
+  let codeToUse = draft.code;
+  let est: Estimation | null = null;
+  let lastError: { code?: string; message: string } | null = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { data, error } = await supabase
+      .from('planner_estimations')
+      .insert({
+        org_id: orgId,
+        code: codeToUse,
+        title: draft.title,
+        customer_name: draft.customer_name || null,
+        customer_phone: draft.customer_phone || null,
+        customer_address: draft.customer_address || null,
+        project_id: draft.project_id,
+        overhead_pct: draft.overhead_pct,
+        discount_pct: draft.discount_pct,
+        discount_amount: draft.discount_amount,
+        adjustments: draft.adjustments.filter(a => a.label.trim() && a.amount > 0),
+        tax_pct: draft.tax_pct,
+        notes: draft.notes || null,
+        terms_conditions: draft.terms_conditions || null,
+        validity_days: draft.validity_days,
+        status: draft.status,
+        pdf_template: normalizePdfTemplate(draft.pdf_template),
+        pdf_invoice_template: normalizePdfTemplate(draft.pdf_invoice_template),
+        pdf_primary_color: draft.pdf_primary_color || null,
+        pdf_secondary_color: draft.pdf_secondary_color || null,
+        billing_config: draft.billing_config?.milestones ? billingConfigToDb(draft.billing_config) : null,
+        created_by: userId,
+        ...imagesToDbFields(draft.images),
+        ...header,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      est = data as Estimation;
+      lastError = null;
+      break;
+    }
+
+    lastError = error;
+    if (!isOrgCodeDuplicateError(error)) {
+      throw new Error(error?.message || 'Gagal menyimpan estimasi');
+    }
+
+    codeToUse = await generateEstimationCode(orgId);
+  }
+
+  if (!est) {
+    throw new Error(lastError?.message || 'Gagal menyimpan estimasi');
+  }
 
   const estimationId = (est as Estimation).id;
   const dbItems = mapItemsToDb(estimationId, items);
@@ -288,34 +318,53 @@ async function performUpdateEstimation(
   const items = draft.items.filter(i => i.name.trim());
   const header = summaryToHeader(draft, items);
 
-  const { error } = await supabase
+  const basePayload = {
+    title: draft.title,
+    customer_name: draft.customer_name || null,
+    customer_phone: draft.customer_phone || null,
+    customer_address: draft.customer_address || null,
+    project_id: draft.project_id,
+    overhead_pct: draft.overhead_pct,
+    discount_pct: draft.discount_pct,
+    discount_amount: draft.discount_amount,
+    adjustments: draft.adjustments.filter(a => a.label.trim() && a.amount > 0),
+    tax_pct: draft.tax_pct,
+    notes: draft.notes || null,
+    terms_conditions: draft.terms_conditions || null,
+    validity_days: draft.validity_days,
+    status: draft.status,
+    pdf_template: normalizePdfTemplate(draft.pdf_template),
+    pdf_invoice_template: normalizePdfTemplate(draft.pdf_invoice_template),
+    pdf_primary_color: draft.pdf_primary_color || null,
+    pdf_secondary_color: draft.pdf_secondary_color || null,
+    billing_config: draft.billing_config?.milestones ? billingConfigToDb(draft.billing_config) : null,
+    updated_at: new Date().toISOString(),
+    ...imagesToDbFields(draft.images),
+    ...header,
+  };
+
+  let { error } = await supabase
     .from('planner_estimations')
     .update({
+      ...basePayload,
       code: draft.code,
-      title: draft.title,
-      customer_name: draft.customer_name || null,
-      customer_phone: draft.customer_phone || null,
-      customer_address: draft.customer_address || null,
-      project_id: draft.project_id,
-      overhead_pct: draft.overhead_pct,
-      discount_pct: draft.discount_pct,
-      discount_amount: draft.discount_amount,
-      adjustments: draft.adjustments.filter(a => a.label.trim() && a.amount > 0),
-      tax_pct: draft.tax_pct,
-      notes: draft.notes || null,
-      terms_conditions: draft.terms_conditions || null,
-      validity_days: draft.validity_days,
-      status: draft.status,
-      pdf_template: normalizePdfTemplate(draft.pdf_template),
-      pdf_invoice_template: normalizePdfTemplate(draft.pdf_invoice_template),
-      pdf_primary_color: draft.pdf_primary_color || null,
-      pdf_secondary_color: draft.pdf_secondary_color || null,
-      billing_config: draft.billing_config?.milestones ? billingConfigToDb(draft.billing_config) : null,
-      updated_at: new Date().toISOString(),
-      ...imagesToDbFields(draft.images),
-      ...header,
     })
     .eq('id', id);
+
+  if (isOrgCodeDuplicateError(error)) {
+    const fallbackCode = existing.code && existing.code !== draft.code
+      ? existing.code
+      : await generateEstimationCode(existing.org_id);
+    const retry = await supabase
+      .from('planner_estimations')
+      .update({
+        ...basePayload,
+        code: fallbackCode,
+      })
+      .eq('id', id);
+    error = retry.error;
+  }
+
   if (error) throw new Error(error.message);
 
   const { error: delErr } = await supabase
