@@ -3,6 +3,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import { useColorScheme } from './hooks/useColorScheme';
+import { initOfflineSync } from './lib/offlineSync';
 
 function ThemeInit() {
   useColorScheme();
@@ -14,6 +15,7 @@ import { initEstimatorPwaDocument } from './lib/pwaBrand';
 
 initEstimatorPwaDocument();
 registerServiceWorker();
+initOfflineSync();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
