@@ -11,14 +11,12 @@ export const MONEFYI_BONUS_HUB_URL =
   process.env.NEXT_PUBLIC_MONEFYI_BONUS_HUB_URL || 'https://estimator.froyek.com/bonus';
 
 export function getSupabaseConfig() {
-  return {
-    url:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      'https://zzwqfmdyncxbolestkqp.supabase.co',
-    anonKey:
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp6d3FmbWR5bmN4Ym9sZXN0a3FwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzNDI3OTQsImV4cCI6MjA4MTkxODc5NH0.qtvqzDicRmIixFh3A46ExuitpAXDWaYHmB7NVBxsc7w',
-  };
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || '';
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
+  if (!url || !anonKey) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY wajib diisi.');
+  }
+  return { url, anonKey };
 }
 
 export type MonefyiProduct = 'monefyi' | 'planner' | 'stay';

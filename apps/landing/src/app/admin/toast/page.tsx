@@ -110,9 +110,8 @@ export default function ToastAdminPage() {
             <button
               type="button"
               onClick={() => setConfig((p) => ({ ...p, enabled: !p.enabled }))}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                config.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
-              }`}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${config.enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"
+                }`}
             >
               {config.enabled ? "Aktif" : "Nonaktif"}
             </button>
@@ -123,9 +122,8 @@ export default function ToastAdminPage() {
             <button
               type="button"
               onClick={() => setConfig((p) => ({ ...p, includeFree: !p.includeFree }))}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                config.includeFree ? "bg-teal-100 text-teal-800" : "bg-slate-200 text-slate-600"
-              }`}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${config.includeFree ? "bg-teal-100 text-teal-800" : "bg-slate-200 text-slate-600"
+                }`}
             >
               {config.includeFree ? "Tampil" : "Hanya Berbayar"}
             </button>
@@ -136,11 +134,10 @@ export default function ToastAdminPage() {
             <button
               type="button"
               onClick={() => setConfig((p) => ({ ...p, maskCustomerName: !p.maskCustomerName }))}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${
-                config.maskCustomerName
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${config.maskCustomerName
                   ? "bg-indigo-100 text-indigo-700"
                   : "bg-slate-200 text-slate-600"
-              }`}
+                }`}
             >
               {config.maskCustomerName ? "Aktif (Privasi)" : "Nama Lengkap"}
             </button>

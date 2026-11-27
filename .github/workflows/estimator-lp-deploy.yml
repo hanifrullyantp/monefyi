@@ -37,7 +37,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_ESTIMATOR_LP_PROJECT_ID }}
-          ADMIN_PASSWORD: ci-build-only
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           ESTIMATOR_STANDALONE: "true"
           PLANNER_APP_ORIGIN: https://monefyi-planner.vercel.app
           NEXT_PUBLIC_PLANNER_APP_URL: https://estimator.froyek.com

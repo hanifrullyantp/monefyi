@@ -52,10 +52,10 @@ export async function POST(req: NextRequest) {
     const formattedPhone = cleanPhone.startsWith("62")
       ? cleanPhone
       : cleanPhone.startsWith("0")
-      ? `62${cleanPhone.slice(1)}`
-      : cleanPhone
-      ? `62${cleanPhone}`
-      : "";
+        ? `62${cleanPhone.slice(1)}`
+        : cleanPhone
+          ? `62${cleanPhone}`
+          : "";
 
     const isFree = (planTier === "free" && !bumpTaken && amount <= 0) || (amount <= 0 && !bumpTaken);
 
@@ -108,16 +108,16 @@ export async function POST(req: NextRequest) {
         const productTitle = isFree
           ? "Froyek Estimator Free"
           : planTier === "pro"
-          ? "Froyek Estimator PRO"
-          : "Froyek Estimator Standard";
+            ? "Froyek Estimator PRO"
+            : "Froyek Estimator Standard";
 
         const orderStatus = isFree
           ? "free_active"
           : finalStatus === "won"
-          ? "paid"
-          : finalStatus === "pending_payment"
-          ? "pending"
-          : "abandoned";
+            ? "paid"
+            : finalStatus === "pending_payment"
+              ? "pending"
+              : "abandoned";
 
         if (existing && existing.length > 0) {
           const rowId = existing[0].id;
@@ -368,8 +368,8 @@ export async function GET(req: NextRequest) {
             const txPhone = txPhoneRaw.startsWith("62")
               ? txPhoneRaw
               : txPhoneRaw.startsWith("0")
-              ? `62${txPhoneRaw.slice(1)}`
-              : txPhoneRaw ? `62${txPhoneRaw}` : "";
+                ? `62${txPhoneRaw.slice(1)}`
+                : txPhoneRaw ? `62${txPhoneRaw}` : "";
 
             const txAmount = Number(tx.amount || tx.credit || 0);
             const txMethod = String(tx.paymentMethod || "qris").toLowerCase();
@@ -529,14 +529,14 @@ export async function DELETE(req: NextRequest) {
     const rawIds: string[] = Array.isArray(body?.ids)
       ? body.ids
       : body?.id
-      ? [String(body.id)]
-      : [];
+        ? [String(body.id)]
+        : [];
 
     const rawSessionIds: string[] = Array.isArray(body?.sessionIds)
       ? body.sessionIds
       : body?.sessionId
-      ? [String(body.sessionId)]
-      : [];
+        ? [String(body.sessionId)]
+        : [];
 
     const ids = rawIds.filter(Boolean);
     const sessionIds = rawSessionIds.filter(Boolean);
@@ -653,12 +653,12 @@ export async function PATCH(req: NextRequest) {
           status === "won"
             ? "paid"
             : status === "pending_payment"
-            ? "pending"
-            : status === "free_active"
-            ? "free_active"
-            : status === "abandoned_checkout"
-            ? "abandoned"
-            : status || "pending";
+              ? "pending"
+              : status === "free_active"
+                ? "free_active"
+                : status === "abandoned_checkout"
+                  ? "abandoned"
+                  : status || "pending";
 
         let query = supabase.from("orders").select("id, raw_payload");
         if (id) {

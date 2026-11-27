@@ -190,7 +190,7 @@ export function FreeTrialPopup() {
           checkoutStep: 5,
           status: "free_active",
         }),
-      }).catch(() => {});
+      }).catch(() => { });
 
       // 3. META PIXEL: CompleteRegistration (Registrations completed)
       // JANGAN PERNAH panggil InitiateCheckout (IC) atau Payment API untuk paket Free Trial!

@@ -271,8 +271,8 @@ export default function ConversationalCheckout({
     product === 'free'
       ? standardBasePrice
       : product === 'standard'
-      ? configuredBumpPrice ?? 50000
-      : 99000;
+        ? configuredBumpPrice ?? 50000
+        : 99000;
   const finalPrice = takeOrderBump ? basePrice + bumpPrice : basePrice;
 
   // Sanitize bump data untuk paket Standard agar selalu "Upgrade ke PRO" (Bukan SOP)
@@ -351,7 +351,7 @@ export default function ConversationalCheckout({
           event: 'checkout_landed',
           plan: product,
         }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [product]);
 
@@ -388,7 +388,7 @@ export default function ConversationalCheckout({
         checkoutStep: stepNum,
         status: leadStatus,
       }),
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 2. Simpan ke Zustand Store lokal jika data minimal (nama & phone/email) sudah ada
     if (fullName.trim()) {
@@ -440,7 +440,7 @@ export default function ConversationalCheckout({
         paymentMethod,
         metadata: extra,
       }),
-    }).catch(() => {});
+    }).catch(() => { });
   };
 
   // Otomatis Kirim Email via Resend saat Pembayaran Berhasil / Akun Free Aktif
@@ -461,7 +461,7 @@ export default function ConversationalCheckout({
         paymentMethod: isFreePlan ? 'Gratis 100%' : paymentMethod,
         sessionId: activeSid,
       }),
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 2. Kirim Akses Akun & Password Sementara
     fetch('/api/email/resend', {
@@ -476,7 +476,7 @@ export default function ConversationalCheckout({
         password: 'Estimator2026!',
         sessionId: activeSid,
       }),
-    }).catch(() => {});
+    }).catch(() => { });
 
     // 3. Provisioning Akun Supabase Auth & set password aktif
     fetch('/api/crm/provision', {
@@ -489,7 +489,7 @@ export default function ConversationalCheckout({
         phone: whatsapp.trim(),
         planTier: product === 'pro' || takeOrderBump ? 'pro' : 'standard',
       }),
-    }).catch(() => {});
+    }).catch(() => { });
   };
 
   // Auto-fill jika user / admin sudah terautentikasi (Hanif Rullyant)
@@ -541,16 +541,16 @@ export default function ConversationalCheckout({
               product === 'pro' && takeOrderBump
                 ? '2 Akun Estimator PRO'
                 : product === 'pro' || takeOrderBump
-                ? 'Estimator PRO'
-                : 'Estimator Standard';
+                  ? 'Estimator PRO'
+                  : 'Estimator Standard';
             const toastCategory =
               product === 'pro' && takeOrderBump
                 ? 'bundle'
                 : product === 'standard' && takeOrderBump
-                ? 'upgrade'
-                : product === 'pro'
-                ? 'pro'
-                : 'standard';
+                  ? 'upgrade'
+                  : product === 'pro'
+                    ? 'pro'
+                    : 'standard';
 
             window.dispatchEvent(
               new CustomEvent('monefyi_user_toast', {
@@ -843,16 +843,16 @@ export default function ConversationalCheckout({
             product === 'pro' && takeOrderBump
               ? '2 Akun Estimator PRO'
               : product === 'pro' || takeOrderBump
-              ? 'Estimator PRO'
-              : 'Estimator Standard';
+                ? 'Estimator PRO'
+                : 'Estimator Standard';
           const toastCategory =
             product === 'pro' && takeOrderBump
               ? 'bundle'
               : product === 'standard' && takeOrderBump
-              ? 'upgrade'
-              : product === 'pro'
-              ? 'pro'
-              : 'standard';
+                ? 'upgrade'
+                : product === 'pro'
+                  ? 'pro'
+                  : 'standard';
 
           window.dispatchEvent(
             new CustomEvent('monefyi_user_toast', {
@@ -948,11 +948,10 @@ export default function ConversationalCheckout({
                   key={st}
                   type="button"
                   onClick={() => goToStep(st)}
-                  className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
-                    currentStep === st
+                  className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${currentStep === st
                       ? 'bg-emerald-500 text-white shadow-xs'
                       : 'text-slate-300 hover:text-white'
-                  }`}
+                    }`}
                   title={`Lompat ke langkah ${st}`}
                 >
                   {st}
@@ -964,11 +963,10 @@ export default function ConversationalCheckout({
               <button
                 type="button"
                 onClick={handleToggleEdit}
-                className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isEditMode
+                className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${isEditMode
                     ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300 scale-105'
                     : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                }`}
+                  }`}
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>{isEditMode ? 'Mode Edit: AKTIF ✏️' : '✏️ Mode Edit Teks'}</span>
@@ -1134,8 +1132,8 @@ export default function ConversationalCheckout({
                     {product === 'free'
                       ? `Upgrade Standard (+${formatIDR(bumpPrice)})`
                       : product === 'standard'
-                      ? `${standardBumpProductName} (+${formatIDR(bumpPrice)})`
-                      : `2 Akun PRO (+${formatIDR(bumpPrice)})`}
+                        ? `${standardBumpProductName} (+${formatIDR(bumpPrice)})`
+                        : `2 Akun PRO (+${formatIDR(bumpPrice)})`}
                   </span>
                 </motion.button>
               )}
@@ -1641,21 +1639,18 @@ export default function ConversationalCheckout({
                       trackFunnelEvent('step4_bump_toggled', { bumpTaken: nextBump });
                     }
                   }}
-                  className={`relative rounded-3xl p-5 sm:p-6 transition-all duration-300 border-2 ${
-                    isEditMode ? 'cursor-default' : 'cursor-pointer'
-                  } ${
-                    takeOrderBump
+                  className={`relative rounded-3xl p-5 sm:p-6 transition-all duration-300 border-2 ${isEditMode ? 'cursor-default' : 'cursor-pointer'
+                    } ${takeOrderBump
                       ? 'bg-amber-50/80 border-amber-500 shadow-xl shadow-amber-500/15 ring-2 ring-amber-400/50'
                       : 'bg-white border-dashed border-amber-300 hover:border-amber-400 hover:bg-amber-50/20 shadow-sm'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start gap-3.5">
                     <div
-                      className={`mt-1 w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
-                        takeOrderBump
+                      className={`mt-1 w-6 h-6 rounded-lg flex items-center justify-center transition-all ${takeOrderBump
                           ? 'bg-amber-500 text-white shadow-sm'
                           : 'border-2 border-slate-300 bg-white'
-                      }`}
+                        }`}
                     >
                       {takeOrderBump && <Check className="w-4 h-4 stroke-[3]" />}
                     </div>
@@ -1666,8 +1661,8 @@ export default function ConversationalCheckout({
                           {product === 'free'
                             ? 'Ya! Ambil Lisensi Standard Seumur Hidup'
                             : product === 'standard'
-                            ? standardBumpProductName
-                            : 'Ya! Tambah 1 Lisensi PRO Ekstra'}
+                              ? standardBumpProductName
+                              : 'Ya! Tambah 1 Lisensi PRO Ekstra'}
                         </span>
                         <div className="text-right">
                           <span className="text-xs text-slate-400 line-through mr-1.5">
@@ -1802,8 +1797,8 @@ export default function ConversationalCheckout({
                         {product === 'free'
                           ? 'Upgrade Standard (Promo Spesial)'
                           : product === 'standard'
-                          ? 'Upgrade PRO (Promo Khusus)'
-                          : 'Ekstra 1 Akun PRO'}
+                            ? 'Upgrade PRO (Promo Khusus)'
+                            : 'Ekstra 1 Akun PRO'}
                       </span>
                       <span className="font-bold">+{formatIDR(bumpPrice)}</span>
                     </div>
@@ -1873,19 +1868,17 @@ export default function ConversationalCheckout({
                               setPaymentMethod(pm.id);
                               trackFunnelEvent('step5_method_selected', { paymentMethod: pm.id });
                             }}
-                            className={`cursor-pointer p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${
-                              isSelected
+                            className={`cursor-pointer p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${isSelected
                                 ? 'border-[#065f46] bg-emerald-50/70 shadow-sm ring-1 ring-emerald-500/25'
                                 : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-3 min-w-0">
                               <div
-                                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs transition-colors ${
-                                  isSelected
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-xs transition-colors ${isSelected
                                     ? 'bg-[#065f46] text-white'
                                     : 'bg-slate-100 text-slate-600'
-                                }`}
+                                  }`}
                               >
                                 {pm.iconType === 'qris' && <QrCode className="w-5 h-5" />}
                                 {pm.iconType === 'bank' && <Landmark className="w-5 h-5" />}
@@ -1900,11 +1893,10 @@ export default function ConversationalCheckout({
                                   </p>
                                   {pm.badge && (
                                     <span
-                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                                        pm.id === 'qris'
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${pm.id === 'qris'
                                           ? 'bg-emerald-100 text-[#065f46]'
                                           : 'bg-slate-100 text-slate-600'
-                                      }`}
+                                        }`}
                                     >
                                       {pm.badge}
                                     </span>
@@ -1915,11 +1907,10 @@ export default function ConversationalCheckout({
                             </div>
 
                             <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                isSelected
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${isSelected
                                   ? 'border-[#065f46] bg-[#065f46]'
                                   : 'border-slate-300 bg-white'
-                              }`}
+                                }`}
                             >
                               {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
                             </div>
@@ -1951,9 +1942,8 @@ export default function ConversationalCheckout({
                         handleSubmitOrder();
                       }
                     }}
-                    className={`w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-black text-lg rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-900/20 select-none ${
-                      isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-                    }`}
+                    className={`w-full py-4 bg-[#065f46] hover:bg-[#047857] active:scale-[0.98] text-white font-black text-lg rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-900/20 select-none ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                      }`}
                   >
                     {isSubmitting ? (
                       <div className="flex items-center gap-2">

@@ -136,8 +136,8 @@ export function formatToastCustomerName(rawName: string, maskName = true): strin
       firstLower === "muhammad" || firstLower === "mohammad"
         ? "M."
         : formattedTokens[0].endsWith(".")
-        ? formattedTokens[0]
-        : `${formattedTokens[0]}.`;
+          ? formattedTokens[0]
+          : `${formattedTokens[0]}.`;
     const callName = formattedTokens[1];
     if (formattedTokens.length === 2) {
       return `${prefix} ${callName}`;

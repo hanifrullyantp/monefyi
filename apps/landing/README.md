@@ -178,9 +178,9 @@ cp .env.example .env
 
 Edit `.env`:
 ```env
-ADMIN_PASSWORD=monefyi2026
+ADMIN_PASSWORD=<isi_password_admin_anda>
 NEXT_PUBLIC_WA_NUMBER=6281234567890
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/app_db
+DATABASE_URL=<isi_connection_string_database_anda>
 ```
 
 ### 3. Database Setup
