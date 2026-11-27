@@ -174,6 +174,15 @@ CREATE TABLE IF NOT EXISTS rab_audit_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- State aplikasi estimator (PersistedState sebagai JSONB, satu baris id = 'app-state')
+-- Digunakan adaptor Supabase di modul_7; Dexie sebagai cache offline.
+CREATE TABLE IF NOT EXISTS rab_app_state (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  app_key TEXT NOT NULL DEFAULT 'app-state' UNIQUE,
+  state JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ============================ RLS ============================
 -- Semua tabel RAB: hanya super admin (is_super_admin()) yang boleh ACCES.
 -- Bukan super admin (termasuk anon) -> 0 baris pada SELECT, ditolak pada INSERT/UPDATE/DELETE.

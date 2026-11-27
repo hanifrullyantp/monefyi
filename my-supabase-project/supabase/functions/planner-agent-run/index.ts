@@ -2,7 +2,55 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { admitRun, decideActionStatus, explainAction, routeRequest, type Autonomy } from "../_shared/agent/runtime.ts";
 import { screenFlowBody } from "../_shared/agent/flow.ts";
+import { writeAudit } from "../_shared/audit.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+
+function logAgentEvent(
+  orgId: string,
+  userId: string,
+  action: string,
+  metadata: Record<string, unknown>,
+) {
+  console.log(
+    JSON.stringify({
+      event: "agent_run",
+      org_id: orgId,
+      user_id: userId,
+      action,
+      timestamp: new Date().toISOString(),
+      ...metadata,
+    }),
+  );
+}
+
+// Rate limiter sederhana per user (sliding window 1 menit, max 60 request)
+const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
+const RATE_LIMIT_MAX = 60;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+function checkRateLimit(userId: string): { ok: true } | { ok: false; retryAfter: number } {
+  const now = Date.now();
+  const entry = rateLimitStore.get(userId);
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimitStore.set(userId, { count: 1, windowStart: now });
+    return { ok: true };
+  }
+  if (entry.count >= RATE_LIMIT_MAX) {
+    return { ok: false, retryAfter: RATE_LIMIT_WINDOW_MS - (now - entry.windowStart) };
+  }
+  entry.count += 1;
+  return { ok: true };
+}
+
+// Bersihkan entri lama setiap 5 menit
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, RATE_LIMIT_WINDOW_MS * 5);
 
 serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
@@ -13,6 +61,10 @@ serve(async (req) => {
       status,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
+
+  if (req.method !== "POST") {
+    return json({ code: "metode_salah", message_id: "metode_salah", fix_hint: "Pakai POST.", valid_options: [] }, 405);
+  }
 
   if (req.method !== "POST") {
     return json({ code: "metode_salah", message_id: "metode_salah", fix_hint: "Pakai POST.", valid_options: [] }, 405);
@@ -38,6 +90,19 @@ serve(async (req) => {
     if (authErr || !authData?.user) {
       return json({ code: "sesi_tidak_sah", message_id: "sesi_tidak_sah", fix_hint: "Masuk ulang.", valid_options: [] }, 401);
     }
+    const userId = String(authData.user.id);
+
+    // Rate limit per user: maksimal 60 request per menit
+    const rateLimit = checkRateLimit(userId);
+    if (!rateLimit.ok) {
+      return json({
+        code: "rate_limit_terlampaui",
+        message_id: "rate_limit_terlampaui",
+        fix_hint: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(rateLimit.retryAfter / 1000)} detik.`,
+        valid_options: [],
+      }, 429);
+    }
+
     const { data: members, error: memberErr } = await userClient
       .from("planner_org_members")
       .select("org_id, role")
@@ -55,22 +120,46 @@ serve(async (req) => {
       }, 409);
     }
     const orgId = String(members[0].org_id);
+    const userId = String(authData.user.id);
     const { data: org } = await userClient.from("planner_organizations").select("plan_type").eq("id", orgId).maybeSingle();
     const { data: settings } = await userClient.from("planner_agent_settings").select("kill_switch, autonomy").eq("org_id", orgId).maybeSingle();
     const autonomy = (settings?.autonomy || "L1") as Autonomy;
     const failures = Number(body.failures || 0);
+
+    // Ambil penggunaan kuota hari ini dari database untuk admitRun yang akurat
+    const v_tz = String(org?.timezone || "Asia/Jakarta");
+    const v_date = new Date().toLocaleDateString("en-CA", { timeZone: v_tz }); // YYYY-MM-DD
+    const { data: usage } = await userClient
+      .from("planner_agent_usage")
+      .select("runs, tokens")
+      .eq("org_id", orgId)
+      .eq("usage_date", v_date)
+      .maybeSingle();
+
     const route = routeRequest(text, failures, "prepare");
+    logAgentEvent(orgId, userId, "route_request", {
+      input: text,
+      sop_id: route.sopId,
+      confidence: route.confidence,
+      tier: route.tier,
+      escalate: route.escalate,
+      failures,
+    });
     const gate = admitRun({
       killSwitch: Boolean(settings?.kill_switch),
       planType: String(org?.plan_type || "free"),
-      usedRuns: 0,
-      usedTokens: 0,
+      usedRuns: usage?.runs ?? 0,
+      usedTokens: usage?.tokens ?? 0,
       iteration: 1,
       tokens: 32,
       costIdr: 0,
     });
-    if (!gate.ok) return json(gate.error, 429);
+    if (!gate.ok) {
+      logAgentEvent(orgId, userId, "quota_rejected", { error: gate.error.code });
+      return json(gate.error, 429);
+    }
     if (!route.sopId) {
+      logAgentEvent(orgId, userId, "sop_not_matched", { input: text });
       return json({
         code: "sop_belum_yakin",
         message_id: "sop_belum_yakin",
@@ -85,7 +174,13 @@ serve(async (req) => {
       const code = quota.data?.code || "kuota_gagal";
       return json({ code, message_id: code, fix_hint: "Coba lagi besok atau minta pemilik menaikkan paket.", valid_options: [] }, 429);
     }
+    if (quota.error || quota.data?.ok === false) {
+      const code = quota.data?.code || "kuota_gagal";
+      logAgentEvent(orgId, userId, "quota_consume_rejected", { code });
+      return json({ code, message_id: code, fix_hint: "Coba lagi besok atau minta pemilik menaikkan paket.", valid_options: [] }, 429);
+    }
     const status = decideActionStatus(autonomy, "prepare", null, 0);
+    const startedAt = Date.now();
     const { data: run, error: runErr } = await userClient.from("planner_agent_runs").insert({
       org_id: orgId,
       user_id: authData.user.id,
@@ -107,6 +202,20 @@ serve(async (req) => {
       impact: { text, confidence: route.confidence, sop_id: route.sopId },
       sop_step: step,
       policy_key: null,
+    });
+    logAgentEvent(orgId, userId, "run_started", {
+      run_id: run.id,
+      sop_id: route.sopId,
+      tier: route.tier,
+      autonomy,
+      status,
+      latency_ms: Date.now() - startedAt,
+    });
+    await writeAudit(userClient, {
+      orgId,
+      userId,
+      action: "agent_run_started",
+      metadata: { run_id: run.id, sop_id: route.sopId, tier: route.tier, autonomy },
     });
     return json({
       run_id: run.id,

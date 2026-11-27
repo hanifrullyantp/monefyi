@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.monefyi.macfyi</string>
+    <key>CFBundleDisplayName</key>
+    <string>MacFyi</string>
+    <key>CFBundleName</key>
+    <string>MacFyi</string>
+    <key>CFBundleExecutable</key>
+    <string>MacFyi</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2026 Monefyi</string>
+</dict>
+</plist>

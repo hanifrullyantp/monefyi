@@ -28,7 +28,10 @@ describe('runtime agen', () => {
     expect(decideActionStatus('L2', 'commit', 100_000, 1_000_000)).toBe('draft');
     expect(decideActionStatus('L2', 'commit', 100_000, 1_000_000, true)).toBe('approved');
     expect(decideActionStatus('L2', 'commit', 2_000_000, 1_000_000, true)).toBe('draft');
-    expect(decideActionStatus('L3', 'read', null, 0)).toBe('draft');
+    // L3 otonomi tertinggi: eksekusi otomatis untuk non-critical, draft untuk critical
+    expect(decideActionStatus('L3', 'read', null, 0)).toBe('executed');
+    expect(decideActionStatus('L3', 'commit', 100_000, 1_000_000)).toBe('executed');
+    expect(decideActionStatus('L3', 'critical', null, 0)).toBe('draft');
     expect(decideActionStatus('L0', 'read', null, 0)).toBe('executed');
   });
 

@@ -107,10 +107,17 @@ export function decideActionStatus(
   approvalLimitRupiah: number,
   gatePassed = false,
 ): ActionStatus {
-  if (risk === 'critical' || autonomy === 'L3' || autonomy === 'L1') return 'draft';
+  // Critical risiko selalu draft, terlepas level otonomi
+  if (risk === 'critical') return 'draft';
+  // L1 selalu membutuhkan persetujuan manusia
+  if (autonomy === 'L1') return 'draft';
+  // L3: otonomi tertinggi, eksekusi otomatis untuk non-critical
+  if (autonomy === 'L3') return 'executed';
+  // L0: read dieksekusi otomatis, write tetap draft
   if (autonomy === 'L0' && risk === 'read') return 'executed';
-  if (gatePassed && autonomy === 'L2' && risk !== 'read' && amount != null && amount <= approvalLimitRupiah) return 'approved';
   if (autonomy === 'L0') return 'draft';
+  // L2: approved jika gate lulus dan nominal dalam batas persetujuan
+  if (gatePassed && autonomy === 'L2' && risk !== 'read' && amount != null && amount <= approvalLimitRupiah) return 'approved';
   return 'draft';
 }
 

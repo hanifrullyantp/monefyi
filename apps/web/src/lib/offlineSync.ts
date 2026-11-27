@@ -29,7 +29,7 @@ class FroyekDb extends Dexie {
       transactions: '++id, project_id, updated_at',
       todos: '++id, project_id, updated_at',
       notifications: '++id, updated_at',
-      pendingMutations: '++id, created_at, synced',
+      pendingMutations: '++id, created_at',
     });
   }
 }
@@ -44,7 +44,7 @@ export type PendingMutation = {
   id?: number;
   table: string;
   op: 'insert' | 'update' | 'delete';
-  payload: any;
+  payload?: any;
   filter?: Record<string, any>;
   created_at: string;
   synced: boolean;
@@ -57,19 +57,19 @@ export async function enqueueMutation(mutation: Omit<PendingMutation, 'id' | 'cr
     created_at: new Date().toISOString(),
     synced: false,
   });
-  const count = await db.pendingMutations.where('synced').equals(false).count();
+  const count = await db.pendingMutations.filter((m) => !m.synced).count();
   useAppStore.getState().setPendingSyncCount(count);
 }
 
 /** Ambil semua mutation yang belum sinkron. */
 export async function getPendingMutations(): Promise<PendingMutation[]> {
-  return db.pendingMutations.where('synced').equals(false).toArray();
+  return db.pendingMutations.filter((m) => !m.synced).toArray();
 }
 
 /** Tandai mutation sebagai sudah sinkron. */
 export async function markSynced(id: number) {
   await db.pendingMutations.update(id, { synced: true });
-  const count = await db.pendingMutations.where('synced').equals(false).count();
+  const count = await db.pendingMutations.filter((m) => !m.synced).count();
   useAppStore.getState().setPendingSyncCount(count);
 }
 

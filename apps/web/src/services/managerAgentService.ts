@@ -24,6 +24,7 @@ import type { Estimation, PricelistCategory } from '../types/estimator';
 import type { PlannerTodo } from '../types/plannerTodo';
 import type { ActorRole } from '../../../../packages/domain/src/autonomyGovernance';
 import { detectPromptInjection } from '../../../../packages/domain/src/receiptExtraction';
+import { TOOLS, type ToolDef } from '../../../../agent-core/src/registry';
 import {
   UNIFIED_MANAGER_ACTIONS,
   UNIFIED_MANAGER_ACTION_TYPES,
@@ -344,6 +345,7 @@ ATURAN PENTING:
 5. Jawab HANYA JSON valid dengan struktur:
 {
   "reply": "Narasi GM yang luwes, jelas, dan berbobot...",
+  "confidence": 0.0-1.0,
   "delegations": [
     {"division": "finance", "note": "Bu Sinta sedang mencatat pengeluaran ke buku kas proyek & memotong sisa RAP..."},
     {"division": "project", "note": "Pak Raka memperbarui persentase progres fisik di jadwal lapangan..."}
@@ -375,7 +377,16 @@ DAFTAR JENIS AKSI ("type") & "params":
 - record_attendance: {employee:"E1 atau nama", type?:"check_in|check_out", project?:"P1", note?:"Hadir tepat waktu"}
 - upsert_pricelist: {name:"HPL Taco Motif Kayu", unit:"lbr", baseCost:185000, marginPct?:20, category?:"material|upah|alat|jasa|borongan|other"}
 - create_estimation: {title:"Interior Kitchen Set", customer:"Bu Rina", phone?:"0811...", items?:[{name:"Kabinet Atas", qty:4, unit:"m1", unitPrice:2200000}]}
-- convert_estimation: {estimation:"EST1", projectName?:"Proyek Kitchen Set Bu Rina"}`;
+- convert_estimation: {estimation:"EST1", projectName?:"Proyek Kitchen Set Bu Rina"}
+
+CONTOH INPUT & OUTPUT (Few-Shot):
+Input: "Catat biaya semen 10 sak 650000 di proyek Rumah Bu Ana"
+Output: {"reply":"Baik Pak, saya mencatat pembelian semen 10 sak senilai Rp 650.000 ke proyek Rumah Bu Ana. Saya akan memotong dari sisa RAP proyek tersebut.","delegations":[{"division":"finance","note":"Bu Sinta mencatat biaya semen ke buku kas proyek & memotong sisa RAP..."}],"actions":[{"type":"record_cost","params":{"project":"P1","item":"Semen 10 sak","total":650000,"qty":10,"unit":"sak","unitPrice":65000},"summary":"Catat biaya Semen 10 sak Rp 650.000 di proyek P1"}],"followUps":["Cek sisa anggaran RAP proyek ini","Update progres pekerjaan lapangan hari ini"]}
+Input: "Update progres pasang keramik jadi 40 persen"
+Output: {"reply":"Saya mengarahkan Pak Raka untuk memperbarui progres fisik pekerjaan pasang keramik menjadi 40% di jadwal lapangan.","delegations":[{"division":"project","note":"Pak Raka memperbarui persentase progres fisik pasang keramik di jadwal lapangan..."}],"actions":[{"type":"update_progress","params":{"project":"P1","workItem":"pasang keramik","progress":40},"summary":"Update progres pasang keramik ke 40% di proyek P1"}],"followUps":["Cek apakah pekerjaan sesuai jadwal Gantt","Konfirmasi ke klien progres terbaru"]}
+Input: "Buat proyek baru Renovasi Ruko Kemang untuk Pak Hendro nilainya 250 juta"
+Output: {"reply":"Saya akan membuat proyek baru Renovasi Ruko Kemang untuk Pak Hendro dengan nilai kontrak Rp 250.000.000. Proyek akan dimulai hari ini dan target selesai dalam 3 bulan.","delegations":[{"division":"project","note":"GM membuat proyek baru dan mengeset jadwal awal..."}],"actions":[{"type":"add_project","params":{"name":"Renovasi Ruko Kemang","client":"Pak Hendro","contract_value":250000000,"start_date":"2026-11-27","end_date":"2026-02-27"},"summary":"Buat proyek Renovasi Ruko Kemang untuk Pak Hendro"}],"followUps":["Tambah item RAP proyek baru ini","Buat estimasi RAB untuk anggaran detail"]}
+`;
 
 export function buildMessages(
   context: ContextPack,
@@ -447,6 +458,48 @@ function normalizeActions(raw: unknown, config: AIConfig): AgentAction[] {
     });
   }
   return out;
+}
+
+/** Validasi parameter aksi terhadap skema tool dari registry sebelum eksekusi.
+ * Hanya memvalidasi aksi yang terdaftar di TOOLS registry; aksi lain (bukan core tool)
+ * dilewati karena dieksekusi melalui jalur lain. */
+export function validateActionParams(
+  action: AgentAction,
+): { ok: true } | { ok: false; code: string; message: string; valid_options?: string[] } {
+  const tool = TOOLS.find((t) => t.name === action.type);
+  if (!tool) {
+    return { ok: true };
+  }
+  const requiredArgs = tool.args.filter((a) => a.required);
+  for (const arg of requiredArgs) {
+    if (action.params[arg.name] == null || action.params[arg.name] === '') {
+      return {
+        ok: false,
+        code: 'parameter_wajib_hilang',
+        message: `Parameter wajib "${arg.name}" hilang untuk aksi ${action.type}.`,
+        valid_options: tool.args.map((a) => a.name),
+      };
+    }
+    if (arg.type === 'integer' && typeof action.params[arg.name] !== 'number') {
+      const parsed = Number(action.params[arg.name]);
+      if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+        return {
+          ok: false,
+          code: 'parameter_tipe_salah',
+          message: `Parameter "${arg.name}" harus berupa bilangan bulat.`,
+        };
+      }
+    }
+    if (arg.enum && !arg.enum.includes(String(action.params[arg.name]))) {
+      return {
+        ok: false,
+        code: 'parameter_nilai_tidak_valid',
+        message: `Parameter "${arg.name}" harus salah satu dari: ${arg.enum.join(', ')}.`,
+        valid_options: arg.enum,
+      };
+    }
+  }
+  return { ok: true };
 }
 
 /** Briefing deterministik yang komunikatif dan tajam. */
@@ -1379,12 +1432,26 @@ export async function runManagerTurn(
     return localSmartManagerTurn(context, userText, config);
   }
 
+const CONFIDENCE_THRESHOLD = 0.7;
+
   let parsed = extractJson<{
     reply?: string;
+    confidence?: number;
     delegations?: unknown;
     actions?: unknown;
     followUps?: unknown;
   }>(text);
+
+  // Confidence threshold: jika LLM tidak yakin, jangan eksekusi aksi
+  const confidence = parsed && Number.isFinite(parsed.confidence) ? (parsed.confidence as number) : 1;
+  if (confidence < CONFIDENCE_THRESHOLD) {
+    return {
+      reply: `Saya masih belum yakin dengan permintaan Anda (kepercayaan ${Math.round(confidence * 100)}%). Bisa tolong diuraikan lebih detail, misalnya menyebutkan nama proyek, jumlah, atau jenis pekerjaan yang ingin dilakukan?`,
+      delegations: [],
+      actions: [],
+      followUps: ['Ulangi permintaan dengan lebih detail'],
+    };
+  }
 
   if (!parsed && (text.includes('{') || text.includes('"reply"'))) {
     try {
@@ -1799,6 +1866,17 @@ export async function executeAgentAction(
   env: ManagerEnv,
   options?: ManagerGovernanceOptions,
 ): Promise<ExecResult> {
+  // Validasi skema parameter terhadap registry sebelum apa pun dieksekusi
+  const paramValidation = validateActionParams(action);
+  if (!paramValidation.ok) {
+    return {
+      ok: false,
+      code: paramValidation.code,
+      message: paramValidation.message,
+      ...(paramValidation.valid_options ? { valid_options: paramValidation.valid_options } : {}),
+    };
+  }
+
   const hasExplicitToken =
     options?.requirePreparedToken === true
     || options?.prepareToken !== undefined

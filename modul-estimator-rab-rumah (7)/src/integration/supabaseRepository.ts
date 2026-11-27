@@ -4,12 +4,6 @@ import { database, type StoreRow } from "./repository";
 
 const APP_STATE_KEY = "app-state";
 
-interface AppStateRow {
-  id: string;
-  state: unknown;
-  updated_at: string;
-}
-
 function readEnv(): { url: string; anonKey: string } | null {
   const meta = import.meta as { env?: Record<string, string | undefined> };
   const env = meta.env;
@@ -30,13 +24,13 @@ export class SupabaseProjectRepository implements ProjectRepository {
   async load(): Promise<PersistedState | null> {
     try {
       const { data, error } = await this.sb
-        .from<AppStateRow, {}>("rab_app_state")
+        .from("rab_app_state")
         .select("state, updated_at")
         .eq("id", APP_STATE_KEY)
         .maybeSingle();
       if (error) throw error;
       if (data?.state) {
-        const state = data.state as PersistedState;
+        const state = (data as { state: unknown }).state as PersistedState;
         await this.writeCache(state);
         this.offline = false;
         return state;
@@ -53,7 +47,7 @@ export class SupabaseProjectRepository implements ProjectRepository {
     await this.writeCache(state);
     try {
       await this.sb
-        .from<AppStateRow, {}>("rab_app_state")
+        .from("rab_app_state")
         .upsert({ id: APP_STATE_KEY, state, updated_at: new Date().toISOString() });
       this.offline = false;
     } catch {
@@ -64,7 +58,7 @@ export class SupabaseProjectRepository implements ProjectRepository {
   async reset(): Promise<void> {
     await database.store.delete(APP_STATE_KEY);
     try {
-      await this.sb.from<AppStateRow, {}>("rab_app_state").delete().eq("id", APP_STATE_KEY);
+      await this.sb.from("rab_app_state").delete().eq("id", APP_STATE_KEY);
       this.offline = false;
     } catch {
       this.offline = true;
