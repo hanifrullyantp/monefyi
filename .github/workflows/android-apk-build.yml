@@ -53,9 +53,26 @@ jobs:
         working-directory: apps/web/android
         run: ./gradlew assembleDebug
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - name: Get version from package.json
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create or update GitHub Release
+        id: release
+        uses: softprops/action-gh-release@v2
         with:
-          name: froyek-android-apk
-          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          tag_name: froyek-mobile-v${{ steps.version.outputs.version }}
+          release_name: Froyek Mobile v${{ steps.version.outputs.version }}
+          body: |
+            Froyek Mobile Android APK (debug)
+
+            Build from commit ${{ github.sha }}
+            Web app: https://froyek.com/app
+          files: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          make_latest: true
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output release URL
+        run: echo "Release: ${{ steps.release.outputs.upload_url }}"

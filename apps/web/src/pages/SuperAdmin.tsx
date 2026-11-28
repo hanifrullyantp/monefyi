@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Users, Building2, Settings, LayoutDashboard, Loader2, RefreshCw,
   Plus, Trash2, Save, ArrowLeft, Search, Activity, AlertTriangle, Archive, RotateCcw,
-  CreditCard,
-  ShieldCheck,
+  CreditCard, ShieldCheck, Download,
 } from 'lucide-react';
 import PricingPlansAdmin from '../components/admin/PricingPlansAdmin';
 import AdminRefundsPanel from '../components/admin/AdminRefundsPanel';
@@ -48,6 +47,9 @@ export default function SuperAdmin() {
   const [organizations, setOrganizations] = useState<AdminOrgRow[]>([]);
   const [orgSearch, setOrgSearch] = useState('');
   const [savingOrgId, setSavingOrgId] = useState<string | null>(null);
+  const [apkDownloadUrl, setApkDownloadUrl] = useState<string | null>(null);
+  const [apkVersion, setApkVersion] = useState<string | null>(null);
+  const [apkLoading, setApkLoading] = useState(false);
 
   const loadOverview = useCallback(async () => {
     setLoading(true);
@@ -112,6 +114,29 @@ export default function SuperAdmin() {
     }
   }, []);
 
+  const loadApkRelease = useCallback(async () => {
+    setApkLoading(true);
+    try {
+      const res = await fetch('https://api.github.com/repos/hanifrullyantp/monefyi/releases/latest', {
+        headers: { Accept: 'application/vnd.github+json' },
+      });
+      if (!res.ok) {
+        setApkLoading(false);
+        return;
+      }
+      const data = await res.json();
+      const asset = data.assets?.find((a: any) => a.name?.endsWith('.apk'));
+      if (asset) {
+        setApkDownloadUrl(asset.browser_download_url);
+        setApkVersion(data.tag_name || data.name || 'unknown');
+      }
+    } catch (e) {
+      console.error('[admin] failed to fetch APK release:', e);
+    } finally {
+      setApkLoading(false);
+    }
+  }, []);
+
   const handleRestoreProject = async (row: ArchivedProjectRow) => {
     if (!window.confirm(`Pulihkan proyek "${row.name}"?`)) return;
     setRestoringId(row.id);
@@ -145,7 +170,8 @@ export default function SuperAdmin() {
     if (tab === 'monitoring') loadMonitoring();
     if (tab === 'archives') loadArchives();
     if (tab === 'organizations') loadOrganizations();
-  }, [tab, loadOverview, loadUsers, loadTypes, loadMonitoring, loadArchives, loadOrganizations]);
+    if (tab === 'platform') loadApkRelease();
+  }, [tab, loadOverview, loadUsers, loadTypes, loadMonitoring, loadArchives, loadOrganizations, loadApkRelease]);
 
   const openEditUser = (u: AdminUserRow) => {
     setSelectedUser(u);
@@ -577,6 +603,37 @@ export default function SuperAdmin() {
             <button type="button" onClick={savePlatform} disabled={loading} className="flex items-center gap-2 px-5 min-h-11 bg-[#059669] text-white rounded-xl text-sm font-bold">
               <Save className="w-4 h-4" /> Simpan
             </button>
+
+            <div className="mt-8 pt-6 border-t border-[#E5EAE8]">
+              <h3 className="font-bold text-[#0F172A] mb-3">Distribusi Aplikasi Mobile</h3>
+              <div className="bg-[#F4F7F5] rounded-2xl p-5 border border-[#E5EAE8] shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#059669] flex items-center justify-center shrink-0">
+                    <Download className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-[#0F172A]">Froyek Mobile (Android APK)</div>
+                    <div className="text-xs text-[#5B6B7A] mt-0.5">
+                      Versi: {apkVersion || '—'} · {apkLoading ? 'Memuat...' : apkDownloadUrl ? 'Tersedia' : 'Belum ada rilis'}
+                    </div>
+                  </div>
+                </div>
+                {apkDownloadUrl ? (
+                  <a href={apkDownloadUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 px-5 min-h-11 bg-[#059669] text-white rounded-xl text-sm font-bold">
+                    <Download className="w-4 h-4" /> Unduh APK &amp; Install
+                  </a>
+                ) : apkLoading ? (
+                  <div className="mt-4 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-[#059669]" /></div>
+                ) : (
+                  <button type="button" disabled className="mt-4 inline-flex items-center gap-2 px-5 min-h-11 bg-slate-200 text-slate-400 rounded-xl text-sm font-bold">
+                    <Download className="w-4 h-4" /> Belum Tersedia
+                  </button>
+                )}
+                <p className="mt-3 text-xs text-[#5B6B7A]">
+                  Build otomatis via GitHub Actions setiap push ke main. Instal APK di perangkat Android.
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
