@@ -84,8 +84,6 @@ export interface Lead {
   verifiedViaMayar?: boolean;
   // Resend Email Logs
   emails?: LeadEmailLog[];
-  // Account Credential for WA / Resend Delivery
-  accountPassword?: string;
   // Estimator in-app usage activity
   estimatorActivity?: EstimatorUserActivity;
 }

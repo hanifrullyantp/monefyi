@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useLeadsStore } from "@/lib/store/leadsStore";
+import { authedFetch } from "@/lib/auth/authedFetch";
 import {
   Plus,
   Search,
@@ -139,7 +140,6 @@ function ResendEmailModal({
   onClose: () => void;
   onEmailSent: (log: LeadEmailLog) => void;
 }) {
-  const [customPassword, setCustomPassword] = useState("Estimator2026!");
   const [isSending, setIsSending] = useState(false);
   const [activeSendingType, setActiveSendingType] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; isError?: boolean } | null>(null);
@@ -167,7 +167,6 @@ function ResendEmailModal({
           planTier: lead.planTier || (lead.projectType?.toLowerCase().includes("pro") ? "pro" : lead.projectType?.toLowerCase().includes("free") ? "free" : "standard"),
           amount: lead.amount || 0,
           paymentMethod: lead.paymentMethod || "QRIS",
-          password: customPassword,
           leadId: lead.id,
           sessionId: lead.sessionId,
         }),
@@ -376,32 +375,13 @@ function ResendEmailModal({
               className="w-full py-3.5 bg-gradient-to-r from-[#065f46] to-emerald-700 hover:from-emerald-800 hover:to-emerald-900 text-white font-black text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-md shadow-emerald-900/15 cursor-pointer disabled:opacity-50 transition-all"
             >
               <Zap className="w-4 h-4 text-amber-300" />
-              <span>⚡ Kirim Paket Lengkap (Konfirmasi Lunas + Password Akun)</span>
+              <span>⚡ Kirim Paket Lengkap (Konfirmasi Lunas + Tautan Akses)</span>
             </button>
           </div>
 
-          {/* Password Customizer */}
-          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700">
-                Password Sementara yang Disertakan:
-              </label>
-              <button
-                type="button"
-                onClick={() => setCustomPassword(`Froyek${Math.floor(1000 + Math.random() * 9000)}!`)}
-                className="text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer"
-              >
-                Acak Otomatis
-              </button>
-            </div>
-            <input
-              value={customPassword}
-              onChange={(e) => setCustomPassword(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-mono font-bold text-slate-800"
-              placeholder="Estimator2026!"
-            />
-            <p className="text-[11px] text-slate-400">
-              Password ini akan dicantumkan di template email &apos;Akses Akun&apos; dan &apos;Reset Password&apos;.
+          <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
+            <p className="text-[11px] text-slate-600 font-medium">
+              Email akses akun kini menggunakan tautan aktivasi tanpa menyertakan password plaintext.
             </p>
           </div>
 
@@ -491,9 +471,9 @@ function SendAccountWaModal({
 }: {
   lead: Lead;
   onClose: () => void;
-  onAccountSent: (password: string) => void;
+  onAccountSent: () => void;
 }) {
-  const [password, setPassword] = useState(lead.accountPassword || "Estimator2026!");
+  const [password, setPassword] = useState("");
   const [recipientName, setRecipientName] = useState(lead.name || "");
   const [recipientPhone, setRecipientPhone] = useState(lead.phone || "");
   const [recipientEmail, setRecipientEmail] = useState(lead.email || "");
@@ -531,10 +511,14 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
       alert("Nomor WhatsApp belum valid.");
       return;
     }
+    if (password.trim().length < 12) {
+      alert("Password wajib minimal 12 karakter.");
+      return;
+    }
 
     // Pastikan user & password tersinkron ke Supabase Auth
     if (recipientEmail && recipientEmail.includes("@")) {
-      fetch("/api/crm/provision", {
+      authedFetch("/api/crm/provision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -549,7 +533,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
 
     const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(messageText)}`;
     window.open(waUrl, "_blank");
-    onAccountSent(password);
+    onAccountSent();
     onClose();
   };
 
@@ -635,17 +619,21 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
                 </label>
                 <button
                   type="button"
-                  onClick={() => setPassword(`Froyek${Math.floor(1000 + Math.random() * 9000)}!`)}
+                  onClick={() =>
+                    setPassword(
+                      `Froyek${Array.from(crypto.getRandomValues(new Uint32Array(1)))[0].toString(36).padStart(7, "0").slice(0, 7)}!A`,
+                    )
+                  }
                   className="text-[10px] font-bold text-emerald-700 hover:underline cursor-pointer"
                 >
-                  Acak Otomatis 🎲
+                  Acak 15 Karakter 🎲
                 </button>
               </div>
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-slate-900"
-                placeholder="Estimator2026!"
+                placeholder="Minimal 12 karakter"
               />
             </div>
           </div>
@@ -1186,31 +1174,17 @@ export default function CRMPage() {
     showToast(`Email ${newLog.type.replace("_", " ")} berhasil dikirim via Resend!`);
   };
 
-  const handleAccountWaSentCallback = (pwd: string) => {
+  const handleAccountWaSentCallback = () => {
     if (!selectedLeadForAccountWa) return;
-
-    useLeadsStore.getState().updateLead(selectedLeadForAccountWa.id, {
-      accountPassword: pwd,
-    });
 
     addActivity(selectedLeadForAccountWa.id, {
       type: "whatsapp",
-      content: `Nama & Password (${pwd}) akun Estimator dikirim ke WA (+${selectedLeadForAccountWa.phone})`,
+      content: `Data akses akun Estimator dikirim ke WA (+${selectedLeadForAccountWa.phone})`,
       timestamp: new Date().toISOString(),
       by: "Admin",
     });
 
-    fetch("/api/crm/lead", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: selectedLeadForAccountWa.id,
-        sessionId: selectedLeadForAccountWa.sessionId,
-        accountPassword: pwd,
-      }),
-    }).catch(() => {});
-
-    showToast(`Akun & password untuk ${selectedLeadForAccountWa.name} berhasil diarahkan ke WhatsApp!`);
+    showToast(`Data akses akun untuk ${selectedLeadForAccountWa.name} berhasil diarahkan ke WhatsApp!`);
   };
 
   const handlePaymentFollowUpSentCallback = (leadId: string, notes: string) => {

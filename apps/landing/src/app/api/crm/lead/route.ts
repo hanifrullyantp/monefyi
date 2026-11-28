@@ -655,11 +655,11 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// PATCH: Perbarui status, catatan, password akun, atau metrik keaktifan estimasi lead
+// PATCH: Perbarui status, catatan, atau metrik keaktifan estimasi lead (tanpa menyimpan password)
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { id, sessionId, status, notes, accountPassword, usedEstimations, estimatorActivity } = body;
+    const { id, sessionId, status, notes, usedEstimations, estimatorActivity } = body;
 
     if (!id && !sessionId) {
       return NextResponse.json(
@@ -676,11 +676,11 @@ export async function PATCH(req: NextRequest) {
         val.id === id ||
         val.sessionId === sessionId
       ) {
+        const { accountPassword: _removedMemPwd, ...safeVal } = val || {};
         memoryLeads.set(key, {
-          ...val,
+          ...safeVal,
           ...(status ? { status } : {}),
           ...(notes !== undefined ? { notes } : {}),
-          ...(accountPassword !== undefined ? { accountPassword } : {}),
           ...(usedEstimations !== undefined ? { usedEstimations } : {}),
           ...(estimatorActivity !== undefined ? { estimatorActivity } : {}),
           updatedAt: new Date().toISOString(),
@@ -714,15 +714,15 @@ export async function PATCH(req: NextRequest) {
         if (matched && matched.length > 0) {
           const row = matched[0];
           const raw = row.raw_payload || {};
+          const { accountPassword: _removedRawPwd, ...safeRaw } = raw;
           await supabase
             .from("orders")
             .update({
               status: orderStatus,
               raw_payload: {
-                ...raw,
+                ...safeRaw,
                 ...(status ? { status } : {}),
                 ...(notes !== undefined ? { notes } : {}),
-                ...(accountPassword !== undefined ? { accountPassword } : {}),
                 ...(usedEstimations !== undefined ? { usedEstimations } : {}),
                 ...(estimatorActivity !== undefined ? { estimatorActivity } : {}),
                 updatedAt: new Date().toISOString(),
@@ -735,7 +735,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, status, accountPassword, usedEstimations });
+    return NextResponse.json({ ok: true, status, usedEstimations });
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: err?.message || "Internal server error" },

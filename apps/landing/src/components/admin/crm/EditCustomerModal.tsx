@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { Lead, LeadStatus } from "@/lib/types/leads";
 import { LEAD_STATUS_LABELS } from "@/lib/types/leads";
+import { authedFetch } from "@/lib/auth/authedFetch";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils/format";
 
 interface Props {
@@ -34,7 +35,7 @@ interface Props {
 export function EditCustomerModal({ lead, onClose, onUpdated }: Props) {
   const [name, setName] = useState(lead.name || "");
   const [email, setEmail] = useState(lead.email || "");
-  const [password, setPassword] = useState(lead.accountPassword || "Estimator2026!");
+  const [password, setPassword] = useState("");
   const [phone, setPhone] = useState(lead.phone || "");
   const [planTier, setPlanTier] = useState<"pro" | "standard" | "free">(
     (lead.planTier as any) ||
@@ -55,7 +56,7 @@ export function EditCustomerModal({ lead, onClose, onUpdated }: Props) {
   // Load live statistics
   const fetchStats = () => {
     setLoadingStats(true);
-    fetch(`/api/crm/customer?email=${encodeURIComponent(lead.email || "")}&id=${encodeURIComponent(lead.id)}`)
+    authedFetch(`/api/crm/customer?email=${encodeURIComponent(lead.email || "")}&id=${encodeURIComponent(lead.id)}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.ok && d.data) {
@@ -81,7 +82,7 @@ export function EditCustomerModal({ lead, onClose, onUpdated }: Props) {
     setSuccessMsg(null);
 
     try {
-      const res = await fetch("/api/crm/customer", {
+      const res = await authedFetch("/api/crm/customer", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -108,7 +109,6 @@ export function EditCustomerModal({ lead, onClose, onUpdated }: Props) {
       const updates: Partial<Lead> = {
         name: name.trim(),
         email: email.trim(),
-        accountPassword: password.trim(),
         phone: phone.trim(),
         planTier,
         status,
@@ -307,10 +307,14 @@ export function EditCustomerModal({ lead, onClose, onUpdated }: Props) {
                   </label>
                   <button
                     type="button"
-                    onClick={() => setPassword("Estimator2026!")}
+                    onClick={() =>
+                      setPassword(
+                        `Froyek${Array.from(crypto.getRandomValues(new Uint32Array(1)))[0].toString(36).padStart(7, "0").slice(0, 7)}!A`,
+                      )
+                    }
                     className="text-[10px] text-emerald-600 hover:text-emerald-700 font-bold"
                   >
-                    Pakai Estimator2026!
+                    Acak 15 Karakter
                   </button>
                 </div>
                 <div className="relative">
@@ -319,9 +323,9 @@ export function EditCustomerModal({ lead, onClose, onUpdated }: Props) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={12}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 pr-10 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono"
-                    placeholder="Minimal 6 karakter"
+                    placeholder="Minimal 12 karakter"
                   />
                   <button
                     type="button"

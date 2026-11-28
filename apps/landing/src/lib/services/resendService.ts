@@ -6,7 +6,6 @@ export interface SendEmailOptions {
   planTier?: "free" | "standard" | "pro";
   amount?: number;
   paymentMethod?: string;
-  password?: string;
   resetLink?: string;
   appUrl?: string;
 }
@@ -115,19 +114,18 @@ function getPaymentConfirmationTemplate(opts: SendEmailOptions) {
   `.trim();
 }
 
-// 2. Template: Password & Akses Akun
+// 2. Template: Aktivasi & Akses Akun (tanpa password)
 function getAccountAccessTemplate(opts: SendEmailOptions) {
   const name = escapeHtml(opts.name || "Pelanggan Froyek");
   const email = escapeHtml(opts.to);
-  const password = escapeHtml(opts.password || "Estimator2026!");
-  const loginUrl = escapeHtml(opts.appUrl || "https://estimator.froyek.com/app/estimator");
+  const setupUrl = escapeHtml(opts.resetLink || opts.appUrl || "https://estimator.froyek.com/app/estimator");
 
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Akses Akun & Password Froyek</title>
+  <title>Aktivasi Akun Froyek</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
   <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
@@ -135,47 +133,28 @@ function getAccountAccessTemplate(opts: SendEmailOptions) {
     <!-- Header -->
     <div style="background-color: #1e3a8a; padding: 32px 28px; text-align: center;">
       <div style="display: inline-block; width: 44px; height: 44px; background-color: #ffffff; border-radius: 12px; line-height: 44px; color: #1e3a8a; font-size: 24px; font-weight: 900; margin-bottom: 12px;">🔑</div>
-      <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800;">Akses Akun Estimator Anda</h1>
-      <p style="color: #bfdbfe; margin: 6px 0 0; font-size: 14px;">Simpan informasi login berikut dengan aman.</p>
+      <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 800;">Aktivasi Akun Estimator Anda</h1>
+      <p style="color: #bfdbfe; margin: 6px 0 0; font-size: 14px;">Atur kata sandi pribadi Anda melalui tautan aman di bawah ini.</p>
     </div>
 
     <!-- Body Content -->
     <div style="padding: 32px 28px;">
       <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-top: 0;">
         Halo <strong>${name}</strong>,<br><br>
-        Akun Froyek Anda telah dibuat. Anda dapat langsung login ke aplikasi menggunakan detail berikut:
+        Akun Froyek Anda telah disiapkan untuk email <strong>${email}</strong>. Klik tombol berikut untuk mengatur kata sandi dan masuk ke aplikasi:
       </p>
-
-      <!-- Credentials Box -->
-      <div style="background-color: #eff6ff; border-radius: 14px; padding: 22px; margin: 24px 0; border: 2px solid #bfdbfe;">
-        <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
-          <tr>
-            <td style="color: #64748b; padding: 6px 0; width: 120px;">URL Login:</td>
-            <td style="color: #1e3a8a; font-weight: 700; padding: 6px 0;">
-              <a href="${loginUrl}" style="color: #2563eb; text-decoration: underline;">estimator.froyek.com</a>
-            </td>
-          </tr>
-          <tr>
-            <td style="color: #64748b; padding: 6px 0;">Email:</td>
-            <td style="color: #0f172a; font-weight: 700; padding: 6px 0; font-family: monospace; font-size: 15px;">${email}</td>
-          </tr>
-          <tr>
-            <td style="color: #64748b; padding: 6px 0;">Password:</td>
-            <td style="color: #1e3a8a; font-weight: 900; padding: 6px 0; font-family: monospace; font-size: 16px; letter-spacing: 1px;">${password}</td>
-          </tr>
-        </table>
-      </div>
 
       <!-- CTA Button -->
       <div style="text-align: center; margin: 32px 0;">
-        <a href="${loginUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
-          Masuk ke Aplikasi Sekarang &rarr;
+        <a href="${setupUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+          Atur Kata Sandi & Masuk ke Aplikasi &rarr;
         </a>
       </div>
 
-      <div style="background-color: #fffbeb; border-radius: 10px; padding: 12px 16px; border: 1px solid #fef3c7; font-size: 12px; color: #92400e;">
-        💡 <strong>Tips Keamanan:</strong> Demi kenyamanan Anda, kami sarankan untuk mengubah password setelah berhasil masuk ke menu Pengaturan Akun.
-      </div>
+      <p style="color: #64748b; font-size: 13px; line-height: 1.6; border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 24px;">
+        Jika tombol tidak berfungsi, salin dan buka tautan berikut di browser Anda:<br>
+        <a href="${setupUrl}" style="color: #2563eb; word-break: break-all; text-decoration: underline; font-size: 12px;">${setupUrl}</a>
+      </p>
     </div>
 
     <!-- Footer -->
