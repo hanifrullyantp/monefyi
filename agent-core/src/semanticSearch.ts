@@ -47,8 +47,9 @@ export type EmbeddingOptions = {
 };
 
 function getEnv(key: string): string | undefined {
-  if (typeof Deno !== 'undefined' && Deno.env) {
-    return Deno.env.get(key);
+  const deno = (globalThis as any).Deno;
+  if (deno && deno.env) {
+    return deno.env.get(key);
   }
   if (typeof process !== 'undefined' && process.env) {
     return process.env[key];

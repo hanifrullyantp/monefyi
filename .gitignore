@@ -21,5 +21,11 @@ apps/*/.env.local
 *.tsbuildinfo
 .vercel
 .env*
+!.env.example
+!**/.env.example
+dist/
+MacFyi/.build/
+*.apk
+*.aab
 monefyi-autonomous-ads*
 *.zip

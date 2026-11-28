@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
+import {
+  User, Globe, LogOut, Edit3, Check, Building2, Bell, Shield,
   Info, RefreshCw, Loader2, ChevronRight, Lock, Users, Wifi, WifiOff, Sparkles, Wallet,
   CreditCard, FlaskConical, Bot, Bug, FileSpreadsheet,
 } from 'lucide-react';
@@ -504,8 +505,8 @@ export default function Settings() {
               sub: estimatorOnly
                 ? 'Aktif seumur hidup'
                 : currentPlan.projects_per_month != null && projectsThisMonth != null
-                ? `${projectsThisMonth}/${currentPlan.projects_per_month} proyek bulan ini`
-                : `${projects.length} proyek`,
+                  ? `${projectsThisMonth}/${currentPlan.projects_per_month} proyek bulan ini`
+                  : `${projects.length} proyek`,
             },
             { label: 'Status', value: isOnline ? 'Online' : 'Offline', sub: syncStatus },
           ].map((kpi, i) => (
@@ -524,11 +525,10 @@ export default function Settings() {
               key={t.id}
               type="button"
               onClick={() => selectTab(t.id)}
-              className={`min-h-11 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${
-                tab === t.id
+              className={`min-h-11 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap border transition-all ${tab === t.id
                   ? 'bg-[#059669] text-white border-[#059669] shadow-sm'
                   : 'bg-white text-[#5B6B7A] border-[#E5EAE8] hover:bg-slate-50'
-              }`}
+                }`}
             >
               <t.icon className="w-3.5 h-3.5" />
               {t.label}
@@ -536,425 +536,424 @@ export default function Settings() {
           ))}
         </div>
 
-      {tab === 'profil' && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-5">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-2xl font-black shrink-0">
-                {name?.charAt(0)?.toUpperCase() || '?'}
+        {tab === 'profil' && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-5">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-2xl font-black shrink-0">
+                  {name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div>
+                  <div className="font-black text-xl text-slate-900">{name || '—'}</div>
+                  <div className="text-sm text-slate-500">{user?.email}</div>
+                  <span className={`inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${roleBadgeClass(user?.role)}`}>
+                    {roleLabel(user?.role)}
+                  </span>
+                </div>
               </div>
-              <div>
-                <div className="font-black text-xl text-slate-900">{name || '—'}</div>
-                <div className="text-sm text-slate-500">{user?.email}</div>
-                <span className={`inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${roleBadgeClass(user?.role)}`}>
-                  {roleLabel(user?.role)}
-                </span>
-              </div>
+              {!editingProfile ? (
+                <button type="button" onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg">
+                  <Edit3 className="w-3.5 h-3.5" /> Edit
+                </button>
+              ) : (
+                <button type="button" onClick={handleSaveProfile} disabled={savingProfile} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg disabled:opacity-50">
+                  {savingProfile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  Simpan
+                </button>
+              )}
             </div>
-            {!editingProfile ? (
-              <button type="button" onClick={() => setEditingProfile(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg">
-                <Edit3 className="w-3.5 h-3.5" /> Edit
-              </button>
-            ) : (
-              <button type="button" onClick={handleSaveProfile} disabled={savingProfile} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg disabled:opacity-50">
-                {savingProfile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                Simpan
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="Nama Lengkap" icon={User} htmlFor={editingProfile ? 'settings-profile-name' : undefined}>
+                {editingProfile ? (
+                  <input
+                    id="settings-profile-name"
+                    name="name"
+                    autoComplete="name"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-slate-800">{name || '—'}</span>
+                )}
+              </Field>
+              <Field label="Email" icon={Globe}>
+                <span className="text-sm font-medium text-slate-800">{user?.email || '—'}</span>
+                <p className="text-xs text-slate-600 mt-0.5">Email tidak dapat diubah di sini.</p>
+              </Field>
+              <Field label="Jabatan / Posisi" htmlFor={editingProfile ? 'settings-profile-position' : undefined}>
+                {editingProfile ? (
+                  <input
+                    id="settings-profile-position"
+                    name="position"
+                    autoComplete="organization-title"
+                    value={position}
+                    onChange={e => setPosition(e.target.value)}
+                    placeholder="Site Manager"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-slate-800">{position || '—'}</span>
+                )}
+              </Field>
+              <Field label="Departemen" htmlFor={editingProfile ? 'settings-profile-department' : undefined}>
+                {editingProfile ? (
+                  <input
+                    id="settings-profile-department"
+                    name="department"
+                    autoComplete="off"
+                    value={department}
+                    onChange={e => setDepartment(e.target.value)}
+                    placeholder="Operasional"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-slate-800">{department || '—'}</span>
+                )}
+              </Field>
+              <Field label="Telepon" htmlFor={editingProfile ? 'settings-profile-phone' : undefined}>
+                {editingProfile ? (
+                  <input
+                    id="settings-profile-phone"
+                    name="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="+62..."
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-slate-800">{phone || '—'}</span>
+                )}
+              </Field>
+              <Field label="Organisasi">
+                <span className="text-sm font-medium text-slate-800">{tenant?.name || '—'}</span>
+              </Field>
+            </div>
+
+            {editingProfile && (
+              <button type="button" onClick={() => { setEditingProfile(false); load(); }} className="text-sm text-slate-500 hover:text-slate-700">
+                Batal
               </button>
             )}
-          </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Nama Lengkap" icon={User} htmlFor={editingProfile ? 'settings-profile-name' : undefined}>
-              {editingProfile ? (
-                <input
-                  id="settings-profile-name"
-                  name="name"
-                  autoComplete="name"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                />
-              ) : (
-                <span className="text-sm font-medium text-slate-800">{name || '—'}</span>
-              )}
-            </Field>
-            <Field label="Email" icon={Globe}>
-              <span className="text-sm font-medium text-slate-800">{user?.email || '—'}</span>
-              <p className="text-xs text-slate-600 mt-0.5">Email tidak dapat diubah di sini.</p>
-            </Field>
-            <Field label="Jabatan / Posisi" htmlFor={editingProfile ? 'settings-profile-position' : undefined}>
-              {editingProfile ? (
-                <input
-                  id="settings-profile-position"
-                  name="position"
-                  autoComplete="organization-title"
-                  value={position}
-                  onChange={e => setPosition(e.target.value)}
-                  placeholder="Site Manager"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                />
-              ) : (
-                <span className="text-sm font-medium text-slate-800">{position || '—'}</span>
-              )}
-            </Field>
-            <Field label="Departemen" htmlFor={editingProfile ? 'settings-profile-department' : undefined}>
-              {editingProfile ? (
-                <input
-                  id="settings-profile-department"
-                  name="department"
-                  autoComplete="off"
-                  value={department}
-                  onChange={e => setDepartment(e.target.value)}
-                  placeholder="Operasional"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                />
-              ) : (
-                <span className="text-sm font-medium text-slate-800">{department || '—'}</span>
-              )}
-            </Field>
-            <Field label="Telepon" htmlFor={editingProfile ? 'settings-profile-phone' : undefined}>
-              {editingProfile ? (
-                <input
-                  id="settings-profile-phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  placeholder="+62..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"
-                />
-              ) : (
-                <span className="text-sm font-medium text-slate-800">{phone || '—'}</span>
-              )}
-            </Field>
-            <Field label="Organisasi">
-              <span className="text-sm font-medium text-slate-800">{tenant?.name || '—'}</span>
-            </Field>
-          </div>
-
-          {editingProfile && (
-            <button type="button" onClick={() => { setEditingProfile(false); load(); }} className="text-sm text-slate-500 hover:text-slate-700">
-              Batal
-            </button>
-          )}
-
-          <div className="pt-4 border-t border-slate-100 space-y-3">
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-emerald-600" />
-              <h3 className="font-bold text-slate-800">Versi Finance</h3>
-            </div>
-            <p className="text-sm text-slate-500">
-              Keuangan Bisnis (v3): neraca organisasi 8 tab dari mockup terbaru. Klasik (v1): ringkasan per proyek.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              {(['v1', 'v3'] as const).map(v => (
-                <button
-                  key={v}
-                  type="button"
-                  disabled={savingFinanceVersion}
-                  onClick={() => handleFinanceVersionChange(v)}
-                  className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold text-left transition-colors ${
-                    (v === 'v3' ? isSandboxFinance(financeVersion) : financeVersion === 'v1')
-                      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="font-bold">{v === 'v1' ? 'Keuangan Klasik (v1)' : 'Keuangan Bisnis (v3)'}</div>
-                  <div className="text-xs font-normal mt-0.5 opacity-80">
-                    {v === 'v1' ? 'Dashboard transaksi proyek' : 'Hero kas, Neraca Bisnis, 8 tab'}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {!demoActive && tenant?.id && isSandboxFinance(financeVersion) && (
-            <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} />
-          )}
-        </div>
-      )}
-
-      {tab === 'estimator' && hasEstimatorAccess && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          {demoActive ? (
-            <p className="text-sm text-[#5B6B7A]">Pengaturan Estimator & PDF tidak tersedia di mode demo.</p>
-          ) : (
-            <EstimatorSettingsPanel />
-          )}
-        </div>
-      )}
-
-      {tab === 'akun' && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          {demoActive ? (
-            <p className="text-sm text-[#5B6B7A]">Pengaturan integrasi akun tidak tersedia di mode demo.</p>
-          ) : (
-            <UserAccountPanel />
-          )}
-        </div>
-      )}
-
-      {tab === 'koordinasi' && canManageTeam && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          {demoActive ? (
-            <p className="text-sm text-[#5B6B7A]">Koordinasi AI & Bot Telegram tidak tersedia di mode demo.</p>
-          ) : (
-            <FieldCoordinationPanel />
-          )}
-        </div>
-      )}
-
-      {tab === 'organisasi' && canEditOrg && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-5">
-          <div>
-            <h3 className="font-bold text-slate-800">Profil Organisasi</h3>
-            <p className="text-sm text-slate-500">
-              Identitas perusahaan Anda. Warna brand diterapkan ke PDF customer, menu aktif, dan portal karyawan — tanpa mengubah logo Froyek.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label htmlFor="settings-org-name" className="text-xs font-semibold text-slate-600 mb-1 block">Nama Perusahaan</label>
-              <input id="settings-org-name" name="orgName" autoComplete="organization" value={orgName} onChange={e => setOrgName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
-            </div>
-            <div>
-              <label htmlFor="settings-org-industry" className="text-xs font-semibold text-slate-600 mb-1 block">Industri</label>
-              <select id="settings-org-industry" name="industry" value={industry} onChange={e => setIndustry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
-                <option value="">Pilih industri</option>
-                {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="settings-org-business-type" className="text-xs font-semibold text-slate-600 mb-1 block">Tipe Bisnis</label>
-              <select id="settings-org-business-type" name="businessType" value={businessType} onChange={e => setBusinessType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
-                {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="settings-org-timezone" className="text-xs font-semibold text-slate-600 mb-1 block">Zona Waktu</label>
-              <select id="settings-org-timezone" name="timezone" value={timezone} onChange={e => setTimezone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
-                {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="settings-org-currency" className="text-xs font-semibold text-slate-600 mb-1 block">Mata Uang Default</label>
-              <select id="settings-org-currency" name="currency" value={currency} onChange={e => setCurrency(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
-                {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="settings-org-brand-color-hex" className="text-xs font-semibold text-slate-600 mb-1 block">Warna Brand Organisasi</label>
-              <div className="flex items-center gap-3">
-                <input id="settings-org-brand-color-picker" name="brandColorPicker" aria-label="Pilih warna brand organisasi" type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer" />
-                <input id="settings-org-brand-color-hex" name="brandColor" autoComplete="off" spellCheck={false} value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono" />
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                <h3 className="font-bold text-slate-800">Versi Finance</h3>
+              </div>
+              <p className="text-sm text-slate-500">
+                Keuangan Bisnis (v3): neraca organisasi 8 tab dari mockup terbaru. Klasik (v1): ringkasan per proyek.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                {(['v1', 'v3'] as const).map(v => (
+                  <button
+                    key={v}
+                    type="button"
+                    disabled={savingFinanceVersion}
+                    onClick={() => handleFinanceVersionChange(v)}
+                    className={`flex-1 px-4 py-3 rounded-xl border text-sm font-semibold text-left transition-colors ${(v === 'v3' ? isSandboxFinance(financeVersion) : financeVersion === 'v1')
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                  >
+                    <div className="font-bold">{v === 'v1' ? 'Keuangan Klasik (v1)' : 'Keuangan Bisnis (v3)'}</div>
+                    <div className="text-xs font-normal mt-0.5 opacity-80">
+                      {v === 'v1' ? 'Dashboard transaksi proyek' : 'Hero kas, Neraca Bisnis, 8 tab'}
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
+
+            {!demoActive && tenant?.id && isSandboxFinance(financeVersion) && (
+              <FinanceIntegrationPanel orgId={tenant.id} userId={user?.id} />
+            )}
           </div>
+        )}
 
-          <BrandIdentityPanel
-            brandColor={brandColor}
-            syncPdf={syncPdfBrand}
-            onSyncPdfChange={setSyncPdfBrand}
-          />
+        {tab === 'estimator' && hasEstimatorAccess && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
+            {demoActive ? (
+              <p className="text-sm text-[#5B6B7A]">Pengaturan Estimator & PDF tidak tersedia di mode demo.</p>
+            ) : (
+              <EstimatorSettingsPanel />
+            )}
+          </div>
+        )}
 
-          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+        {tab === 'akun' && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
+            {demoActive ? (
+              <p className="text-sm text-[#5B6B7A]">Pengaturan integrasi akun tidak tersedia di mode demo.</p>
+            ) : (
+              <UserAccountPanel />
+            )}
+          </div>
+        )}
+
+        {tab === 'koordinasi' && canManageTeam && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
+            {demoActive ? (
+              <p className="text-sm text-[#5B6B7A]">Koordinasi AI & Bot Telegram tidak tersedia di mode demo.</p>
+            ) : (
+              <FieldCoordinationPanel />
+            )}
+          </div>
+        )}
+
+        {tab === 'organisasi' && canEditOrg && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-5">
             <div>
-              <h4 className="font-bold text-slate-800">Paket langganan</h4>
+              <h3 className="font-bold text-slate-800">Profil Organisasi</h3>
               <p className="text-sm text-slate-500">
-                {estimatorOnly ? (
-                  <>{resolvedPlanLabel} · Aktif seumur hidup</>
-                ) : (
-                  <>
-                    {resolvedPlanLabel} · {formatPlanPriceIdr(currentPlan.price_monthly_idr)}/bulan
-                    {currentPlan.projects_per_month != null && projectsThisMonth != null && (
-                      <> · {projectsThisMonth}/{currentPlan.projects_per_month} proyek bulan ini</>
-                    )}
-                  </>
-                )}
+                Identitas perusahaan Anda. Warna brand diterapkan ke PDF customer, menu aktif, dan portal karyawan — tanpa mengubah logo Froyek.
               </p>
             </div>
-            {!estimatorOnly && (
-              <button
-                type="button"
-                onClick={() => selectTab('pricelist')}
-                className="px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl"
-              >
-                Lihat pricelist &amp; upgrade
-              </button>
-            )}
-          </div>
 
-          <div className="flex flex-wrap gap-3 pt-2">
-            <button type="button" onClick={handleSaveOrg} disabled={savingOrg} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
-              {savingOrg && <Loader2 className="w-4 h-4 animate-spin" />}
-              Simpan Organisasi
-            </button>
-            {!estimatorOnly && (
-              <button type="button" onClick={goToHr} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 flex items-center gap-1.5 hover:bg-slate-50">
-                <Users className="w-4 h-4" /> HR &amp; Karyawan
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {!estimatorOnly && (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-500">
-              Kelola anggota, undangan, dan akses join di halaman <button type="button" onClick={goToHr} className="text-emerald-600 font-semibold">HR &amp; Karyawan</button>.
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'pricelist' && canEditOrg && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          <UpgradePlansPanel
-            orgPlanType={tenant?.plan}
-            pricingPlans={pricingPlans}
-            projectsThisMonth={projectsThisMonth}
-          />
-        </div>
-      )}
-
-      {tab === 'domain' && canEditOrg && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          {demoActive ? (
-            <p className="text-sm text-[#5B6B7A]">Custom Domain tidak tersedia di mode demo.</p>
-          ) : (
-            <CustomDomainPanel onUpgrade={() => selectTab('pricelist')} />
-          )}
-        </div>
-      )}
-
-      {tab === 'notifikasi' && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-5">
-          <div>
-            <h3 className="font-bold text-slate-800">Preferensi Notifikasi</h3>
-            <p className="text-sm text-slate-500">Atur jenis notifikasi yang ingin kamu terima.</p>
-          </div>
-
-          <div className="space-y-1">
-            <NotifGroup title="Email">
-              {[
-                { key: 'email_invitation' as const, label: 'Undangan & welcome email' },
-                { key: 'email_role_change' as const, label: 'Perubahan role & akses' },
-              ].map(item => (
-                <ToggleRow key={item.key} label={item.label} checked={notifPrefs[item.key]} onChange={v => handleNotifChange(item.key, v)} />
-              ))}
-            </NotifGroup>
-            <NotifGroup title="In-App">
-              {[
-                { key: 'inapp_join_request' as const, label: 'Permintaan join tim' },
-                { key: 'inapp_project' as const, label: 'Proyek & task update' },
-                { key: 'inapp_hr' as const, label: 'HR & absensi' },
-                { key: 'inapp_finance' as const, label: 'Keuangan & budget alert' },
-              ].map(item => (
-                <ToggleRow key={item.key} label={item.label} checked={notifPrefs[item.key]} onChange={v => handleNotifChange(item.key, v)} />
-              ))}
-            </NotifGroup>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={handleSaveNotif} disabled={notifSaved} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
-              Simpan Preferensi
-            </button>
-            {!notifSaved && <span className="text-xs text-amber-600">Ada perubahan belum disimpan</span>}
-          </div>
-          <p className="text-xs text-slate-600">Disimpan lokal per perangkat. Sinkron ke cloud — coming soon.</p>
-        </div>
-      )}
-
-      {tab === 'keamanan' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-4">
-            <div className="flex items-center gap-2">
-              <Lock className="w-5 h-5 text-emerald-500" />
-              <h3 className="font-bold text-slate-800">Ubah Password</h3>
-            </div>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="settings-new-password" className="text-xs font-semibold text-slate-600 mb-1 block">Password Baru</label>
-                <input id="settings-new-password" name="newPassword" autoComplete="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 karakter" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              <div className="sm:col-span-2">
+                <label htmlFor="settings-org-name" className="text-xs font-semibold text-slate-600 mb-1 block">Nama Perusahaan</label>
+                <input id="settings-org-name" name="orgName" autoComplete="organization" value={orgName} onChange={e => setOrgName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
               </div>
               <div>
-                <label htmlFor="settings-confirm-password" className="text-xs font-semibold text-slate-600 mb-1 block">Konfirmasi Password</label>
-                <input id="settings-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+                <label htmlFor="settings-org-industry" className="text-xs font-semibold text-slate-600 mb-1 block">Industri</label>
+                <select id="settings-org-industry" name="industry" value={industry} onChange={e => setIndustry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                  <option value="">Pilih industri</option>
+                  {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="settings-org-business-type" className="text-xs font-semibold text-slate-600 mb-1 block">Tipe Bisnis</label>
+                <select id="settings-org-business-type" name="businessType" value={businessType} onChange={e => setBusinessType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                  {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="settings-org-timezone" className="text-xs font-semibold text-slate-600 mb-1 block">Zona Waktu</label>
+                <select id="settings-org-timezone" name="timezone" value={timezone} onChange={e => setTimezone(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                  {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="settings-org-currency" className="text-xs font-semibold text-slate-600 mb-1 block">Mata Uang Default</label>
+                <select id="settings-org-currency" name="currency" value={currency} onChange={e => setCurrency(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm">
+                  {CURRENCIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="settings-org-brand-color-hex" className="text-xs font-semibold text-slate-600 mb-1 block">Warna Brand Organisasi</label>
+                <div className="flex items-center gap-3">
+                  <input id="settings-org-brand-color-picker" name="brandColorPicker" aria-label="Pilih warna brand organisasi" type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} className="w-12 h-10 rounded-lg border border-slate-200 cursor-pointer" />
+                  <input id="settings-org-brand-color-hex" name="brandColor" autoComplete="off" spellCheck={false} value={brandColor} onChange={e => setBrandColor(e.target.value)} className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm font-mono" />
+                </div>
               </div>
             </div>
-            <p className="text-xs text-slate-600">Minimal 8 karakter, huruf besar, angka, dan simbol.</p>
-            <button type="button" onClick={handleChangePassword} disabled={changingPassword || !newPassword} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
-              {changingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
-              Update Password
-            </button>
-          </div>
 
-          {!demoActive && tenant?.id && <TelegramLinkPanel orgId={tenant.id} isOwner={isOwner} />}
+            <BrandIdentityPanel
+              brandColor={brandColor}
+              syncPdf={syncPdfBrand}
+              onSyncPdfChange={setSyncPdfBrand}
+            />
 
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-2xl border border-rose-200 transition-colors">
-            <LogOut className="w-4 h-4" /> Keluar dari perangkat ini
-          </button>
-          <button onClick={handleLogoutAll} className="w-full flex items-center justify-center gap-2 py-3 text-sm text-slate-600 hover:bg-slate-100 rounded-2xl border border-slate-200 transition-colors">
-            Keluar dari semua perangkat
-          </button>
-        </div>
-      )}
-
-      {tab === 'diagnostik' && showAdminLink && (
-        demoActive ? (
-          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm text-sm text-[#5B6B7A]">
-            Diagnostik sinkronisasi server tidak tersedia di mode demo.
-          </div>
-        ) : (
-          <ErrorTraceDiagnosticsPanel />
-        )
-      )}
-
-      {tab === 'developer' && showAdminLink && user?.id && (
-        <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
-          {demoActive ? (
-            <p className="text-sm text-[#5B6B7A]">Panel developer tidak tersedia di mode demo.</p>
-          ) : (
-            <MigrationDeveloperPanel userId={user.id} />
-          )}
-        </div>
-      )}
-
-      {tab === 'tentang' && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-4">
-            <h3 className="font-bold text-slate-800">Tentang Aplikasi</h3>
-            <div className="grid sm:grid-cols-2 gap-3 text-sm">
-              <AboutRow label="Aplikasi" value="Froyek" />
-              <AboutRow label="Versi" value="0.1.0 MVP" />
-              <AboutRow label="Mode" value={isDemoMode ? 'Demo' : 'Production'} />
-              <AboutRow label="Paket" value={resolvedPlanLabel} />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-3">
-            <h3 className="font-bold text-slate-800">Status Sinkronisasi</h3>
-            <div className="flex items-center gap-3 text-sm">
-              {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-slate-600" />}
-              <span className="font-medium capitalize">{syncStatus}</span>
-              {lastSynced && (
-                <span className="text-slate-600">
-                  · Terakhir sync {lastSynced.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                </span>
+            <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h4 className="font-bold text-slate-800">Paket langganan</h4>
+                <p className="text-sm text-slate-500">
+                  {estimatorOnly ? (
+                    <>{resolvedPlanLabel} · Aktif seumur hidup</>
+                  ) : (
+                    <>
+                      {resolvedPlanLabel} · {formatPlanPriceIdr(currentPlan.price_monthly_idr)}/bulan
+                      {currentPlan.projects_per_month != null && projectsThisMonth != null && (
+                        <> · {projectsThisMonth}/{currentPlan.projects_per_month} proyek bulan ini</>
+                      )}
+                    </>
+                  )}
+                </p>
+              </div>
+              {!estimatorOnly && (
+                <button
+                  type="button"
+                  onClick={() => selectTab('pricelist')}
+                  className="px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl"
+                >
+                  Lihat pricelist &amp; upgrade
+                </button>
               )}
             </div>
-          </div>
 
-          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800">
-            <p className="font-semibold mb-1">Butuh bantuan?</p>
-            <p className="text-emerald-700">
-              Hubungi admin organisasi Anda atau email ke{' '}
-              <a href="mailto:support@froyek.com" className="font-semibold underline">support@froyek.com</a>.
-            </p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <button type="button" onClick={handleSaveOrg} disabled={savingOrg} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
+                {savingOrg && <Loader2 className="w-4 h-4 animate-spin" />}
+                Simpan Organisasi
+              </button>
+              {!estimatorOnly && (
+                <button type="button" onClick={goToHr} className="px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 flex items-center gap-1.5 hover:bg-slate-50">
+                  <Users className="w-4 h-4" /> HR &amp; Karyawan
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {!estimatorOnly && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-500">
+                Kelola anggota, undangan, dan akses join di halaman <button type="button" onClick={goToHr} className="text-emerald-600 font-semibold">HR &amp; Karyawan</button>.
+              </div>
+            )}
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {tab === 'pricelist' && canEditOrg && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
+            <UpgradePlansPanel
+              orgPlanType={tenant?.plan}
+              pricingPlans={pricingPlans}
+              projectsThisMonth={projectsThisMonth}
+            />
+          </div>
+        )}
+
+        {tab === 'domain' && canEditOrg && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
+            {demoActive ? (
+              <p className="text-sm text-[#5B6B7A]">Custom Domain tidak tersedia di mode demo.</p>
+            ) : (
+              <CustomDomainPanel onUpgrade={() => selectTab('pricelist')} />
+            )}
+          </div>
+        )}
+
+        {tab === 'notifikasi' && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-5">
+            <div>
+              <h3 className="font-bold text-slate-800">Preferensi Notifikasi</h3>
+              <p className="text-sm text-slate-500">Atur jenis notifikasi yang ingin kamu terima.</p>
+            </div>
+
+            <div className="space-y-1">
+              <NotifGroup title="Email">
+                {[
+                  { key: 'email_invitation' as const, label: 'Undangan & welcome email' },
+                  { key: 'email_role_change' as const, label: 'Perubahan role & akses' },
+                ].map(item => (
+                  <ToggleRow key={item.key} label={item.label} checked={notifPrefs[item.key]} onChange={v => handleNotifChange(item.key, v)} />
+                ))}
+              </NotifGroup>
+              <NotifGroup title="In-App">
+                {[
+                  { key: 'inapp_join_request' as const, label: 'Permintaan join tim' },
+                  { key: 'inapp_project' as const, label: 'Proyek & task update' },
+                  { key: 'inapp_hr' as const, label: 'HR & absensi' },
+                  { key: 'inapp_finance' as const, label: 'Keuangan & budget alert' },
+                ].map(item => (
+                  <ToggleRow key={item.key} label={item.label} checked={notifPrefs[item.key]} onChange={v => handleNotifChange(item.key, v)} />
+                ))}
+              </NotifGroup>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={handleSaveNotif} disabled={notifSaved} className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold disabled:opacity-50">
+                Simpan Preferensi
+              </button>
+              {!notifSaved && <span className="text-xs text-amber-600">Ada perubahan belum disimpan</span>}
+            </div>
+            <p className="text-xs text-slate-600">Disimpan lokal per perangkat. Sinkron ke cloud — coming soon.</p>
+          </div>
+        )}
+
+        {tab === 'keamanan' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2">
+                <Lock className="w-5 h-5 text-emerald-500" />
+                <h3 className="font-bold text-slate-800">Ubah Password</h3>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="settings-new-password" className="text-xs font-semibold text-slate-600 mb-1 block">Password Baru</label>
+                  <input id="settings-new-password" name="newPassword" autoComplete="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min. 8 karakter" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+                </div>
+                <div>
+                  <label htmlFor="settings-confirm-password" className="text-xs font-semibold text-slate-600 mb-1 block">Konfirmasi Password</label>
+                  <input id="settings-confirm-password" name="confirmPassword" autoComplete="new-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-600">Minimal 8 karakter, huruf besar, angka, dan simbol.</p>
+              <button type="button" onClick={handleChangePassword} disabled={changingPassword || !newPassword} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold disabled:opacity-50 flex items-center gap-2">
+                {changingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+                Update Password
+              </button>
+            </div>
+
+            {!demoActive && tenant?.id && <TelegramLinkPanel orgId={tenant.id} isOwner={isOwner} />}
+
+            <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-2xl border border-rose-200 transition-colors">
+              <LogOut className="w-4 h-4" /> Keluar dari perangkat ini
+            </button>
+            <button onClick={handleLogoutAll} className="w-full flex items-center justify-center gap-2 py-3 text-sm text-slate-600 hover:bg-slate-100 rounded-2xl border border-slate-200 transition-colors">
+              Keluar dari semua perangkat
+            </button>
+          </div>
+        )}
+
+        {tab === 'diagnostik' && showAdminLink && (
+          demoActive ? (
+            <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm text-sm text-[#5B6B7A]">
+              Diagnostik sinkronisasi server tidak tersedia di mode demo.
+            </div>
+          ) : (
+            <ErrorTraceDiagnosticsPanel />
+          )
+        )}
+
+        {tab === 'developer' && showAdminLink && user?.id && (
+          <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm">
+            {demoActive ? (
+              <p className="text-sm text-[#5B6B7A]">Panel developer tidak tersedia di mode demo.</p>
+            ) : (
+              <MigrationDeveloperPanel userId={user.id} />
+            )}
+          </div>
+        )}
+
+        {tab === 'tentang' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-4">
+              <h3 className="font-bold text-slate-800">Tentang Aplikasi</h3>
+              <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                <AboutRow label="Aplikasi" value="Froyek" />
+                <AboutRow label="Versi" value="0.1.0 MVP" />
+                <AboutRow label="Mode" value={isDemoMode ? 'Demo' : 'Production'} />
+                <AboutRow label="Paket" value={resolvedPlanLabel} />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-[20px] border border-[#E5EAE8] p-5 sm:p-6 shadow-sm space-y-3">
+              <h3 className="font-bold text-slate-800">Status Sinkronisasi</h3>
+              <div className="flex items-center gap-3 text-sm">
+                {isOnline ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-slate-600" />}
+                <span className="font-medium capitalize">{syncStatus}</span>
+                {lastSynced && (
+                  <span className="text-slate-600">
+                    · Terakhir sync {lastSynced.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 text-sm text-emerald-800">
+              <p className="font-semibold mb-1">Butuh bantuan?</p>
+              <p className="text-emerald-700">
+                Hubungi admin organisasi Anda atau email ke{' '}
+                <a href="mailto:support@froyek.com" className="font-semibold underline">support@froyek.com</a>.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
