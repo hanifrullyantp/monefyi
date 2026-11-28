@@ -42,7 +42,7 @@ const MIGRATION_PATH = resolve(
 );
 const CHANNEL_GATEWAY_PATH = resolve(
   __dirname,
-  '@domain/channelGateway.ts',
+  '../../../../../../packages/domain/src/channelGateway.ts',
 );
 
 const ORG_A = 'org-froyek-a';
