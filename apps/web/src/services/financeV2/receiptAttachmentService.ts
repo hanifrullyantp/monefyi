@@ -6,7 +6,7 @@ import {
   type PrepareEntryFromReceiptResult,
   type ReceiptAttachmentMeta,
   type ReceiptExtractionResult,
-} from '../../../../../packages/domain/src/receiptExtraction';
+} from '@domain/receiptExtraction';
 import {
   prepareFinanceEntry,
   type AgentNextAction,

@@ -5,7 +5,7 @@ import {
   resolveProjectIncomeTemplate,
   toRupiah,
   type JournalAccountRole,
-} from '../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import type { AccountType } from '../../types/financeV2';
 import { ensureChartOfAccounts, findSystemAccount } from './accountService';
 import { createJournalEntry } from './journalService';

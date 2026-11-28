@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { emptyProfile, policyProblems, type CompanyProfile, type Policy } from '../../../../../agent-core/src/profile';
+import { emptyProfile, policyProblems, type CompanyProfile, type Policy } from '@agent-core/profile';
 
 type Status = { bot_configured: boolean; links: number; kill_switch: boolean; my_linked: boolean };
 

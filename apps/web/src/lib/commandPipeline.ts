@@ -6,8 +6,8 @@ import { applyProgressTagHints } from './commandTags';
 import type { TaggableEntity } from './commandTags';
 import { lookupMemory, lookupFuzzyMemory } from '../services/commandMemoryService';
 import { looksLikeLeadForm, parseLeadForm } from './leadFormParser';
-import { storedAmountConflicts } from '../../../../packages/domain/src/validation';
-import { sopForIntent } from '../../../../agent-core/src/sop';
+import { storedAmountConflicts } from '@domain/validation';
+import { sopForIntent } from '@agent-core/sop';
 
 export type PipelineSource = 'memory' | 'rule' | 'fuzzy' | 'ai' | 'fallback';
 

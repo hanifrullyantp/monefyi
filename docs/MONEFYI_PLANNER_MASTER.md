@@ -763,10 +763,19 @@ Semua di [`my-supabase-project/supabase/functions/`](../my-supabase-project/supa
 | `planner-remove-member` | Hapus member dari org |
 | `planner-transfer-ownership` | Transfer ownership org |
 | `planner-finance-amortize` | Amortisasi aset tetap |
+| `planner-agent-run` | Eksekusi agen otonom (prepare/run, kuota, SoD, observability) |
+| `planner-agent-health` | Health check agen per organisasi (kill switch, quota, autonomy) |
+| `planner-agent-monitoring` | Monitoring akurasi agen real-time (runs, actions, success/error rate) |
 
 Config mapping: [`src/lib/config.ts`](../monefyi_planner/src/lib/config.ts)
 
 Secret: `GEMINI_API_KEY` (edge functions AI).
+
+Observability opsional (di Supabase Dashboard > Settings > Secrets):
+- `SENTRY_DSN` — DSN Sentry untuk error tracking
+- `DD_API_KEY` — API key DataDog untuk metrik
+- `DD_ENV` — environment (default: `production`)
+- `DD_SERVICE` — nama service (default: `monefyi-agent`)
 
 ---
 
@@ -849,7 +858,17 @@ monefyi_planner/
 ./scripts/rls-smoke-test.sh
 ```
 
-### 19.5 Smoke test produksi
+### 19.5 Agent Staging & Canary Deploy (Supabase Edge Functions)
+
+Perubahan agent edge functions (`planner-agent-run`, `planner-agent-health`, `planner-agent-monitoring`, dan shared `_shared/*`) di-deploy melalui workflow GitHub Actions terpisah:
+
+1. **Eval gate** — `agentEval.test.ts`, `agentRuntime.test.ts`, `agentTools.test.ts`, `financeAgentEval.test.ts` harus lulus
+2. **Staging deploy** — Push ke Supabase project staging (`SUPABASE_STAGING_PROJECT_REF`), jalankan health check + monitoring smoke test
+3. **Production promote** — Hanya setelah staging lolos, push ke Supabase production (`SUPABASE_PROJECT_REF`)
+
+Workflow: `.github/workflows/agent-staging-canary.yml`
+
+### 19.6 Smoke test produksi
 
 1. Signup → org di `planner_organizations`
 2. Login → `/app`, session persist
@@ -888,6 +907,7 @@ cd monefyi_planner && npm run test
 - **Sentry:** error rate per migration flag
 - **Audit:** `planner_audit_logs` untuk CRUD `rpp_*`
 - **Balance:** log `isBalanced=false` counts per org (non-PII)
+- **Agent monitoring:** `planner-agent-monitoring` edge function menyediakan metrik runs, actions, success/error rate, distribusi SOP & autonomy, dan quota usage per organisasi. Akses hanya untuk owner/manager.
 
 ---
 
@@ -904,6 +924,7 @@ cd monefyi_planner && npm run test
 | Phase 5 — Admin & multi-tenancy | ✅ Mostly done | Subscription billing partial |
 | Phase 6 — Gantt advanced | ⚠️ Partial | Critical path visual, resource leveling |
 | Phase 7 — Mobile polish | ⚠️ Ongoing | UX audit P1/P2 items |
+| **Program H — Agent Otonom 100/100** | ✅ Done | Kuota aktual, health check, monitoring, staging/canary, Sentry/DataDog, semantic search, LLM-as-judge, few-shot prompt, parameter validation, L3 autonomy, rate limiting, Docker, backup/DR |
 
 ### 21.2 Priority gaps (dari UX audit)
 
@@ -919,6 +940,7 @@ cd monefyi_planner && npm run test
 - ~~Tidak ada master doc Planner~~ → dokumen ini
 - ~~Gantt/work items undocumented~~ → §10
 - ~~Progress metrics undocumented~~ → §11
+- ~~Agent otonom 100/100 undocumented~~ → PROGRESS.md (Program H), §17, §19.5, §20.3, §21.1
 - Backend markdown di `my-supabase-project/` — masih minimal (edge functions di §17)
 
 ---

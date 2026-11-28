@@ -8,7 +8,7 @@ import {
   parseCostCommand,
   parseRupiah,
   parseTanggal,
-} from '../../../../packages/domain/src/money';
+} from '@domain/money';
 import {
   assertContextSize,
   assertParseInput,

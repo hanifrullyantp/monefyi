@@ -437,6 +437,7 @@ describe('General Manager & 5 Kepala Divisi (managerAgentService)', () => {
       userId: 'user-1',
       orgId: 'org-1',
       userName: 'Owner',
+      accessToken: '',
       projects: [...ctx.projects.values()],
       currentProject: ctx.projects.get('P1')!,
       onNavigate: vi.fn(),

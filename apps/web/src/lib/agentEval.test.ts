@@ -1,8 +1,8 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { l2Gate, loadReplayInputs, loadScenarios, runScenario } from '../../../../agent-core/src/evalRunner';
-import { SOP_CATALOG } from '../../../../agent-core/src/sopData';
-import type { ScenarioResult } from '../../../../agent-core/src/evalRunner';
+import { l2Gate, loadReplayInputs, loadScenarios, runScenario } from '@agent-core/evalRunner';
+import { SOP_CATALOG } from '@agent-core/sopData';
+import type { ScenarioResult } from '@agent-core/evalRunner';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const now = Date.parse('2026-11-04T01:00:00.000Z');

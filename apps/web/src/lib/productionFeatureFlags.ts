@@ -10,7 +10,7 @@ import {
   type EnvRecord,
   type ProductionMoneyFlagKey,
   type ProductionMoneyFlags,
-} from '../../../../packages/domain/src/productionFeatureFlags';
+} from '@domain/productionFeatureFlags';
 
 function readViteEnv(): EnvRecord {
   const metaEnv = (import.meta as unknown as { env?: EnvRecord })?.env;

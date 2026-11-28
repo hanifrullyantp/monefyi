@@ -19,7 +19,7 @@ import {
   type OrgFinanceRule,
   type PrepareEntryInput,
   type PrepareEntryResult,
-} from '../../../../agent-core/src/financeEntryEngine';
+} from '@agent-core/financeEntryEngine';
 
 /**
  * Adapter aplikasi web untuk engine 2-langkah `prepare_entry` / `commit_entry`.

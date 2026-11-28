@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { SOP_CATALOG } from '../../../../agent-core/src/sopData';
-import { buildContextPack, emptyProfile, parametersFromProfile, type ModelTier } from '../../../../agent-core/src/profile';
-import { previewWizard } from '../../../../agent-core/src/profileWizard';
-import { routeCatatBiaya } from '../../../../agent-core/src/sop';
+import { SOP_CATALOG } from '@agent-core/sopData';
+import { buildContextPack, emptyProfile, parametersFromProfile, type ModelTier } from '@agent-core/profile';
+import { previewWizard } from '@agent-core/profileWizard';
+import { routeCatatBiaya } from '@agent-core/sop';
 import { useAppStore } from '../store/appStore';
 import { isPlatformAdmin } from '../services/adminService';
 

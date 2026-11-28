@@ -7,8 +7,8 @@ import {
   prepareEntry,
   recordFinanceCorrection,
   type EntityCatalogItem,
-} from '../../../../agent-core/src/financeEntryEngine';
-import { estimateJsonTokens } from '../../../../agent-core/src/financeSnapshot';
+} from '@agent-core/financeEntryEngine';
+import { estimateJsonTokens } from '@agent-core/financeSnapshot';
 
 const root = new URL('../../../../', import.meta.url);
 const now = Date.parse('2026-11-24T03:00:00.000Z');

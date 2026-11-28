@@ -1,4 +1,4 @@
-import { parseRupiah } from '../../../../packages/domain/src/money';
+import { parseRupiah } from '@domain/money';
 
 /**
  * Command normalization + signature/slot extraction for the learning memory.

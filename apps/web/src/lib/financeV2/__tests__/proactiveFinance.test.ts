@@ -5,7 +5,7 @@ import {
   evaluateMonthCloseChecklist,
   evaluateProjectProactiveAlerts,
   scoreClientCollectionRisk,
-} from '../../../../../../packages/domain/src/proactiveFinance';
+} from '@domain/proactiveFinance';
 
 describe('G2-1: Domain Proaktif — Aging, Risiko Klien, Peringatan Proyek, & Checklist Tutup Bulan', () => {
   describe('computeAgingSchedule', () => {

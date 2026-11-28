@@ -7,7 +7,7 @@ import {
   type ParamsTemplate,
 } from '../lib/commandNormalize';
 import { combinedSimilarity } from '../lib/textSimilarity';
-import { canMemorizeCommand, storedAmountConflicts } from '../../../../packages/domain/src/validation';
+import { canMemorizeCommand, storedAmountConflicts } from '@domain/validation';
 
 export interface CommandMemory {
   id: string;

@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { findMatches } from '../../../../agent-core/src/find';
-import { buildFinanceSnapshot, estimateJsonTokens } from '../../../../agent-core/src/financeSnapshot';
-import { agentManual, fixtures, functionSchema, mcpTools } from '../../../../agent-core/src/generate';
-import { commitRecordCost, prepareRecordCost } from '../../../../agent-core/src/prepare';
-import { TOOLS, assertRegistry, toolsFor } from '../../../../agent-core/src/registry';
-import { routeCatatBiaya } from '../../../../agent-core/src/sop';
+import { findMatches } from '@agent-core/find';
+import { buildFinanceSnapshot, estimateJsonTokens } from '@agent-core/financeSnapshot';
+import { agentManual, fixtures, functionSchema, mcpTools } from '@agent-core/generate';
+import { commitRecordCost, prepareRecordCost } from '@agent-core/prepare';
+import { TOOLS, assertRegistry, toolsFor } from '@agent-core/registry';
+import { routeCatatBiaya } from '@agent-core/sop';
 
 const root = new URL('../../../../', import.meta.url);
 

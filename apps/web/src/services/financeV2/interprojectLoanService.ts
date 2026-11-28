@@ -1,11 +1,11 @@
 import { supabase } from '../../lib/supabase';
-import { orgToday } from '../../../../../packages/domain/src/dates';
+import { orgToday } from '@domain/dates';
 import {
   interprojectLoanDisbursement,
   interprojectLoanRepayment,
   toRupiah,
   type TemplateLine,
-} from '../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import type { AccountType, JournalLineInput } from '../../types/financeV2';
 import { ensureChartOfAccounts, findSystemAccount } from './accountService';
 import { postJournalEntry } from './journalService';

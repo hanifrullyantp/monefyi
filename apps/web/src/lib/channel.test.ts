@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parametersFromProfile, emptyProfile, type CompanyProfile } from '../../../../agent-core/src/profile';
-import { SOP_CATALOG } from '../../../../agent-core/src/sopData';
-import { routeRequest } from '../../../../agent-core/src/runtime';
-import { TOOLS, assertRegistry, toolsFor } from '../../../../agent-core/src/registry';
+import { parametersFromProfile, emptyProfile, type CompanyProfile } from '@agent-core/profile';
+import { SOP_CATALOG } from '@agent-core/sopData';
+import { routeRequest } from '@agent-core/runtime';
+import { TOOLS, assertRegistry, toolsFor } from '@agent-core/registry';
 import {
   LINK_TTL_MS,
   allowMessage,
@@ -16,14 +16,14 @@ import {
   redactSecrets,
   sealSecret,
   type ChannelIdentity,
-} from '../../../../agent-core/src/channelGate';
+} from '@agent-core/channelGate';
 import {
   createChannelProvider,
   deliver,
   downloadTelegramFile,
   telegramSend,
   type OutboundMessage,
-} from '../../../../agent-core/src/channelProvider';
+} from '@agent-core/channelProvider';
 import {
   applyFieldReply,
   classifyFieldReply,
@@ -37,7 +37,7 @@ import {
   shouldAskField,
   type FieldProfile,
   type OpenQuestion,
-} from '../../../../agent-core/src/fieldProgress';
+} from '@agent-core/fieldProgress';
 
 const now = Date.parse('2026-11-05T01:00:00.000Z');
 

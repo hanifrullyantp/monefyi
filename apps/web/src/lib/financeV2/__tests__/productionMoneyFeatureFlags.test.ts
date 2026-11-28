@@ -9,7 +9,7 @@ import {
   assertMoneyFeatureEnabled,
   isMoneyFeatureFlagEnabled,
   resolveProductionMoneyFlags,
-} from '../../../../../../packages/domain/src/productionFeatureFlags';
+} from '@domain/productionFeatureFlags';
 import {
   getProductionMoneyFlags,
   isMoneyFeatureEnabled,

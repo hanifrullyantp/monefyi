@@ -17,8 +17,8 @@ import {
   type TenantCronBatchInput,
   type TenantProactiveReminderInput,
   type TenantProactiveRemindersResult,
-} from '../../../../../packages/domain/src/reminderScheduler';
-import type { ClientRiskBand } from '../../../../../packages/domain/src/proactiveFinance';
+} from '@domain/reminderScheduler';
+import type { ClientRiskBand } from '@domain/proactiveFinance';
 
 export interface FinanceReminderRecord {
   id: string;

@@ -7,10 +7,18 @@ struct MacFyiApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        WindowGroup {
+        // Kosong — tidak ada jendela utama, aplikasi hanya di menu bar
+        EmptyScene()
+    }
+}
+
+struct EmptyScene: Scene {
+    var body: some Scene {
+        #if os(macOS)
+        Settings {
             EmptyView()
         }
-        .windowStyle(HiddenTitleBarWindowStyle())
+        #endif
     }
 }
 
@@ -19,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     var popover: NSPopover?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Tutup jendela WindowGroup yang dibuat otomatis agar hanya status bar item yang tersisa
+        // Tutup semua jendela yang mungkin dibuat otomatis
         NSApp.windows.forEach { $0.close() }
 
         UNUserNotificationCenter.current().delegate = self
@@ -31,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationWillTerminate(_ notification: Notification) {
         MonitorManager.shared.stopMonitoring()
-        CaffeinateManager.shared.stop()
+        CaffeinateManager.shared.forceStop()
     }
 
     private func setupStatusBar() {

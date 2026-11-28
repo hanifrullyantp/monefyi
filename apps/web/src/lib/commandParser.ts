@@ -1,5 +1,5 @@
-import { firstRupiah, parseCostCommand } from '../../../../packages/domain/src/money';
-import { storedAmountConflicts } from '../../../../packages/domain/src/validation';
+import { firstRupiah, parseCostCommand } from '@domain/money';
+import { storedAmountConflicts } from '@domain/validation';
 import { finalizeParams } from './commandNormalize';
 
 export type ParseSource = 'memory' | 'rule' | 'ai' | 'fuzzy' | 'fallback';

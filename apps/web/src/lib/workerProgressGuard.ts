@@ -2,7 +2,7 @@ import {
   evaluateProgressUpdateRequest,
   type PmActorRole,
   type ProgressUpdateEvaluationResult,
-} from '../../../../packages/domain/src/projectManagerAgent';
+} from '@domain/projectManagerAgent';
 import type { WorkItem, WorkItemAttachment, WorkItemNote } from '../services/workItemService';
 import type { UserRole } from '../store/appStore';
 

@@ -1,4 +1,4 @@
-import { toRupiah } from '../../../../../packages/domain/src/journal';
+import { toRupiah } from '@domain/journal';
 import type { AccountCategory, AccountType, FinanceAccount } from '../../types/financeV2';
 import { hppAccountTypeForRapType } from '../../services/financeV2/accountService';
 

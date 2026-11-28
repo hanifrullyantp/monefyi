@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { calcDividend } from '../../lib/financeV2AdvancedCalc';
-import { toRupiah } from '../../../../../packages/domain/src/journal';
-import { orgToday } from '../../../../../packages/domain/src/dates';
+import { toRupiah } from '@domain/journal';
+import { orgToday } from '@domain/dates';
 import { ensureChartOfAccounts, findSystemAccount } from './accountService';
 import { createJournalEntry } from './journalService';
 import type { InvestmentType, Investor, InvestorTransaction, InvestorTransactionType } from '../../types/financeV2';

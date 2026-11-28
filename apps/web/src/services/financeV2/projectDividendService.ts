@@ -9,8 +9,8 @@ import {
   type DividendPayout,
   type DividendPreviewLine,
 } from '../../lib/projects/dividend';
-import { toRupiah } from '../../../../../packages/domain/src/journal';
-import { orgToday } from '../../../../../packages/domain/src/dates';
+import { toRupiah } from '@domain/journal';
+import { orgToday } from '@domain/dates';
 import { normalizePartyKey } from '../../lib/financeV2/partyLedger';
 import { loadReceivablesByProject, recordReceivablePayment } from './receivableService';
 import { loadPayablesByProject } from './payableService';

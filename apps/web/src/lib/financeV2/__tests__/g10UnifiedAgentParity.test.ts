@@ -14,7 +14,7 @@ import {
   type PreparedActionStore,
   type UnifiedDailyUsage,
   type UnifiedGatewayPolicy,
-} from '../../../../../../packages/domain/src/unifiedAgentGateway';
+} from '@domain/unifiedAgentGateway';
 import {
   commitManagerAction,
   executeAgentAction,
@@ -118,6 +118,7 @@ function makeManagerEnvAndCtx(): { ctx: ContextPack; env: ManagerEnv } {
     userId: 'owner-1',
     orgId: 'org-g10-1',
     userName: 'Owner Froyek',
+    accessToken: '',
     projects: [proj],
     currentProject: proj,
     onNavigate: vi.fn(),

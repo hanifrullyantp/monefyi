@@ -12,23 +12,23 @@ import {
   evaluateMaterialAndPurchaseDrafts,
   evaluateProgressUpdateRequest,
   type PmWorkItemScheduleInput,
-} from '../../../../../../packages/domain/src/projectManagerAgent';
+} from '@domain/projectManagerAgent';
 import {
   buildDailyProjectLaborAccruals,
   resolveAttendanceProjectFromSchedule,
   type AttendanceProjectSplitInput,
   type CompensationRateRecord,
   type LaborPolicy,
-} from '../../../../../../packages/domain/src/hrdPayroll';
+} from '@domain/hrdPayroll';
 import {
   linesAreBalanced,
   validateJournalDimensions,
-} from '../../../../../../packages/domain/src/journal';
-import { computeRecognizableRevenue } from '../../../../../../packages/domain/src/revenueRecognition';
+} from '@domain/journal';
+import { computeRecognizableRevenue } from '@domain/revenueRecognition';
 import {
   runAdvisorWhatIf,
   type ForecastCashFlowInput,
-} from '../../../../../../packages/domain/src/financialAdvisor';
+} from '@domain/financialAdvisor';
 import { validateWorkerProgressUpdate } from '../../workerProgressGuard';
 
 const DAY_MS = 86_400_000;

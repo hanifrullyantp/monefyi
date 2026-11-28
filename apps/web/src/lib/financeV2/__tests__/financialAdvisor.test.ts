@@ -8,7 +8,7 @@ import {
   recommendProjectPricing,
   runAdvisorWhatIf,
   type ForecastCashFlowInput,
-} from '../../../../../../packages/domain/src/financialAdvisor';
+} from '@domain/financialAdvisor';
 
 describe('G3-1: Mesin Analisis Deterministik Financial Advisor', () => {
   describe('forecastCashFlow13Weeks', () => {

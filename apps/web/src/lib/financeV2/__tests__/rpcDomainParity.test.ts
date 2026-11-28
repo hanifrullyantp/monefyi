@@ -11,7 +11,7 @@ import {
   resolveProjectIncomeTemplate,
   toRupiah,
   type TemplateLine,
-} from '../../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 
 const postedJournalPayloads: Array<{ p_lines: Array<Record<string, unknown>>; p_reference_type: string }> = [];
 const mockAccounts = [

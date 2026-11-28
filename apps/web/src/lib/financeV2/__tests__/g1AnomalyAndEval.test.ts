@@ -6,16 +6,16 @@ import {
   FINANCE_AGENT_INTENTS,
   prepareEntry,
   type EntityCatalogItem,
-} from '../../../../../../agent-core/src/financeEntryEngine';
+} from '@agent-core/financeEntryEngine';
 import {
   evaluateG1FinanceSet,
   loadG1EvalCases,
-} from '../../../../../../agent-core/src/financeEvalRunner';
+} from '@agent-core/financeEvalRunner';
 import {
   detectAnomalousAmount,
   detectDuplicateEntry,
   type ExistingDuplicateEntry,
-} from '../../../../../../packages/domain/src/anomalyDetection';
+} from '@domain/anomalyDetection';
 
 const root = fileURLToPath(new URL('../../../../../../', import.meta.url));
 const devSetPath = `${root}evals/finance/g1_dev_set.yaml`;

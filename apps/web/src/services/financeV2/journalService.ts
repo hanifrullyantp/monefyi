@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { validateBalancedEntry } from '../../lib/financeV2Calc';
-import { orgToday } from '../../../../../packages/domain/src/dates';
+import { orgToday } from '@domain/dates';
 import type { CreateJournalInput, JournalEntry, JournalLine } from '../../types/financeV2';
 
 function mapEntry(row: Record<string, unknown>): JournalEntry {

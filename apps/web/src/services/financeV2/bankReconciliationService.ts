@@ -12,7 +12,7 @@ import {
   type MatchBankStatementResult,
   type ParseBankStatementCsvResult,
   type ReconcileCashVsBankResult,
-} from '../../../../../packages/domain/src/bankStatement';
+} from '@domain/bankStatement';
 
 export interface BankStatementRowRecord {
   id: string;

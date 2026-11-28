@@ -22,9 +22,9 @@ import { createProject, updateProject } from './projectService';
 import type { OrgMember } from '../types/onboarding';
 import type { Estimation, PricelistCategory } from '../types/estimator';
 import type { PlannerTodo } from '../types/plannerTodo';
-import type { ActorRole } from '../../../../packages/domain/src/autonomyGovernance';
-import { detectPromptInjection } from '../../../../packages/domain/src/receiptExtraction';
-import { TOOLS, type ToolDef } from '../../../../agent-core/src/registry';
+import type { ActorRole } from '@domain/autonomyGovernance';
+import { detectPromptInjection } from '@domain/receiptExtraction';
+import { TOOLS, type ToolDef } from '@agent-core/registry';
 import {
   UNIFIED_MANAGER_ACTIONS,
   UNIFIED_MANAGER_ACTION_TYPES,
@@ -39,8 +39,8 @@ import {
   type UnifiedDailyUsage,
   type UnifiedGatewayPolicy,
   type UnifiedManagerActionType,
-} from '../../../../packages/domain/src/unifiedAgentGateway';
-import { enrichContextPackWithSemantic } from '../../../../agent-core/src/profile.ts';
+} from '@domain/unifiedAgentGateway';
+import { enrichContextPackWithSemantic } from '@agent-core/profile.ts';
 import {
   callUnifiedAI,
   extractJson,

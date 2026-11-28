@@ -10,7 +10,7 @@ import {
   payrollLiabilitySettlement,
   projectLaborAccrual,
   validateJournalDimensions,
-} from '../../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import {
   buildDailyProjectLaborAccruals,
   buildOfficeMonthlyPayrollAccrual,
@@ -25,7 +25,7 @@ import {
   type DailyAssignmentSchedule,
   type LaborPolicy,
   type PayrollStatutoryConfig,
-} from '../../../../../../packages/domain/src/hrdPayroll';
+} from '@domain/hrdPayroll';
 import { ACCOUNT_TYPE_LABEL, type AccountType } from '../../../types/financeV2';
 
 const baseLaborPolicy: LaborPolicy = {

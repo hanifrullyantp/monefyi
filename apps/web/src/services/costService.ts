@@ -1,6 +1,6 @@
 import { type DbCostRealization } from '../lib/adapters';
 import { supabase } from '../lib/supabase';
-import { toRupiah } from '../../../../packages/domain/src/journal';
+import { toRupiah } from '@domain/journal';
 import { logProjectAudit } from './auditService';
 import { loadRapItems } from './rapService';
 

@@ -3,7 +3,7 @@ import {
   projectDividendCash,
   toRupiah,
   type TemplateLine,
-} from '../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import {
   dividendPool,
   previewDividend,

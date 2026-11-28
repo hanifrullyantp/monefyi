@@ -8,7 +8,7 @@ import {
   buildTenantProactiveReminders,
   PROACTIVE_REMINDER_TYPES,
   runMultiTenantCronBatch,
-} from '../../../../../../packages/domain/src/reminderScheduler';
+} from '@domain/reminderScheduler';
 
 const { fromMock } = vi.hoisted(() => ({
   fromMock: vi.fn(),

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { explainAction } from '../../../../../agent-core/src/runtime';
+import { explainAction } from '@agent-core/runtime';
 import { useAppStore } from '../../store/appStore';
 import { executeIntent } from '../../lib/intentExecutor';
 import { loadWorkItems } from '../../services/workItemService';

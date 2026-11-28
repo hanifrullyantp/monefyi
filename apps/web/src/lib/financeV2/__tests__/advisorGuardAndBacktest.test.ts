@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildAdvisorBriefTool } from '../../../../../../agent-core/src/advisorTools';
-import { estimateJsonTokens } from '../../../../../../agent-core/src/financeSnapshot';
-import { assertRegistry, toolsFor } from '../../../../../../agent-core/src/registry';
+import { buildAdvisorBriefTool } from '@agent-core/advisorTools';
+import { estimateJsonTokens } from '@agent-core/financeSnapshot';
+import { assertRegistry, toolsFor } from '@agent-core/registry';
 import {
   estimateAdvisorTokens,
   extractNumbersFromNarrative,
@@ -9,14 +9,14 @@ import {
   runCashFlowForecastBacktest,
   verifyNarrativeNumbersMatchSource,
   type ForecastBacktestCaseInput,
-} from '../../../../../../packages/domain/src/advisorNarrationGuard';
+} from '@domain/advisorNarrationGuard';
 import {
   analyzeProjectMargin,
   FINANCIAL_ADVISOR_DISCLAIMER,
   forecastCashFlow13Weeks,
   type ForecastCashFlowInput,
   type ProjectMarginInput,
-} from '../../../../../../packages/domain/src/financialAdvisor';
+} from '@domain/financialAdvisor';
 
 function makeBaseForecastInput(overrides: Partial<ForecastCashFlowInput> = {}): ForecastCashFlowInput {
   return {

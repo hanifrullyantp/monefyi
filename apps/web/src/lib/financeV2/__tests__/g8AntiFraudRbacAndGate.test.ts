@@ -6,7 +6,7 @@ import {
   type AttendanceCheckRecord,
   type AttendanceFraudContext,
   type HrdWorkerPayRecord,
-} from '../../../../../../packages/domain/src/hrdGovernance';
+} from '@domain/hrdGovernance';
 import {
   buildDailyProjectLaborAccruals,
   computeKasbonSettlement,
@@ -14,8 +14,8 @@ import {
   type AttendanceProjectSplitInput,
   type CompensationRateRecord,
   type LaborPolicy,
-} from '../../../../../../packages/domain/src/hrdPayroll';
-import { linesAreBalanced, validateJournalDimensions } from '../../../../../../packages/domain/src/journal';
+} from '@domain/hrdPayroll';
+import { linesAreBalanced, validateJournalDimensions } from '@domain/journal';
 import type { OrgMember } from '../../../types/onboarding';
 import type { AttendanceRecord } from '../../../services/attendanceService';
 import type { BonRequest, MemberCompensation } from '../../../services/payrollService';

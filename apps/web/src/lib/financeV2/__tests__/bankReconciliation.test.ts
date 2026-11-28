@@ -19,7 +19,7 @@ import {
   parseBankStatementCsv,
   reconcileCashVsBank,
   type LedgerCashLine,
-} from '../../../../../../packages/domain/src/bankStatement';
+} from '@domain/bankStatement';
 import {
   importAndMatchBankStatement,
   runCashBankReconciliation,

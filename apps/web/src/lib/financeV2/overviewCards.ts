@@ -1,4 +1,4 @@
-import { toRupiah } from '../../../../../packages/domain/src/journal';
+import { toRupiah } from '@domain/journal';
 import type { FinanceAccount, Payable, Receivable } from '../../types/financeV2';
 import type { JournalLineEnriched } from './reports/types';
 import { buildProfitLossFromLines } from './reports/profitLossReport';

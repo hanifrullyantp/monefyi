@@ -13,21 +13,21 @@ import {
   type FinanceEventCode,
   type JournalAccountRole,
   type TemplateLine,
-} from '../../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import {
   computeRapCompletionFeedback,
   generateRapDraftFromHistory,
   type CompletedProjectHistoryRecord,
-} from '../../../../../../packages/domain/src/rapLearning';
+} from '@domain/rapLearning';
 import {
   clearEntryEngineStateForTests,
   commitEntry,
   prepareEntry,
-} from '../../../../../../agent-core/src/financeEntryEngine';
+} from '@agent-core/financeEntryEngine';
 import {
   buildFinanceSnapshot,
   estimateJsonTokens,
-} from '../../../../../../agent-core/src/financeSnapshot';
+} from '@agent-core/financeSnapshot';
 import type { AccountType, FinanceAccount } from '../../../types/financeV2';
 import { computePeriodProfitFromAccounts } from '../../../services/financeV2/accountService';
 import { businessReportFromLedger } from '../../../services/financeV1/businessReportService';

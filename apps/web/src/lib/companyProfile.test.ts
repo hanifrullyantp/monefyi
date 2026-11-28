@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SOP_CATALOG } from '../../../../agent-core/src/sopData';
+import { SOP_CATALOG } from '@agent-core/sopData';
 import {
   PLATFORM_LOCKS,
   buildContextPack,
@@ -7,15 +7,15 @@ import {
   estimateTokens,
   parametersFromProfile,
   type CompanyProfile,
-} from '../../../../agent-core/src/profile';
+} from '@agent-core/profile';
 import {
   WIZARD_QUESTIONS,
   approveProfileUpdate,
   previewWizard,
   proposeProfileUpdate,
   rollbackProfile,
-} from '../../../../agent-core/src/profileWizard';
-import type { SopDefinition } from '../../../../agent-core/src/sopSchema';
+} from '@agent-core/profileWizard';
+import type { SopDefinition } from '@agent-core/sopSchema';
 
 const catat = SOP_CATALOG.find((sop) => sop.id === 'catat_biaya')!;
 

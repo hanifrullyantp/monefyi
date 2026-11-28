@@ -12,7 +12,7 @@ import {
   type FeedbackSignalCategory,
   type IngestFeedbackSignalResult,
   type OrgTelemetryConsent,
-} from '../../../../packages/domain/src/feedbackObservability';
+} from '@domain/feedbackObservability';
 
 export interface FeedbackPersistAdapter {
   insertFeedbackEvent: (item: FeedbackQueueItem) => Promise<{ error: string | null }>;

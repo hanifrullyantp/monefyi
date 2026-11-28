@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { admitRun, decideActionStatus, explainAction, routeRequest, shouldDispatchMorning } from '../../../../agent-core/src/runtime';
+import { admitRun, decideActionStatus, explainAction, routeRequest, shouldDispatchMorning } from '@agent-core/runtime';
 
 describe('runtime agen', () => {
   it('perintah biaya masuk SOP dan tier rendah', () => {

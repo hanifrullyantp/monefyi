@@ -47,14 +47,14 @@ import {
   interprojectLoanRepayment,
   linesAreBalanced,
   validateJournalDimensions,
-} from '../../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import {
   aggregatePartyBalancesById,
   aggregatePartyBalancesFromJournalLines,
   normalizePartyName,
   resolvePartyId,
   type PartyRecord,
-} from '../../../../../../packages/domain/src/party';
+} from '@domain/party';
 import { buildPartyAccounts, findPartyAccount } from '../partyLedger';
 import { buildProfitLossFromLines } from '../reports/profitLossReport';
 import type { JournalLineEnriched } from '../reports/types';

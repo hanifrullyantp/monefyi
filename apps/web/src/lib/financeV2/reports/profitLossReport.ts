@@ -1,5 +1,5 @@
 import { balanceDelta } from '../../financeV2Calc';
-import { toRupiah } from '../../../../../../packages/domain/src/journal';
+import { toRupiah } from '@domain/journal';
 import type { AccountCategory } from '../../../types/financeV2';
 import type { JournalLineEnriched, ProfitLossReport, ReportFilters } from './types';
 import { loadEnrichedJournalLines } from './loadReportData';

@@ -13,9 +13,9 @@ import {
   evaluateWorkingCapitalFundingNeed,
   TAX_DRAFT_DISCLAIMER,
   type TaxProfileConfig,
-} from '../../../../../../packages/domain/src/cfoTaxAndCapital';
-import { forecastCashFlow13Weeks } from '../../../../../../packages/domain/src/financialAdvisor';
-import { linesAreBalanced } from '../../../../../../packages/domain/src/journal';
+} from '@domain/cfoTaxAndCapital';
+import { forecastCashFlow13Weeks } from '@domain/financialAdvisor';
+import { linesAreBalanced } from '@domain/journal';
 
 const REPO_ROOT = resolve(fileURLToPath(new URL('../../../../../..', import.meta.url)));
 const MIGRATION_PATH = resolve(

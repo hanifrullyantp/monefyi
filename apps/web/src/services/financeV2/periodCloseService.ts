@@ -1,7 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import { buildFinanceReportBundle } from '../../lib/financeV2/reports';
 import { loadEnrichedJournalLines } from '../../lib/financeV2/reports/loadReportData';
-import { toRupiah } from '../../../../../packages/domain/src/journal';
+import { toRupiah } from '@domain/journal';
 import { getFinanceV2Snapshot } from './balanceSheetService';
 import { loadPayables } from './payableService';
 import { createJournalEntry } from './journalService';

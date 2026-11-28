@@ -1,5 +1,5 @@
 import type { Notification, Project, Tenant, User, UserRole } from '../store/appStore';
-import { orgToday } from '../../../../packages/domain/src/money';
+import { orgToday } from '@domain/money';
 import { computeFinanceReportMonth, monthPickerToReportDate } from './financeReportMonth';
 import { parseWorkHours } from '../utils/workHours';
 import { schedulePlanProgress } from './progressMetrics';

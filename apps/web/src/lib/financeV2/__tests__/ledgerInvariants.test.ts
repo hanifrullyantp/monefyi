@@ -12,7 +12,7 @@ import {
   toRupiah,
   walletTransfer,
   payPayable,
-} from '../../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import { balanceDelta, isBalanceSheetBalanced } from '../../financeV2Calc';
 import { buildProfitLossFromLines } from '../reports/profitLossReport';
 import type { JournalLineEnriched } from '../reports/types';

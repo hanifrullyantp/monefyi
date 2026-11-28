@@ -1,4 +1,4 @@
-import { orgToday } from '../../../../packages/domain/src/dates';
+import { orgToday } from '@domain/dates';
 import { supabase } from '../lib/supabase';
 import { assertNoDbError } from '../lib/supabaseErrors';
 import { useAppStore } from '../store/appStore';

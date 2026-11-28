@@ -15,7 +15,7 @@ import {
   receiveReceivable,
   validateJournalDimensions,
   walletTransfer,
-} from '../../../../packages/domain/src/journal';
+} from '@domain/journal';
 
 describe('template jurnal', () => {
   it('kejadian seimbang dalam rupiah bulat termasuk dividen proyek', () => {

@@ -176,6 +176,7 @@ export default function ManagerWorkspaceModal({
       userId: user.id,
       orgId: tenant.id,
       userName: user.name,
+      accessToken: '',
       projects,
       currentProject: focusedProject,
       onNavigate: path => navigate(path),

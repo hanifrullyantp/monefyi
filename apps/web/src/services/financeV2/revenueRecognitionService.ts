@@ -3,7 +3,7 @@ import {
   recognizeDownPaymentRevenue,
   toRupiah,
   type JournalAccountRole,
-} from '../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import {
   buildScheduledRecognitionPlan,
   normalizePeriodMonth,
@@ -11,7 +11,7 @@ import {
   type RevenueRecognitionMethod,
   type ScheduledRecognitionPlanItem,
   type ScheduledRecognitionProjectInput,
-} from '../../../../../packages/domain/src/revenueRecognition';
+} from '@domain/revenueRecognition';
 import type { AccountType, JournalLineInput } from '../../types/financeV2';
 import { ensureChartOfAccounts, findSystemAccount, loadAccountsByType } from './accountService';
 import { postJournalEntry } from './journalService';

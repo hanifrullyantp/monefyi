@@ -15,7 +15,7 @@ import {
   measureUxBurdenReduction,
   selectInitialWorkerProjectId,
   type MorningFeedItemInput,
-} from '../../../../../../packages/domain/src/uxLightening';
+} from '@domain/uxLightening';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

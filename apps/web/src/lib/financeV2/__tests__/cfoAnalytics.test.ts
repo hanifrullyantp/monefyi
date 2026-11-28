@@ -7,7 +7,7 @@ import {
   renderBoardReportPdfHtml,
   simulateDividendPolicyComparison,
   type BoardMonthlyReportInput,
-} from '../../../../../../packages/domain/src/cfoAnalytics';
+} from '@domain/cfoAnalytics';
 
 describe('G4-1: CFO Anggaran vs Aktual, KPI, Kebijakan Dividen 2 Mode, & Laporan Bulanan Direksi', () => {
   describe('computeBudgetVsActual', () => {

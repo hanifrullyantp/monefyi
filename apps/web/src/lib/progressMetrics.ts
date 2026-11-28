@@ -4,7 +4,7 @@ import {
   daysUntil,
   schedulePlanProgress,
   weightedActualProgress,
-} from '../../../../packages/domain/src/progress';
+} from '@domain/progress';
 
 export { schedulePlanProgress, weightedActualProgress };
 

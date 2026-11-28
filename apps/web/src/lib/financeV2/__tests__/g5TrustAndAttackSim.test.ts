@@ -6,8 +6,8 @@ import {
   clearEntryEngineStateForTests,
   prepareEntry,
   type EntityCatalogItem,
-} from '../../../../../../agent-core/src/financeEntryEngine';
-import { detectDuplicateEntry } from '../../../../../../packages/domain/src/anomalyDetection';
+} from '@agent-core/financeEntryEngine';
+import { detectDuplicateEntry } from '@domain/anomalyDetection';
 import {
   authorizeAgentAction,
   buildAuditTrailExport,
@@ -21,14 +21,14 @@ import {
   type OrgDailyGovernanceUsage,
   type ShadowDecisionRecord,
   type UserCorrectionSignalMemory,
-} from '../../../../../../packages/domain/src/autonomyGovernance';
+} from '@domain/autonomyGovernance';
 import {
   approveMispostingReversalPostmortem,
   proposeMispostingReversalAndPostmortem,
-} from '../../../../../../packages/domain/src/incidentRecovery';
-import { linesAreBalanced } from '../../../../../../packages/domain/src/journal';
-import { extractReceiptFields } from '../../../../../../packages/domain/src/receiptExtraction';
-import { runMultiTenantCronBatch } from '../../../../../../packages/domain/src/reminderScheduler';
+} from '@domain/incidentRecovery';
+import { linesAreBalanced } from '@domain/journal';
+import { extractReceiptFields } from '@domain/receiptExtraction';
+import { runMultiTenantCronBatch } from '@domain/reminderScheduler';
 
 const REPO_ROOT = resolve(fileURLToPath(new URL('../../../../../..', import.meta.url)));
 const MIGRATION_PATH = resolve(

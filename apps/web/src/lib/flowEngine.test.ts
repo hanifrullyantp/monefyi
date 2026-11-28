@@ -1,16 +1,16 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { loadSopDirectory } from '../../../../agent-core/src/loadSops';
-import { SOP_CATALOG } from '../../../../agent-core/src/sopData';
+import { loadSopDirectory } from '@agent-core/loadSops';
+import { SOP_CATALOG } from '@agent-core/sopData';
 import {
   planFlowAction,
   screenFlowBody,
   startRun,
   transition,
   type FlowRun,
-} from '../../../../agent-core/src/flow';
-import { REQUIRED_SOPS, type SopDefinition } from '../../../../agent-core/src/sopSchema';
-import { routeCatatBiaya } from '../../../../agent-core/src/sop';
+} from '@agent-core/flow';
+import { REQUIRED_SOPS, type SopDefinition } from '@agent-core/sopSchema';
+import { routeCatatBiaya } from '@agent-core/sop';
 
 const NOW = Date.parse('2026-11-04T01:00:00.000Z');
 const catalog = loadSopDirectory(fileURLToPath(new URL('../../../../agent-core/sop/', import.meta.url)));

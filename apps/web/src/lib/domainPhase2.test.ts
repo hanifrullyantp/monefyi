@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { computeProjectEvm } from '../../../../packages/domain/src/evm';
+import { computeProjectEvm } from '@domain/evm';
 import { computeProjectEvm as edgeEvm } from '../../../../my-supabase-project/supabase/functions/_shared/evm';
-import { orgToday } from '../../../../packages/domain/src/dates';
-import { structuredError } from '../../../../packages/domain/src/errors';
-import { weightedActualProgress } from '../../../../packages/domain/src/progress';
-import { canMemorizeCommand, storedAmountConflicts } from '../../../../packages/domain/src/validation';
+import { orgToday } from '@domain/dates';
+import { structuredError } from '@domain/errors';
+import { weightedActualProgress } from '@domain/progress';
+import { canMemorizeCommand, storedAmountConflicts } from '@domain/validation';
 
 const NOW = new Date('2026-01-06T00:00:00.000Z');
 

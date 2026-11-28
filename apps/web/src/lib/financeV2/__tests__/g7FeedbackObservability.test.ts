@@ -13,7 +13,7 @@ import {
   ingestFeedbackSignal,
   REDACTION_TAGS,
   type FeedbackQueueItem,
-} from '../../../../../../packages/domain/src/feedbackObservability';
+} from '@domain/feedbackObservability';
 import {
   clearFeedbackObservabilityStoreForTests,
   getAggregatedFeedbackIssues,

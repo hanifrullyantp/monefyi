@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   evaluateFinanceGoldSet,
   loadFinanceGoldCases,
-} from '../../../../agent-core/src/financeEvalRunner';
+} from '@agent-core/financeEvalRunner';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const goldPath = `${root}evals/finance/gold_200_id.yaml`;

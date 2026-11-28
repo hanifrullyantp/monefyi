@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { resolveProjectIncomeTemplate, toRupiah } from '../../../../packages/domain/src/journal';
+import { resolveProjectIncomeTemplate, toRupiah } from '@domain/journal';
 
 export type IncomeCategory = 'dp' | 'termin' | 'pelunasan' | 'retensi' | 'other';
 export type IncomeStatus = 'received' | 'pending' | 'invoiced' | 'accrued' | 'cancelled';

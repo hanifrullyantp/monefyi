@@ -4,10 +4,19 @@
  * Menyediakan pencarian konteks berbasis vektor (semantic) yang digabungkan
  * dengan pencarian kata kunci (hybrid search) untuk retrieval konteks yang
  * lebih akurat dari sekadar pencarian deterministik.
+ * 
+ * File ini bekerja di kedua lingkungan: browser/Vite (frontend) dan Deno (Supabase Edge Functions).
  */
 
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "../../../my-supabase-project/supabase/types/database";
+let createClient: any = null;
+
+try {
+  // Hanya tersedia di lingkungan Deno (Supabase Edge Functions)
+  const supabaseModule = await import("@supabase/supabase-js");
+  createClient = supabaseModule.createClient;
+} catch {
+  // Tidak tersedia di frontend/Vite — akan menggunakan fallback
+}
 
 export type SemanticSearchResult = {
   id: string;
@@ -37,26 +46,40 @@ export type EmbeddingOptions = {
   accessToken: string;
 };
 
+function getEnv(key: string): string | undefined {
+  if (typeof Deno !== 'undefined' && Deno.env) {
+    return Deno.env.get(key);
+  }
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+  return undefined;
+}
+
 /** Generate embedding untuk teks menggunakan AI provider yang tersedia. */
 export async function generateEmbedding(
   text: string,
   accessToken: string,
 ): Promise<number[]> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseUrl = getEnv("SUPABASE_URL");
+  const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
 
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  if (!supabaseUrl || !supabaseAnonKey || !createClient) {
+    // Fallback: hash-based deterministic embedding (untuk development tanpa AI provider)
+    return deterministicEmbedding(text);
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
 
   // Panggil edge function untuk generate embedding (jika tersedia)
-  // Atau gunakan AI provider langsung di sini
   const { data, error } = await supabase.functions.invoke("agent-generate-embedding", {
     body: { text },
   });
 
   if (error || !data?.embedding) {
-    // Fallback: hash-based deterministic embedding (untuk development tanpa AI provider)
+    // Fallback: hash-based deterministic embedding
     return deterministicEmbedding(text);
   }
 
@@ -85,10 +108,14 @@ function deterministicEmbedding(text: string): number[] {
 export async function storeEmbedding(
   opts: EmbeddingOptions,
 ): Promise<string> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseUrl = getEnv("SUPABASE_URL");
+  const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
 
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  if (!supabaseUrl || !supabaseAnonKey || !createClient) {
+    throw new Error("Supabase client tidak tersedia di lingkungan ini.");
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: `Bearer ${opts.accessToken}` } },
   });
 
@@ -109,10 +136,14 @@ export async function storeEmbedding(
 export async function semanticSearch(
   opts: SemanticSearchOptions,
 ): Promise<SemanticSearchResult[]> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseUrl = getEnv("SUPABASE_URL");
+  const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
 
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  if (!supabaseUrl || !supabaseAnonKey || !createClient) {
+    throw new Error("Supabase client tidak tersedia di lingkungan ini.");
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: `Bearer ${opts.accessToken}` } },
   });
 
@@ -149,12 +180,16 @@ export async function hybridSearch(
 
   // Jika tidak ada hasil semantik yang cukup, coba keyword search sederhana
   if (semanticResults.length === 0) {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseUrl = getEnv("SUPABASE_URL");
+    const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
 
-    const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${opts.accessToken}` } },
-    });
+    if (!supabaseUrl || !supabaseAnonKey || !createClient) {
+      return semanticResults;
+    }
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${opts.accessToken}` } },
+  });
 
     const { data, error } = await supabase
       .from("agent_embeddings")

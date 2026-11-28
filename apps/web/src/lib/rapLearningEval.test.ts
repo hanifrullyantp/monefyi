@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseYaml } from '../../../../agent-core/src/yaml';
+import { parseYaml } from '@agent-core/yaml';
 import {
   computeRapCompletionFeedback,
   evaluateRapPredictionMape,
   generateRapDraftFromHistory,
   type CompletedProjectHistoryRecord,
   type RapMapeCase,
-} from '../../../../packages/domain/src/rapLearning';
+} from '@domain/rapLearning';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 

@@ -36,11 +36,11 @@ import {
   FINANCE_EVENT_CODES,
   linesAreBalanced,
   recognizeDownPaymentRevenue,
-} from '../../../../../../packages/domain/src/journal';
+} from '@domain/journal';
 import {
   buildScheduledRecognitionPlan,
   computeRecognizableRevenue,
-} from '../../../../../../packages/domain/src/revenueRecognition';
+} from '@domain/revenueRecognition';
 import {
   planMonthlyRevenueRecognition,
   postRevenueRecognition,

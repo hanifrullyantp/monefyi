@@ -38,7 +38,7 @@ import TeamTodoBoard from '../components/team/TeamTodoBoard';
 import { listMembers } from '../services/memberService';
 import type { OrgMember } from '../types/onboarding';
 import { validateWorkerProgressUpdate } from '../lib/workerProgressGuard';
-import { selectInitialWorkerProjectId } from '../../../../packages/domain/src/uxLightening';
+import { selectInitialWorkerProjectId } from '@domain/uxLightening';
 
 export const MIN_BON_AMOUNT = 1000;
 

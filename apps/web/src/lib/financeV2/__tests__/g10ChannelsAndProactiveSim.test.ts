@@ -15,7 +15,7 @@ import {
   type ChannelIdentityBinding,
   type ChannelType,
   type SingleOrgChannelGatewayPolicy,
-} from '../../../../../../packages/domain/src/channelGateway';
+} from '@domain/channelGateway';
 import {
   PROACTIVE_TRIGGER_TYPES,
   buildOwnerDailySummary5Lines,
@@ -27,12 +27,12 @@ import {
   type ProactiveBudgetPolicy,
   type ProactiveMemberProfile,
   type ProactiveTriggerEvent,
-} from '../../../../../../packages/domain/src/proactiveOrchestrator';
+} from '@domain/proactiveOrchestrator';
 import {
   DEFAULT_UNIFIED_APPROVAL_THRESHOLD_RUPIAH,
   commitUnifiedAction,
   type UnifiedGatewayPolicy,
-} from '../../../../../../packages/domain/src/unifiedAgentGateway';
+} from '@domain/unifiedAgentGateway';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,7 +42,7 @@ const MIGRATION_PATH = resolve(
 );
 const CHANNEL_GATEWAY_PATH = resolve(
   __dirname,
-  '../../../../../../packages/domain/src/channelGateway.ts',
+  '@domain/channelGateway.ts',
 );
 
 const ORG_A = 'org-froyek-a';

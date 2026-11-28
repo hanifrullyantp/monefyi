@@ -17,7 +17,7 @@ import {
   buildPrepareEntryFromReceipt,
   computeDeterministicSha256,
   extractReceiptFields,
-} from '../../../../../../packages/domain/src/receiptExtraction';
+} from '@domain/receiptExtraction';
 import {
   clearEntryEngineStateForTests,
   type EntityCatalogItem,

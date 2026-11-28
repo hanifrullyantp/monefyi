@@ -9,8 +9,8 @@ import {
   toRupiah,
   validateJournalDimensions,
   type TemplateLine,
-} from '../../../../../../packages/domain/src/journal';
-import { computeRecognizableRevenue } from '../../../../../../packages/domain/src/revenueRecognition';
+} from '@domain/journal';
+import { computeRecognizableRevenue } from '@domain/revenueRecognition';
 import {
   buildBalanceSheetFromBalances,
   type AccountBalanceEntry,
@@ -25,23 +25,23 @@ import type { AccountCategory, AccountType } from '../../../types/financeV2';
 import {
   buildPrepareEntryFromReceipt,
   extractReceiptFields,
-} from '../../../../../../packages/domain/src/receiptExtraction';
+} from '@domain/receiptExtraction';
 import {
   clearEntryEngineStateForTests,
   commitEntry,
   prepareEntry,
   type EntityCatalogItem,
-} from '../../../../../../agent-core/src/financeEntryEngine';
+} from '@agent-core/financeEntryEngine';
 import {
   matchBankStatementToLedger,
   parseBankStatementCsv,
   reconcileCashVsBank,
   type LedgerCashLine,
-} from '../../../../../../packages/domain/src/bankStatement';
+} from '@domain/bankStatement';
 import {
   detectAnomalousAmount,
   detectDuplicateEntry,
-} from '../../../../../../packages/domain/src/anomalyDetection';
+} from '@domain/anomalyDetection';
 
 // G2 modules
 import {
@@ -49,12 +49,12 @@ import {
   evaluateMonthCloseChecklist,
   evaluateProjectProactiveAlerts,
   scoreClientCollectionRisk,
-} from '../../../../../../packages/domain/src/proactiveFinance';
+} from '@domain/proactiveFinance';
 import {
   approveAndDispatchCollectionDraft,
   buildCollectionMessageDraft,
   runMultiTenantCronBatch,
-} from '../../../../../../packages/domain/src/reminderScheduler';
+} from '@domain/reminderScheduler';
 
 // G3 modules
 import {
@@ -64,14 +64,14 @@ import {
   prioritizePayables,
   recommendProjectPricing,
   runAdvisorWhatIf,
-} from '../../../../../../packages/domain/src/financialAdvisor';
+} from '@domain/financialAdvisor';
 import {
   estimateAdvisorTokens,
   formatAdvisorMobileAnswer,
   verifyNarrativeNumbersMatchSource,
-} from '../../../../../../packages/domain/src/advisorNarrationGuard';
-import { buildAdvisorBriefTool } from '../../../../../../agent-core/src/advisorTools';
-import { estimateJsonTokens } from '../../../../../../agent-core/src/financeSnapshot';
+} from '@domain/advisorNarrationGuard';
+import { buildAdvisorBriefTool } from '@agent-core/advisorTools';
+import { estimateJsonTokens } from '@agent-core/financeSnapshot';
 
 // G4 modules
 import {
@@ -81,7 +81,7 @@ import {
   computeCfoKpis,
   renderBoardReportPdfHtml,
   simulateDividendPolicyComparison,
-} from '../../../../../../packages/domain/src/cfoAnalytics';
+} from '@domain/cfoAnalytics';
 import {
   buildAnnualScenarioPlan,
   buildLoanAmortizationSchedule,
@@ -89,7 +89,7 @@ import {
   calculateTaxDraftAndCalendar,
   TAX_DRAFT_DISCLAIMER,
   type TaxProfileConfig,
-} from '../../../../../../packages/domain/src/cfoTaxAndCapital';
+} from '@domain/cfoTaxAndCapital';
 
 // G5 modules
 import {
@@ -103,11 +103,11 @@ import {
   type OrgAutonomyGovernancePolicy,
   type OrgDailyGovernanceUsage,
   type ShadowDecisionRecord,
-} from '../../../../../../packages/domain/src/autonomyGovernance';
+} from '@domain/autonomyGovernance';
 import {
   approveMispostingReversalPostmortem,
   proposeMispostingReversalAndPostmortem,
-} from '../../../../../../packages/domain/src/incidentRecovery';
+} from '@domain/incidentRecovery';
 
 /**
  * Buku besar in-memory 4-kategori COA (aktiva, pasiva, pendapatan, beban)

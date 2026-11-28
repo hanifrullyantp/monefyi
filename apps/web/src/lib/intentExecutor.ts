@@ -1,6 +1,6 @@
 import { formatCurrency, todayStr } from './adapters';
 import type { ParsedCommand } from './commandParser';
-import { commitRecordCost, prepareRecordCost } from '../../../../agent-core/src/prepare';
+import { commitRecordCost, prepareRecordCost } from '@agent-core/prepare';
 import { createCostRealization } from '../services/costService';
 import { loadRapItems, createRapItem, syncProjectBudgetFromRap, type RapItem } from '../services/rapService';
 import type { ParsedCostLine } from './costParser';

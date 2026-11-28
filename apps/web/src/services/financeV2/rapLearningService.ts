@@ -5,7 +5,7 @@ import {
   type CompletedProjectHistoryRecord,
   type RapCompletionFeedback,
   type RapDraftProposal,
-} from '../../../../../packages/domain/src/rapLearning';
+} from '@domain/rapLearning';
 import { supabase } from '../../lib/supabase';
 import { buildProfitLossFromLines } from '../../lib/financeV2/reports/profitLossReport';
 import { loadEnrichedJournalLines } from '../../lib/financeV2/reports/loadReportData';

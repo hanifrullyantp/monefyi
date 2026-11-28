@@ -44,8 +44,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "src"),
-        "@domain": path.resolve(__dirname, "../../packages/domain/src"),
-        "@agent-core": path.resolve(__dirname, "../../agent-core/src"),
+        "@domain": path.resolve(__dirname, "vendor/packages/domain/src"),
+        "@agent-core": path.resolve(__dirname, "vendor/agent-core/src"),
         "@supabase/supabase-js": path.resolve(__dirname, "node_modules/@supabase/supabase-js"),
       },
     },

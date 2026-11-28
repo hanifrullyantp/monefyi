@@ -1,4 +1,4 @@
-import { normalizePartyName } from '../../../../../packages/domain/src/party';
+import { normalizePartyName } from '@domain/party';
 import type { Payable, Receivable } from '../../types/financeV2';
 
 export type PartyLedgerLine = {

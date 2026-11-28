@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { linesAreBalanced } from '../../../../../../packages/domain/src/journal';
+import { linesAreBalanced } from '@domain/journal';
 import { buildOverviewThreeCards } from '../overviewCards';
 import { planBusinessModeDividend, planProjectModeDividend } from '../dividendModes';
 import type { JournalLineEnriched } from '../reports/types';
