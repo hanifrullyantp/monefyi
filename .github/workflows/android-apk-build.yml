@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches: [main, chore/apk-hardening]
     paths:
       - "apps/web/**"
       - ".github/workflows/android-apk-build.yml"
@@ -78,7 +78,8 @@ jobs:
       - name: Get version from package.json
         if: github.event_name == 'workflow_dispatch' && (inputs.create_release == true || github.event.inputs.create_release == 'true')
         id: version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        run: |
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Create or update GitHub Release
         if: github.event_name == 'workflow_dispatch' && (inputs.create_release == true || github.event.inputs.create_release == 'true')
@@ -100,4 +101,5 @@ jobs:
 
       - name: Output release URL
         if: github.event_name == 'workflow_dispatch' && (inputs.create_release == true || github.event.inputs.create_release == 'true')
-        run: echo "Release: ${{ steps.release.outputs.upload_url }}"
+        run: |
+          echo "Release: ${{ steps.release.outputs.upload_url }}"
