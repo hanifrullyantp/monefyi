@@ -51,8 +51,25 @@ serve(async (req) => {
       }, 409);
     }
 
-    const orgId = String(members[0].org_id);
-    const userRole = members[0].role;
+    const url = new URL(req.url);
+    const requestedOrgId = url.searchParams.get("org_id")?.trim() || null;
+
+    // H-AUD-08: Validasi org_id yang diminta atau pilih keanggotaan di mana user memiliki peran owner/manager
+    const matchedMember = requestedOrgId
+      ? members.find((m) => String(m.org_id) === requestedOrgId)
+      : members.find((m) => m.role === "owner" || m.role === "manager") ?? members[0];
+
+    if (!matchedMember) {
+      return json({
+        code: "tidak_memiliki_wewenang",
+        message_id: "tidak_memiliki_wewenang",
+        fix_hint: "Anda bukan anggota aktif dari organisasi yang diminta.",
+        valid_options: [],
+      }, 403);
+    }
+
+    const orgId = String(matchedMember.org_id);
+    const userRole = matchedMember.role;
 
     if (userRole !== "owner" && userRole !== "manager") {
       return json({
@@ -63,11 +80,9 @@ serve(async (req) => {
       }, 403);
     }
 
-    const url = new URL(req.url);
-    const days = Number(url.searchParams.get("days")) || 1;
+    const days = Math.max(1, Math.min(90, Number(url.searchParams.get("days")) || 1));
 
     // Ambil rentang tanggal
-    const tz = "Asia/Jakarta";
     const endDate = new Date();
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
@@ -103,17 +118,17 @@ serve(async (req) => {
 
     if (usageErr) throw usageErr;
 
-    // 4. Hitung metrik
+    // 4. Hitung metrik (planner_agent_runs.status: 'active' | 'done' | 'blocked')
     const totalRuns = runs?.length || 0;
-    const completedRuns = runs?.filter((r: any) => r.status === "completed" || r.status === "executed" || r.status === "approved").length || 0;
-    const failedRuns = runs?.filter((r: any) => r.status === "failed" || r.status === "rejected").length || 0;
-    const draftRuns = runs?.filter((r: any) => r.status === "draft" || r.status === "pending").length || 0;
+    const completedRuns = runs?.filter((r: any) => r.status === "done" || r.status === "completed" || r.status === "executed" || r.status === "approved").length || 0;
+    const failedRuns = runs?.filter((r: any) => r.status === "blocked" || r.status === "failed" || r.status === "rejected").length || 0;
+    const draftRuns = runs?.filter((r: any) => r.status === "active" || r.status === "draft" || r.status === "pending").length || 0;
     const successRate = totalRuns > 0 ? (completedRuns / totalRuns) * 100 : 0;
     const errorRate = totalRuns > 0 ? (failedRuns / totalRuns) * 100 : 0;
 
     const totalActions = actions?.length || 0;
-    const completedActions = actions?.filter((a: any) => a.status === "completed" || a.status === "executed" || a.status === "approved").length || 0;
-    const failedActions = actions?.filter((a: any) => a.status === "failed" || a.status === "rejected").length || 0;
+    const completedActions = actions?.filter((a: any) => a.status === "executed" || a.status === "approved" || a.status === "completed").length || 0;
+    const failedActions = actions?.filter((a: any) => a.status === "rejected" || a.status === "failed").length || 0;
     const actionSuccessRate = totalActions > 0 ? (completedActions / totalActions) * 100 : 0;
 
     const totalRunsTokens = usage?.reduce((sum: number, u: any) => sum + (u.tokens || 0), 0) || 0;

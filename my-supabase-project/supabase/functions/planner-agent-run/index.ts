@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { admitRun, decideActionStatus, explainAction, routeRequest, type Autonomy } from "../_shared/agent/runtime.ts";
 import { screenFlowBody } from "../_shared/agent/flow.ts";
+import { detectPromptInjection } from "../../../../packages/domain/src/receiptExtraction.ts";
 import { writeAudit } from "../_shared/audit.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { monitorEvent, monitorError, monitorAsync } from "../_shared/monitoring.ts";
@@ -21,23 +22,8 @@ function logAgentEvent(
   });
 }
 
-// Rate limiter per user
-const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
-const RATE_LIMIT_MAX = 60;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-
-function checkRateLimit(userId: string): { ok: true } | { ok: false; retryAfter: number } {
-  const now = Date.now();
-  const entry = rateLimitStore.get(userId);
-  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-    rateLimitStore.set(userId, { count: 1, windowStart: now });
-    return { ok: true };
-  }
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return { ok: false, retryAfter: RATE_LIMIT_WINDOW_MS - (now - entry.windowStart) };
-  }
-  entry.count += 1;
-  return { ok: true };
+function estimateActualTokens(text: string): number {
+  return Math.min(4000, Math.max(16, Math.ceil(text.length / 4) + 24));
 }
 
 serve(async (req) => {
@@ -70,6 +56,17 @@ serve(async (req) => {
       return json({ code: "input_kosong", message_id: "input_kosong", fix_hint: "Isi permintaan.", valid_options: [] }, 400);
     }
 
+    // H-AUD-10: Tolak prompt injection sebelum pemrosesan lebih lanjut
+    const injectionHits = detectPromptInjection(text);
+    if (injectionHits.length > 0) {
+      return json({
+        code: "prompt_injection_detected",
+        message_id: "prompt_injection_detected",
+        fix_hint: "Permintaan ditolak karena mengandung instruksi berisiko.",
+        valid_options: [],
+      }, 400);
+    }
+
     const userClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -78,17 +75,6 @@ serve(async (req) => {
       return json({ code: "sesi_tidak_sah", message_id: "sesi_tidak_sah", fix_hint: "Masuk ulang.", valid_options: [] }, 401);
     }
     userId = String(authData.user.id);
-
-    // Rate limit per user: maksimal 60 request per menit
-    const rateLimit = checkRateLimit(userId);
-    if (!rateLimit.ok) {
-      return json({
-        code: "rate_limit_terlampaui",
-        message_id: "rate_limit_terlampaui",
-        fix_hint: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(rateLimit.retryAfter / 1000)} detik.`,
-        valid_options: [],
-      }, 429);
-    }
 
     const { data: members, error: memberErr } = await userClient
       .from("planner_org_members")
@@ -107,6 +93,23 @@ serve(async (req) => {
       }, 409);
     }
     orgId = String(members[0].org_id);
+
+    // H-AUD-07: Rate limit di database bersama (per org_id + user_id, 60 request/menit)
+    const rateLimitRes = await userClient.rpc("planner_agent_check_rate_limit", {
+      p_org_id: orgId,
+      p_user_id: userId,
+      p_max_per_minute: 60,
+    });
+    if (rateLimitRes.error || rateLimitRes.data?.ok === false) {
+      const retryAfterMs = Number(rateLimitRes.data?.retry_after_ms ?? 60_000);
+      return json({
+        code: "rate_limit_terlampaui",
+        message_id: "rate_limit_terlampaui",
+        fix_hint: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(retryAfterMs / 1000)} detik.`,
+        valid_options: [],
+      }, 429);
+    }
+
     const { data: org } = await userClient
       .from("planner_organizations")
       .select("plan_type, timezone")
@@ -119,10 +122,29 @@ serve(async (req) => {
       .maybeSingle();
     const autonomy = (settings?.autonomy || "L1") as Autonomy;
     const failures = Number(body.failures || 0);
+    const actualTokens = estimateActualTokens(text);
 
-    // Ambil penggunaan kuota hari ini dari database untuk admitRun yang akurat
+    // H-AUD-07: Konsumsi kuota atomik (per org + per user dengan FOR UPDATE) di awal request menggunakan token aktual
+    const quotaResult = await userClient.rpc("planner_agent_consume_quota", {
+      p_org_id: orgId,
+      p_tokens: actualTokens,
+      p_user_id: userId,
+    });
+    if (quotaResult.error || quotaResult.data?.ok === false) {
+      const code = quotaResult.data?.code || "kuota_gagal";
+      monitorEvent({
+        level: "warn",
+        message: "quota_consume_rejected",
+        org_id: orgId,
+        user_id: userId,
+        error_code: code,
+        metadata: { quota_code: code },
+      });
+      return json({ code, message_id: code, fix_hint: "Coba lagi besok atau minta pemilik menaikkan paket.", valid_options: [] }, 429);
+    }
+
     const v_tz = String(org?.timezone || "Asia/Jakarta");
-    const v_date = new Date().toLocaleDateString("en-CA", { timeZone: v_tz }); // YYYY-MM-DD
+    const v_date = new Date().toLocaleDateString("en-CA", { timeZone: v_tz });
     const { data: usage } = await userClient
       .from("planner_agent_usage")
       .select("runs, tokens")
@@ -130,36 +152,21 @@ serve(async (req) => {
       .eq("usage_date", v_date)
       .maybeSingle();
 
-    const route = await monitorAsync(
-      () => Promise.resolve(routeRequest(text, failures, "prepare")),
-      {
-        operation: "route_request",
-        org_id: orgId,
-        user_id: userId,
-        metadata: { failures },
-      },
-    );
-    logAgentEvent(orgId, userId, "route_request", {
-      sop_id: route.sopId,
-      confidence: route.confidence,
-      tier: route.tier,
-      escalate: route.escalate,
-      failures,
-    });
     const gate = await monitorAsync(
       () => Promise.resolve(admitRun({
         killSwitch: Boolean(settings?.kill_switch),
         planType: String(org?.plan_type || "free"),
-        usedRuns: usage?.runs ?? 0,
-        usedTokens: usage?.tokens ?? 0,
+        usedRuns: Math.max(0, (usage?.runs ?? 1) - 1),
+        usedTokens: Math.max(0, (usage?.tokens ?? actualTokens) - actualTokens),
         iteration: 1,
-        tokens: 32,
+        tokens: actualTokens,
         costIdr: 0,
       })),
       {
         operation: "admit_run",
         org_id: orgId,
         user_id: userId,
+        tokens_used: actualTokens,
         metadata: { plan_type: org?.plan_type, kill_switch: settings?.kill_switch },
       },
     );
@@ -174,12 +181,33 @@ serve(async (req) => {
       });
       return json(gate.error, 429);
     }
+
+    const route = await monitorAsync(
+      () => Promise.resolve(routeRequest(text, failures, "prepare")),
+      {
+        operation: "route_request",
+        org_id: orgId,
+        user_id: userId,
+        tokens_used: actualTokens,
+        metadata: { failures },
+      },
+    );
+    logAgentEvent(orgId, userId, "route_request", {
+      sop_id: route.sopId,
+      confidence: route.confidence,
+      tier: route.tier,
+      escalate: route.escalate,
+      tokens_used: actualTokens,
+      failures,
+    });
+
     if (!route.sopId) {
       monitorEvent({
         level: "warn",
         message: "sop_not_matched",
         org_id: orgId,
         user_id: userId,
+        tokens_used: actualTokens,
         metadata: { sop_matched: false },
       });
       return json({
@@ -191,19 +219,7 @@ serve(async (req) => {
         escalate: route.escalate,
       }, 422);
     }
-    const quotaResult = await userClient.rpc("planner_agent_consume_quota", { p_org_id: orgId, p_tokens: 32 });
-    if (quotaResult.error || quotaResult.data?.ok === false) {
-      const code = quotaResult.data?.code || "kuota_gagal";
-      monitorEvent({
-        level: "warn",
-        message: "quota_consume_rejected",
-        org_id: orgId,
-        user_id: userId,
-        error_code: code,
-        metadata: { quota_code: code },
-      });
-      return json({ code, message_id: code, fix_hint: "Coba lagi besok atau minta pemilik menaikkan paket.", valid_options: [] }, 429);
-    }
+
     const status = decideActionStatus(autonomy, "prepare", null, 0);
     const startedAt = Date.now();
     const { data: run, error: runErr } = await userClient.from("planner_agent_runs").insert({
@@ -239,6 +255,7 @@ serve(async (req) => {
       tier: route.tier,
       autonomy,
       status,
+      tokens_used: actualTokens,
       latency_ms: Date.now() - startedAt,
     });
     await writeAudit(userClient, {

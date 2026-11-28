@@ -1,7 +1,8 @@
 /**
  * Observability & Monitoring untuk Agent Edge Functions.
  * Mendukung Sentry dan DataDog melalui variabel lingkungan.
- * Semua event dikirim sebagai structured JSON logs + optional remote telemetry.
+ * Semua event dikirim sebagai structured JSON logs + optional remote telemetry
+ * setelah disanitasi dari PII, nominal sensitif, dan teks mentah pengguna (H-AUD-11).
  */
 
 export type MonitorLevel = "debug" | "info" | "warn" | "error" | "critical";
@@ -32,15 +33,85 @@ const SENTRY_ENV = Deno.env.get("SENTRY_ENV") || "production";
 const isSentryConfigured = Boolean(SENTRY_DSN);
 const isDatadogConfigured = Boolean(DD_API_KEY);
 
-/** Kirim event ke Sentry via HTTP envelope (fallback jika SDK tidak tersedia). */
-async function sendToSentry(event: MonitorEvent): Promise<void> {
-  if (!isSentryConfigured) return;
+const FORBIDDEN_PII_KEYS = new Set([
+  "input",
+  "rawtext",
+  "raw_text",
+  "text",
+  "prompt",
+  "note",
+  "reason",
+  "phone",
+  "email",
+  "name",
+  "worker_name",
+  "employee",
+  "amount",
+  "total",
+  "salary",
+]);
+
+function scrubPiiString(value: string): string {
+  return value
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[redacted_email]")
+    .replace(/\b(?:\+?62|0)8[1-9][0-9]{6,10}\b/g, "[redacted_phone]")
+    .replace(/\b(?:rp\.?\s*)?\d{1,3}(?:[.,]\d{3})+(?:\s*(?:juta|jt|ribu|rb|miliar|m))?\b/gi, "[redacted_amount]");
+}
+
+/** Sanitasi metadata telemetri agar tidak pernah mengirim kalimat input mentah, PII, nama pekerja, atau nominal ke Sentry/log (H-AUD-11). */
+export function sanitizeMonitorMetadata(
+  metadata?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  if (!metadata || typeof metadata !== "object") return undefined;
+  const clean: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(metadata)) {
+    if (FORBIDDEN_PII_KEYS.has(key.toLowerCase())) {
+      continue;
+    }
+    if (typeof val === "string") {
+      clean[key] = scrubPiiString(val).slice(0, 200);
+    } else if (typeof val === "number" || typeof val === "boolean" || val === null) {
+      clean[key] = val;
+    }
+  }
+  return clean;
+}
+
+/** Parse Sentry DSN (`https://<public_key>@<host>/<project_id>`) menjadi endpoint `/api/<project_id>/envelope/` dan header `X-Sentry-Auth` (H-AUD-11). */
+export function parseSentryDsn(dsn: string): { envelopeUrl: string; authHeader: string } | null {
   try {
-    const envelope = JSON.stringify({
-      event_id: crypto.randomUUID(),
+    const parsed = new URL(dsn);
+    const publicKey = parsed.username;
+    const projectId = parsed.pathname.replace(/^\/+|\/+$/g, "");
+    if (!publicKey || !projectId) return null;
+    const basePath = parsed.pathname.split("/").slice(0, -1).join("/");
+    const envelopeUrl = `${parsed.protocol}//${parsed.host}${basePath}/api/${projectId}/envelope/`;
+    const authHeader = `Sentry sentry_version=7, sentry_client=monefyi-agent/1.0, sentry_key=${publicKey}`;
+    return { envelopeUrl, authHeader };
+  } catch {
+    return null;
+  }
+}
+
+/** Kirim event ke Sentry via HTTP envelope dengan DSN parser & X-Sentry-Auth yang benar. */
+async function sendToSentry(event: MonitorEvent): Promise<void> {
+  if (!isSentryConfigured || !SENTRY_DSN) return;
+  const dsnInfo = parseSentryDsn(SENTRY_DSN);
+  if (!dsnInfo) return;
+  try {
+    const safeMetadata = sanitizeMonitorMetadata(event.metadata);
+    const eventId = crypto.randomUUID().replace(/-/g, "");
+    const envelopeHeader = JSON.stringify({
+      event_id: eventId,
+      sent_at: new Date().toISOString(),
+      dsn: SENTRY_DSN,
+    });
+    const itemHeader = JSON.stringify({ type: "event" });
+    const payload = JSON.stringify({
+      event_id: eventId,
       timestamp: new Date().toISOString(),
       level: event.level,
-      message: event.message,
+      message: scrubPiiString(event.message),
       tags: {
         org_id: event.org_id ?? "unknown",
         sop_id: event.sop_id ?? "none",
@@ -49,19 +120,21 @@ async function sendToSentry(event: MonitorEvent): Promise<void> {
         environment: SENTRY_ENV,
       },
       extra: {
-        user_id: event.user_id,
         run_id: event.run_id,
         latency_ms: event.latency_ms,
         tokens_used: event.tokens_used,
-        cost_idr: event.cost_idr,
         error_code: event.error_code,
-        metadata: event.metadata,
+        metadata: safeMetadata,
       },
     });
-    await fetch(`${SENTRY_DSN}/api/${SENTRY_DSN.split("/").pop()}/envelope/`, {
+    const envelopeBody = `${envelopeHeader}\n${itemHeader}\n${payload}\n`;
+    await fetch(dsnInfo.envelopeUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: envelope,
+      headers: {
+        "Content-Type": "application/x-sentry-envelope",
+        "X-Sentry-Auth": dsnInfo.authHeader,
+      },
+      body: envelopeBody,
     }).catch(() => {
       // Sentry gagal tidak boleh mengganggu alur utama
     });
@@ -135,8 +208,9 @@ async function sendToDatadog(event: MonitorEvent): Promise<void> {
   }
 }
 
-/** Catat event monitoring ke console (structured log) + remote telemetry. */
+/** Catat event monitoring ke console (structured log) + remote telemetry dengan sanitasi PII. */
 export function monitorEvent(event: MonitorEvent): void {
+  const safeMetadata = sanitizeMonitorMetadata(event.metadata);
   const logEntry = {
     event: "agent_monitor",
     timestamp: new Date().toISOString(),
@@ -149,17 +223,16 @@ export function monitorEvent(event: MonitorEvent): void {
     autonomy: event.autonomy,
     latency_ms: event.latency_ms,
     tokens_used: event.tokens_used,
-    cost_idr: event.cost_idr,
     error_code: event.error_code,
-    error_message: event.error_message,
-    message: event.message,
-    metadata: event.metadata,
+    error_message: event.error_message ? scrubPiiString(event.error_message) : undefined,
+    message: scrubPiiString(event.message),
+    metadata: safeMetadata,
   };
   console.log(JSON.stringify(logEntry));
 
   // Fire-and-forget ke remote telemetry
-  void sendToSentry(event);
-  void sendToDatadog(event);
+  void sendToSentry({ ...event, metadata: safeMetadata });
+  void sendToDatadog({ ...event, metadata: safeMetadata });
 }
 
 /** Catat error ke monitoring. */

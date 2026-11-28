@@ -45,8 +45,25 @@ serve(async (req) => {
       }, 409);
     }
 
-    // Ambil health status untuk setiap organisasi anggota
-    const orgHealth = await Promise.all(members.map(async (member) => {
+    // H-AUD-08: Hanya owner atau manager yang berhak melihat status health & kuota organisasi
+    const url = new URL(req.url);
+    const requestedOrgId = url.searchParams.get("org_id")?.trim() || null;
+
+    const authorizedMembers = members.filter(
+      (m) => (m.role === "owner" || m.role === "manager") && (!requestedOrgId || String(m.org_id) === requestedOrgId),
+    );
+
+    if (authorizedMembers.length === 0) {
+      return json({
+        code: "tidak_memiliki_wewenang",
+        message_id: "tidak_memiliki_wewenang",
+        fix_hint: "Hanya owner atau manager organisasi terkait yang dapat melihat status health agent.",
+        valid_options: [],
+      }, 403);
+    }
+
+    // Ambil health status hanya untuk organisasi di mana user adalah owner/manager
+    const orgHealth = await Promise.all(authorizedMembers.map(async (member) => {
       const orgId = String(member.org_id);
 
       // Kill switch & autonomy
@@ -56,21 +73,21 @@ serve(async (req) => {
         .eq("org_id", orgId)
         .maybeSingle();
 
+      // Plan type & timezone
+      const { data: org } = await userClient
+        .from("planner_organizations")
+        .select("plan_type, timezone")
+        .eq("id", orgId)
+        .maybeSingle();
+
       // Penggunaan kuota hari ini
-      const tz = "Asia/Jakarta";
+      const tz = String(org?.timezone || "Asia/Jakarta");
       const v_date = new Date().toLocaleDateString("en-CA", { timeZone: tz });
       const { data: usage } = await userClient
         .from("planner_agent_usage")
         .select("runs, tokens")
         .eq("org_id", orgId)
         .eq("usage_date", v_date)
-        .maybeSingle();
-
-      // Plan type
-      const { data: org } = await userClient
-        .from("planner_organizations")
-        .select("plan_type")
-        .eq("id", orgId)
         .maybeSingle();
 
       const planType = String(org?.plan_type || "free");

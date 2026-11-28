@@ -1,4 +1,5 @@
 import { orgToday } from "../domain/dates.ts";
+import { detectPromptInjection } from "../../../../../packages/domain/src/receiptExtraction.ts";
 import { allowMessage, maySend, openSecret, redactSecrets, sha256Hex } from "./channelGate.ts";
 import { acknowledgeCallback, downloadTelegramFile, telegramSend, type ParsedUpdate } from "./channelProvider.ts";
 import {
@@ -155,6 +156,19 @@ export async function handleUpdate(admin: Admin, update: ParsedUpdate): Promise<
           if (transcript) text = transcript;
         }
       }
+    }
+
+    // H-AUD-10: Cegah prompt injection dari pesan teks atau transkrip suara Telegram
+    const injectionHits = detectPromptInjection(text);
+    if (injectionHits.length > 0) {
+      await logMessage(admin, {
+        orgId: row.org_id,
+        telegramUserId: update.telegramUserId,
+        messageType: update.type,
+        summary: "prompt_injection_blocked",
+        status: "ignored",
+      });
+      return;
     }
 
     const inbound = await interpretInbound({

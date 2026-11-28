@@ -182,6 +182,19 @@ export interface ManagerEnv {
 
 const rp = (n: number) => formatCurrency(Number(n) || 0);
 
+/** Sanitasi teks dari database (nama proyek, alasan kasbon, judul todo, semantic context) terhadap indirect prompt injection (H-AUD-10). */
+function sanitizeContextField(raw: unknown, fallback = '-'): string {
+  const str = String(raw ?? '').trim();
+  if (!str) return fallback;
+  const cleanLines = str
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && detectPromptInjection(line).length === 0);
+  const joined = cleanLines.join(' ').trim();
+  return joined || fallback;
+}
+
 async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
   try {
     return await p;
@@ -215,7 +228,7 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     const contract = p.contract_value ?? p.total_budget_planned ?? 0;
     const cashBalance = (p.total_received || 0) - (p.spent_amount || 0);
     lines.push(
-      `[${code}]${isActive ? ' (PROYEK SEDANG DIBUKA)' : ''} ${p.name} | klien: ${p.client_name || '-'} | status: ${p.status} | kontrak: ${rp(contract)} | RAP: ${rp(p.total_budget_planned)} | realisasi biaya: ${rp(p.spent_amount)} | dana masuk: ${rp(p.total_received)} | saldo kas proyek: ${rp(cashBalance)} | progres fisik: ${Math.round(p.progress_percentage)}% (target ${Math.round(p.planned_progress || 0)}%) | kondisi: ${p.health_status}`,
+      `[${code}]${isActive ? ' (PROYEK SEDANG DIBUKA)' : ''} ${sanitizeContextField(p.name, 'Proyek')} | klien: ${sanitizeContextField(p.client_name, '-')} | status: ${p.status} | kontrak: ${rp(contract)} | RAP: ${rp(p.total_budget_planned)} | realisasi biaya: ${rp(p.spent_amount)} | dana masuk: ${rp(p.total_received)} | saldo kas proyek: ${rp(cashBalance)} | progres fisik: ${Math.round(p.progress_percentage)}% (target ${Math.round(p.planned_progress || 0)}%) | kondisi: ${p.health_status}`,
     );
   }
   if (!activeProjectCode && projects.size > 0) {
@@ -282,7 +295,7 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     pendingBons.slice(0, 15).forEach((b, i) => {
       const code = `B${i + 1}`;
       bons.set(code, b);
-      lines.push(`[${code}] ${b.profiles?.name || b.user_id.slice(0, 6)} mengajukan ${rp(b.amount)}${b.reason ? ` (${b.reason})` : ''}`);
+      lines.push(`[${code}] ${sanitizeContextField(b.profiles?.name || b.user_id.slice(0, 6))} mengajukan ${rp(b.amount)}${b.reason ? ` (${sanitizeContextField(b.reason, '')})` : ''}`);
     });
   }
 
@@ -292,7 +305,7 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     openTodos.slice(0, 12).forEach((t, i) => {
       const code = `T${i + 1}`;
       todos.set(code, t);
-      lines.push(`[${code}] ${t.title} | PIC: ${t.assignee_name || 'belum ditugaskan'} | proyek: ${t.project_name || '-'}${t.due_date ? ` | tenggat: ${t.due_date}` : ''}`);
+      lines.push(`[${code}] ${sanitizeContextField(t.title)} | PIC: ${sanitizeContextField(t.assignee_name, 'belum ditugaskan')} | proyek: ${sanitizeContextField(t.project_name, '-')}${t.due_date ? ` | tenggat: ${t.due_date}` : ''}`);
     });
   }
 
@@ -301,7 +314,7 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     ests.slice(0, 10).forEach((e, i) => {
       const code = `EST${i + 1}`;
       estimations.set(code, e);
-      lines.push(`[${code}] ${e.code} "${e.title}" | klien: ${e.customer_name || '-'} | status: ${e.status} | nilai jual: ${rp(e.total_selling_price)} | HPP: ${rp(e.subtotal_hpp)}`);
+      lines.push(`[${code}] ${e.code} "${sanitizeContextField(e.title)}" | klien: ${sanitizeContextField(e.customer_name, '-')} | status: ${e.status} | nilai jual: ${rp(e.total_selling_price)} | HPP: ${rp(e.subtotal_hpp)}`);
     });
   }
 
@@ -310,7 +323,7 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
     items.slice(0, 15).forEach((it, i) => {
       const code = `M${i + 1}`;
       pricelist.set(code, it.id);
-      lines.push(`[${code}] ${it.name} | satuan: ${it.unit} | HPP: ${rp(it.base_cost)} | harga jual: ${rp(it.selling_price)}`);
+      lines.push(`[${code}] ${sanitizeContextField(it.name)} | satuan: ${it.unit} | HPP: ${rp(it.base_cost)} | harga jual: ${rp(it.selling_price)}`);
     });
   }
 
@@ -328,7 +341,7 @@ export async function buildContextPack(env: ManagerEnv): Promise<ContextPack> {
       semanticContext = enriched.semanticContext;
       lines.push('', 'KONTEKS RELEN (PENCARIAN SEMANTIK):');
       for (const sc of semanticContext) {
-        lines.push(`- [${sc.content_type}] ${sc.content} (relevansi: ${Math.round(sc.similarity * 100)}%)`);
+        lines.push(`- [${sc.content_type}] ${sanitizeContextField(sc.content)} (relevansi: ${Math.round(sc.similarity * 100)}%)`);
       }
     }
   } catch {
@@ -407,11 +420,11 @@ DAFTAR JENIS AKSI ("type") & "params":
 
 CONTOH INPUT & OUTPUT (Few-Shot):
 Input: "Catat biaya semen 10 sak 650000 di proyek Rumah Bu Ana"
-Output: {"reply":"Baik Pak, saya mencatat pembelian semen 10 sak senilai Rp 650.000 ke proyek Rumah Bu Ana. Saya akan memotong dari sisa RAP proyek tersebut.","delegations":[{"division":"finance","note":"Bu Sinta mencatat biaya semen ke buku kas proyek & memotong sisa RAP..."}],"actions":[{"type":"record_cost","params":{"project":"P1","item":"Semen 10 sak","total":650000,"qty":10,"unit":"sak","unitPrice":65000},"summary":"Catat biaya Semen 10 sak Rp 650.000 di proyek P1"}],"followUps":["Cek sisa anggaran RAP proyek ini","Update progres pekerjaan lapangan hari ini"]}
+Output: {"reply":"Baik Pak, saya mencatat pembelian semen 10 sak senilai Rp 650.000 ke proyek Rumah Bu Ana. Saya akan memotong dari sisa RAP proyek tersebut.","confidence":0.95,"delegations":[{"division":"finance","note":"Bu Sinta mencatat biaya semen ke buku kas proyek & memotong sisa RAP..."}],"actions":[{"type":"record_cost","params":{"project":"P1","item":"Semen 10 sak","total":650000,"qty":10,"unit":"sak","unitPrice":65000},"summary":"Catat biaya Semen 10 sak Rp 650.000 di proyek P1"}],"followUps":["Cek sisa anggaran RAP proyek ini","Update progres pekerjaan lapangan hari ini"]}
 Input: "Update progres pasang keramik jadi 40 persen"
-Output: {"reply":"Saya mengarahkan Pak Raka untuk memperbarui progres fisik pekerjaan pasang keramik menjadi 40% di jadwal lapangan.","delegations":[{"division":"project","note":"Pak Raka memperbarui persentase progres fisik pasang keramik di jadwal lapangan..."}],"actions":[{"type":"update_progress","params":{"project":"P1","workItem":"pasang keramik","progress":40},"summary":"Update progres pasang keramik ke 40% di proyek P1"}],"followUps":["Cek apakah pekerjaan sesuai jadwal Gantt","Konfirmasi ke klien progres terbaru"]}
+Output: {"reply":"Saya mengarahkan Pak Raka untuk memperbarui progres fisik pekerjaan pasang keramik menjadi 40% di jadwal lapangan.","confidence":0.92,"delegations":[{"division":"project","note":"Pak Raka memperbarui persentase progres fisik pasang keramik di jadwal lapangan..."}],"actions":[{"type":"update_progress","params":{"project":"P1","workItem":"pasang keramik","progress":40},"summary":"Update progres pasang keramik ke 40% di proyek P1"}],"followUps":["Cek apakah pekerjaan sesuai jadwal Gantt","Konfirmasi ke klien progres terbaru"]}
 Input: "Buat proyek baru Renovasi Ruko Kemang untuk Pak Hendro nilainya 250 juta"
-Output: {"reply":"Saya akan membuat proyek baru Renovasi Ruko Kemang untuk Pak Hendro dengan nilai kontrak Rp 250.000.000. Proyek akan dimulai hari ini dan target selesai dalam 3 bulan.","delegations":[{"division":"project","note":"GM membuat proyek baru dan mengeset jadwal awal..."}],"actions":[{"type":"add_project","params":{"name":"Renovasi Ruko Kemang","client":"Pak Hendro","contract_value":250000000,"start_date":"2026-11-27","end_date":"2026-02-27"},"summary":"Buat proyek Renovasi Ruko Kemang untuk Pak Hendro"}],"followUps":["Tambah item RAP proyek baru ini","Buat estimasi RAB untuk anggaran detail"]}
+Output: {"reply":"Saya akan membuat proyek baru Renovasi Ruko Kemang untuk Pak Hendro dengan nilai kontrak Rp 250.000.000. Proyek akan dimulai hari ini dan target selesai dalam 3 bulan.","confidence":0.94,"delegations":[{"division":"project","note":"GM membuat proyek baru dan mengeset jadwal awal..."}],"actions":[{"type":"add_project","params":{"name":"Renovasi Ruko Kemang","client":"Pak Hendro","contract_value":250000000,"start_date":"2026-11-27","end_date":"2026-02-27"},"summary":"Buat proyek Renovasi Ruko Kemang untuk Pak Hendro"}],"followUps":["Tambah item RAP proyek baru ini","Buat estimasi RAB untuk anggaran detail"]}
 `;
 
 export function buildMessages(
@@ -1627,7 +1640,7 @@ export async function runManagerTurn(
     return localSmartManagerTurn(context, userText, config);
   }
 
-const CONFIDENCE_THRESHOLD = 0.7;
+  const CONFIDENCE_THRESHOLD = 0.7;
 
   let parsed = extractJson<{
     reply?: string;
@@ -1637,8 +1650,28 @@ const CONFIDENCE_THRESHOLD = 0.7;
     followUps?: unknown;
   }>(text);
 
-  // Confidence threshold: jika LLM tidak yakin, jangan eksekusi aksi
-  const confidence = parsed && Number.isFinite(parsed.confidence) ? (parsed.confidence as number) : 1;
+  if (!parsed && (text.includes('{') || text.includes('"reply"'))) {
+    try {
+      const repaired = await callUnifiedAI(
+        [
+          ...messages,
+          { role: 'assistant', content: text },
+          { role: 'user', content: 'Format salah atau terpotong. Balas ulang HANYA objek JSON valid sesuai skema {reply, confidence, delegations, actions, followUps}.' },
+        ],
+        { json: true, maxTokens: 4096, temperature: 0.1 },
+        config,
+      );
+      parsed = extractJson(repaired);
+      if (parsed) text = repaired;
+    } catch {
+      // lanjut ke pemeriksaan confidence di bawah
+    }
+  }
+
+  // H-AUD-09: Confidence hilang = 0, dan dievaluasi setelah JSON repair agar repair tidak melewati ambang 0.7
+  const confidence = parsed && typeof parsed.confidence === 'number' && Number.isFinite(parsed.confidence)
+    ? parsed.confidence
+    : 0;
   if (confidence < CONFIDENCE_THRESHOLD) {
     return {
       reply: `Saya masih belum yakin dengan permintaan Anda (kepercayaan ${Math.round(confidence * 100)}%). Bisa tolong diuraikan lebih detail, misalnya menyebutkan nama proyek, jumlah, atau jenis pekerjaan yang ingin dilakukan?`,
@@ -1648,51 +1681,11 @@ const CONFIDENCE_THRESHOLD = 0.7;
     };
   }
 
-  if (!parsed && (text.includes('{') || text.includes('"reply"'))) {
-    try {
-      const repaired = await callUnifiedAI(
-        [
-          ...messages,
-          { role: 'assistant', content: text },
-          { role: 'user', content: 'Format salah atau terpotong. Balas ulang HANYA objek JSON valid sesuai skema {reply, delegations, actions, followUps}.' },
-        ],
-        { json: true, maxTokens: 4096, temperature: 0.1 },
-        config,
-      );
-      parsed = extractJson(repaired);
-      if (parsed) text = repaired;
-    } catch {
-      // lanjut ke pembersihan teks di bawah
-    }
-  }
-
   // Bersihkan balasan GM agar tidak pernah ada fragmen raw JSON seperti { "reply": "..." yang bocor ke balon chat
-  let cleanedReply = cleanRawAssistantReply(parsed?.reply || text);
+  const cleanedReply = cleanRawAssistantReply(parsed?.reply || text);
 
-  let actions = normalizeActions(parsed?.actions, config);
-
-  // JARING PENGAMAN EKSEKUTIF: Jika user minta merapikan/sinkronkan proyek, tapi LLM hanya memberi teks narasi tanpa action
-  if (
-    /(?:rapi(?:kan)?|sinkron(?:kan)?|update|sesuai(?:kan)?)\s+.*(?:proy?ek|project|status)|status.*real|up to date|tidak up to date/i.test(
-      userText,
-    )
-  ) {
-    if (actions.length === 0) {
-      const audit = auditAndSyncProjectStatuses(context);
-      if (audit.rawActions.length > 0) {
-        actions = normalizeActions(audit.rawActions, config);
-        cleanedReply = `${cleanedReply}\n\n${audit.summaryText}`.trim();
-      }
-    }
-  }
-
-  // Jaring pengaman multi-perintah
-  if (actions.length === 0) {
-    const rescue = extractMultiClauseActions(context, userText);
-    if (rescue.rawActions.length > 0) {
-      actions = normalizeActions(rescue.rawActions, config);
-    }
-  }
+  // H-AUD-09: Jika LLM sudah mengembalikan respons valid dengan actions kosong, jangan paksa eksekusi lewat extractMultiClauseActions
+  const actions = normalizeActions(parsed?.actions, config);
 
   let delegations: DelegationReport[] = Array.isArray(parsed?.delegations)
     ? (parsed!.delegations as { division?: string; note?: string }[])
