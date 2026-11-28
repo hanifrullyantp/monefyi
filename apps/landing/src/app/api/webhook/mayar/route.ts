@@ -121,22 +121,21 @@ export async function POST(req: NextRequest) {
         const recipientEmail = matchedOrder.email || customerEmail;
         const buyerName = matchedOrder.full_name || customerName;
         const finalAmount = matchedOrder.grand_total || amount || 93000;
-        const accountPassword = isFroyekOrder
-          ? ""
-          : String(currentRaw.accountPassword || "Estimator2026!");
         const resolvedPlanTier: "free" | "standard" | "pro" =
           matchedOrder.plan_tier ||
           currentRaw.planTier ||
           (matchedOrder.product_title?.toLowerCase().includes("pro") ? "pro" : "standard");
 
-        // Provisioning akun pembeli di Supabase Auth jika SUPABASE_SERVICE_ROLE_KEY tersedia
+        // Provisioning akun pembeli di Supabase Auth dengan password acak internal & link aktivasi Supabase
+        let estimatorSetupUrl: string | undefined;
         if (!isFroyekOrder && recipientEmail && recipientEmail.includes("@")) {
           const supabaseAdmin = getSupabaseAdminClient();
           if (supabaseAdmin) {
+            const internalRandomPassword = `${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}Aa1!`;
             try {
               await supabaseAdmin.auth.admin.createUser({
                 email: recipientEmail,
-                password: accountPassword,
+                password: internalRandomPassword,
                 email_confirm: true,
                 user_metadata: {
                   full_name: buyerName,
@@ -145,6 +144,16 @@ export async function POST(req: NextRequest) {
               });
             } catch (authErr) {
               console.warn("Non-fatal: Supabase Auth user already exists or could not be created", authErr);
+            }
+            try {
+              const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
+                type: "recovery",
+                email: recipientEmail,
+                options: { redirectTo: "https://estimator.froyek.com/app/estimator?status=activated" },
+              });
+              estimatorSetupUrl = linkData?.properties?.action_link || undefined;
+            } catch (linkErr) {
+              console.warn("Non-fatal: could not generate Supabase activation link", linkErr);
             }
           }
         }
@@ -214,13 +223,13 @@ export async function POST(req: NextRequest) {
         }
 
         if (!isFroyekOrder && recipientEmail && recipientEmail.includes("@") && !hasSentWelcomeEmail) {
-          // 2. Email Akun & Password
+          // 2. Email Link Aktivasi Akun (tanpa password)
           const res2 = await sendResendEmail({
             to: recipientEmail,
             name: buyerName,
             type: "account_access",
             planTier: resolvedPlanTier,
-            password: accountPassword,
+            resetLink: estimatorSetupUrl,
             appUrl: "https://estimator.froyek.com/app/estimator?status=activated",
           });
 
@@ -228,7 +237,7 @@ export async function POST(req: NextRequest) {
             id: `email_${Date.now()}_2`,
             resendId: res2.emailId,
             type: "account_access",
-            subject: "Akses Akun & Password Froyek Estimator Anda",
+            subject: "Aktivasi Akun Froyek Estimator Anda",
             to: recipientEmail,
             status: res2.status,
             sentAt: res2.sentAt,
@@ -255,16 +264,16 @@ export async function POST(req: NextRequest) {
           if (capiRes.sent > 0) capiSent = true;
         }
 
+        const { accountPassword: _removedPassword, ...safeCurrentRaw } = currentRaw;
         await supabase
           .from("orders")
           .update({
             status: "paid",
             raw_payload: {
-              ...currentRaw,
+              ...safeCurrentRaw,
               status: "won",
               paidAt: currentRaw.paidAt || new Date().toISOString(),
               transactionId: transactionId || currentRaw.paymentId,
-              accountPassword,
               welcomeEmailSent: true,
               capiPurchaseSent: capiSent,
               emails: [...newEmailLogs, ...existingEmails],

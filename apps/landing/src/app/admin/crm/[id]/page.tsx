@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { authedFetch } from "@/lib/auth/authedFetch";
 import { formatCurrency, formatDate, formatRelativeTime } from "@/lib/utils/format";
 import {
   LeadStatus,
@@ -76,14 +77,14 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     if (!lead) return;
     setLoadingStats(true);
     const searchEmail = lead.email || "";
-    fetch(`/api/crm/customer?email=${encodeURIComponent(searchEmail)}&id=${encodeURIComponent(id)}`)
+    authedFetch(`/api/crm/customer?email=${encodeURIComponent(searchEmail)}&id=${encodeURIComponent(id)}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.ok && d.data) {
           setStats(d.data);
           setForm((prev: any) => ({
             ...prev,
-            accountPassword: prev.accountPassword || lead.accountPassword || "Estimator2026!",
+            accountPassword: prev.accountPassword || "",
             email: prev.email || d.data.email || lead.email || "",
             planTier: (prev.planTier as any) || d.data.planTier || lead.planTier || "standard",
           }));
@@ -112,7 +113,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
     setSaving(true);
     setSaveSuccessMsg(null);
     try {
-      const res = await fetch("/api/crm/customer", {
+      const res = await authedFetch("/api/crm/customer", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -135,7 +136,8 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
       if (!res.ok || !data.ok) {
         alert(`Gagal menyimpan: ${data.error || "Terjadi kesalahan"}`);
       } else {
-        updateLead(id, form as Partial<typeof lead>);
+        const { accountPassword: _omittedPwd, ...safeForm } = form;
+        updateLead(id, safeForm as Partial<typeof lead>);
         setSaveSuccessMsg("Data pelanggan & password berhasil disinkronkan ke Supabase Auth!");
         setTimeout(() => setSaveSuccessMsg(null), 4000);
         setEditing(false);
@@ -178,16 +180,20 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
   };
 
   const handleSendAccountWa = () => {
-    const password = form.accountPassword || lead?.accountPassword || "Estimator2026!";
+    const password = String(form.accountPassword || "").trim();
+    if (password.length < 12) {
+      alert("Masukkan password baru minimal 12 karakter terlebih dahulu di form edit sebelum mengirim akses WA.");
+      return;
+    }
 
     // Pastikan user & password tersinkron ke Supabase Auth
     if (lead.email && lead.email.includes("@")) {
-      fetch("/api/crm/provision", {
+      authedFetch("/api/crm/provision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: lead.email.trim(),
-          password: password.trim(),
+          password,
           name: lead.name?.trim(),
           phone: lead.phone,
           planTier: lead.projectType?.toLowerCase().includes("pro") ? "pro" : "standard",
@@ -215,7 +221,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
 
     addActivity(id, {
       type: "whatsapp",
-      content: `Kirim nama & password akun (${password}) via WhatsApp ke ${lead.phone}`,
+      content: `Kirim data akses akun via WhatsApp ke ${lead.phone}`,
       timestamp: new Date().toISOString(),
       by: "Admin",
     });
@@ -583,10 +589,15 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
                       </label>
                       <button
                         type="button"
-                        onClick={() => setForm({ ...form, accountPassword: "Estimator2026!" })}
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            accountPassword: `Froyek${Array.from(crypto.getRandomValues(new Uint32Array(1)))[0].toString(36).padStart(7, "0").slice(0, 7)}!A`,
+                          })
+                        }
                         className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md"
                       >
-                        Set: Estimator2026!
+                        Acak 15 Karakter
                       </button>
                     </div>
                     <div className="relative">
@@ -594,7 +605,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
                         type={showPassword ? "text" : "password"}
                         value={form.accountPassword || ""}
                         onChange={(e) => setForm({ ...form, accountPassword: e.target.value })}
-                        placeholder="Minimal 6 karakter"
+                        placeholder="Minimal 12 karakter"
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 pr-20 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono"
                       />
                       <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -746,7 +757,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
                         <div>
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">PASSWORD AKUN</p>
                           <p className="text-sm font-mono font-bold text-slate-900">
-                            {showPassword ? (form.accountPassword || lead.accountPassword || "Estimator2026!") : "••••••••••••"}
+                            {showPassword ? (form.accountPassword || "(Belum diatur)") : "••••••••••••"}
                           </p>
                         </div>
                       </div>
@@ -760,7 +771,7 @@ Jika ada pertanyaan atau butuh bantuan teknis, tim kami siap membantu melalui ch
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleCopyPassword(form.accountPassword || lead.accountPassword || "Estimator2026!")}
+                          onClick={() => handleCopyPassword(form.accountPassword || "")}
                           className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200"
                           title="Copy Password"
                         >

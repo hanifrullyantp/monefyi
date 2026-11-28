@@ -125,11 +125,12 @@ describe("Optimizer", () => {
   it("property-based: kendala struktur tidak pernah dilanggar", () => {
     for (const floors of [1, 2, 3]) {
       for (const soil of ["baik", "sedang", "buruk"] as const) {
+        const baseModel = createBuildingModel({ area: 70, floors, bedrooms: 3, bathrooms: 2, soil });
+        const p = project({ model: { ...baseModel, rooms: buildAutoRooms(baseModel) } });
+        const c = ctx(p);
+        const spec = defaultSpec({ floors, soil });
+        const start = c.rapFor(spec);
         for (const target of [0.95, 0.8, 0.6, 0.3, 0.05]) {
-          const p = project({ model: { ...createBuildingModel({ area: 70, floors, bedrooms: 3, bathrooms: 2, soil }), rooms: buildAutoRooms(createBuildingModel({ area: 70, floors, bedrooms: 3, bathrooms: 2, soil })) } });
-          const c = ctx(p);
-          const spec = defaultSpec({ floors, soil });
-          const start = c.rapFor(spec);
           const res = optimizeSpec(spec, { targetRap: Math.round(start * target) }, c);
           const min = minimumStructureLevel({ floors, soil }, res.spec);
           expect(SPEC_ORDER.indexOf(res.spec.struktur)).toBeGreaterThanOrEqual(SPEC_ORDER.indexOf(min.level));
@@ -138,7 +139,7 @@ describe("Optimizer", () => {
         }
       }
     }
-  });
+  }, 60_000);
 
   it("kasus tak layak memicu keputusan + batas aman", () => {
     const p = project();

@@ -77,7 +77,7 @@ function EditorHarness() {
 }
 
 describe("T6. UI Editor Denah", () => {
-  it("drag ruangan tidak memunculkan toast dibatalkan, handle resize ada, maksimal 3 peringatan tampil", async () => {
+  it("drag ruangan memakai pointerDown/pointerMove/pointerUp mengubah koordinat ruangan tanpa menggeser kanvas", async () => {
     const { container } = render(
       <EstimatorProvider host={{}}>
         <EditorHarness />
@@ -87,17 +87,31 @@ describe("T6. UI Editor Denah", () => {
     // 1. Kanvas denah ada
     const canvas = await screen.findByRole("application", { name: /Denah interaktif/i });
     expect(canvas).toBeTruthy();
+    canvas.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 600, height: 500, right: 600, bottom: 500, x: 0, y: 0, toJSON: () => {} }) as DOMRect;
+    const vbBefore = canvas.getAttribute("viewBox");
 
-    // 2. Pilih salah satu ruangan
-    const roomEl = canvas.querySelector("g[role='button']");
-    expect(roomEl).toBeTruthy();
-    fireEvent.click(roomEl!);
+    // 2. Pilih ruangan pertama & catat koordinat awal
+    const rooms = canvas.querySelectorAll("g[role='button']");
+    expect(rooms.length).toBeGreaterThan(1);
+    const roomEl = rooms[0] as SVGGElement;
+    const roomName = (roomEl.getAttribute("aria-label") || "").split(",")[0];
+    const polyBefore = roomEl.querySelector("polygon")?.getAttribute("points");
 
-    // 3. Simulasi pointer drag: tidak ada toast 'dibatalkan'
-    fireEvent.pointerDown(roomEl!, { clientX: 100, clientY: 100, button: 0 });
-    fireEvent.pointerMove(canvas, { clientX: 160, clientY: 120, button: 0 });
-    fireEvent.pointerUp(canvas, { clientX: 160, clientY: 120, button: 0 });
+    // 3. Simulasi pointer drag nyata: pointerDown -> pointerMove -> pointerUp
+    fireEvent.pointerDown(roomEl, { clientX: 100, clientY: 100, button: 0, pointerId: 1 });
+    fireEvent.pointerMove(canvas, { clientX: 350, clientY: 250, button: 0, pointerId: 1 });
+    fireEvent.pointerUp(canvas, { clientX: 350, clientY: 250, button: 0, pointerId: 1 });
 
+    // Kanvas tidak boleh ikut pan saat drag ruangan (gagal jika stopPropagation dihapus)
+    expect(canvas.getAttribute("viewBox")).toBe(vbBefore);
+    // Koordinat poligon ruangan yang digeser benar-benar berubah
+    const movedRoom = Array.from(canvas.querySelectorAll("g[role='button']")).find((el) =>
+      (el.getAttribute("aria-label") || "").startsWith(`${roomName},`)
+    );
+    const polyAfter = movedRoom?.querySelector("polygon")?.getAttribute("points");
+    expect(polyAfter).toBeTruthy();
+    expect(polyAfter).not.toBe(polyBefore);
     expect(screen.queryByText(/dibatalkan/i)).toBeNull();
 
     // 4. Popover / Panel ruangan: tombol 'Hapus Ruangan' dan kontrol ukuran tersedia

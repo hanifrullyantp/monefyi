@@ -30,6 +30,9 @@
       ],
       "@agent-core/*": [
         "../../agent-core/src/*"
+      ],
+      "@supabase/supabase-js": [
+        "./node_modules/@supabase/supabase-js"
       ]
     },
     /* Linting - relaxed for build */

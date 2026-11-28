@@ -10,7 +10,7 @@ interface ResendApiPayload extends SendEmailOptions {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as ResendApiPayload;
-    const { to, name, type, planTier, amount, paymentMethod, password, resetLink, leadId, sessionId } = body;
+    const { to, name, type, planTier, amount, paymentMethod, resetLink, leadId, sessionId } = body;
 
     if (!to || !to.includes("@")) {
       return NextResponse.json(
@@ -37,7 +37,6 @@ export async function POST(req: NextRequest) {
       planTier,
       amount,
       paymentMethod,
-      password,
       resetLink,
       appUrl,
     });

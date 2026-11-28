@@ -443,12 +443,12 @@ export default function ConversationalCheckout({
     }).catch(() => { });
   };
 
-  // Otomatis Kirim Email via Resend saat Pembayaran Berhasil / Akun Free Aktif
+  // Otomatis Kirim Konfirmasi Pembayaran via Resend (provisioning akun & link aktivasi diurus server-side oleh webhook Mayar)
   const sendAutoResendEmails = (isFreePlan: boolean) => {
     if (!email.trim() || !email.includes('@')) return;
     const activeSid = sessionId || (typeof window !== 'undefined' ? sessionStorage.getItem('monefyi_checkout_session') || '' : '');
 
-    // 1. Kirim Konfirmasi Pembayaran
+    // Kirim Konfirmasi Pembayaran (tanpa password; provisioning akun & link aktivasi ditangani webhook server-side)
     fetch('/api/email/resend', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -460,34 +460,6 @@ export default function ConversationalCheckout({
         amount: isFreePlan ? 0 : finalPrice,
         paymentMethod: isFreePlan ? 'Gratis 100%' : paymentMethod,
         sessionId: activeSid,
-      }),
-    }).catch(() => { });
-
-    // 2. Kirim Akses Akun & Password Sementara
-    fetch('/api/email/resend', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: email.trim(),
-        name: fullName.trim() || 'Pelanggan Estimator',
-        type: 'account_access',
-        planTier: product,
-        amount: isFreePlan ? 0 : finalPrice,
-        password: 'Estimator2026!',
-        sessionId: activeSid,
-      }),
-    }).catch(() => { });
-
-    // 3. Provisioning Akun Supabase Auth & set password aktif
-    fetch('/api/crm/provision', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.trim(),
-        name: fullName.trim() || 'Pelanggan Estimator',
-        password: 'Estimator2026!',
-        phone: whatsapp.trim(),
-        planTier: product === 'pro' || takeOrderBump ? 'pro' : 'standard',
       }),
     }).catch(() => { });
   };
