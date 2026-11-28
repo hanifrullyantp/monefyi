@@ -1,10 +1,10 @@
 /**
  * Semantic Search / Embedding untuk Context Retrieval Agent Otonom.
- * 
+ *
  * Menyediakan pencarian konteks berbasis vektor (semantic) yang digabungkan
  * dengan pencarian kata kunci (hybrid search) untuk retrieval konteks yang
  * lebih akurat dari sekadar pencarian deterministik.
- * 
+ *
  * File ini bekerja di kedua lingkungan: browser/Vite (frontend) dan Deno (Supabase Edge Functions).
  */
 
@@ -34,6 +34,7 @@ export type SemanticSearchOptions = {
   limit?: number;
   threshold?: number;
   accessToken: string;
+  clientFactory?: (accessToken: string) => any;
 };
 
 export type EmbeddingOptions = {
@@ -44,11 +45,13 @@ export type EmbeddingOptions = {
   embedding: number[];
   metadata?: Record<string, unknown>;
   accessToken: string;
+  clientFactory?: (accessToken: string) => any;
 };
 
 function getEnv(key: string): string | undefined {
-  if (typeof Deno !== 'undefined' && Deno.env) {
-    return Deno.env.get(key);
+  const deno = (globalThis as any).Deno;
+  if (deno && deno.env) {
+    return deno.env.get(key);
   }
   if (typeof process !== 'undefined' && process.env) {
     return process.env[key];
@@ -56,30 +59,41 @@ function getEnv(key: string): string | undefined {
   return undefined;
 }
 
+/** Escape wildcard SQL LIKE/ILIKE (%, _, dan \) agar tidak bisa dimanipulasi untuk wildcard injection (H-AUD-08). */
+export function escapeSqlLikePattern(raw: string): string {
+  return String(raw ?? '').replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
+
+function resolveSupabaseClient(accessToken: string, customFactory?: (token: string) => any): any | null {
+  if (customFactory) {
+    return customFactory(accessToken);
+  }
+  const supabaseUrl = getEnv("SUPABASE_URL");
+  const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !supabaseAnonKey || !createClient) {
+    return null;
+  }
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}
+
 /** Generate embedding untuk teks menggunakan AI provider yang tersedia. */
 export async function generateEmbedding(
   text: string,
   accessToken: string,
+  clientFactory?: (token: string) => any,
 ): Promise<number[]> {
-  const supabaseUrl = getEnv("SUPABASE_URL");
-  const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
-
-  if (!supabaseUrl || !supabaseAnonKey || !createClient) {
-    // Fallback: hash-based deterministic embedding (untuk development tanpa AI provider)
+  const supabase = resolveSupabaseClient(accessToken, clientFactory);
+  if (!supabase) {
     return deterministicEmbedding(text);
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-  });
-
-  // Panggil edge function untuk generate embedding (jika tersedia)
   const { data, error } = await supabase.functions.invoke("agent-generate-embedding", {
     body: { text },
   });
 
   if (error || !data?.embedding) {
-    // Fallback: hash-based deterministic embedding
     return deterministicEmbedding(text);
   }
 
@@ -99,7 +113,6 @@ function deterministicEmbedding(text: string): number[] {
     const idx = Math.abs(hash) % dim;
     vec[idx] += 1 / Math.sqrt(tokens.length);
   }
-  // Normalisasi
   const norm = Math.sqrt(vec.reduce((s, v) => s + v * v, 0));
   return norm > 0 ? vec.map(v => v / norm) : vec;
 }
@@ -108,16 +121,13 @@ function deterministicEmbedding(text: string): number[] {
 export async function storeEmbedding(
   opts: EmbeddingOptions,
 ): Promise<string> {
-  const supabaseUrl = getEnv("SUPABASE_URL");
-  const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
-
-  if (!supabaseUrl || !supabaseAnonKey || !createClient) {
+  if (!opts.orgId || !String(opts.orgId).trim()) {
+    throw new Error("orgId wajib diisi untuk storeEmbedding.");
+  }
+  const supabase = resolveSupabaseClient(opts.accessToken, opts.clientFactory);
+  if (!supabase) {
     throw new Error("Supabase client tidak tersedia di lingkungan ini.");
   }
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${opts.accessToken}` } },
-  });
 
   const { data, error } = await supabase.rpc("agent_store_embedding", {
     p_org_id: opts.orgId,
@@ -136,19 +146,15 @@ export async function storeEmbedding(
 export async function semanticSearch(
   opts: SemanticSearchOptions,
 ): Promise<SemanticSearchResult[]> {
-  const supabaseUrl = getEnv("SUPABASE_URL");
-  const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
-
-  if (!supabaseUrl || !supabaseAnonKey || !createClient) {
+  if (!opts.orgId || !String(opts.orgId).trim()) {
+    throw new Error("orgId wajib diisi untuk semanticSearch.");
+  }
+  const supabase = resolveSupabaseClient(opts.accessToken, opts.clientFactory);
+  if (!supabase) {
     throw new Error("Supabase client tidak tersedia di lingkungan ini.");
   }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${opts.accessToken}` } },
-  });
-
-  // Generate embedding untuk query
-  const queryEmbedding = await generateEmbedding(opts.query, opts.accessToken);
+  const queryEmbedding = await generateEmbedding(opts.query, opts.accessToken, opts.clientFactory);
 
   const { data, error } = await supabase.rpc("agent_semantic_search", {
     p_org_id: opts.orgId,
@@ -159,13 +165,20 @@ export async function semanticSearch(
   });
 
   if (error) throw error;
-  return (data as SemanticSearchResult[]).map((r) => ({
-    ...r,
-    similarity: Number(r.similarity),
-  }));
+  return ((data ?? []) as Array<SemanticSearchResult & { org_id?: string }>)
+    .filter((r) => !r.org_id || r.org_id === opts.orgId)
+    .filter((r) => !opts.contentType || r.content_type === opts.contentType)
+    .map((r) => ({
+      id: r.id,
+      content: r.content,
+      content_type: r.content_type,
+      source_id: r.source_id,
+      similarity: Number(r.similarity),
+      metadata: r.metadata ?? {},
+    }));
 }
 
-/** Hybrid search: gabungkan semantic search + keyword search untuk hasil terbaik. */
+/** Hybrid search: gabungkan semantic search + keyword search dengan escaping % dan _ serta filter contentType (H-AUD-08). */
 export async function hybridSearch(
   opts: SemanticSearchOptions & { keywordBoost?: number },
 ): Promise<SemanticSearchResult[]> {
@@ -176,39 +189,52 @@ export async function hybridSearch(
     limit: opts.limit ?? 5,
     threshold: opts.threshold ?? 0.5,
     accessToken: opts.accessToken,
+    clientFactory: opts.clientFactory,
   });
 
-  // Jika tidak ada hasil semantik yang cukup, coba keyword search sederhana
   if (semanticResults.length === 0) {
-    const supabaseUrl = getEnv("SUPABASE_URL");
-    const supabaseAnonKey = getEnv("SUPABASE_ANON_KEY");
-
-    if (!supabaseUrl || !supabaseAnonKey || !createClient) {
+    const supabase = resolveSupabaseClient(opts.accessToken, opts.clientFactory);
+    if (!supabase) {
       return semanticResults;
     }
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${opts.accessToken}` } },
-  });
+    const escapedQuery = escapeSqlLikePattern(opts.query);
+    if (!escapedQuery.trim()) {
+      return [];
+    }
 
-    const { data, error } = await supabase
+    let queryBuilder = supabase
       .from("agent_embeddings")
       .select("id, content, content_type, source_id, metadata")
-      .eq("org_id", opts.orgId)
-      .ilike("content", `%${opts.query}%`)
+      .eq("org_id", opts.orgId);
+
+    if (opts.contentType) {
+      queryBuilder = queryBuilder.eq("content_type", opts.contentType);
+    }
+
+    const { data, error } = await queryBuilder
+      .ilike("content", `%${escapedQuery}%`)
       .limit(opts.limit ?? 5);
 
     if (error) throw error;
-    return (data as Array<{
+    return ((data ?? []) as Array<{
       id: string;
+      org_id?: string;
       content: string;
       content_type: string;
       source_id: string;
       metadata: Record<string, unknown>;
-    }>).map((r) => ({
-      ...r,
-      similarity: 0.5, // default similarity untuk keyword match
-    }));
+    }>)
+      .filter((r) => !r.org_id || r.org_id === opts.orgId)
+      .filter((r) => !opts.contentType || r.content_type === opts.contentType)
+      .map((r) => ({
+        id: r.id,
+        content: r.content,
+        content_type: r.content_type,
+        source_id: r.source_id,
+        metadata: r.metadata ?? {},
+        similarity: 0.5,
+      }));
   }
 
   return semanticResults;

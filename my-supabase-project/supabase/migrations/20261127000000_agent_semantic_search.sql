@@ -49,7 +49,7 @@ CREATE POLICY agent_embeddings_delete ON public.agent_embeddings
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.agent_embeddings TO authenticated;
 
--- Fungsi untuk pencarian semantik berdasarkan cosine similarity
+-- Fungsi untuk pencarian semantik berdasarkan cosine similarity (H-AUD-08: guard is_org_member)
 CREATE OR REPLACE FUNCTION public.agent_semantic_search(
   p_org_id uuid,
   p_query_embedding vector(1536),
@@ -66,8 +66,13 @@ RETURNS TABLE (
   metadata jsonb
 )
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_org_member(p_org_id, 'worker') THEN
+    RAISE EXCEPTION 'di_luar_wewenang' USING ERRCODE = '42501';
+  END IF;
+
   RETURN QUERY
   SELECT
     e.id,
@@ -85,9 +90,10 @@ BEGIN
 END;
 $$;
 
--- Fungsi untuk generate embedding dari teks (dipanggil dari edge function)
--- Catat: generate sebenarnya dilakukan di edge function via AI provider,
--- fungsi ini hanya menyimpan embedding ke database.
+REVOKE ALL ON FUNCTION public.agent_semantic_search(uuid, vector, text, integer, float8) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.agent_semantic_search(uuid, vector, text, integer, float8) TO authenticated;
+
+-- Fungsi untuk menyimpan embedding ke database (H-AUD-08: guard is_org_member)
 CREATE OR REPLACE FUNCTION public.agent_store_embedding(
   p_org_id uuid,
   p_content text,
@@ -98,16 +104,24 @@ CREATE OR REPLACE FUNCTION public.agent_store_embedding(
 )
 RETURNS uuid
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 DECLARE
   v_id uuid;
 BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_org_member(p_org_id, 'worker') THEN
+    RAISE EXCEPTION 'di_luar_wewenang' USING ERRCODE = '42501';
+  END IF;
+
   INSERT INTO public.agent_embeddings (org_id, content, content_type, source_id, embedding, metadata)
   VALUES (p_org_id, p_content, p_content_type, p_source_id, p_embedding, p_metadata)
   RETURNING id INTO v_id;
   RETURN v_id;
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.agent_store_embedding(uuid, text, text, text, vector, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.agent_store_embedding(uuid, text, text, text, vector, jsonb) TO authenticated;
 
 -- Trigger untuk updated_at
 CREATE OR REPLACE FUNCTION public.update_agent_embeddings_updated_at()
