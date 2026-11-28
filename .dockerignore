@@ -1,0 +1,25 @@
+# Environment variables, secrets, and local configs
+.env
+.env.*
+**/.env*
+!**/.env.example
+
+# Dependencies and build artifacts
+node_modules
+**/node_modules
+dist
+**/dist
+out
+**/out
+.next
+**/.next
+
+# Git and IDE metadata
+.git
+.github
+.DS_Store
+**/.DS_Store
+
+# Backups and logs
+backups
+*.log

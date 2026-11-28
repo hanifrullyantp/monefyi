@@ -172,6 +172,7 @@ export interface ManagerEnv {
   userId: string;
   orgId: string;
   userName: string;
+  userRole?: ActorRole;
   accessToken: string;
   projects: Project[];
   currentProject: Project | null;
@@ -425,7 +426,9 @@ export function buildMessages(
   ];
 }
 
-const HIGH_RISK: ActionType[] = ['generate_payroll', 'add_project', 'convert_estimation'];
+const HIGH_RISK: ActionType[] = UNIFIED_MANAGER_ACTION_TYPES.filter(
+  (type) => UNIFIED_MANAGER_ACTIONS[type].alwaysRequiresApproval,
+);
 
 function actionAmount(a: { type: ActionType; params: Record<string, unknown> }): number {
   const direct = Number(
@@ -441,11 +444,9 @@ function needsApproval(
   a: { type: ActionType; params: Record<string, unknown> },
   config: AIConfig,
 ): boolean {
+  const spec = UNIFIED_MANAGER_ACTIONS[a.type];
+  if (spec?.alwaysRequiresApproval || HIGH_RISK.includes(a.type)) return true;
   if (config.executionMode === 'review') return true;
-  if (HIGH_RISK.includes(a.type)) return true;
-  if (a.type === 'review_bon' && String(a.params.decision) === 'approve' && actionAmount(a) > config.autoLimit) {
-    return true;
-  }
   return actionAmount(a) > config.autoLimit;
 }
 
@@ -485,28 +486,181 @@ function normalizeActions(raw: unknown, config: AIConfig): AgentAction[] {
   return out;
 }
 
-/** Validasi parameter aksi terhadap skema tool dari registry sebelum eksekusi.
- * Hanya memvalidasi aksi yang terdaftar di TOOLS registry; aksi lain (bukan core tool)
- * dilewati karena dieksekusi melalui jalur lain. */
+export interface ManagerActionArgSpec {
+  name: string;
+  type: 'string' | 'number' | 'integer' | 'array';
+  required: boolean;
+  enum?: readonly string[];
+}
+
+export const MANAGER_ACTION_PARAM_SCHEMAS: Record<ActionType, readonly ManagerActionArgSpec[]> = {
+  record_cost: [
+    { name: 'item', type: 'string', required: true },
+    { name: 'total', type: 'number', required: true },
+    { name: 'project', type: 'string', required: false },
+    { name: 'qty', type: 'number', required: false },
+    { name: 'unit', type: 'string', required: false },
+    { name: 'unitPrice', type: 'number', required: false },
+  ],
+  record_income: [
+    { name: 'amount', type: 'number', required: true },
+    { name: 'category', type: 'string', required: false, enum: ['dp', 'termin', 'pelunasan', 'retensi', 'other'] },
+    { name: 'project', type: 'string', required: false },
+    { name: 'description', type: 'string', required: false },
+  ],
+  record_transfer: [
+    { name: 'amount', type: 'number', required: true },
+    { name: 'transferType', type: 'string', required: false, enum: ['loan', 'repayment'] },
+    { name: 'fromProject', type: 'string', required: false },
+    { name: 'toProject', type: 'string', required: false },
+    { name: 'counterparty', type: 'string', required: false },
+    { name: 'description', type: 'string', required: false },
+  ],
+  update_progress: [
+    { name: 'workItem', type: 'string', required: true },
+    { name: 'progress', type: 'number', required: true },
+    { name: 'project', type: 'string', required: false },
+  ],
+  add_worker_log: [
+    { name: 'workers', type: 'integer', required: true },
+    { name: 'project', type: 'string', required: false },
+  ],
+  add_project: [
+    { name: 'name', type: 'string', required: true },
+    { name: 'client', type: 'string', required: false },
+    { name: 'contract_value', type: 'number', required: false },
+    { name: 'start_date', type: 'string', required: false },
+    { name: 'end_date', type: 'string', required: false },
+    { name: 'duration_days', type: 'integer', required: false },
+  ],
+  add_rap_item: [
+    { name: 'name', type: 'string', required: true },
+    { name: 'qty', type: 'number', required: true },
+    { name: 'unitPrice', type: 'number', required: true },
+    { name: 'unit', type: 'string', required: false },
+    { name: 'project', type: 'string', required: false },
+    { name: 'type', type: 'string', required: false, enum: ['material', 'labor', 'equipment', 'subcontract', 'other'] },
+  ],
+  add_work_item: [
+    { name: 'name', type: 'string', required: true },
+    { name: 'project', type: 'string', required: false },
+    { name: 'plannedStart', type: 'string', required: false },
+    { name: 'plannedEnd', type: 'string', required: false },
+    { name: 'weight', type: 'number', required: false },
+  ],
+  update_project_status: [
+    { name: 'status', type: 'string', required: true, enum: ['planning', 'active', 'on_hold', 'completed', 'archived'] },
+    { name: 'project', type: 'string', required: false },
+  ],
+  review_bon: [
+    { name: 'bon', type: 'string', required: true },
+    { name: 'decision', type: 'string', required: true, enum: ['approve', 'reject'] },
+    { name: 'reason', type: 'string', required: false },
+  ],
+  assign_todo: [
+    { name: 'title', type: 'string', required: true },
+    { name: 'project', type: 'string', required: false },
+    { name: 'assignee', type: 'string', required: false },
+    { name: 'due', type: 'string', required: false },
+    { name: 'priority', type: 'string', required: false, enum: ['low', 'medium', 'high', 'urgent'] },
+  ],
+  complete_todo: [
+    { name: 'todo', type: 'string', required: true },
+  ],
+  generate_payroll: [],
+  add_employee: [
+    { name: 'name', type: 'string', required: true },
+    { name: 'role', type: 'string', required: false, enum: ['worker', 'staff', 'manager'] },
+    { name: 'phone', type: 'string', required: false },
+  ],
+  record_attendance: [
+    { name: 'employee', type: 'string', required: true },
+    { name: 'type', type: 'string', required: false, enum: ['check_in', 'check_out'] },
+    { name: 'project', type: 'string', required: false },
+    { name: 'note', type: 'string', required: false },
+  ],
+  upsert_pricelist: [
+    { name: 'name', type: 'string', required: true },
+    { name: 'baseCost', type: 'number', required: true },
+    { name: 'unit', type: 'string', required: false },
+    { name: 'marginPct', type: 'number', required: false },
+    { name: 'category', type: 'string', required: false, enum: ['material', 'upah', 'alat', 'jasa', 'borongan', 'other'] },
+  ],
+  create_estimation: [
+    { name: 'title', type: 'string', required: true },
+    { name: 'customer', type: 'string', required: false },
+    { name: 'phone', type: 'string', required: false },
+    { name: 'items', type: 'array', required: false },
+  ],
+  convert_estimation: [
+    { name: 'estimation', type: 'string', required: true },
+    { name: 'projectName', type: 'string', required: false },
+  ],
+};
+
+/** Validasi parameter aksi terhadap skema 18 aksi manajer (atau TOOLS registry) sebelum eksekusi. */
 export function validateActionParams(
   action: AgentAction,
 ): { ok: true } | { ok: false; code: string; message: string; valid_options?: string[] } {
-  const tool = TOOLS.find((t) => t.name === action.type);
-  if (!tool) {
-    return { ok: true };
+  const managerSchema = Object.prototype.hasOwnProperty.call(MANAGER_ACTION_PARAM_SCHEMAS, action?.type)
+    ? MANAGER_ACTION_PARAM_SCHEMAS[action.type]
+    : undefined;
+  const tool = TOOLS.find((t) => t.name === action?.type);
+
+  if (!managerSchema && !tool) {
+    return {
+      ok: false,
+      code: 'aksi_tidak_dikenal',
+      message: `Tipe aksi "${String(action?.type ?? '')}" tidak dikenal dalam skema Manager Agent.`,
+      valid_options: [...UNIFIED_MANAGER_ACTION_TYPES],
+    };
   }
-  const requiredArgs = tool.args.filter((a) => a.required);
-  for (const arg of requiredArgs) {
-    if (action.params[arg.name] == null || action.params[arg.name] === '') {
+
+  const params = action?.params && typeof action.params === 'object' ? action.params : {};
+  const specs: readonly ManagerActionArgSpec[] =
+    managerSchema
+    ?? (tool?.args.map((a) => ({
+      name: a.name,
+      type: a.type,
+      required: a.required,
+      enum: a.enum,
+    })) ?? []);
+
+  for (const arg of specs) {
+    let val = params[arg.name];
+    // Untuk record_cost, total juga dapat dihitung dari qty * unitPrice
+    if (
+      action.type === 'record_cost'
+      && arg.name === 'total'
+      && (val == null || val === '')
+      && params.qty != null
+      && params.unitPrice != null
+    ) {
+      val = Number(params.qty) * Number(params.unitPrice);
+    }
+    // Untuk record_income / record_transfer, izinkan alias total -> amount
+    if (
+      (action.type === 'record_income' || action.type === 'record_transfer')
+      && arg.name === 'amount'
+      && (val == null || val === '')
+      && params.total != null
+    ) {
+      val = params.total;
+    }
+
+    if (arg.required && (val == null || (typeof val === 'string' && val.trim() === ''))) {
       return {
         ok: false,
         code: 'parameter_wajib_hilang',
         message: `Parameter wajib "${arg.name}" hilang untuk aksi ${action.type}.`,
-        valid_options: tool.args.map((a) => a.name),
+        valid_options: specs.map((a) => a.name),
       };
     }
-    if (arg.type === 'integer' && typeof action.params[arg.name] !== 'number') {
-      const parsed = Number(action.params[arg.name]);
+
+    if (val == null || val === '') continue;
+
+    if (arg.type === 'integer') {
+      const parsed = typeof val === 'number' ? val : Number(val);
       if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
         return {
           ok: false,
@@ -514,13 +668,29 @@ export function validateActionParams(
           message: `Parameter "${arg.name}" harus berupa bilangan bulat.`,
         };
       }
+    } else if (arg.type === 'number') {
+      const parsed = typeof val === 'number' ? val : Number(val);
+      if (!Number.isFinite(parsed) && !(action.type === 'add_project' && arg.name === 'contract_value' && typeof val === 'string')) {
+        return {
+          ok: false,
+          code: 'parameter_tipe_salah',
+          message: `Parameter "${arg.name}" harus berupa angka yang valid.`,
+        };
+      }
+    } else if (arg.type === 'array' && !Array.isArray(val)) {
+      return {
+        ok: false,
+        code: 'parameter_tipe_salah',
+        message: `Parameter "${arg.name}" harus berupa array.`,
+      };
     }
-    if (arg.enum && !arg.enum.includes(String(action.params[arg.name]))) {
+
+    if (arg.enum && !arg.enum.includes(String(val).toLowerCase())) {
       return {
         ok: false,
         code: 'parameter_nilai_tidak_valid',
         message: `Parameter "${arg.name}" harus salah satu dari: ${arg.enum.join(', ')}.`,
-        valid_options: arg.enum,
+        valid_options: [...arg.enum],
       };
     }
   }
@@ -1700,13 +1870,37 @@ export function routeManagerSingleDoorInput(input: {
   return { routing, actions };
 }
 
+function resolveSessionActorRole(
+  ctx: ContextPack,
+  env: ManagerEnv,
+  explicitRole?: ActorRole | null,
+): ActorRole {
+  if (explicitRole === 'owner' || explicitRole === 'manager' || explicitRole === 'worker') {
+    return explicitRole;
+  }
+  if (env.userRole === 'owner' || env.userRole === 'manager' || env.userRole === 'worker') {
+    return env.userRole;
+  }
+  const userId = String(env.userId ?? '').trim();
+  if (userId) {
+    for (const m of ctx.members.values()) {
+      if (m.user_id === userId || m.id === userId) {
+        if (m.role === 'owner') return 'owner';
+        if (m.role === 'manager') return 'manager';
+        return 'worker';
+      }
+    }
+  }
+  return 'owner';
+}
+
 /**
  * Tahap PREPARE wajib sebelum eksekusi Manager Agent:
  * tidak menulis data apapun, menerbitkan `prepareToken` TTL 10 menit + `idempotencyKey`.
  */
 export function prepareManagerAction(
   action: AgentAction,
-  _ctx: ContextPack,
+  ctx: ContextPack,
   env: ManagerEnv,
   options?: ManagerGovernanceOptions,
 ): PrepareManagerActionResult {
@@ -1714,7 +1908,7 @@ export function prepareManagerAction(
   const dailyUsage = options?.dailyUsage ?? buildDefaultDailyUsage();
   const store = options?.preparedStore ?? defaultManagerPreparedStore;
   const actorId = options?.actorId ?? 'agent:gm';
-  const actorRole = options?.actorRole ?? 'manager';
+  const actorRole = resolveSessionActorRole(ctx, env, options?.actorRole);
   const idempotencyKey =
     options?.idempotencyKey
     ?? action.idempotencyKey
@@ -1920,17 +2114,24 @@ export async function executeAgentAction(
     };
   }
 
+  const sessionUserId = String(env.userId ?? '').trim();
   const resolvedApprovedBy =
     options?.approvedBy !== undefined
       ? options.approvedBy
-      : env.userId || 'owner:human';
+      : sessionUserId || null;
+  const resolvedApproverRole =
+    options?.approverRole !== undefined
+      ? options.approverRole
+      : sessionUserId
+        ? resolveSessionActorRole(ctx, env, null)
+        : null;
 
   return commitManagerAction(prep.action, ctx, env, {
     ...options,
     prepareToken: prep.prepareToken,
     idempotencyKey: prep.idempotencyKey,
     approvedBy: resolvedApprovedBy,
-    approverRole: options?.approverRole ?? 'owner',
+    approverRole: resolvedApproverRole,
   });
 }
 

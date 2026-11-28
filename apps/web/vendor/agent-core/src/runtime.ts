@@ -1,10 +1,22 @@
 import { structuredError, type StructuredError } from '../../packages/domain/src/errors.ts';
 import { orgToday } from '../../packages/domain/src/dates.ts';
+import {
+  authorizeAgentAction,
+  type AgentActionRequest,
+  type OrgAutonomyGovernancePolicy,
+  type OrgDailyGovernanceUsage,
+} from '../../packages/domain/src/autonomyGovernance.ts';
 import { routeCatatBiaya } from './sop.ts';
 
 export type Autonomy = 'L0' | 'L1' | 'L2' | 'L3';
 export type ModelTier = 'rendah' | 'menengah' | 'tinggi';
 export type ActionStatus = 'draft' | 'approved' | 'rejected' | 'executed';
+
+export type RuntimeGovernanceContext = {
+  request: AgentActionRequest;
+  policy: OrgAutonomyGovernancePolicy;
+  dailyUsage: OrgDailyGovernanceUsage;
+};
 
 const QUOTA: Record<string, { runs: number; tokens: number }> = {
   free: { runs: 10, tokens: 20_000 },
@@ -106,18 +118,37 @@ export function decideActionStatus(
   amount: number | null,
   approvalLimitRupiah: number,
   gatePassed = false,
+  governance?: RuntimeGovernanceContext,
 ): ActionStatus {
   // Critical risiko selalu draft, terlepas level otonomi
   if (risk === 'critical') return 'draft';
+
+  // Pemeriksaan tata kelola deterministik (authorizeAgentAction: SoD, kill switch, cap harian, batas high-risk)
+  if (governance) {
+    const authRes = authorizeAgentAction(governance.request, governance.policy, governance.dailyUsage);
+    if (!authRes.allowed) return 'draft';
+  }
+
   // L1 selalu membutuhkan persetujuan manusia
   if (autonomy === 'L1') return 'draft';
-  // L3: otonomi tertinggi, eksekusi otomatis untuk non-critical
-  if (autonomy === 'L3') return 'executed';
+
   // L0: read dieksekusi otomatis, write tetap draft
   if (autonomy === 'L0' && risk === 'read') return 'executed';
   if (autonomy === 'L0') return 'draft';
+
+  // L3: read dieksekusi otomatis; write/commit WAJIB lulus gatePassed, dalam approvalLimitRupiah, dan lolos governance
+  if (autonomy === 'L3') {
+    if (risk === 'read') return 'executed';
+    if (gatePassed && amount != null && amount >= 0 && amount <= approvalLimitRupiah) {
+      return 'executed';
+    }
+    return 'draft';
+  }
+
   // L2: approved jika gate lulus dan nominal dalam batas persetujuan
-  if (gatePassed && autonomy === 'L2' && risk !== 'read' && amount != null && amount <= approvalLimitRupiah) return 'approved';
+  if (gatePassed && autonomy === 'L2' && risk !== 'read' && amount != null && amount <= approvalLimitRupiah) {
+    return 'approved';
+  }
   return 'draft';
 }
 

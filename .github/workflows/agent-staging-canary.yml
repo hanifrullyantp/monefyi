@@ -35,85 +35,95 @@ jobs:
         with:
           node-version: "22"
           cache: npm
+          cache-dependency-path: apps/web/package-lock.json
       - name: Install dependencies
         run: npm ci
+        working-directory: apps/web
       - name: Run agent eval gate
         run: npx vitest run src/lib/agentEval.test.ts src/lib/agentRuntime.test.ts src/lib/agentTools.test.ts src/lib/financeEntryEngine.test.ts src/lib/financeAgentEval.test.ts src/lib/rapLearningEval.test.ts
         working-directory: apps/web
 
   staging-deploy:
     needs: eval
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    environment:
+      name: staging
     defaults:
       run:
         working-directory: my-supabase-project
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/cli@v1
+      - uses: supabase/setup-cli@v1
         with:
           version: latest
       - name: Link Supabase STAGING project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
+        run: supabase link --project-ref "${{ secrets.SUPABASE_STAGING_PROJECT_REF }}"
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
       - name: Push agent migrations to STAGING
         run: supabase db push --remote --yes --include-all
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
       - name: Deploy agent edge functions to STAGING
         run: |
           supabase functions deploy planner-agent-run
           supabase functions deploy planner-agent-health
           supabase functions deploy planner-agent-monitoring
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
       - name: Run health check against STAGING
         run: |
-          curl -sf https://api.supabase.co/functions/v1/planner-agent-health \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_STAGING_ANON_KEY }}" \
+          curl -sf "https://${SUPABASE_STAGING_PROJECT_REF}.supabase.co/functions/v1/planner-agent-health" \
+            -H "Authorization: Bearer ${SUPABASE_STAGING_ANON_KEY}" \
             | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);process.exit(j.status==='healthy'||j.status==='degraded'?0:1)})"
         env:
+          SUPABASE_STAGING_PROJECT_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
           SUPABASE_STAGING_ANON_KEY: ${{ secrets.SUPABASE_STAGING_ANON_KEY }}
       - name: Run monitoring smoke test against STAGING
         run: |
-          curl -sf https://api.supabase.co/functions/v1/planner-agent-monitoring \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_STAGING_ANON_KEY }}" \
-            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);process.exit(j.status===200?0:1)})"
+          curl -sf "https://${SUPABASE_STAGING_PROJECT_REF}.supabase.co/functions/v1/planner-agent-monitoring" \
+            -H "Authorization: Bearer ${SUPABASE_STAGING_ANON_KEY}" \
+            | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);process.exit(j.metrics&&typeof j.metrics.total_runs==='number'?0:1)})"
         env:
+          SUPABASE_STAGING_PROJECT_REF: ${{ secrets.SUPABASE_STAGING_PROJECT_REF }}
           SUPABASE_STAGING_ANON_KEY: ${{ secrets.SUPABASE_STAGING_ANON_KEY }}
 
   production-promote:
     needs: staging-deploy
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    # Wajib melalui GitHub Environment 'production' dengan required reviewers sebelum menyentuh rahasia produksi
+    environment:
+      name: production
     defaults:
       run:
         working-directory: my-supabase-project
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/cli@v1
+      - uses: supabase/setup-cli@v1
         with:
           version: latest
       - name: Link Supabase PRODUCTION project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN }}
       - name: Push agent migrations to PRODUCTION
         run: supabase db push --remote --yes --include-all
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN }}
       - name: Deploy agent edge functions to PRODUCTION
         run: |
           supabase functions deploy planner-agent-run
           supabase functions deploy planner-agent-health
           supabase functions deploy planner-agent-monitoring
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_PRODUCTION_ACCESS_TOKEN }}
       - name: Run health check against PRODUCTION
         run: |
-          curl -sf https://api.supabase.co/functions/v1/planner-agent-health \
-            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+          curl -sf "https://${SUPABASE_PROJECT_REF}.supabase.co/functions/v1/planner-agent-health" \
+            -H "Authorization: Bearer ${NEXT_PUBLIC_SUPABASE_ANON_KEY}" \
             | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);process.exit(j.status==='healthy'||j.status==='degraded'?0:1)})"
         env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

@@ -17,11 +17,11 @@ function logAgentEvent(
     message: action,
     org_id: orgId,
     user_id: userId,
-    ...(metadata),
+    metadata,
   });
 }
 
-// Rate limiter sederhana per user (sliding window 1 menit, max 60 request)
+// Rate limiter per user
 const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
 const RATE_LIMIT_MAX = 60;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -40,16 +40,6 @@ function checkRateLimit(userId: string): { ok: true } | { ok: false; retryAfter:
   return { ok: true };
 }
 
-// Bersihkan entri lama setiap 5 menit
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
-      rateLimitStore.delete(key);
-    }
-  }
-}, RATE_LIMIT_WINDOW_MS * 5);
-
 serve(async (req) => {
   const corsResponse = handleCorsPreflightRequest(req);
   if (corsResponse) return corsResponse;
@@ -64,9 +54,8 @@ serve(async (req) => {
     return json({ code: "metode_salah", message_id: "metode_salah", fix_hint: "Pakai POST.", valid_options: [] }, 405);
   }
 
-  if (req.method !== "POST") {
-    return json({ code: "metode_salah", message_id: "metode_salah", fix_hint: "Pakai POST.", valid_options: [] }, 405);
-  }
+  let orgId: string | undefined;
+  let userId: string | undefined;
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -88,7 +77,7 @@ serve(async (req) => {
     if (authErr || !authData?.user) {
       return json({ code: "sesi_tidak_sah", message_id: "sesi_tidak_sah", fix_hint: "Masuk ulang.", valid_options: [] }, 401);
     }
-    const userId = String(authData.user.id);
+    userId = String(authData.user.id);
 
     // Rate limit per user: maksimal 60 request per menit
     const rateLimit = checkRateLimit(userId);
@@ -117,10 +106,17 @@ serve(async (req) => {
         valid_options: [],
       }, 409);
     }
-    const orgId = String(members[0].org_id);
-    const userId = String(authData.user.id);
-    const { data: org } = await userClient.from("planner_organizations").select("plan_type").eq("id", orgId).maybeSingle();
-    const { data: settings } = await userClient.from("planner_agent_settings").select("kill_switch, autonomy").eq("org_id", orgId).maybeSingle();
+    orgId = String(members[0].org_id);
+    const { data: org } = await userClient
+      .from("planner_organizations")
+      .select("plan_type, timezone")
+      .eq("id", orgId)
+      .maybeSingle();
+    const { data: settings } = await userClient
+      .from("planner_agent_settings")
+      .select("kill_switch, autonomy")
+      .eq("org_id", orgId)
+      .maybeSingle();
     const autonomy = (settings?.autonomy || "L1") as Autonomy;
     const failures = Number(body.failures || 0);
 
@@ -140,11 +136,10 @@ serve(async (req) => {
         operation: "route_request",
         org_id: orgId,
         user_id: userId,
-        metadata: { input: text, failures },
+        metadata: { failures },
       },
     );
     logAgentEvent(orgId, userId, "route_request", {
-      input: text,
       sop_id: route.sopId,
       confidence: route.confidence,
       tier: route.tier,
@@ -185,7 +180,7 @@ serve(async (req) => {
         message: "sop_not_matched",
         org_id: orgId,
         user_id: userId,
-        metadata: { input: text },
+        metadata: { sop_matched: false },
       });
       return json({
         code: "sop_belum_yakin",

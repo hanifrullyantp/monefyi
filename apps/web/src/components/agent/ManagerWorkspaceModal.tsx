@@ -172,10 +172,17 @@ export default function ManagerWorkspaceModal({
 
   const env: ManagerEnv | null = useMemo(() => {
     if (!user || !tenant) return null;
+    const mappedRole =
+      user.role === 'owner' || user.role === 'admin'
+        ? 'owner'
+        : user.role === 'manager'
+          ? 'manager'
+          : 'worker';
     return {
       userId: user.id,
       orgId: tenant.id,
       userName: user.name,
+      userRole: mappedRole,
       accessToken: '',
       projects,
       currentProject: focusedProject,
