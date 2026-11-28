@@ -184,3 +184,4 @@ $$;
 
 REVOKE ALL ON FUNCTION public.planner_agent_consume_quota(uuid, integer, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.planner_agent_consume_quota(uuid, integer, uuid) TO authenticated;
+

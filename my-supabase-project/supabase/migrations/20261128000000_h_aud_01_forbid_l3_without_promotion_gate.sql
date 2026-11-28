@@ -12,3 +12,4 @@ ALTER TABLE public.planner_agent_settings
 ALTER TABLE public.planner_agent_settings
   ADD CONSTRAINT planner_agent_settings_autonomy_check
   CHECK (autonomy IN ('L0', 'L1', 'L2'));
+

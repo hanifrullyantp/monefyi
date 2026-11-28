@@ -183,14 +183,31 @@ export function parseCostCommand(input: string): CostCommand | null {
         projectName,
       };
     }
+    // H-AUD-12: Deteksi nominal ambigu pada pola "<qty> <unit> <nominal>" ketika pengguna
+    // menuliskan total harga (atau salah ketik nol ekstra tanpa pemisah ribuan/simbol @)
+    // untuk satuan material eceran (sak/kg/btg/batang/buah/pcs/lembar/lbr/kaleng/ember/galon/dus).
+    const rawPriceToken = withQty[4].trim();
+    const hasExplicitUnitPriceMarker = /(?:@|harga|hrg|x|×)/i.test(rest);
+    const hasThousandDotsOrRp = /\brp\.?\s*/i.test(rawPriceToken) || /^\d{1,3}(\.\d{3})+$/.test(rawPriceToken);
+    const isRetailMaterialUnit = /^(?:sak|kg|btg|batang|buah|pcs|lembar|lbr|kaleng|ember|galon|dus)$/i.test(unit);
+    const looksLikeAmbiguousTotalOrExtraZero =
+      isRetailMaterialUnit &&
+      qty.value >= 5 &&
+      !hasExplicitUnitPriceMarker &&
+      !hasThousandDotsOrRp &&
+      price.amount >= 500_000;
+
     return {
       item,
       qty: qty.value,
       unit,
       unitPrice: price.amount,
       total: Math.round(qty.value * price.amount),
-      needsReview: qty.needsReview || price.needsReview,
-      reason: price.reason || qty.reason,
+      needsReview: qty.needsReview || price.needsReview || looksLikeAmbiguousTotalOrExtraZero,
+      reason:
+        price.reason ||
+        qty.reason ||
+        (looksLikeAmbiguousTotalOrExtraZero ? 'nominal_satuan_vs_total_ambigu' : undefined),
       projectName,
     };
   }

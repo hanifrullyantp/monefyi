@@ -276,9 +276,8 @@
     - id: p-rumah
       org_id: org-a
       name: Rumah Bu Ana
-  expect_sop: catat_biaya
-  expect_writes: 1
-  expect_total: 6500000
+  expect_sop: tidak_ada
+  expect_writes: 0
 - id: nominal_titik_desimal
   kind: nominal_ambigu
   role: worker
@@ -288,9 +287,8 @@
     - id: p-rumah
       org_id: org-a
       name: Rumah Bu Ana
-  expect_sop: catat_biaya
-  expect_writes: 1
-  expect_total: 15000000
+  expect_sop: tidak_ada
+  expect_writes: 0
 - id: pembayaran_ganda_idempotensi_berbeda
   kind: pembayaran_ganda
   role: worker

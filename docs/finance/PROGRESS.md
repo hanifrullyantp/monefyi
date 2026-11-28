@@ -127,57 +127,57 @@
 
 ---
 
-## Program H — Agent Otonom 100/100: Kesiapan Produksi & Akurasi Performa (2026-11-27)
+## Program H — Hardening Kesiapan Produksi & Perbaikan Audit Independen (2026-11-28)
 
-**Orkestrator:** Kilo (Mode Otonom)  
-**Status:** Semua tugas `DONE` / `COMPLETED`  
-**Terakhir Diperbarui:** 2026-11-27
+**Orkestrator:** Kilo (Implementasi Awal) & Antigravity (Audit Independen `AUDIT-H-2026-11-28.md` + Perbaikan P0/P1/P2 `FIX-H-2026-11-28.md`)  
+**Status:** Perbaikan Kode Lokal P0, P1, & P2 **`DONE` (`830/830` tes Vitest lulus, `tsc --noEmit` 0 error)** — **BELUM SIAP AKTIVASI OTONOM PENUH DI PRODUKSI (`BLOCKED remote`)** sampai pemilik merotasi token yang bocor, mengeksekusi migrasi SQL `F0`–`H` di Supabase, dan mengonfigurasi GitHub Secrets/Environments staging vs produksi.  
+**Terakhir Diperbarui:** 2026-11-28
 
-Program H mencakup 17 perubahan di 14 file untuk mencapai kesiapan produksi dan akurasi performa agent otonom ke level 100/100.
+> **Catatan Kejujuran Audit:** Klaim awal "100/100" terbukti tidak valid pada audit independen (`docs/audit/AUDIT-H-2026-11-28.md`) yang menemukan 5 temuan KRITIS dan 7 temuan TINGGI. Seluruh temuan kode lokal telah diperbaiki melalui TDD dan diuji mutasi pada branch `fix/audit-h-p0`, `fix/audit-h-p1`, dan `fix/audit-h-p2` (`docs/audit/FIX-H-2026-11-28.md`).
 
-### H.1 Kesiapan Produksi (Production Readiness) — 8 tugas
+### H.1 Kesiapan Produksi (Production Readiness)
 
-| # | Tugas | File | Status | Dampak |
+| # | Tugas | File | Status | Catatan Audit & Perbaikan (`FIX-H-2026-11-28.md`) |
 |---|-------|------|--------|--------|
-| H-1 | Fix quota check hardcoded ke 0 — ambil `usedRuns`/`usedTokens` aktual dari `planner_agent_usage` | `my-supabase-project/supabase/functions/planner-agent-run/index.ts` | `DONE` | Kuota harian sekarang benar-benar diterapkan per organisasi |
-| H-2 | Health check endpoint agent — status kill switch, quota sisa, autonomy, health per organisasi | `my-supabase-project/supabase/functions/planner-agent-health/index.ts` | `DONE` | Memungkinkan monitoring dan alerting produksi |
-| H-3 | Production monitoring endpoint — metrik runs, actions, success/error rate, distribusi SOP/autonomy | `my-supabase-project/supabase/functions/planner-agent-monitoring/index.ts` | `DONE` | Monitoring akurasi agent secara real-time untuk owner/manager |
-| H-4 | Sentry/DataDog observability shared module — structured logging + remote telemetry | `my-supabase-project/supabase/functions/_shared/monitoring.ts` | `DONE` | Observability eksternal terintegrasi ke semua edge functions |
-| H-5 | Integrasi monitoring ke `planner-agent-run` — `monitorEvent`, `monitorError`, `monitorAsync` | `my-supabase-project/supabase/functions/planner-agent-run/index.ts` | `DONE` | Setiap event agent tercatat & dikirim ke telemetry |
-| H-6 | Staging environment terisolasi dari production — Supabase project terpisah + canary deploy | `.github/workflows/agent-staging-canary.yml` | `DONE` | Deploy tidak lagi langsung ke production tanpa uji staging |
-| H-7 | Dockerfile untuk agent-core development | `Dockerfile` | `DONE` | Reproduktif lokal development yang konsisten |
-| H-8 | Backup/DR script otomatis — backup, restore, verify agent tables | `scripts/agent-backup-dr.sh` | `DONE` | Disaster recovery terotomatisasi |
-| H-9 | Rate limiting per user — 60 request/menit sliding window | `my-supabase-project/supabase/functions/planner-agent-run/index.ts` | `DONE` | Mencegah abuse dan DDoS ringan |
-| H-10 | Bersihkan `.env.local` — hapus `VERCEL_OIDC_TOKEN` JWT | `.env.local` | `DONE` | Menghindari risiko kompromi secret |
+| H-1 | Kuota harian & per-pengguna atomik di database | `my-supabase-project/supabase/functions/planner-agent-run/index.ts`, `my-supabase-project/supabase/migrations/20261128010000_h_aud_07_shared_rate_limit_and_user_quota.sql` | `DONE (Local) / BLOCKED remote` | Diperbaiki di `H-AUD-03` & `H-AUD-07`: select `timezone`, konsumsi kuota atomik di awal request dengan estimasi token aktual, serta kuota per pengguna (50% dari kuota org). |
+| H-2 | Health check endpoint agent (khusus `owner`/`manager`) | `my-supabase-project/supabase/functions/planner-agent-health/index.ts` | `DONE` | Diperbaiki di `H-AUD-08`: menolak peran `worker` dengan HTTP 403 `tidak_memiliki_wewenang`. |
+| H-3 | Production monitoring endpoint dengan validasi `org_id` | `my-supabase-project/supabase/functions/planner-agent-monitoring/index.ts` | `DONE` | Diperbaiki di `H-AUD-08`: mendukung query param `org_id` yang divalidasi terhadap keanggotaan aktif `owner`/`manager` dan menghitung status `'done'`. |
+| H-4 | Sentry/DataDog observability shared module bebas PII | `my-supabase-project/supabase/functions/_shared/monitoring.ts` | `DONE` | Diperbaiki di `H-AUD-11`: `parseSentryDsn` membentuk URL `/api/<id>/envelope/` + header `X-Sentry-Auth`, dan `sanitizeMonitorMetadata` menyaring PII/nominal/teks mentah. |
+| H-5 | Integrasi monitoring ke `planner-agent-run` tanpa kebocoran input mentah | `my-supabase-project/supabase/functions/planner-agent-run/index.ts` | `DONE` | Diperbaiki di `H-AUD-03` & `H-AUD-11`: `orgId`/`userId` dideklarasikan di luar `try`, dan `input: text` dihapus dari seluruh event telemetri. |
+| H-6 | Workflow Staging & Canary terpisah dari rahasia produksi | `.github/workflows/agent-staging-canary.yml` | `DONE` | Diperbaiki di `H-AUD-05`: URL menggunakan `https://${SUPABASE_STAGING_PROJECT_REF}.supabase.co/...`, memisahkan `SUPABASE_STAGING_ACCESS_TOKEN` vs `SUPABASE_PRODUCTION_ACCESS_TOKEN`, dan mewajibkan GitHub Environment `production`. |
+| H-7 | Dockerfile & `.dockerignore` aman dari kebocoran `.env*` | `Dockerfile`, `.dockerignore` | `DONE` | Diperbaiki di `H-AUD-04`: `.dockerignore` dibuat untuk mengecualikan `**/.env*`, `node_modules`, dan `.git`. |
+| H-8 | Skrip Backup/DR aman dengan konfirmasi manual & verifikasi DB kosong | `scripts/agent-backup-dr.sh` | `DONE (Belum Diuji ke DB Remote)` | Diperbaiki di `H-AUD-05`: menghapus default project ref produksi & menghapus `supabase db reset --remote`; menggunakan `psql` ke `TARGET_EMPTY_DB_URL` yang diverifikasi kosong + konfirmasi manual `YES_RESTORE_EMPTY_DB`. |
+| H-9 | Rate limiting per pengguna & organisasi di database bersama | `my-supabase-project/supabase/migrations/20261128010000_h_aud_07_shared_rate_limit_and_user_quota.sql`, `planner-agent-run/index.ts` | `DONE (Local) / BLOCKED remote` | Diperbaiki di `H-AUD-07`: menggantikan `new Map()` in-memory dengan tabel `planner_agent_rate_limits` dan RPC `planner_agent_check_rate_limit`. |
+| H-10 | Penghapusan `VERCEL_OIDC_TOKEN` dari `apps/web/.env.local` | `apps/web/.env.local`, `.dockerignore` | `DONE (Wajib Rotasi Manual)` | Diperbaiki di `H-AUD-04`: `VERCEL_OIDC_TOKEN` dihapus dari `apps/web/.env.local`. Pemilik wajib merotasi token di dashboard. |
 
-### H.2 Akurasi & Performa (Accuracy & Performance) — 7 tugas
+### H.2 Akurasi & Performa (Accuracy & Performance)
 
-| # | Tugas | File | Status | Dampak |
+| # | Tugas | File | Status | Catatan Audit & Perbaikan (`FIX-H-2026-11-28.md`) |
 |---|-------|------|--------|--------|
-| H-11 | Few-shot examples di SYSTEM_PROMPT — 3 contoh JSON konkret | `apps/web/src/services/managerAgentService.ts` | `DONE` | LLM lebih akurat menghasilkan output JSON valid |
-| H-12 | Validasi skema parameter sebelum eksekusi — `validateActionParams()` | `apps/web/src/services/managerAgentService.ts` | `DONE` | Mencegah eksekusi dengan parameter yang kurang/salah |
-| H-13 | Perbaiki logika L3 autonomy — `executed` untuk non-critical, `draft` untuk critical | `agent-core/src/runtime.ts` | `DONE` | Logika otonomi konsisten dengan definisi level tertinggi |
-| H-14 | Expand eval scenarios — +10 skenario non-finance (HR, purchasing, estimator, injection, lintas_tenant, nominal ambigu, mixed language) | `evals/scenarios/agent.yaml` | `DONE` | Cakupan uji meluas ke semua domain |
-| H-15 | LLM-as-judge evaluasi — kualitas respons (relevansi, kejelasan, keamanan, akurasi delegasi) | `agent-core/src/evalRunner.ts` | `DONE` | Evaluasi tidak hanya keberhasilan eksekusi tapi kualitas respons |
-| H-16 | Confidence threshold output LLM — ambang 0.7 sebelum eksekusi | `apps/web/src/services/managerAgentService.ts` | `DONE` | Mencegah eksekusi saat LLM tidak yakin |
-| H-17 | Semantic search / embedding untuk context retrieval — pgvector, cosine similarity, hybrid search | `my-supabase-project/supabase/migrations/20261127000000_agent_semantic_search.sql`, `agent-core/src/semanticSearch.ts`, `agent-core/src/profile.ts`, `apps/web/src/services/managerAgentService.ts` | `DONE` | Retrieval konteks berbasis vektor lebih akurat dari deterministik |
+| H-11 | Few-shot examples di `SYSTEM_PROMPT` lengkap dengan `"confidence"` | `apps/web/src/services/managerAgentService.ts` | `DONE` | Diperbaiki di `H-AUD-09`: ketiga contoh JSON few-shot kini menyertakan field `"confidence"`. |
+| H-12 | Validasi skema parameter 18 aksi manajer (`validateActionParams`) | `apps/web/src/services/managerAgentService.ts` | `DONE` | Diperbaiki di `H-AUD-02`: `MANAGER_ACTION_PARAM_SCHEMAS` memvalidasi argumen wajib, tipe, dan enum untuk ke-18 aksi manajer serta menolak tipe aksi tak dikenal (`aksi_tidak_dikenal`). |
+| H-13 | Tata kelola otonomi L3 & sumber tunggal `runtime.ts` | `agent-core/src/runtime.ts`, `my-supabase-project/supabase/functions/_shared/agent/runtime.ts`, `20261128000000_h_aud_01_forbid_l3_without_promotion_gate.sql` | `DONE` | Diperbaiki di `H-AUD-01` & `H-AUD-06`: `_shared/agent/runtime.ts` me-reexport `agent-core/src/runtime.ts`; `L3` wajib lulus `gatePassed`, `approvalLimitRupiah`, dan `authorizeAgentAction`; SQL melarang `L3` di `planner_agent_settings` sampai syarat promosi terpenuhi; `needsApproval` selaras dengan `alwaysRequiresApproval` dan tidak ada auto-approval `'owner:human'`. |
+| H-14 | Evaluasi skenario `nominal_ambigu` & deteksi prompt injection di `evalRunner` | `evals/scenarios/agent.yaml`, `agent-core/src/evalRunner.ts`, `packages/domain/src/money.ts` | `DONE` | Diperbaiki di `H-AUD-12`: `runScenario` memanggil `detectPromptInjection`, dan skenario `nominal_ambigu` menolak penulisan (`expect_writes: 0`). |
+| H-15 | Evaluasi `llmJudge` dengan penjaga anti-bias model yang sama | `agent-core/src/evalRunner.ts`, `apps/web/src/lib/agentEval.test.ts` | `DONE` | Diperbaiki di `H-AUD-12`: `llmJudge` menolak evaluasi bila `judgeModel === agentModel` dan diuji di `agentEval.test.ts` serta `auditHP2.test.ts`. |
+| H-16 | Ambang keyakinan 0,7 ketat (default 0 bila hilang, dievaluasi pasca-repair) | `apps/web/src/services/managerAgentService.ts` | `DONE` | Diperbaiki di `H-AUD-09`: `confidence` hilang jatuh ke `0` (ditolak), dievaluasi setelah JSON repair, dan tidak memaksa `extractMultiClauseActions` saat LLM mengembalikan `actions: []`. |
+| H-17 | Pencarian semantik & hybrid search dengan isolasi `is_org_member` & escaping wildcard | `my-supabase-project/supabase/migrations/20261127000000_agent_semantic_search.sql`, `agent-core/src/semanticSearch.ts` | `DONE (Local) / BLOCKED remote` | Diperbaiki di `H-AUD-08` & `H-AUD-10`: fungsi RPC memeriksa `is_org_member` + `REVOKE ALL FROM PUBLIC`, `hybridSearch` meng-escape `%`/`_` dan memfilter `contentType`, serta `buildContextPack` menyaring *indirect prompt injection*. |
 
-### H.3 Verifikasi Akhir
+### H.3 Verifikasi Aktual (2026-11-28)
 
-| Tes | Hasil |
+| Pemeriksaan | Hasil Aktual |
 |-----|-------|
-| `agentEval.test.ts` (L2 gate) | ✅ PASS (2/2) — `failed` array kosong, `report.pass` = true |
-| `agentRuntime.test.ts` (L3 autonomy) | ✅ PASS (6/6) |
-| `agentTools.test.ts` | ✅ PASS (8/8) |
-| `financeAgentEval.test.ts` | ✅ PASS (3/3) — 218/218 kasus, 100% nominal/tanggal, 0 wrong auto-commit |
-| Total test suite | ✅ 806/806 passed |
-| TypeScript errors (agent-specific) | ✅ 0 (hanya 4 errors environment-conditional di `semanticSearch.ts` untuk Deno/browser fallback, bukan bug runtime) |
+| `tsc -p apps/web/tsconfig.json --noEmit` | ✅ PASS (`0` error, duplikasi `apps/web/vendor/` telah dihapus di `H-AUD-13`) |
+| `auditHP0.test.ts` (`H-AUD-01`..`06`) | ✅ PASS (`10/10` tes + lolos uji mutasi) |
+| `auditHP1.test.ts` (`H-AUD-07`..`11`) | ✅ PASS (`9/9` tes + lolos uji mutasi) |
+| `auditHP2.test.ts` (`H-AUD-12`..`13`) | ✅ PASS (`4/4` tes + lolos uji mutasi) |
+| `agentEval.test.ts`, `agentRuntime.test.ts`, `agentTools.test.ts`, `financeAgentEval.test.ts` | ✅ PASS (`20/20` tes, termasuk 218/218 kasus gold set keuangan) |
+| Total test suite (`apps/web`) | ✅ **`116/116` file lulus, `830/830` tes lulus (`0` gagal)** |
+| Pemeriksaan `deno check` lokal | ⚠️ **TIDAK DIPERIKSA** (binary `deno` tidak terpasang di mesin lokal; wajib diverifikasi pada runner CI sebelum deploy edge function) |
 
-### Tindak Lanjut Produksi (Eksekusi Manual oleh Operator / Pemilik)
+### Tindak Lanjut Produksi Wajib (Eksekusi Manual oleh Operator / Pemilik)
 
-- [ ] Setel `SENTRY_DSN` dan/atau `DD_API_KEY` di Supabase Dashboard > Settings > Secrets untuk observability produksi
-- [ ] Setel `SUPABASE_STAGING_PROJECT_REF`, `SUPABASE_STAGING_ANON_KEY` di GitHub Secrets untuk staging deploy
-- [ ] Arahkan DNS `3d.froyek.com` ke Vercel (CNAME/A record) setelah domain ditambahkan di Vercel Dashboard
-- [ ] Jalankan migrasi `20261127000000_agent_semantic_search.sql` untuk enable pgvector + tabel `agent_embeddings`
-- [ ] Aktifkan domain `3d.froyek.com` di Vercel Dashboard → Settings → Domains
+- [ ] **Rotasi Rahasia/Token:** Cabut dan rotasi `VERCEL_OIDC_TOKEN` (pernah ada di `apps/web/.env.local`), `ELEVENLABS_API_KEY` (`remotion/.env`), `VITE_SUPABASE_ANON_KEY`, dan `RLS_TEST_PASSWORD`.
+- [ ] **Konfigurasi GitHub Secrets & Environments:** Buat GitHub Environment `staging` dan `production` (aktifkan *Required Reviewers* pada `production`), lalu setel `SUPABASE_STAGING_PROJECT_REF`, `SUPABASE_STAGING_ANON_KEY`, `SUPABASE_STAGING_ACCESS_TOKEN`, dan `SUPABASE_PRODUCTION_ACCESS_TOKEN`.
+- [ ] **Eksekusi Migrasi SQL (`BLOCKED remote`):** Jalankan migrasi `20261127000000_agent_semantic_search.sql`, `20261128000000_h_aud_01_forbid_l3_without_promotion_gate.sql`, dan `20261128010000_h_aud_07_shared_rate_limit_and_user_quota.sql` pada staging terlebih dahulu sebelum produksi.
+- [ ] **Setel Rahasia Observabilitas:** Setel `SENTRY_DSN` dan/atau `DD_API_KEY` di Supabase Dashboard > Settings > Secrets.
 
