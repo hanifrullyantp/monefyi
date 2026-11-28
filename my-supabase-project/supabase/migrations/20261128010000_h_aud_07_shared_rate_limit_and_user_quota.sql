@@ -39,6 +39,7 @@ CREATE POLICY planner_agent_user_usage_select ON public.planner_agent_user_usage
 GRANT SELECT ON public.planner_agent_rate_limits TO authenticated;
 GRANT SELECT ON public.planner_agent_user_usage TO authenticated;
 
+DROP FUNCTION IF EXISTS public.planner_agent_check_rate_limit(uuid, uuid, integer);
 CREATE OR REPLACE FUNCTION public.planner_agent_check_rate_limit(
   p_org_id uuid,
   p_user_id uuid,
@@ -85,6 +86,7 @@ $$;
 REVOKE ALL ON FUNCTION public.planner_agent_check_rate_limit(uuid, uuid, integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.planner_agent_check_rate_limit(uuid, uuid, integer) TO authenticated;
 
+DROP FUNCTION IF EXISTS public.planner_agent_consume_quota(uuid, integer);
 CREATE OR REPLACE FUNCTION public.planner_agent_consume_quota(
   p_org_id uuid,
   p_tokens integer,

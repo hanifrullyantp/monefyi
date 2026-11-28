@@ -1,4 +1,4 @@
-import { parseCostCommand } from "../domain/money.ts";
+import { parseCostCommand } from './money.ts';
 
 /** Teks dan suara yang terbaca sebagai biaya masuk SOP yang sama dengan tombol catat. */
 export function sopForIntent(intent: string): 'catat_biaya' | null {

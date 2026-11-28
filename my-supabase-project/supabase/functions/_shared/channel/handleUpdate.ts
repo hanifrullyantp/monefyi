@@ -1,5 +1,5 @@
 import { orgToday } from "../domain/dates.ts";
-import { detectPromptInjection } from "../../../../../packages/domain/src/receiptExtraction.ts";
+import { detectPromptInjection } from "./receiptExtraction.ts";
 import { allowMessage, maySend, openSecret, redactSecrets, sha256Hex } from "./channelGate.ts";
 import { acknowledgeCallback, downloadTelegramFile, telegramSend, type ParsedUpdate } from "./channelProvider.ts";
 import {

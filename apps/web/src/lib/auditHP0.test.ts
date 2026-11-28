@@ -276,13 +276,18 @@ describe('P0 Audit Fixes (H-AUD-01..06)', () => {
   });
 
   describe('3. H-AUD-01: _shared/agent/runtime.ts bersumber tunggal dari agent-core & L3 tunduk pada gatePassed, approvalLimitRupiah, dan authorizeAgentAction', () => {
-    it('_shared/agent/runtime.ts bukan salinan terpisah yang ketinggalan, melainkan re-export langsung dari agent-core/src/runtime.ts', () => {
+    it('_shared/agent/runtime.ts self-contained dalam _shared/ tanpa impor lintas folder ke agent-core (REAUD-01)', () => {
       const sharedRuntimePath = resolve(
         REPO_ROOT,
         'my-supabase-project/supabase/functions/_shared/agent/runtime.ts',
       );
       const sharedContent = readFileSync(sharedRuntimePath, 'utf8');
-      expect(sharedContent).toContain('agent-core/src/runtime.ts');
+      expect(sharedContent).not.toContain('agent-core/src/runtime.ts');
+      expect(sharedContent).not.toMatch(/\.\.\/\.\.\/\.\.\/\.\.\//);
+      expect(sharedContent).toContain("from './errors.ts'");
+      expect(sharedContent).toContain("from './dates.ts'");
+      expect(sharedContent).toContain("from './autonomyGovernance.ts'");
+      expect(sharedContent).toContain("from './sop.ts'");
     });
 
     it('L3 tidak pernah melewati gatePassed, approvalLimitRupiah, authorizeAgentAction, SoD, kill switch, dan cap harian', () => {

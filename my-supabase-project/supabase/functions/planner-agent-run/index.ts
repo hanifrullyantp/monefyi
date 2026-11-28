@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { admitRun, decideActionStatus, explainAction, routeRequest, type Autonomy } from "../_shared/agent/runtime.ts";
 import { screenFlowBody } from "../_shared/agent/flow.ts";
-import { detectPromptInjection } from "../../../../packages/domain/src/receiptExtraction.ts";
+import { detectPromptInjection } from "../_shared/agent/receiptExtraction.ts";
 import { writeAudit } from "../_shared/audit.ts";
 import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 import { monitorEvent, monitorError, monitorAsync } from "../_shared/monitoring.ts";
