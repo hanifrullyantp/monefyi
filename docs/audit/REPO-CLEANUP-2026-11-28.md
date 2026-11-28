@@ -137,3 +137,4 @@ Jika pemilik menyetujui secara tertulis setelah merotasi token:
    ```
    (Tambahkan `--path android/app/google-services.json` jika pemilik memutuskan untuk mengeluarkannya juga.)
 3. Lakukan `git push --force --all` dan `git push --force --tags` setelah seluruh kontributor diinformasikan untuk re-clone.
+
